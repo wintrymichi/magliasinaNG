@@ -1,0 +1,6 @@
+# immagini Street View (9,4 GB, (c) Google): restano in locale, non nel repository
+panorami/
+viste/
+storici_2013_2014/
+__pycache__/
+*.pyc
