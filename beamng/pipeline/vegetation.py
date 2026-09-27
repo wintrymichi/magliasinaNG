@@ -7,12 +7,19 @@ choice is driven by measurable shape cues): pointed crown + dark colour -> conif
 Every instance is scaled so its height equals the measured tree height; among the
 candidate models the one whose crown width after scaling is closest to the
 measured crown diameter is used. Yaw is random (not observable).
+Nothing stands on the paved surfaces (clear_paved): the canopy model puts a tree where its crown
+peaks, which over a road is often the middle of the carriageway, and the shrub and hedge models
+are scaled wider than the gap between the road and the verge. Trees whose trunk is on a paved
+surface or within 0.5 m of it are dropped; shrubs and hedges reaching more than 0.2 m over a
+paved edge are moved back from it (up to 1.5 m), or dropped (clearance.py).
 """
 import json, os
 import numpy as np
 from config import WORK
 import asset_bounds
 import bng
+
+from clearance import clear_paved
 
 T = "/levels/east_coast_usa/art/shapes/trees/"   # level copies: their materials are defined
 E = "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/"
@@ -32,6 +39,40 @@ MODELS = {
                 E + "tree_douglasfir_small_a.dae", E + "tree_douglasfir_small_b.dae"],
     "conifer_narrow": [I + "cypress_tree.dae"],
 }
+
+
+def paved_dist_dir():
+    """Signed distance to the meshed paved areas (roadheight.paved_polygons; negative inside)
+    and the unit vector away from them."""
+    import shapely
+    import roadheight
+    polys = [g for g, _, _ in roadheight.paved_polygons()]
+    tree = shapely.STRtree(polys)
+    union = shapely.union_all(polys)
+    shapely.prepare(union)
+    edge = union.boundary
+
+    def fn(x, y):
+        x = np.atleast_1d(np.asarray(x, float)); y = np.atleast_1d(np.asarray(y, float))
+        pts = shapely.points(x, y)
+        d = np.full(len(pts), 99.0)
+        u = np.tile([1.0, 0.0], (len(pts), 1))
+        (ip, ig), dist = tree.query_nearest(pts, max_distance=10.0, return_distance=True, all_matches=False)
+        d[ip] = dist
+        inside = shapely.contains_xy(union, x, y)
+        for i, g in zip(ip, ig):
+            if inside[i]:
+                a, b = np.asarray(shapely.shortest_line(edge, pts[i]).coords)
+                d[i] = -np.hypot(*(b - a))
+                v = a - b                                  # towards the outline: out of the paved area
+            else:
+                a, b = np.asarray(shapely.shortest_line(polys[g], pts[i]).coords)
+                v = b - a
+            n = np.hypot(*v)
+            if n > 1e-9:
+                u[i] = v / n
+        return d, u[:, 0], u[:, 1]
+    return fn
 
 
 def classify(h, d, sharp, rgb, lc_garden):
@@ -77,7 +118,8 @@ def build(level_dir, level_name, scene, rng_seed=7):
         p = cands[k]
         yaw = rng.uniform(0, 2 * np.pi)
         name = os.path.splitext(os.path.basename(p))[0]
-        items.setdefault((name, p), []).append((x[i], y[i], z[i] - 0.15, yaw, s[k], None))
+        kind = "bush" if cls[i] == "bush" else "tree"
+        items.setdefault((name, p), []).append((x[i], y[i], z[i] - 0.15, yaw, s[k], None, kind))
     # shrubs and hedges along the route (understory.py)
     us_f = os.path.join(WORK, "understory.npz")
     if os.path.exists(us_f):
@@ -94,14 +136,14 @@ def build(level_dir, level_name, scene, rng_seed=7):
             if kind == 1:
                 theta = -float(yaw_img)                 # image rows point south: world angle = -image angle
                 s = float(np.clip(h_ / hedge_h, 0.5, 2.5))
-                items.setdefault(("cypress_hedge_3m", hedge_p), []).append((x_, y_, z_ - 0.1, None, s, theta))
+                items.setdefault(("cypress_hedge_3m", hedge_p), []).append((x_, y_, z_ - 0.1, None, s, theta, "hedge"))
             else:
                 H0 = np.array([dims[p][0] for p in bush_models])
                 k = int(np.argmin(np.abs(np.log(np.maximum(h_, 0.5) / H0))))
                 p = bush_models[k]
                 name = os.path.splitext(os.path.basename(p))[0]
                 items.setdefault((name, p), []).append((x_, y_, z_ - 0.1, rng.uniform(0, 2 * np.pi),
-                                                       float(np.clip(h_ / H0[k], 0.4, 2.5)), None))
+                                                       float(np.clip(h_ / H0[k], 0.4, 2.5)), None, "bush"))
         # shrubs the photos show and the game lacked (missing_veg.py, full-dataset comparison)
         ps_f = os.path.join(WORK, "photo_shrubs.npz")
         if os.path.exists(ps_f):
@@ -112,8 +154,36 @@ def build(level_dir, level_name, scene, rng_seed=7):
                 p = bush_models[k]
                 name = os.path.splitext(os.path.basename(p))[0]
                 items.setdefault((name, p), []).append((x_, y_, z_ - 0.1, rng.uniform(0, 2 * np.pi),
-                                                       float(np.clip(h_ / H0[k], 0.4, 2.5)), None))
+                                                       float(np.clip(h_ / H0[k], 0.4, 2.5)), None, "bush"))
             print("photo shrubs", len(ps["x"]))
+    # nothing on the paved surfaces
+    entries, where = [], []
+    for key, lst in items.items():
+        b = asset_bounds.cached([key[1]]).get(key[1])
+        ext = (np.array(b[1]) - np.array(b[0])) if b else np.array([2.0, 2.0, 2.0])
+        for j, (px, py, pz, yaw, sc, theta, kind) in enumerate(lst):
+            e = {"x": px, "y": py, "kind": kind, "r": 0.25 * (ext[0] + ext[1]) * sc}
+            if kind == "hedge":
+                e.update(r=0.5 * ext[1] * sc, L=0.5 * ext[0] * sc, theta=theta)
+            entries.append(e)
+            where.append((key, j))
+    res = clear_paved(entries, paved_dist_dir())
+    from geo import Grid
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    new_items = {}
+    n_drop = {"tree": 0, "bush": 0, "hedge": 0}
+    n_move = 0
+    for (key, j), e, r in zip(where, entries, res):
+        px, py, pz, yaw, sc, theta, kind = items[key][j]
+        if r is None:
+            n_drop[kind] += 1
+            continue
+        if (r[0], r[1]) != (px, py):
+            n_move += 1
+            pz = float(dtm.sample([r[0]], [r[1]])[0]) - 0.1          # ground at the new place
+        new_items.setdefault(key, []).append((r[0], r[1], pz, yaw, sc, theta))
+    items = new_items
+    print("off the paved surfaces: dropped", n_drop, "| shrubs and hedges moved back", n_move)
     fdir = os.path.join(level_dir, "forest")
     os.makedirs(fdir, exist_ok=True)
     managed = {}

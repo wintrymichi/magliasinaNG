@@ -1,6 +1,8 @@
 """AI / traffic road network as invisible DecalRoads (BeamNG builds its navgraph from them).
 
-Main route: the measured carriageway centre line and width (road_profile.npz).
+Main route: the measured carriageway centre line and width (road_profile.npz); where that line
+runs along a wall between two paved surfaces (the Street View track left the carriageway, e.g.
+~1.25 km from Magliaso), its nodes move sideways onto one surface (keep_to_surface).
 Other roads: OSM drivable ways (topology, one-way, class) whose nodes are moved to the
 centre of the surveyed carriageway (MU 'strada_sentiero'): a perpendicular ray pair
 finds both edges within 8 m; width = edge distance. Ways duplicating the main route are
@@ -12,6 +14,7 @@ import shapely
 from scipy.ndimage import gaussian_filter1d, median_filter
 from config import DATA, WORK, wgs_to_local, TER_HALF
 import bng
+from clearance import keep_to_surface
 
 DRIVE = {"secondary": 1.0, "secondary_link": 1.0, "tertiary": 1.0, "tertiary_link": 1.0, "unclassified": 0.8,
          "residential": 0.8, "living_street": 0.6, "service": 0.4, "track": 0.2}
@@ -62,8 +65,11 @@ def build(scene, hfn):
     cx, cy = gaussian_filter1d(C[:, 0], 3), gaussian_filter1d(C[:, 1], 3)
     idx = np.arange(0, len(cx), 10)                            # every 5 m
     w = np.clip(median_filter(rp["width"], 21)[idx], 4.5, 9.0)
-    z = hfn(cx[idx], cy[idx])
-    nodes = [[float(a), float(b), float(c) + 0.1, float(d)] for a, b, c, d in zip(cx[idx], cy[idx], z, w)]
+    import roadheight
+    S = roadheight.load()
+    Pm, z, off = keep_to_surface(np.column_stack([cx[idx], cy[idx]]), hfn, lambda x, y: S.distance(x, y) < 0.4)
+    print("main route: %d nodes moved sideways onto one surface (max %.1f m)" % (int((off != 0).sum()), np.abs(off).max()))
+    nodes = [[float(a), float(b), float(c) + 0.1, float(d)] for (a, b), c, d in zip(Pm, z, w)]
     scene.add(g, {"name": "strada_cantonale", "class": "DecalRoad", "persistentId": bng.pid(),
                   "position": nodes[0][:3], "drivability": 1, "improvedSpline": True, "material": "road_invisible",
                   "nodes": nodes, "lanesLeft": 1, "lanesRight": 1})
