@@ -101,16 +101,15 @@ def height_fn():
     """Paved surface near the paved areas, smoothed DTM away from them (bilinear)."""
     S = load()
     if "base" not in _cache:
-        dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
-        _cache["base"] = Grid(gaussian_filter(dtm.a, 1.0), dtm.x_min, dtm.y_max, dtm.res)
+        from geo import smoothed_sampler
+        _cache["base"] = smoothed_sampler(Grid.load(os.path.join(WORK, "dtm05.npz")), 1.0)
     base = _cache["base"]
 
     def fn(x, y):
         shape = np.shape(x)
         x = np.atleast_1d(np.asarray(x, np.float64)).ravel()
         y = np.atleast_1d(np.asarray(y, np.float64)).ravel()
-        r, c = base.rc(x, y)
-        z = map_coordinates(base.a, [r, c], order=1, mode="nearest").astype(np.float64)
+        z = base(x, y).astype(np.float64)
         w = np.clip((FAR - S.distance(x, y)) / (FAR - NEAR), 0.0, 1.0)
         m = w > 0
         if m.any():

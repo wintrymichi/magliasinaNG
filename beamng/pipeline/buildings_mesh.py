@@ -81,9 +81,9 @@ def neutral_texture(src_zip_path, dst, gain=0.95):
 
 
 def roof_colors(blds):
-    with rasterio.open(os.path.join(WORK, "ortho05.tif")) as s:
-        o = s.read().transpose(1, 2, 0)
-        tr = s.transform
+    """Median orthophoto colour of every roof (footprint eroded 1.5 m against relief displacement)."""
+    from geo import ortho_sampler
+    ortho = ortho_sampler()
     cols = {}
     for b in blds:
         r = b["roofs"]
@@ -93,18 +93,18 @@ def roof_colors(blds):
         if fp.is_empty or fp.area < 1:
             fp = shapely.MultiPoint(r.reshape(-1, 3)[:, :2]).convex_hull
         x0, y0, x1, y1 = fp.bounds
-        xs = np.arange(x0, x1, 0.5); ys = np.arange(y0, y1, 0.5)
+        xs = np.arange(x0, x1, 1.0); ys = np.arange(y0, y1, 1.0)
         if len(xs) == 0 or len(ys) == 0:
             continue
         X, Y = np.meshgrid(xs, ys)
         inside = shapely.contains_xy(fp, X, Y)
         if not inside.any():
             continue
-        cc = ((X[inside] - tr.c) / tr.a).astype(int); rr = ((Y[inside] - tr.f) / tr.e).astype(int)
-        ok = (cc >= 0) & (cc < o.shape[1]) & (rr >= 0) & (rr < o.shape[0])
-        if ok.sum() < 3:
+        c = ortho(X[inside], Y[inside])
+        c = c[~np.isnan(c).any(1)]
+        if len(c) < 3:
             continue
-        cols[b["uuid"]] = np.median(o[rr[ok], cc[ok]], 0) / 255.0
+        cols[b["uuid"]] = np.median(c, 0) / 255.0
     return cols
 
 
@@ -113,10 +113,19 @@ def build(level_dir, level_name, keep=None):
     blds = pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb"))
     shp_dir = os.path.join(level_dir, "art", "shapes", "buildings")
     os.makedirs(shp_dir, exist_ok=True)
-    neutral_texture("/assets/materials/trim/plaster/t_highrise_plaster/t_highrise_plaster_b.color.dds",
-                    os.path.join(shp_dir, "t_plaster_neutral.png"))
-    neutral_texture("/levels/italy/art/shapes/buildings/Italy_bld_roof_tiles_d.dds",
-                    os.path.join(shp_dir, "t_rooftiles_neutral.png"), gain=1.0)
+    import vanilla
+    v1_walls = None
+    if vanilla.have_game():
+        neutral_texture("/assets/materials/trim/plaster/t_highrise_plaster/t_highrise_plaster_b.color.dds",
+                        os.path.join(shp_dir, "t_plaster_neutral.png"))
+        neutral_texture("/levels/italy/art/shapes/buildings/Italy_bld_roof_tiles_d.dds",
+                        os.path.join(shp_dir, "t_rooftiles_neutral.png"), gain=1.0)
+    else:                    # the grey copies of the released level, and its measured facade tones
+        for f in ("t_plaster_neutral.png", "t_rooftiles_neutral.png"):
+            vanilla.copy(f"art/shapes/buildings/{f}", os.path.join(shp_dir, f))
+        from scipy.spatial import cKDTree
+        wp, wc = vanilla.wall_colors()
+        v1_walls = (cKDTree(wp), wc) if len(wp) else None
     L = f"/levels/{level_name}/art/shapes/buildings"
     rcol = roof_colors(blds)
     atlas = texturing.Atlas(4096)
@@ -159,8 +168,13 @@ def build(level_dir, level_name, keep=None):
             rest = walls[~assigned]
             if len(rest):
                 V = rest.reshape(-1, 3)
+                stored = np.clip(wall_col / 0.9, 0, 1)
+                if v1_walls is not None and not os.path.exists(f):
+                    dd, jj = v1_walls[0].query(V[::3][:50])
+                    if (dd < 0.05).mean() > 0.5:           # the same building in the released level
+                        stored = np.median(v1_walls[1][jj[dd < 0.05]], 0)
                 mb.add("bld_plaster", V, uvs=wall_uvs(rest) / 2.5, normals=bng.flat_normals_soup(V),
-                       colors=np.r_[np.clip(wall_col / 0.9, 0, 1), 1.0])
+                       colors=np.r_[stored, 1.0])
             if len(roofs):
                 V = roofs.reshape(-1, 3)
                 col = rcol.get(b["uuid"], np.array([0.55, 0.42, 0.36]))

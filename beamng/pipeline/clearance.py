@@ -78,3 +78,118 @@ def keep_to_surface(P, hfn, on_paved, max_off=5.0, step=0.5, max_rise=0.8):
     for i in range(n - 1, 0, -1):
         j[i - 1] = back[i, j[i]]
     return Q[np.arange(n), j], Z[np.arange(n), j], offs[j]
+
+
+# ---------------------------------------------------------------------- v2.0: the whole network
+ROAD_CLEAR = 1.0       # m, no tree trunk closer than this to a road, square or bridge deck
+PATH_CLEAR = 0.5       # m, ... to a path
+LOW_TREE = 6.0         # m, lower trees reach the road with their crown: kept off like shrubs
+MOVE_TREE = 3.0        # m, trees that would have to move farther are dropped
+TILE_D = 500.0
+
+
+class Drivable:
+    """Signed distance (negative inside) and outward direction to the drivable surfaces, roads and
+    paths apart, from exact geometry merged per TILE_D m tile."""
+
+    def __init__(self, roads, paths):
+        import shapely
+        self.shapely = shapely
+        self.sets = {"road": list(roads), "path": list(paths)}
+        self.trees = {k: shapely.STRtree(v) if v else None for k, v in self.sets.items()}
+        self.cache = {}
+
+    def _tile(self, kind, tx, ty):
+        key = (kind, tx, ty)
+        if key not in self.cache:
+            sh = self.shapely
+            box = sh.box(tx * TILE_D - 30, ty * TILE_D - 30, (tx + 1) * TILE_D + 30, (ty + 1) * TILE_D + 30)
+            tree = self.trees[kind]
+            g = sh.Polygon()
+            if tree is not None:
+                ids = tree.query(box, predicate="intersects")
+                if len(ids):
+                    g = sh.union_all([self.sets[kind][i] for i in ids]).intersection(box.buffer(10))
+            if not g.is_empty:
+                sh.prepare(g)
+            self.cache[key] = (g, g.boundary if not g.is_empty else None)
+            if len(self.cache) > 64:
+                self.cache.pop(next(iter(self.cache)))
+        return self.cache[key]
+
+    def dist_dir(self, kind, x, y):
+        """(d, ux, uy) for the surfaces of `kind`: d signed (m, 99 far away), u away from them."""
+        sh = self.shapely
+        x = np.atleast_1d(np.asarray(x, float)); y = np.atleast_1d(np.asarray(y, float))
+        d = np.full(len(x), 99.0)
+        u = np.tile([1.0, 0.0], (len(x), 1))
+        tx, ty = np.floor(x / TILE_D).astype(int), np.floor(y / TILE_D).astype(int)
+        for key in set(zip(tx.tolist(), ty.tolist())):
+            m = np.flatnonzero((tx == key[0]) & (ty == key[1]))
+            g, edge = self._tile(kind, *key)
+            if edge is None:
+                continue
+            pts = sh.points(x[m], y[m])
+            inside = sh.contains_xy(g, x[m], y[m])
+            dist = sh.distance(edge, pts)
+            near = dist < 20.0
+            lines = sh.shortest_line(pts[near], edge)
+            c = sh.get_coordinates(lines).reshape(-1, 2, 2)
+            v = c[:, 1] - c[:, 0]                          # from the point to the outline
+            nrm = np.linalg.norm(v, axis=1, keepdims=True)
+            v = v / np.maximum(nrm, 1e-9)
+            v[~inside[near]] *= -1                         # outside: away from the outline
+            dd = np.where(inside, -dist, dist)
+            d[m] = np.minimum(dd, 99.0)
+            uu = u[m]
+            uu[near] = v
+            u[m] = uu
+        return d, u[:, 0], u[:, 1]
+
+
+def clear_network(entries, drv):
+    """Keep the vegetation off every drivable surface (v2.0 rules). entries: dicts x, y, kind
+    ('tree', 'bush', 'hedge'), r (crown / half width m), L, theta (hedges), h (height m).
+    A tree trunk must stay ROAD_CLEAR m from roads and PATH_CLEAR m from paths; trees lower than
+    LOW_TREE m and shrubs must not reach over them (EDGE_OVERHANG); what is too close moves
+    outwards (trees up to MOVE_TREE m, shrubs MAX_SHIFT m) or is dropped.
+    Returns per entry None (dropped) or the (x, y) to use."""
+    out = [None] * len(entries)
+    if not entries:
+        return out
+    X = np.array([e["x"] for e in entries]); Y = np.array([e["y"] for e in entries])
+    need = {}
+    for kind, clear in (("road", ROAD_CLEAR), ("path", PATH_CLEAR)):
+        d, _, _ = drv.dist_dir(kind, X, Y)
+        need[kind] = d
+    for i, e in enumerate(entries):
+        low = e["kind"] != "tree" or e.get("h", 99.0) < LOW_TREE
+        reach = (e["r"] + e.get("L", 0.0) - EDGE_OVERHANG) if low else 0.0
+        req = {"road": max(ROAD_CLEAR, reach), "path": max(PATH_CLEAR, reach)}
+        if need["road"][i] >= req["road"] and need["path"][i] >= req["path"]:
+            out[i] = (e["x"], e["y"])
+            continue
+        limit = MOVE_TREE if e["kind"] == "tree" else MAX_SHIFT
+        x, y, moved = e["x"], e["y"], 0.0
+        for _ in range(4):
+            worst, step, ux, uy = None, 0.0, 0.0, 0.0
+            for kind in ("road", "path"):
+                if e["kind"] == "hedge":
+                    t = np.linspace(-e["L"], e["L"], max(3, int(np.ceil(2 * e["L"] / 0.5)) + 1))
+                    px, py = x + np.cos(e["theta"]) * t, y + np.sin(e["theta"]) * t
+                    reqk = max(PATH_CLEAR if kind == "path" else ROAD_CLEAR, e["r"] - EDGE_OVERHANG)
+                else:
+                    px, py = np.array([x]), np.array([y])
+                    reqk = req[kind]
+                d, vx, vy = drv.dist_dir(kind, px, py)
+                j = int(np.argmin(d))
+                if reqk - d[j] > step:
+                    step, ux, uy = reqk - d[j], vx[j], vy[j]
+            if step <= 0:
+                out[i] = (x, y)
+                break
+            moved += step + 0.05
+            if moved > limit:
+                break
+            x, y = x + ux * (step + 0.05), y + uy * (step + 0.05)
+    return out

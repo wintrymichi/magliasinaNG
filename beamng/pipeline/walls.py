@@ -58,7 +58,11 @@ def _context():
              for b in blds if b["kind"] == "Mauer gross" and len(b["walls"])]
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     k = int(round(2 * R_SEARCH / dtm.res)) | 1
-    lid = np.load(os.path.join(WORK, "lidar_near.npz"))
+    lf = os.path.join(WORK, "lidar_near.npz")
+    # LiDAR crests along the route (lidar_extract.py); a build without the point clouds (v2.0 in the
+    # cloud) takes the wall tops from the DTM and the photo caps only
+    lid = np.load(lf) if os.path.exists(lf) else {"x": np.zeros(0), "y": np.zeros(0), "z": np.zeros(0),
+                                                    "cls": np.zeros(0, int)}
     nonveg = np.isin(lid["cls"], [1, 2, 6])
     # unclassified returns on a guardrail are not the wall crest (a retaining wall under a
     # guardrail would otherwise get a 0.8 m parapet that does not exist)
@@ -79,36 +83,70 @@ def _context():
     caps_f = os.path.join(WORK, "wall_caps.json")
     caps = json.load(open(caps_f)) if os.path.exists(caps_f) else {}
     import roadheight
-    return dict(av=av, mauer=mauer, dtm=dtm, dmin=minimum_filter(dtm.a, size=k), dmax=maximum_filter(dtm.a, size=k),
-                LP=LP, LZ=lid["z"][nonveg], tree=cKDTree(LP), rw_zone=rw_zone, caps=caps, surface=roadheight.load())
+    near = None
+    nf = os.path.join(WORK, "network.npz")
+    if os.path.exists(nf):                         # v2.0: only the walls seen from a road or path
+        import network
+        segs, d, _ = network.load()
+        path = np.array([segs[k]["kind"] == "path" for k in d["seg"]], bool)
+        near = {kind: (cKDTree(np.column_stack([d["x"][m], d["y"][m]])), 0.5 * d["width"][m])
+                for kind, m in (("road", ~path), ("path", path)) if m.any()}
+    return dict(av=av, mauer=mauer, dtm=dtm, k=k, LP=LP, LZ=lid["z"][nonveg],
+                tree=cKDTree(LP) if len(LP) else None, rw_zone=rw_zone, caps=caps, surface=roadheight.load(),
+                near=near)
+
+
+NEAR = {"road": 60.0, "path": 25.0}     # m, cadastral walls farther from every road and path are left out (v2.0)
+FINE = {"road": 15.0, "path": 8.0}      # m, finer vertices on the walls this close to a road or path
+STEP_FINE, STEP_COARSE = 1.0, 2.5       # m between the vertices of a wall outline (v1.x: 0.5 and 2)
 
 
 def wall_geometry(ctx=None):
     """Yield every cadastral wall polygon with its per-vertex base/top heights (see module doc)."""
     ctx = ctx or _context()
     dtm = ctx["dtm"]
+    k = ctx["k"]
 
-    def samp(a, x, y):
-        r, c = dtm.rc(x, y)
-        return map_coordinates(a, [r, c], order=1, mode="nearest")
+    def local(poly):
+        """Lowest and highest DTM ground within R_SEARCH of the wall (window of the wall only)."""
+        x0, y0, x1, y1 = poly.bounds
+        sub, _, _ = dtm.window(x0, y0, x1, y1, pad=k + 2)
+        a = np.asarray(sub.a, np.float32)
+        return (Grid(minimum_filter(a, size=k), sub.x_min, sub.y_max, sub.res),
+                Grid(maximum_filter(a, size=k), sub.x_min, sub.y_max, sub.res))
+
+    def samp(g, x, y):
+        return g.sample(x, y)
     import json as _json
     road = shapely.LineString(np.load(os.path.join(WORK, "road_profile.npz"))["center"])
     for wi, (g, kind, props) in enumerate(wall_footprints(ctx["av"], ctx["mauer"])):
+        if ctx.get("near") is not None:
+            c = g.representative_point()
+            dist = {}
+            for kind, (tree, hw) in ctx["near"].items():
+                d, j = tree.query([c.x, c.y])
+                dist[kind] = d - hw[j]
+            if all(dist[k] > NEAR[k] for k in dist):
+                continue
+            fine = any(dist[k] < FINE[k] for k in dist) or g.distance(road) < 60
+        else:
+            fine = g.distance(road) < 60
         for pj, poly in enumerate(polygons(g)):
             if poly.area < 0.05:
                 continue
             if ctx["rw_zone"] is not None and poly.intersection(ctx["rw_zone"]).area > 0.5 * poly.area:
                 continue                                  # replaced by a photo-verified roadside wall
             # fine vertex spacing where the walls are seen from the road, coarse far away
-            step = 0.5 if poly.distance(road) < 60 else 2.0
+            step = (0.5 if ctx.get("near") is None else STEP_FINE) if fine else STEP_COARSE
             poly = shapely.segmentize(shapely.geometry.polygon.orient(poly, 1.0), step)
             rings = [np.asarray(poly.exterior.coords)[:-1]] + [np.asarray(r.coords)[:-1] for r in poly.interiors]
             allv = np.concatenate(rings)
-            zlo = samp(ctx["dmin"], allv[:, 0], allv[:, 1])
-            zhi = samp(ctx["dmax"], allv[:, 0], allv[:, 1])
+            dmin, dmax = local(poly)
+            zlo = samp(dmin, allv[:, 0], allv[:, 1])
+            zhi = samp(dmax, allv[:, 0], allv[:, 1])
             crest = np.full(len(allv), -1e9)
             inner = poly.buffer(0.05)
-            idx = ctx["tree"].query_ball_point(allv, r=0.6)
+            idx = ctx["tree"].query_ball_point(allv, r=0.6) if ctx["tree"] is not None else [[] for _ in allv]
             LP, LZ = ctx["LP"], ctx["LZ"]
             for j, ii in enumerate(idx):
                 if len(ii) >= 3:
@@ -145,7 +183,7 @@ def wall_geometry(ctx=None):
                     zbot[near] = np.minimum(zbot[near], zr - 0.4)
                     ztop[near] = np.maximum(ztop[near], zr + 0.15)
             yield dict(key=f"w{wi}_{pj}", poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
-                       zbot=zbot, samp=samp, dmax=ctx["dmax"])
+                       zbot=zbot, samp=samp, dmax=dmax)
 
 
 def add_photo_pieces(mb, atlas, prefix, tex, T6, U6, u_lo, u_hi, z_lo, z_hi):
@@ -258,21 +296,36 @@ def build(level_dir, level_name, scene, material="mp_wall_stone"):
     return np.concatenate(carve) if carve else np.zeros((0, 4))
 
 
+def near_vertices(samples, xs, ys, radius):
+    """Flat indices (into the terrain rows x cols) of the terrain vertices within `radius` of the
+    sample points, and the (distance, index) of the nearest sample of each (the terrain is a regular
+    grid: only the vertices around every sample are looked at)."""
+    sq = xs[1] - xs[0]
+    k = int(np.ceil(radius / sq)) + 1
+    c = np.round((samples[:, 0] - xs[0]) / sq).astype(np.int64)
+    r = np.round((samples[:, 1] - ys[0]) / sq).astype(np.int64)
+    dc, dr = np.meshgrid(np.arange(-k, k + 1), np.arange(-k, k + 1))
+    cc = (c[:, None] + dc.ravel()[None]).ravel()
+    rr = (r[:, None] + dr.ravel()[None]).ravel()
+    ok = (cc >= 0) & (cc < len(xs)) & (rr >= 0) & (rr < len(ys))
+    flat = np.unique(rr[ok] * len(xs) + cc[ok])
+    pts = np.column_stack([xs[flat % len(xs)], ys[flat // len(xs)]])
+    d, j = cKDTree(samples[:, :2]).query(pts, k=1, distance_upper_bound=radius)
+    m = np.isfinite(d)
+    return flat[m], pts[m], j[m]
+
+
 def carve_terrain(samples, xs, ys, H, radius=1.1):
     """Terrain vertices within `radius` of a wall that lie below the wall's mid height
     are lowered to the local wall base, so the terrain slope does not stick out of the face."""
     if len(samples) == 0:
         return H
-    tree = cKDTree(samples[:, :2])
-    X, Y = np.meshgrid(xs, ys)
-    pts = np.column_stack([X.ravel(), Y.ravel()])
-    d, j = tree.query(pts, k=1, distance_upper_bound=radius)
-    ok = np.isfinite(d)
-    Hf = H.ravel().copy()
-    zlo = samples[j[ok], 2]
-    zmid = 0.5 * (samples[j[ok], 2] + samples[j[ok], 3])
-    low_side = Hf[ok] < zmid
-    idx = np.where(ok)[0][low_side]
+    flat, pts, j = near_vertices(samples, xs, ys, radius)
+    Hf = H.ravel()
+    zlo = samples[j, 2]
+    zmid = 0.5 * (samples[j, 2] + samples[j, 3])
+    low_side = Hf[flat] < zmid
+    idx = flat[low_side]
     Hf[idx] = np.minimum(Hf[idx], zlo[low_side] - 0.02)
     return Hf.reshape(H.shape)
 
@@ -362,19 +415,14 @@ def adjust_terrain_roadside(samples, xs, ys, H, behind=2.8, front=1.6, hidden=1.
     behind it (up to 2.2 m) it rises to the wall top: the DTM smears walls into slopes."""
     if len(samples) == 0:
         return H
-    tree = cKDTree(samples[:, :2])
-    X, Y = np.meshgrid(xs, ys)
-    pts = np.column_stack([X.ravel(), Y.ravel()])
-    d, j = tree.query(pts, k=1, distance_upper_bound=max(behind, front) + 0.5)
-    ok = np.isfinite(d)
-    Hf = H.ravel().copy()
-    idx = np.where(ok)[0]
-    S = samples[j[ok]]
-    off = ((pts[idx] - S[:, :2]) * S[:, 2:4]).sum(1)          # + behind the face, - in front
+    flat, pts, j = near_vertices(samples, xs, ys, max(behind, front) + 0.5)
+    Hf = H.ravel()
+    S = samples[j]
+    off = ((pts - S[:, :2]) * S[:, 2:4]).sum(1)              # + behind the face, - in front
     # vertices up to `hidden` m behind the face stay at road level (under the 1.5 m wide cap),
     # further back they rise to the crest: the terrain step is always hidden by the wall
     fr = (off < hidden) & (off > -front)
     bh = (off >= hidden) & (off <= behind)
-    Hf[idx[fr]] = np.minimum(Hf[idx[fr]], S[fr, 4] - 0.02)
-    Hf[idx[bh]] = np.maximum(Hf[idx[bh]], S[bh, 5] - 0.05)
+    Hf[flat[fr]] = np.minimum(Hf[flat[fr]], S[fr, 4] - 0.02)
+    Hf[flat[bh]] = np.maximum(Hf[flat[bh]], S[bh, 5] - 0.05)
     return Hf.reshape(H.shape)

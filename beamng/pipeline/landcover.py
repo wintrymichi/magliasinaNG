@@ -17,8 +17,16 @@ CLASSES = ["none", "edificio", "altro_rivestimento_duro", "giardino", "campo_pra
            "strada_sentiero", "bacino_idrico", "bosco_fitto", "corso_acqua", "vigna", "marciapiede",
            "altro_bosco", "altro_humus", "spartitraffico", "pietraia_sabbia", "specchio_acqua",
            "canneti", "ferrovia", "altra_coltura_intensiva", "cava_di_ghiaia_discarica",
-           "altra_senza_vegetazione", "torbiera"]
+           "altra_senza_vegetazione", "torbiera",
+           # classes of the survey that only appear in the v2.0 area (appended: codes stay stable)
+           "pascolo_boscato_fitto", "pascolo_boscato_aperto", "roccia", "ghiacciaio_nevaio",
+           "binario", "pista_aerea", "altro"]
 CODE = {c: i for i, c in enumerate(CLASSES)}
+
+
+def code(cls):
+    """Class code; unknown survey classes count as 'altro' (reported by main)."""
+    return CODE.get(cls, CODE["altro"])
 
 
 def to_local(geom):
@@ -43,10 +51,22 @@ def main():
     h, w = dtm.a.shape
     tr = Affine(dtm.res, 0, dtm.x_min, 0, -dtm.res, dtm.y_max)
     shapes = []
+    unknown = sorted({cls for cls in av["LCSF"] if cls not in CODE})
+    if unknown:
+        print("survey classes not in CLASSES (as 'altro'):", unknown)
     for cls, items in av["LCSF"].items():
         for g, p in items:
-            shapes.append((g, CODE[cls]))
-    lc = features.rasterize(shapes, out_shape=(h, w), transform=tr, fill=0, dtype=np.uint8, all_touched=False)
+            shapes.append((g, code(cls)))
+    lc = np.zeros((h, w), np.uint8)
+    B = 2048                                             # row bands: the v2.0 grid is ~22 000 x 18 000
+    for r0 in range(0, h, B):
+        r1 = min(r0 + B, h)
+        y_top = dtm.y_max - r0 * dtm.res
+        box = shapely.box(dtm.x_min, dtm.y_max - r1 * dtm.res, dtm.x_min + w * dtm.res, y_top)
+        sub = [(g, c) for g, c in shapes if g.intersects(box)]
+        if sub:
+            lc[r0:r1] = features.rasterize(sub, out_shape=(r1 - r0, w), fill=0, dtype=np.uint8, all_touched=False,
+                                           transform=Affine(dtm.res, 0, dtm.x_min, 0, -dtm.res, y_top))
     np.savez_compressed(os.path.join(WORK, "landcover05.npz"), a=lc, x_min=dtm.x_min, y_max=dtm.y_max, res=dtm.res)
     u, c = np.unique(lc, return_counts=True)
     for k, n in zip(u, c):
