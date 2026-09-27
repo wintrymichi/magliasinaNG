@@ -274,10 +274,23 @@ def stage_roads(scene, ctx):
     t0 = time.time()
     tiles = network_mesh.tiles()
     ntri = 0
+    chunk_tops = {}
+
+    def on_tops(cx, cy, tri):
+        chunk_tops.setdefault((cx, cy), []).append(tri)
     for k, (X0, Y0) in enumerate(tiles):
-        ntri += network_mesh.mesh_tile(net, dtm, X0, Y0, xs, ys, add_surface, on_carve)
+        ntri += network_mesh.mesh_tile(net, dtm, X0, Y0, xs, ys, add_surface, on_tops)
         if k % 25 == 0:
             print("  network tiles %d/%d, %d triangles, %.0f s" % (k + 1, len(tiles), ntri, time.time() - t0), flush=True)
+    # the carve once all the meshes exist (a vertex at a tile edge sees the meshes on both sides)
+    per = int(round(network_mesh.TILE / CHUNK))
+    for X0, Y0 in tiles:
+        cx0, cy0 = int(round(X0 / CHUNK)), int(round(Y0 / CHUNK))
+        near = [t for cx in range(cx0 - 1, cx0 + per + 1) for cy in range(cy0 - 1, cy0 + per + 1)
+                for t in chunk_tops.get((cx, cy), [])]
+        if near:
+            network_mesh.carve_tile(net, X0, Y0, xs, ys, road_mesh.TriSurface(np.concatenate(near)), on_carve)
+    print("  network carve done, %.0f s" % (time.time() - t0), flush=True)
 
     def on_deck(x, y, mat, uvt, soup, kind):
         tx, ty = int(np.floor(x / CHUNK)), int(np.floor(y / CHUNK))
@@ -620,17 +633,21 @@ PUBLIC_README = [
 def write_info(ctx):
     spawns = ctx.get("spawns", [])
     info = {
-        "title": "Strada Cantonale Magliaso - Pura",
-        "description": "Ricostruzione in scala 1:1 della Strada Cantonale da Magliaso a Pura (Ticino, CH), "
-                       "da 366 panoramiche Street View (ottobre 2022) con dati ufficiali swisstopo "
-                       "(swissALTI3D, SWISSIMAGE, swissBUILDINGS3D, swissSURFACE3D) e della misurazione "
+        "title": "Malcantone - Magliaso, Pura e dintorni",
+        "description": "Ricostruzione in scala 1:1 di circa 46 km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
+                       "Magliaso, Manno, Cademario, Novaggio e Sessa: ogni strada e sentiero guidabile, 137 ponti, "
+                       "8490 edifici, circa 240 000 alberi, traffico IA. La Strada Cantonale Magliaso - Pura e' "
+                       "ricostruita da 366 panoramiche Street View (ottobre 2022). Dati ufficiali swisstopo "
+                       "(swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della misurazione "
                        "ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei riordini "
-                       "fondiari, Cantone Ticino; (c) OpenStreetMap contributors (ODbL).",
+                       "fondiari, Cantone Ticino; Copernicus DEM GLO-30 (c) DLR e.V. / Airbus.",
         "previews": [f"{LEVEL_NAME}_preview.jpg"],
         "size": [TER_SIZE, TER_SIZE],
         "authors": "michi (pipeline: Claude)",
-        "biome": "Prealpi ticinesi, bosco di castagni", "roads": "Strada cantonale, strade comunali",
-        "suitablefor": "Guida su strada di montagna", "features": "Scala reale 1:1, terreno LiDAR",
+        "biome": "Prealpi ticinesi, bosco di castagni, Lago di Lugano",
+        "roads": "Strade cantonali, strade comunali, strade forestali, sentieri e mulattiere",
+        "suitablefor": "Guida su strada di montagna, fuoristrada su sentieri",
+        "features": "Scala reale 1:1, terreno LiDAR, 12 x 12 km, 18 paesi",
         "isAuxiliary": False, "supportsTraffic": True, "supportsTimeOfDay": True,
         "defaultSpawnPointName": spawns[0][0] if spawns else None,
         "spawnPoints": [{"objectname": s[0], "translationId": s[0]} for s in spawns],

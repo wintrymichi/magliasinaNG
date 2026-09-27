@@ -1,0 +1,93 @@
+# Release v2.0 della mappa BeamNG (Malcantone): il livello costruito da zero su un server GitHub
+# con i dati aperti di swisstopo e della misurazione ufficiale (download, raster, rete stradale,
+# ponti, edifici, vegetazione), più gli oggetti del percorso originale presi dalla release v1.1.
+# I controlli di check_level.py devono passare, altrimenti la release non viene creata.
+# Si avvia a mano: Actions > Release v2.0 > Run workflow.
+name: Release v2.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Spazio su disco
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dipendenze
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: Release v1.1 (oggetti del percorso originale, texture neutre)
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_av.py
+          python download_tlm.py
+
+      - name: Raster, edifici, alberi
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python trees.py
+
+      - name: Rete stradale
+        working-directory: beamng/pipeline
+        run: |
+          python network.py
+          python network_surface.py
+
+      - name: Livello
+        working-directory: beamng/pipeline
+        run: python build_level.py
+
+      - name: Controlli
+        working-directory: beamng/pipeline
+        run: python check_level.py
+
+      - name: Pacchetto
+        working-directory: beamng/pipeline
+        run: |
+          python package.py magliaso_pura_v2.0
+          ls -la "$MAGLIASO_ROOT/dist"
+
+      - name: Release
+        run: |
+          gh release create v2.0 "$MAGLIASO_ROOT/dist/magliaso_pura_v2.0.zip" --target "$GITHUB_SHA" \
+            --title "Mappa BeamNG.drive Malcantone v2.0" --notes-file beamng/RELEASE_v2.0.md

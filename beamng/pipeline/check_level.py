@@ -4,8 +4,8 @@
   of the road and bridge meshes over them (a slope poking through the asphalt or a deck);
 - the network drivable everywhere: at every station of the swissTLM3D network (network.py, every
   2 m along every road and path) a top face within PROFILE_TOL m of the profile of
-  network_surface.py (the face nearest to it where a bridge passes over a road); no bumps along the
-  stations (second difference over 2 m above BUMP_TOL m); roads more than FLOAT_TOL m above the
+  network_surface.py (the face nearest to it where a bridge passes over a road); no bumps of the
+  meshes along the stations (second difference over 2 m beyond the profile's above BUMP_TOL m); roads more than FLOAT_TOL m above the
   ground outside the bridges are listed for the review;
 - road continuity: vertices of neighbouring road chunks at the same place and different heights;
 - trees and shrubs: forest items whose trunk is on a road or path or closer than the clearance of
@@ -22,6 +22,7 @@ import numpy as np
 import shapely
 from scipy.spatial import cKDTree
 import patch_release as pr
+from road_mesh import TriSurface as Surface
 from config import LEVEL_DIR
 
 TERRAIN_TOL = 0.10
@@ -33,89 +34,12 @@ TILE = 512.0
 PLACE_CELL = 40.0
 MAX_PLACES = 400
 LIMITS = {"terrain_over_road": 0, "road_seams": 0, "trunks_on_surface": 0, "trunks_near_roads": 0,
+          "road_faces_under_water": 0,
           "shrubs_on_surface": 0, "network_holes": 0, "network_off_profile": 0, "network_bumps": 0,
           "forest_items": 250_000, "ai_components_over_1km": 1}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
 PATH_MATS = ("mp_path_dirt", "mp_path_paved")
 SKIP_MATS = ("mp_road_wall", "mp_bridge_parapet")
-
-
-class Surface:
-    """Top faces (k, 3, 3): height at points, as the lowest face, the highest or the face nearest
-    to a given height where faces overlap (a road under a bridge)."""
-
-    def __init__(self, tri, cell=2.0):
-        self.t = np.asarray(tri, np.float64)
-        k = len(self.t)
-        self.cell = cell
-        if not k:
-            return
-        lo, hi = self.t[:, :, :2].min(1), self.t[:, :, :2].max(1)
-        self.o = lo.min(0) - cell
-        c0 = np.floor((lo - self.o) / cell).astype(np.int64)
-        c1 = np.floor((hi - self.o) / cell).astype(np.int64)
-        self.W = int(c1[:, 0].max()) + 2
-        self.H = int(c1[:, 1].max()) + 2
-        nx, ny = c1[:, 0] - c0[:, 0] + 1, c1[:, 1] - c0[:, 1] + 1
-        cnt = nx * ny
-        tid = np.repeat(np.arange(k), cnt)
-        off = np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt)
-        cx = np.repeat(c0[:, 0], cnt) + off % np.repeat(nx, cnt)
-        cy = np.repeat(c0[:, 1], cnt) + off // np.repeat(nx, cnt)
-        key = cy * self.W + cx
-        order = np.argsort(key, kind="stable")
-        self.key, self.tid = key[order], tid[order]
-        A, B, C = self.t[:, 0], self.t[:, 1], self.t[:, 2]
-        n = np.cross(B - A, C - A)
-        nz = np.where(np.abs(n[:, 2]) > 1e-12, n[:, 2], 1e-12)
-        self.b, self.c = -n[:, 0] / nz, -n[:, 1] / nz
-        self.a = A[:, 2] - self.b * A[:, 0] - self.c * A[:, 1]
-        self.A = A[:, :2]
-        self.v0, self.v1 = B[:, :2] - A[:, :2], C[:, :2] - A[:, :2]
-        self.den = self.v0[:, 0] * self.v1[:, 1] - self.v1[:, 0] * self.v0[:, 1]
-
-    def height(self, x, y, mode="low", zhint=None):
-        x = np.atleast_1d(np.asarray(x, np.float64))
-        y = np.atleast_1d(np.asarray(y, np.float64))
-        out = np.full(len(x), np.nan)
-        if not len(self.t) or not len(x):
-            return out
-        cx = np.floor((x - self.o[0]) / self.cell).astype(np.int64)
-        cy = np.floor((y - self.o[1]) / self.cell).astype(np.int64)
-        ok = (cx >= 0) & (cx < self.W) & (cy >= 0) & (cy < self.H)
-        q = np.flatnonzero(ok)
-        key = cy[q] * self.W + cx[q]
-        s = np.searchsorted(self.key, key, "left")
-        e = np.searchsorted(self.key, key, "right")
-        cnt = e - s
-        rep = np.repeat(np.arange(len(q)), cnt)
-        if not len(rep):
-            return out
-        j = self.tid[np.repeat(s, cnt) + (np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt))]
-        qi = q[rep]
-        px, py = x[qi] - self.A[j, 0], y[qi] - self.A[j, 1]
-        den = np.where(np.abs(self.den[j]) < 1e-12, 1e-12, self.den[j])
-        l1 = (px * self.v1[j, 1] - self.v1[j, 0] * py) / den
-        l2 = (self.v0[j, 0] * py - px * self.v0[j, 1]) / den
-        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l1 + l2 <= 1 + 1e-6)
-        qi, j = qi[inside], j[inside]
-        z = self.a[j] + self.b[j] * x[qi] + self.c[j] * y[qi]
-        if mode == "low":
-            out[:] = np.inf
-            np.minimum.at(out, qi, z)
-            out[np.isinf(out)] = np.nan
-        elif mode == "high":
-            out[:] = -np.inf
-            np.maximum.at(out, qi, z)
-            out[np.isinf(out)] = np.nan
-        else:
-            h = np.atleast_1d(zhint)[qi]
-            d = np.abs(z - h)
-            order = np.lexsort((d, qi))
-            qi, z = qi[order], z[order]
-            first = np.r_[True, qi[1:] != qi[:-1]]
-            out[qi[first]] = z[first]
-        return out
 
 
 def road_tops(lv):
@@ -222,6 +146,13 @@ def main(lv=None):
                 if len(i):
                     counts["network_stations"] += len(i)
                     zm = S.height(st["x"][i], st["y"][i], "near", zs[i])
+                    # a station on the seam between two meshes (a deck end, the edge of a strip)
+                    # falls in the sub-millimetre crack of the rounded vertices: look 3 cm around
+                    for dx, dy in ((0.03, 0), (-0.03, 0), (0, 0.03), (0, -0.03)):
+                        miss = ~np.isfinite(zm)
+                        if not miss.any():
+                            break
+                        zm[miss] = S.height(st["x"][i][miss] + dx, st["y"][i][miss] + dy, "near", zs[i][miss])
                     hole = ~np.isfinite(zm)
                     counts["network_holes"] += int(hole.sum())
                     if hole.any():
@@ -244,7 +175,10 @@ def main(lv=None):
                     # bumps: second difference along each segment (stations 2 m apart, consecutive)
                     seg = st["seg"][i]
                     same = (seg[1:-1] == seg[:-2]) & (seg[1:-1] == seg[2:]) & (np.diff(i)[:-1] == 1) & (np.diff(i)[1:] == 1)
-                    d2 = np.abs(zm[:-2] - 2 * zm[1:-1] + zm[2:])
+                    # the mesh's own bumps: its second difference beyond the profile's (a path over
+                    # a hump keeps the hump)
+                    zp = zs[i]
+                    d2 = np.abs((zm[:-2] - 2 * zm[1:-1] + zm[2:]) - (zp[:-2] - 2 * zp[1:-1] + zp[2:]))
                     bump = same & np.isfinite(d2) & (d2 > BUMP_TOL)
                     counts["network_bumps"] += int(bump.sum())
                     if bump.any():
@@ -276,6 +210,20 @@ def main(lv=None):
         print("  tiles of row y=%.0f done" % ty, flush=True)
     res.update(counts)
     res.update({k: round(v, 3) for k, v in worst.items()})
+    # roads under the lake: top faces inside a water block and below its surface
+    blocks = []
+    wf = os.path.join(lv, "main", "MissionGroup", "level_objects", "Water", "items.level.json")
+    for o in (pr.items(wf) if os.path.exists(wf) else []):
+        if o.get("class") == "WaterBlock":
+            (bx, by, bz), (sx, sy, _) = o["position"], o.get("scale", [1, 1, 1])
+            blocks.append((bx - sx / 2, by - sy / 2, bx + sx / 2, by + sy / 2, bz))
+    wet = np.zeros(len(tri), bool)
+    c3 = tri.mean(1)
+    for x0_, y0_, x1_, y1_, bz in blocks:
+        wet |= (c3[:, 0] > x0_) & (c3[:, 0] < x1_) & (c3[:, 1] > y0_) & (c3[:, 1] < y1_) & (c3[:, 2] < bz + 0.05)
+    res["road_faces_under_water"] = int(wet.sum())
+    if wet.any():
+        places.add("strada sott'acqua", c3[wet, 0], c3[wet, 1], c3[wet, 2], np.ones(int(wet.sum())))
     # seams: the same vertex position in two chunks with different heights
     P = tri.reshape(-1, 3)
     ch = np.repeat(chunk, 3)

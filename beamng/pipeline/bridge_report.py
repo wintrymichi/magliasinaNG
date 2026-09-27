@@ -120,13 +120,32 @@ def views(r, b, D):
            trees=False)
     out.append(Image.open(tmp).convert("RGB"))
     for end, (p0, p1, zi) in enumerate(((P[0], P[min(1, n - 1)], z[0]), (P[-1], P[max(n - 2, 0)], z[-1]))):
-        d = (p1 - p0) / max(np.linalg.norm(p1 - p0), 1e-9)
-        back = p0 - d * 25.0
-        dd, j = D.tree.query(back)
-        zb = float(D.z[j]) if dd < 4 else float(zi)
-        r.shot(Camera.driver(back[0], back[1], zb, math.atan2(d[1], d[0]), pitch=-3.0), tmp, near=280, far=2500)
+        cam = approach(D, s, end, p0, p1, zi)
+        r.shot(Camera.driver(*cam, pitch=-3.0), tmp, near=280, far=2500)
         out.append(Image.open(tmp).convert("RGB"))
     return out
+
+
+def approach(D, s, end, p0, p1, zi, back=25.0):
+    """Driver's position (x, y, z, heading) BACK m before a bridge end on the road that leads to it
+    (straight back from the end when the network stops there)."""
+    node = s["nodes"][end]
+    for q in D.segs:
+        if q["id"] == s["id"] or node not in q["nodes"] or q["n"] < 2:
+            continue
+        a, n = q["first"], q["n"]
+        idx = np.arange(a, a + n) if q["nodes"][0] == node else np.arange(a + n - 1, a - 1, -1)
+        P = np.column_stack([D.st["x"][idx], D.st["y"][idx]])
+        ss = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+        k = int(min(np.searchsorted(ss, back), n - 1))
+        if k == 0:
+            continue
+        x, y, zz = P[k][0], P[k][1], float(D.z[idx[k]])
+        return x, y, zz, math.atan2(p0[1] - y, p0[0] - x)
+    d = (p1 - p0) / max(np.linalg.norm(p1 - p0), 1e-9)
+    b = p0 - d * back
+    zg = float(D.dtm.sample([b[0]], [b[1]])[0])
+    return b[0], b[1], max(float(zi), zg), math.atan2(d[1], d[0])
 
 
 def sheet(i, b, D, r):

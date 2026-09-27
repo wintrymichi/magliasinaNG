@@ -24,6 +24,7 @@ THREE = os.path.join(WORK, "three.module.js")
 ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 SKY = (0.70, 0.79, 0.88)
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
+RELOAD = 25                             # views per page load
 GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props")
 
 # material name (substring) -> sRGB colour; the first match wins
@@ -53,9 +54,11 @@ let scene = null;
 const T = {f4: Float32Array, u1: Uint8Array, u4: Uint32Array};
 function dispose(s) {
   s.traverse(o => {
+    if (o.isInstancedMesh) o.dispose();             // its instance buffers
     if (o.geometry) o.geometry.dispose();
     if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
   });
+  renderer.renderLists.dispose();
 }
 function geom(A, pos, extra) {
   const g = new THREE.BufferGeometry();
@@ -83,7 +86,7 @@ window.renderView = async function (url) {
   const sc = sun.shadow.camera;
   sc.left = -H.shadowR; sc.right = H.shadowR; sc.top = H.shadowR; sc.bottom = -H.shadowR;
   sc.near = 1; sc.far = H.shadowFar;
-  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+  sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.12;
   for (const t of H.terrains) {
     const g = geom(A, t.pos);
     g.setAttribute('uv', new THREE.BufferAttribute(A(t.uv), 2));
@@ -390,8 +393,9 @@ class Renderer:
         tx = np.linspace(xs[0], xs[-1], tw)
         ty = np.linspace(ys[0], ys[-1], th)
         TX, TY = np.meshgrid(tx, ty)
-        rgb = L.ortho()(TX.ravel(), TY.ravel())                      # (3, n)
-        tex = np.concatenate([rgb.T, np.full((tw * th, 1), 255, np.uint8)], 1).astype(np.uint8)
+        rgb = L.ortho()(TX.ravel(), TY.ravel()).T.copy()             # (n, 3)
+        rgb[(rgb == 0).all(1)] = (96, 108, 80)                       # no orthophoto (Italy)
+        tex = np.concatenate([rgb, np.full((tw * th, 1), 255, np.uint8)], 1).astype(np.uint8)
         return dict(pos=pos, uv=uv, idx=idx, tex=tex.reshape(-1), tw=tw, th=th, cast=cast)
 
     def _soups(self, x0, y0, x1, y1, origin):
@@ -590,6 +594,9 @@ class Renderer:
     def shot(self, cam, out, **kw):
         self._blob = self.scene(cam, **kw)
         self._n += 1
+        if self._n % RELOAD == 0:              # a fresh WebGL context now and then (SwiftShader memory)
+            self.page.reload()
+            self.page.wait_for_function("window.ready === true", timeout=60000)
         url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
         data = base64.b64decode(url.split(",", 1)[1])
         os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)

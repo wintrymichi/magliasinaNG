@@ -9,7 +9,8 @@ carriageway). The ends of lines that meet at a junction share one height; where 
 on straight through a junction the second difference runs across it too. The fit is iteratively
 reweighted with Tukey weights (2 m -> 0.3 m), so parked cars, smeared walls and the edge of a gap
 lose their weight. Bridges have no DTM data (the DTM is the ground under them): their deck is the
-smooth curve between the approaches, adjusted by beamng/dati/ponti.json (bridges.py).
+smooth curve between the approaches, adjusted by beamng/dati/ponti.json (bridges.py); a bridge
+where the DTM shows no dip deeper than DIP under it (a culvert) keeps its data.
 Along the Strada Cantonale the idealised surface of v1.1 (roadheight.py, corridor fit) is kept:
 stations on it are held to it, so the side roads join it without a step.
 Cross slope: the plane of the DTM across the carriageway, smoothed along the line, at most
@@ -32,6 +33,8 @@ CROSS_SMOOTH = {"road": 8.0, "path": 4.0}      # m, Gaussian smoothing of the cr
 TAPER = 10.0                                    # m, cross slope fades to 0 at the ends of a bridge
 W_HOLD = 100.0                                  # weight of the Strada Cantonale surface
 STRAIGHT = 145.0                                # deg, two lines leaving a node this far apart carry on
+DIP = 1.5                                       # m, a bridge over a dip shallower than this rests on the ground
+ON_GROUND = 1.0                                 # m, ... if its swissTLM3D line is no higher above the DTM
 
 
 def tangents(st, segs):
@@ -129,7 +132,23 @@ def solve(verbose=True):
     d = np.median(D, axis=1)
     u, n_unk = unknowns(st, segs, len(node_pos))
     hold, zhold = cantonale_hold(st)
+    # not on a bridge (its deck is not the surface beside it) nor where the corridor surface is
+    # far from the DTM (the edge of a lower street beside the line)
+    hold &= ~bridge & (np.abs(np.nan_to_num(zhold, nan=1e9) - d) < 3.0)
     w0 = np.where(bridge, 0.0, 1.0)
+    # a bridge whose ground the DTM shows unbroken under it (a culvert, a stream under the road,
+    # a gap the DTM fills in) and whose swissTLM3D line (on a bridge: the deck) runs on that
+    # ground keeps the road on the ground: its stations keep their data. Not over water: the DTM
+    # is flat there, the deck is above it.
+    zt = st["z_tlm"]
+    for s in segs:
+        a, n = s["first"], s["n"]
+        if s["bridge"] and n >= 2:
+            ss = st["s"][a:a + n]
+            line = d[a] + (d[a + n - 1] - d[a]) * ss / max(ss[-1], 1e-9)
+            above = np.nanmax(zt[a:a + n] - d[a:a + n]) if np.isfinite(zt[a:a + n]).any() else 0.0
+            if (d[a:a + n] - line).min() > -DIP and above < ON_GROUND:
+                w0[a:a + n] = 1.0
     w0[hold] = 0.0
     Rs, Cs, Vs, Ws, n_s = smooth_rows(st, segs, u, node_pos)
     S_mat = sp.csr_matrix((Vs, (Rs, Cs)), shape=(n_s, n_unk))

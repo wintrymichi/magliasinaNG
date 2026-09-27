@@ -31,6 +31,7 @@ DAM = 60.0
 THICK = 1.0
 GRID_ELEMENT = 25.0
 LOW = 0.5            # m, dry land this far below the lake must not be covered
+SHORE = 0.5          # m, ground this far above the lake in a lake cell is shore (stays dry)
 
 
 def lake_level():
@@ -183,9 +184,12 @@ def build(scene, cx, cy, params, block):
 
 
 def lake_bed(H, xs, ys, level, lake_grid):
-    """Terrain under the lake: at least 1 m under the water, deeper away from the shore (max 6 m)."""
+    """Terrain under the lake: at least 1 m under the water, deeper away from the shore (max 6 m).
+    Only where the ground is at the water already (the DTM shows the lake flat at its level): the
+    land of a shore cell of the GRID m mask stays, so the shore follows the ground, not the grid."""
     X, Y = np.meshgrid(xs, ys)
     inside = lake_grid.sample(X.ravel(), Y.ravel(), order=0).reshape(X.shape) > 0
+    inside &= H < level + SHORE
     if not inside.any():
         return H
     step = xs[1] - xs[0]

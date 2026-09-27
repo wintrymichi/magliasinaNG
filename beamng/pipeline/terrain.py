@@ -110,6 +110,9 @@ def heights_band(xs, ys, dtm, dtm2, wgrid):
     X, Y = np.meshgrid(xs, ys)
     H = dtm2.sample(X.ravel(), Y.ravel()).reshape(X.shape).astype(np.float64)
     w = wgrid.sample(X.ravel(), Y.ravel()).reshape(X.shape)
+    # outside the 0.5 m raster the samplers repeat its edge: no weight there
+    bx0, by0, bx1, by1 = dtm.bounds()
+    w[(X < bx0 + 1) | (X > bx1 - 1) | (Y < by0 + 1) | (Y > by1 - 1)] = 0.0
     m = w > 0
     if m.any():
         x0, x1 = X[m].min(), X[m].max()
@@ -141,6 +144,10 @@ def build_terrain(level_dir, override=None, override_mask=None, layer_override=N
         H = np.minimum(H, cap)
     if post_fn is not None:
         H = post_fn(H, xs, ys)
+        if override is not None:                         # walls may lower it, nothing may raise it over a road
+            H = np.where(override_mask, np.minimum(H, override), H)
+        if cap is not None:
+            H = np.minimum(H, cap)
     gy, gx = np.gradient(H, TER_SQUARE)
     slope = np.degrees(np.arctan(np.hypot(gx, gy))).astype(np.float32)
     del gx, gy

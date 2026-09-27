@@ -133,10 +133,10 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     if net_xy is not None:
         from scipy.spatial import cKDTree
         pts, hw, is_path = net_xy
-        T = np.column_stack([t["x"], t["y"]])
+        txy = np.column_stack([t["x"], t["y"]])
         dist = []
         for m in (~is_path, is_path):
-            dd, jj = cKDTree(pts[m]).query(T) if m.any() else (np.full(len(T), 1e9), np.zeros(len(T), int))
+            dd, jj = cKDTree(pts[m]).query(txy) if m.any() else (np.full(len(txy), 1e9), np.zeros(len(txy), int))
             dist.append(dd - (hw[m][jj] if m.any() else 0.0))
         keep = thin(t["x"], t["y"], t["h"], dist[0], CAP - SHRUBS, dist[1])
         t = {k: t[k][keep] for k in t.files}

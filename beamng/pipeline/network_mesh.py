@@ -41,6 +41,9 @@ STEP_Z = 0.30          # m, neighbouring cells further apart: a step (wall)
 BLEND_DZ = 0.40        # m, lines whose heights at a cell agree within this are blended
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
+FILL_OFF = 2.0         # m, largest offset of a square or car park from the smoothed ground
+FILLED = -2            # line code of the cells of squares and car parks (harmonic fill)
+NODE_DECK = 8.0        # m around the junction where a line meets a bridge: the deck replaces its strip
 AV_CLASSES = {"strada_sentiero": "road", "marciapiede": "sidewalk", "spartitraffico": "island",
               "altro_rivestimento_duro": "hard"}
 
@@ -49,7 +52,8 @@ class Network:
     """Stations with their heights, and the drivable polygons with the lines they belong to."""
 
     def __init__(self, exclude=None):
-        self.segs, st, _ = network.load()
+        self.segs, st, node_pos = network.load()
+        self.node_xy = np.asarray(node_pos, np.float64)
         ns = network_surface.load()
         self.x, self.y, self.w = st["x"], st["y"], st["width"]
         self.z_tlm = st["z_tlm"]
@@ -122,16 +126,22 @@ class Network:
                 near = av_tree.query(strip, predicate="intersects")
                 if len(near):
                     strip = strip.difference(shapely.union_all([road_like[i][0] for i in near]))
-            # the decks of the bridges it leads onto, not the ones that pass over it
-            adj = sorted({i for nd in s["nodes"] for i in node_decks.get(nd, [])})
-            for hole in [decks[i] for i in adj] + ([ex_geom] if not ex_geom.is_empty else []):
-                if strip.intersects(hole):
+            # the decks of the bridges it leads onto, near the junction only (a path that starts on
+            # a bridge and goes down under it keeps its way under), not the ones that pass over it
+            holes = []
+            for nd in s["nodes"]:
+                for i in node_decks.get(nd, []):
+                    near_node = shapely.Point(self.node_xy[nd]).buffer(NODE_DECK)
+                    holes.append(decks[i].intersection(near_node))
+            for hole in holes + ([ex_geom] if not ex_geom.is_empty else []):
+                if not hole.is_empty and strip.intersects(hole):
                     strip = strip.difference(hole)
             strip = strip.intersection(keep)
             own = {s["id"]} | node_segs.get(s["nodes"][0], set()) | node_segs.get(s["nodes"][1], set())
             for p in shapely.get_parts(strip):
                 if p.geom_type == "Polygon" and p.area >= 0.5:
-                    self.polys.append({"geom": p, "cls": "strip_" + s["kind"], "surface": s["surface"], "segs": own})
+                    self.polys.append({"geom": p, "cls": "strip_" + s["kind"], "surface": s["surface"], "segs": own,
+                                       "own": s["id"]})
         # polygons of the lines of the survey polygons must not be blended with bridges' lines
         for p in self.polys:
             p["segs"] = {k for k in p["segs"] if not segs[k]["bridge"]}
@@ -146,14 +156,16 @@ class Network:
         print("drivable polygons %d, ha %s" % (len(self.polys), {k: round(v, 1) for k, v in area_by.items()}), flush=True)
 
     # ------------------------------------------------------------------ heights
-    def heights(self, X, Y, P, with_seg=False):
+    def heights(self, X, Y, P, with_seg=False, own=None):
         """Heights at points (X, Y) inside polygons P (index into self.polys); NaN where no line
         of the polygon is near (squares, car parks). with_seg: also the line that gave each height
         (-1 for none).
         Every line near a point gives the height of its surface there: the point projected on the
         line (between two stations, linear), plus the cross slope times the offset; beyond the end
         of a line it carries on along the end's grade. The line nearest the point (relative to its
-        half width) wins; lines that agree with it within BLEND_DZ are blended (junctions)."""
+        half width) wins; lines that agree with it within BLEND_DZ are blended (junctions).
+        own: only this line (a strip along its line: a path beside a higher road keeps its own
+        height up to its edges)."""
         n = len(X)
         out = np.full(n, np.nan)
         segs_out = np.full(n, -1, np.int64)
@@ -167,6 +179,8 @@ class Network:
         jj = np.where(valid, j, 0)
         seg = self.seg[jj]
         ok = valid & np.asarray(self.assoc[np.repeat(P, k), seg.ravel()]).reshape(n, k)
+        if own is not None:
+            ok &= seg == own
         N = len(self.x)
         Xb, Yb = X[:, None], Y[:, None]
         best_d = np.full((n, k), np.inf)
@@ -231,11 +245,13 @@ class Network:
         return (out, segs_out) if with_seg else out
 
     def strip_height(self, pid):
-        """Height function of a strip polygon: its lines' surface (nearest station where the
-        blend finds none)."""
+        """Height function of a strip polygon: the surface of its own line (nearest station of its
+        lines where that finds none)."""
+        own = self.polys[pid].get("own")
+
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
-            z = self.heights(x, y, np.full(len(x), pid))
+            z = self.heights(x, y, np.full(len(x), pid), own=own)
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)
@@ -257,8 +273,14 @@ class Network:
         if len(ids) == 0:
             return None, ids
         tr = Affine(RES, 0, x0, 0, -RES, y1)
-        owner = features.rasterize([(self.polys[i]["geom"], int(i)) for i in ids], out_shape=(H, W), transform=tr,
-                                   fill=-1, dtype=np.int32)
+        shapes = [(self.polys[i]["geom"], int(i)) for i in ids]
+        owner = features.rasterize(shapes, out_shape=(H, W), transform=tr, fill=-1, dtype=np.int32)
+        # a thin polygon at an angle is a chain of cells touching only at their corners: the cells
+        # it merely touches join it (where no other polygon has them), so its cells are linked
+        touched = features.rasterize(shapes, out_shape=(H, W), transform=tr, fill=-1, dtype=np.int32,
+                                     all_touched=True)
+        free = (owner < 0) & (touched >= 0)
+        owner[free] = touched[free]
         m = owner >= 0
         if not m.any():
             return None, ids
@@ -271,26 +293,25 @@ class Network:
         # squares and car parks: smoothed DTM, corrected to meet the roads around
         hole = m & np.isnan(Z)
         if hole.any():
-            sub, _, _ = dtm.window(x0, y0, x1, y1, pad=0)
-            Ds = ndi.gaussian_filter(np.asarray(sub.a, np.float64), 4.0)
-            Ds = pad_to(Ds, H, W)
+            # the smoothed DTM on the cells of the window (sampled: the window may reach past the
+            # edge of the DTM raster, near the corners of the area)
+            Xc = x0 + (np.arange(W) + 0.5) * RES
+            Yc = y1 - (np.arange(H) + 0.5) * RES
+            Ds = dtm.sample(np.tile(Xc, H), np.repeat(Yc, W)).reshape(H, W).astype(np.float64)
+            if np.isnan(Ds).any():
+                Ds = np.where(np.isnan(Ds), np.nanmean(Ds), Ds)
+            Ds = ndi.gaussian_filter(Ds, 4.0)
             Z = harmonic_fill(Z, m, Ds)
+            G[hole] = FILLED                  # one smooth field: its cells are one surface however steep
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
         LR, LD = surface_fit.link_same(owner, m)
-        same_r = (G[:, :-1] == G[:, 1:]) & (G[:, :-1] >= 0)
-        same_d = (G[:-1, :] == G[1:, :]) & (G[:-1, :] >= 0)
+        same_r = (G[:, :-1] == G[:, 1:]) & (G[:, :-1] != -1)
+        same_d = (G[:-1, :] == G[1:, :]) & (G[:-1, :] != -1)
         LR[:, :-1] &= same_r | (np.abs(Z[:, :-1] - Z[:, 1:]) < STEP_Z)
         LD[:-1, :] &= same_d | (np.abs(Z[:-1, :] - Z[1:, :]) < STEP_Z)
         return surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES), ids
-
-
-def pad_to(a, H, W):
-    out = np.full((H, W), np.nan)
-    h, w = min(H, a.shape[0]), min(W, a.shape[1])
-    out[:h, :w] = a[:h, :w]
-    return np.where(np.isnan(out), np.nanmean(a), out)
 
 
 def harmonic_fill(Z, m, D):
@@ -298,7 +319,9 @@ def harmonic_fill(Z, m, D):
     cells (4-neighbour Laplace over m)."""
     unk = m & np.isnan(Z)
     known = m & ~np.isnan(Z)
-    R = np.where(known, Z - D, 0.0)
+    # at most FILL_OFF m off the smoothed ground: a yard beside a road in a deep cutting stays on
+    # the ground with a step (a wall) to the road, not in a pit
+    R = np.where(known, np.clip(Z - D, -FILL_OFF, FILL_OFF), 0.0)
     idx = -np.ones(Z.shape, np.int64)
     ur, uc = np.nonzero(unk)
     idx[ur, uc] = np.arange(len(ur))
@@ -344,9 +367,9 @@ def tiles():
             for ty in range(int(np.floor(y0 / TILE)), int(np.floor(y1 / TILE)) + 1)]
 
 
-def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_carve):
+def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
     """Meshes of the chunks of one tile -> on_mesh(tx, ty, material, uv tile, V, T, S, ground);
-    terrain carve of its vertices -> on_carve(rows, cols, z)."""
+    their top faces -> on_tops(tx, ty, triangles) (for carve_tile, once every tile is meshed)."""
     import road_mesh
     X1, Y1 = X0 + TILE, Y0 + TILE
     core = shapely.box(X0, Y0, X1, Y1)
@@ -362,6 +385,12 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_carve):
     sub.a = ndi.gaussian_filter(np.asarray(sub.a, np.float32), 0.6)
     ground = lambda x, y: sub.sample(x, y)
     n_tri = 0
+
+    def emit(cx, cy, mat, uvt, V, T):
+        on_mesh(cx, cy, mat, uvt, V, T, S, ground)
+        tri = V[T]
+        nrm = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+        on_tops(cx, cy, tri[nrm[:, 2] / np.maximum(np.linalg.norm(nrm, axis=1), 1e-12) > 0.5])
     for cx in range(int(round(X0 / CHUNK)), int(round(X1 / CHUNK))):
         for cy in range(int(round(Y0 / CHUNK)), int(round(Y1 / CHUNK))):
             cbox = shapely.box(cx * CHUNK, cy * CHUNK, (cx + 1) * CHUNK, (cy + 1) * CHUNK)
@@ -374,7 +403,7 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_carve):
                 if p["cls"].startswith("strip"):             # on its line, no raster
                     V, T = road_mesh.mesh_polygon(piece, net.strip_height(int(pid)), cell=cell)
                     if len(T) and np.isfinite(V[:, 2]).all():
-                        on_mesh(cx, cy, mat, uvt, V, T, S, ground)
+                        emit(cx, cy, mat, uvt, V, T)
                         n_tri += len(T)
                     continue
                 zf = (lambda pid_: (lambda x, y, comp: S.height(x, y, pid=pid_, comp=int(comp))))(int(pid))
@@ -383,39 +412,33 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_carve):
                     kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
                     for comp_, V, T in road_mesh.mesh_polygon_surfaces(part, zf, kf, cell=cell):
                         if len(T) and np.isfinite(V[:, 2]).all():
-                            on_mesh(cx, cy, mat, uvt, V, T, S, ground)
+                            emit(cx, cy, mat, uvt, V, T)
                             n_tri += len(T)
-    # terrain carve: vertices under the meshes drop 0.1 m under the lowest surface nearby
+    return n_tri
+
+
+def carve_tile(net, X0, Y0, xs, ys, surf, on_carve):
+    """Terrain carve of one tile: its vertices under the network meshes drop 0.1 m under the lowest
+    top face at the vertex and around it (surf: road_mesh.TriSurface of the meshes as built, those
+    of the neighbouring tiles too, so no slope can poke through any of them) -> on_carve(rows, cols, z)."""
+    import road_mesh
+    X1, Y1 = X0 + TILE, Y0 + TILE
+    ids = net.ptree.query(shapely.box(X0, Y0, X1, Y1), predicate="intersects")
     c0 = int(np.searchsorted(xs, X0)); c1 = int(np.searchsorted(xs, X1))
     r0 = int(np.searchsorted(ys, Y0)); r1 = int(np.searchsorted(ys, Y1))
-    if c1 > c0 and r1 > r0:
-        sq = xs[1] - xs[0]
-        tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)          # row 0 = south
-        ring = [(dx * sq, dy * sq) for dx, dy in road_mesh.CARVE_RING]
-        survey = [i for i in ids if not net.polys[i]["cls"].startswith("strip")]
-        strips = [i for i in ids if net.polys[i]["cls"].startswith("strip")]
-        if survey:
-            mask = features.rasterize([(net.polys[i]["geom"].buffer(0.35), 1) for i in survey], out_shape=(r1 - r0, c1 - c0),
-                                      transform=tr, fill=0, dtype=np.uint8, all_touched=True).astype(bool)
-            rr, cc = np.nonzero(mask)
-            if len(rr):
-                Xv, Yv = xs[c0 + cc], ys[r0 + rr]
-                zc = S.height(Xv, Yv)
-                for dx, dy in ring:                     # NaN off the surface: no vote
-                    zc = np.fmin(zc, S.height(Xv + dx, Yv + dy))
-                ok = np.isfinite(zc)
-                on_carve(r0 + rr[ok], c0 + cc[ok], zc[ok] - 0.10)
-        if strips:
-            sid = features.rasterize([(net.polys[i]["geom"].buffer(0.35), int(i)) for i in strips], out_shape=(r1 - r0, c1 - c0),
-                                     transform=tr, fill=-1, dtype=np.int32, all_touched=True)
-            rr, cc = np.nonzero(sid >= 0)
-            for pid in np.unique(sid[rr, cc]):
-                k = sid[rr, cc] == pid
-                Xv, Yv = xs[c0 + cc[k]], ys[r0 + rr[k]]
-                fz = net.strip_height(int(pid))
-                zc = fz(Xv, Yv)
-                for dx, dy in ring:
-                    zc = np.fmin(zc, fz(Xv + dx, Yv + dy))
-                ok = np.isfinite(zc)
-                on_carve(r0 + rr[k][ok], c0 + cc[k][ok], zc[ok] - 0.10)
-    return n_tri
+    if len(ids) == 0 or c1 <= c0 or r1 <= r0:
+        return
+    sq = xs[1] - xs[0]
+    tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)          # row 0 = south
+    ring = [(dx * sq, dy * sq) for dx, dy in road_mesh.CARVE_RING]
+    mask = features.rasterize([(net.polys[i]["geom"].buffer(0.35), 1) for i in ids], out_shape=(r1 - r0, c1 - c0),
+                              transform=tr, fill=0, dtype=np.uint8, all_touched=True).astype(bool)
+    rr, cc = np.nonzero(mask)
+    if not len(rr):
+        return
+    Xv, Yv = xs[c0 + cc], ys[r0 + rr]
+    zc = surf.height(Xv, Yv, "low")
+    for dx, dy in ring:                              # NaN off the meshes: no vote
+        zc = np.fmin(zc, surf.height(Xv + dx, Yv + dy, "low"))
+    ok = np.isfinite(zc)
+    on_carve(r0 + rr[ok], c0 + cc[ok], zc[ok] - 0.10)

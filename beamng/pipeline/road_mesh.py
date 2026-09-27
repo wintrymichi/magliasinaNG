@@ -271,3 +271,83 @@ def skirt_bands(V, T, depth, top=SKIRT):
     deep = (da > top + 0.01) | (db > top + 0.01)
     wall = band(ka, kb, da, db, deep) if deep.any() else np.zeros((0, 3))
     return kerb, wall
+
+
+class TriSurface:
+    """Top faces (k, 3, 3): height at points, as the lowest face, the highest or the face nearest
+    to a given height where faces overlap (a road under a bridge)."""
+
+    def __init__(self, tri, cell=2.0):
+        self.t = np.asarray(tri, np.float64)
+        k = len(self.t)
+        self.cell = cell
+        if not k:
+            return
+        lo, hi = self.t[:, :, :2].min(1), self.t[:, :, :2].max(1)
+        self.o = lo.min(0) - cell
+        c0 = np.floor((lo - self.o) / cell).astype(np.int64)
+        c1 = np.floor((hi - self.o) / cell).astype(np.int64)
+        self.W = int(c1[:, 0].max()) + 2
+        self.H = int(c1[:, 1].max()) + 2
+        nx, ny = c1[:, 0] - c0[:, 0] + 1, c1[:, 1] - c0[:, 1] + 1
+        cnt = nx * ny
+        tid = np.repeat(np.arange(k), cnt)
+        off = np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt)
+        cx = np.repeat(c0[:, 0], cnt) + off % np.repeat(nx, cnt)
+        cy = np.repeat(c0[:, 1], cnt) + off // np.repeat(nx, cnt)
+        key = cy * self.W + cx
+        order = np.argsort(key, kind="stable")
+        self.key, self.tid = key[order], tid[order]
+        A, B, C = self.t[:, 0], self.t[:, 1], self.t[:, 2]
+        n = np.cross(B - A, C - A)
+        nz = np.where(np.abs(n[:, 2]) > 1e-12, n[:, 2], 1e-12)
+        self.b, self.c = -n[:, 0] / nz, -n[:, 1] / nz
+        self.a = A[:, 2] - self.b * A[:, 0] - self.c * A[:, 1]
+        self.A = A[:, :2]
+        self.v0, self.v1 = B[:, :2] - A[:, :2], C[:, :2] - A[:, :2]
+        self.den = self.v0[:, 0] * self.v1[:, 1] - self.v1[:, 0] * self.v0[:, 1]
+
+    def height(self, x, y, mode="low", zhint=None):
+        x = np.atleast_1d(np.asarray(x, np.float64))
+        y = np.atleast_1d(np.asarray(y, np.float64))
+        out = np.full(len(x), np.nan)
+        if not len(self.t) or not len(x):
+            return out
+        cx = np.floor((x - self.o[0]) / self.cell).astype(np.int64)
+        cy = np.floor((y - self.o[1]) / self.cell).astype(np.int64)
+        ok = (cx >= 0) & (cx < self.W) & (cy >= 0) & (cy < self.H)
+        q = np.flatnonzero(ok)
+        key = cy[q] * self.W + cx[q]
+        s = np.searchsorted(self.key, key, "left")
+        e = np.searchsorted(self.key, key, "right")
+        cnt = e - s
+        rep = np.repeat(np.arange(len(q)), cnt)
+        if not len(rep):
+            return out
+        j = self.tid[np.repeat(s, cnt) + (np.arange(cnt.sum()) - np.repeat(np.cumsum(cnt) - cnt, cnt))]
+        qi = q[rep]
+        px, py = x[qi] - self.A[j, 0], y[qi] - self.A[j, 1]
+        den = np.where(np.abs(self.den[j]) < 1e-12, 1e-12, self.den[j])
+        l1 = (px * self.v1[j, 1] - self.v1[j, 0] * py) / den
+        l2 = (self.v0[j, 0] * py - px * self.v0[j, 1]) / den
+        inside = (l1 >= -1e-6) & (l2 >= -1e-6) & (l1 + l2 <= 1 + 1e-6)
+        qi, j = qi[inside], j[inside]
+        if not len(qi):
+            return out
+        z = self.a[j] + self.b[j] * x[qi] + self.c[j] * y[qi]
+        if mode == "low":
+            out[:] = np.inf
+            np.minimum.at(out, qi, z)
+            out[np.isinf(out)] = np.nan
+        elif mode == "high":
+            out[:] = -np.inf
+            np.maximum.at(out, qi, z)
+            out[np.isinf(out)] = np.nan
+        else:
+            h = np.atleast_1d(zhint)[qi]
+            d = np.abs(z - h)
+            order = np.lexsort((d, qi))
+            qi, z = qi[order], z[order]
+            first = np.r_[True, qi[1:] != qi[:-1]]
+            out[qi[first]] = z[first]
+        return out

@@ -117,6 +117,47 @@ def deck_geometry(P, N, z, hw, ground, kind, typ):
     return cat(top), cat(sides), cat(par), cat(piers)
 
 
+def ends_to_ground(P, N, z, s, degree, ground, max_ext=60.0):
+    """A bridge end where the network ends (the area cuts the line; a footbridge on its own):
+    a deck end in the air carries on straight until the ground comes within 1 m of it, at most
+    max_ext m, easing down onto it; a deck end below the ground rises to it (the deck is tilted
+    towards that end). Returns P, N, z and the notes of what was done."""
+    notes = []
+    for end in (0, 1):
+        if degree.get(s["nodes"][end], 0) != 1 or len(P) < 2:
+            continue
+        i, j = (0, 1) if end == 0 else (len(P) - 1, len(P) - 2)
+        g = float(ground([P[i][0]], [P[i][1]])[0])
+        if z[i] - g > 1.5:
+            u = (P[i] - P[j]) / max(np.linalg.norm(P[i] - P[j]), 1e-9)
+            add, reached, gq = [], False, g
+            for k in np.arange(2.0, max_ext + 0.1, 2.0):
+                q = P[i] + u * k
+                add.append(q)
+                gq = float(ground([q[0]], [q[1]])[0])
+                if gq >= z[i] - 1.0:
+                    reached = True
+                    break
+            if not reached:
+                notes.append("sospeso")
+                continue
+            A = np.array(add)
+            ze = np.linspace(z[i], min(z[i], gq + 0.05), len(A) + 1)[1:]    # easing onto the ground
+            if end == 0:
+                P = np.vstack([A[::-1], P]); N = np.vstack([np.repeat(N[:1], len(A), 0), N])
+                z = np.r_[ze[::-1], z]
+            else:
+                P = np.vstack([P, A]); N = np.vstack([N, np.repeat(N[-1:], len(A), 0)])
+                z = np.r_[z, ze]
+            notes.append("prolungato %d m" % round(2.0 * len(A)))
+        elif z[i] - g < -0.5:
+            ss = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+            w = ss / max(ss[-1], 1e-9) if end == 1 else 1.0 - ss / max(ss[-1], 1e-9)
+            z = z + (g - z[i]) * w
+            notes.append("raccordato al terreno")
+    return P, N, z, notes
+
+
 def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
     """Deck meshes of every bridge (on_mesh(x, y, material, uv tile, soup, kind)), the ground
     under them lowered where it rises above the slab (on_carve_min(rows, cols, z)), the record of
@@ -129,6 +170,10 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
     over = load_overrides()
     records = []
     sq = xs[1] - xs[0]
+    degree = {}
+    for q in segs:
+        for nd in q["nodes"]:
+            degree[nd] = degree.get(nd, 0) + 1
     for s in segs:
         if not s["bridge"]:
             continue
@@ -146,11 +191,16 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
             ss = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
             z = z0 + (z1 - z0) * ss / max(ss[-1], 1e-9)
         hw = half_width({"width": net.w}, s)
+        z_line = z.copy()                              # on the stations (checks)
+        notes = []
+        if not ("z0" in o or "z1" in o or o.get("profile")):
+            P, N, z, notes = ends_to_ground(P, N, z, s, degree, ground)
         g = ground(P[:, 0], P[:, 1])
         clear = z - SLAB - g
         typ = o.get("type") or ("culvert" if clear.max() < LOW else "open")
         top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ)
-        mat_top = "mp_road_asphalt" if s["surface"] == "hard" else ("mp_road_gravel" if s["kind"] == "road" else "mp_path_dirt")
+        mat_top = {("road", "hard"): "mp_road_asphalt", ("road", "natural"): "mp_road_gravel",
+                   ("path", "hard"): "mp_path_paved", ("path", "natural"): "mp_path_dirt"}[(s["kind"], s["surface"])]
         cxy = P.mean(0)
         on_mesh(cxy[0], cxy[1], mat_top, 1.25, top, "top")
         on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
@@ -178,8 +228,10 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         # checks for the review: deck against the 3D line of swissTLM3D (on a bridge its height is the
         # deck's), steepest grade, grade change where the deck meets the approaches
         ztlm = net.z_tlm[a:a + n] if getattr(net, "z_tlm", None) is not None else np.full(n, np.nan)
-        ss = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
-        grade = np.gradient(z, ss) if n > 1 else np.zeros(n)
+        Pl = np.column_stack([st_x[a:a + n], st_y[a:a + n]])
+        ss = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Pl, axis=0), axis=1))]
+        z = z_line if len(z_line) == n else z[:n]
+        grade = np.gradient(z, ss) if n > 1 and ss[-1] > 0 else np.zeros(n)
         g_in = net.g[a - 1] if a > 0 and net.seg[a - 1] != s["id"] else np.nan
         flags = []
         dtlm = float(np.nanmax(np.abs(z - ztlm))) if np.isfinite(ztlm).any() else np.nan
@@ -189,6 +241,7 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
             flags.append("ripido")
         if clear.min() < -0.5 and typ == "open":
             flags.append("terreno")
+        flags += notes
         records.append({"tlm": s["tlm"], "seg": s["id"], "class": s["class"], "name": s["name"],
                         "dz_tlm_m": round(dtlm, 2) if np.isfinite(dtlm) else None,
                         "max_grade": round(float(np.abs(grade).max()), 3), "flags": flags,

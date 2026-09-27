@@ -24,8 +24,8 @@ from render3d import Renderer, Camera
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(HERE), "verifica", "mappa")
 SHOTS = os.path.join(WORK, "review")
-ROAD_EVERY = 500.0
-PATH_EVERY = 1500.0
+ROAD_EVERY = 700.0
+PATH_EVERY = 2000.0
 SETS = ("overview", "bridges", "roads", "paths", "villages", "corners", "flagged")
 
 
@@ -249,9 +249,19 @@ def corner_views(r):
     return contact_sheets(entries, "angoli", cols=2, tw=800, th=450, per=4, title="Angoli dell'area")
 
 
+FLAGGED_PER_KIND = 24
+
+
 def flagged_views(r, net):
     f = os.path.join(os.path.dirname(HERE), "verifica", "check_level.json")
     places = json.load(open(f)).get("places", []) if os.path.exists(f) else []
+    per = {}
+    keep = []
+    for pl in places:                                  # the worst of every kind (they come worst first)
+        per[pl["what"]] = per.get(pl["what"], 0) + 1
+        if per[pl["what"]] <= FLAGGED_PER_KIND:
+            keep.append(pl)
+    places = keep
     sub = os.path.join(SHOTS, "flagged")
     os.makedirs(sub, exist_ok=True)
     entries = []
