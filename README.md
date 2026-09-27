@@ -4,7 +4,7 @@ Percorso: 45.981686, 8.878474 → 46.001760, 8.860159 · 3,7 km, tutto sulla Str
 
 > **Le immagini non sono nel repository.** Le cartelle `panorami/`, `viste/` e `storici_2013_2014/` (9,4 GB) contengono immagini Google Street View e restano in locale. Il repository contiene i metadati (pose, date, posizioni) e gli script con cui le immagini si riscaricano: `sv_capture.py`, `expand.py`, `finalize.py`.
 
-**Mappa BeamNG.drive** ricostruita da questo dataset: vedi [`beamng/`](beamng/README.md). La mod è nella [release v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0). La v1.1, con strade lisce e carreggiata senza alberi, si ottiene con [`beamng/pipeline/patch_release.py`](beamng/README.md#ricostruire-il-livello).
+**Mappa BeamNG.drive** ricostruita da questo dataset: vedi [`beamng/`](beamng/README.md). La mod è nella [release v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1), che rispetto alla [v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0) ha le strade lisce e la carreggiata senza alberi.
 
 ## Contenuto
 
@@ -41,4 +41,4 @@ La cartella [`beamng/`](beamng/README.md) contiene la pipeline che ricostruisce 
 - le panoramiche danno le pose calibrate, gli oggetti, la segnaletica del 2022 e la verifica;
 - i dati ufficiali swisstopo e della misurazione ufficiale ticinese danno il terreno, gli edifici e le strade.
 
-La cartella contiene anche la verifica finale contro tutte le 1464 viste e i risultati di calcolo leggeri. La mod pronta da installare è nella [release v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0).
+La cartella contiene anche la verifica finale contro tutte le 1464 viste e i risultati di calcolo leggeri. La mod pronta da installare è nella [release v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1).
