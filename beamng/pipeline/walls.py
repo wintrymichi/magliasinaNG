@@ -9,7 +9,10 @@ are skipped. For every footprint vertex (densified to <= 0.5 m):
                without unclassified returns within 0.6 m of a guardrail)
 Walls lower than 0.25 m above the lower ground are given 0.25 m (they exist in the
 survey). Next to the road the top is capped at the road surface + 0.15 m where the panoramas
-show no wall above the road (wall_caps.py: the LiDAR crest caught guardrails and shrubs). Output meshes: prism sides + triangulated top, per 128 m chunk.
+show no wall above the road (wall_caps.py: the LiDAR crest caught guardrails and shrubs).
+Within 1 m of a paved surface (roadheight.py) a wall reaches from 0.4 m below it to at least
+0.15 m above it: the idealised road can be higher (a bridge) or lower (a smeared ramp removed)
+than the DTM the wall was measured on. Output meshes: prism sides + triangulated top, per 128 m chunk.
 Also returns a terrain carve (vertices on the low side within 1.1 m drop to the
 wall base) so no slope pokes out of the wall face.
 """
@@ -75,8 +78,9 @@ def _context():
                                  if len(r["pts"]) > 1]) if rw else None
     caps_f = os.path.join(WORK, "wall_caps.json")
     caps = json.load(open(caps_f)) if os.path.exists(caps_f) else {}
+    import roadheight
     return dict(av=av, mauer=mauer, dtm=dtm, dmin=minimum_filter(dtm.a, size=k), dmax=maximum_filter(dtm.a, size=k),
-                LP=LP, LZ=lid["z"][nonveg], tree=cKDTree(LP), rw_zone=rw_zone, caps=caps)
+                LP=LP, LZ=lid["z"][nonveg], tree=cKDTree(LP), rw_zone=rw_zone, caps=caps, surface=roadheight.load())
 
 
 def wall_geometry(ctx=None):
@@ -131,8 +135,17 @@ def wall_geometry(ctx=None):
                 if capped.any():
                     across = np.array([np.min(np.where(capped[ii], ztop[ii], np.inf)) for ii in nb])
                     ztop = np.minimum(ztop, across)
+            zbot = zlo - 0.4
+            # next to a paved surface the wall meets the (idealised) road surface
+            S = ctx.get("surface")
+            if S is not None:
+                near = S.distance(allv[:, 0], allv[:, 1]) < 1.25
+                if near.any():
+                    zr = S.height(allv[near, 0], allv[near, 1])
+                    zbot[near] = np.minimum(zbot[near], zr - 0.4)
+                    ztop[near] = np.maximum(ztop[near], zr + 0.15)
             yield dict(key=f"w{wi}_{pj}", poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
-                       zbot=zlo - 0.4, samp=samp, dmax=ctx["dmax"])
+                       zbot=zbot, samp=samp, dmax=ctx["dmax"])
 
 
 def add_photo_pieces(mb, atlas, prefix, tex, T6, U6, u_lo, u_hi, z_lo, z_hi):
@@ -271,6 +284,8 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
     import json
     import cv2
     runs = json.load(open(os.path.join(WORK, "roadside_walls.json")))
+    import roadheight
+    S = roadheight.load()
     CH = 128.0
     builders = {}
     samples = []
@@ -292,7 +307,8 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
         away = side * Nl                                     # from the road into the wall/hill
         face = P[:, :2]
         back = face + away * thick
-        zb, zt = P[:, 2] - 0.3, P[:, 3]
+        zr = S.height(face[:, 0], face[:, 1])                  # idealised road next to the face
+        zb, zt = np.minimum(P[:, 2], zr) - 0.3, np.maximum(P[:, 3], zr + 0.15)
         c = face[len(face) // 2]
         mb = builders.setdefault((int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH))), bng.MeshBuilder())
         s = np.r_[0, np.cumsum(np.linalg.norm(np.diff(face, axis=0), axis=1))]
@@ -323,7 +339,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
             cap = t3[:, ::-1].reshape(-1, 3)
         mb.add(material + "_top", cap, uvs=cap[:, :2] / 1.6, normals=bng.flat_normals_soup(cap))
         for k in range(len(P)):
-            samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], P[k, 2], P[k, 3]])
+            samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], zb[k] + 0.3, zt[k]])
     if photo:
         mats = []
         for i, page in enumerate(atlas.pages):

@@ -1,0 +1,84 @@
+# Release v1.1 della mappa BeamNG: lo zip della release v1.0 corretto da
+# beamng/pipeline/patch_release.py (strade lisce, ponti, gradini ai muri, carreggiata senza alberi).
+# Si avvia a mano: Actions > Release v1.1 > Run workflow.
+name: Release v1.1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dipendenze
+        run: pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4
+
+      - name: Zip della v1.0
+        run: |
+          mkdir -p dist
+          gh release download v1.0 --pattern magliaso_pura_v1.0.zip --dir dist
+          echo "45fc49d8d19c2731207286cbc0ba5fd16ba9e0cce0c1e1bdb9d6ef83a76f567a  dist/magliaso_pura_v1.0.zip" | sha256sum -c -
+
+      - name: Correzione
+        run: |
+          python -u beamng/pipeline/patch_release.py dist/magliaso_pura_v1.0.zip dist/magliaso_pura_v1.1.zip | tee dist/patch.log
+          sha256sum dist/magliaso_pura_v1.1.zip
+
+      - name: Stesso risultato della correzione verificata
+        # i conteggi della correzione controllata in locale: se cambiano, la release non viene creata
+        run: |
+          for line in \
+            "paved polygons 278 (433 pieces), cells 243518" \
+            "cliff bands 126: bridged 2, holes/bumps filled 14, walls kept 24, steep surfaces kept 85" \
+            "surface of 231282 cells: data rejected 1.2 %" \
+            "paved surfaces: 278 polygons -> 83 surfaces; polygon edges 5052 m joined (1313 m at a crease), 174 m steps" \
+            "road meshes: 44 chunks, stone faces 1719" \
+            "terrain: 80320 vertices carved again" \
+            "main AI route: 4 nodes moved sideways onto one surface" \
+            "props moved with the road: 83 objects, poles/signs mesh, 19 guardrail chunks" \
+            "(dropped, moved back): {'tree': [123, 0], 'bush': [83, 225], 'hedge': [42, 108]}"
+          do
+            grep -qF "$line" dist/patch.log || { echo "diverso dalla correzione verificata: $line"; exit 1; }
+          done
+
+      - name: Release
+        run: |
+          cat > dist/notes.md <<'EOF'
+          Correzione della v1.0: la strada è liscia e sulla carreggiata non ci sono più alberi né ostacoli.
+
+          **Installazione:** copia `magliaso_pura_v1.1.zip` così com'è in `%LOCALAPPDATA%\BeamNG\BeamNG.drive\current\mods\` e togli `magliaso_pura_v1.0.zip`, che contiene lo stesso livello. In gioco scegli il livello **Strada Cantonale Magliaso - Pura (v1.1)**.
+
+          - **Strade lisce:** strade, marciapiedi e piazzali non ricalcano più il modello del terreno punto per punto. Pendenze e curve restano quelle reali, mentre il rumore del LiDAR, le gobbe e gli avvallamenti spariscono. Sulla cantonale la sezione della carreggiata è piana.
+          - **Ponte e tratto a sbalzo:** il modello del terreno non contiene i ponti. Per questo nella v1.0 la strada sul ponte del riale, a circa 3,05 km da Magliaso, scendeva di 7 m nel fosso, e il bordo a valle del tratto a circa 3,27 km cedeva di 3-4 m. Ora entrambi sono alla quota della strada, con i fianchi in pietra.
+          - **Muri tra superfici a quote diverse:** dove il modello del terreno aveva spalmato un muro in una rampa, ora c'è un gradino con una faccia in pietra. Il terreno non sporge più sopra l'asfalto.
+          - **Carreggiata sgombra:** tolti 123 alberi con il tronco sulla strada o a meno di 0,5 m dal bordo. 225 arbusti e 108 siepi sono stati spostati indietro fino a 1,5 m, mentre 83 arbusti e 42 siepi che non ci stavano sono stati tolti.
+          - **Il resto segue la strada:** segnaletica, rete dell'IA, lampioni, pali, cartelli, arredo e guardrail stanno sulla nuova superficie.
+          - **Controlli (v1.0 → v1.1):** punti del terreno più di 20 cm sopra l'asfalto 468 → 0; alberi e arbusti sulle superfici stradali 154 → 0; salto massimo tra due punti della linea dell'IA 5,15 m → 0,62 m.
+          - **Versione pubblica:** come la v1.0, non contiene immagini Google Street View.
+
+          **Come è fatta:** è lo zip della v1.0 corretto da `beamng/pipeline/patch_release.py` con il workflow `.github/workflows/release_v1.1.yml`. Muri e recinzioni sono quelli della v1.0. Le cifre di `beamng/verifica/VERIFICA.md` si riferiscono alla geometria della v1.0.
+
+          **Fonti:**
+          - © swisstopo (swissALTI3D, SWISSIMAGE, swissBUILDINGS3D, swissSURFACE3D);
+          - Ufficio del catasto e dei riordini fondiari, Cantone Ticino;
+          - © OpenStreetMap contributors (ODbL);
+          - Copernicus DEM GLO-30 (© DLR e.V. / Airbus, fornito nell'ambito di COPERNICUS da UE ed ESA).
+          EOF
+          gh release create v1.1 dist/magliaso_pura_v1.1.zip --target "$GITHUB_SHA" \
+            --title "Mappa BeamNG.drive Magliaso – Pura v1.1" --notes-file dist/notes.md

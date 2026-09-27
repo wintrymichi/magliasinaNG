@@ -3,6 +3,9 @@
 Cross-section of the rail (A-profile, 0.31 m high, 0.08 m deep) swept along the path
 with its face towards the carriageway, top at the measured height; C-posts every 2 m
 behind the rail, 0.3 m into the ground. Galvanised-steel material. Collision on.
+The foot of the rail is re-based on the road surface of roadheight.py as guardrails2.py
+does: the ground, but never lower than the road edge next to it minus 0.1 m (rails on
+valley-side walls and on the bridge stand at road level).
 """
 import json, os
 import numpy as np
@@ -69,8 +72,21 @@ def rail(mb, P, side):
                normals=bng.flat_normals_soup(box))
 
 
+def foot_fn():
+    """Foot of a rail: max(DTM, road surface continued to the rail - 0.1 m)."""
+    from geo import Grid
+    import roadheight
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    S = roadheight.load()
+
+    def fn(x, y):
+        return np.maximum(dtm.sample(x, y), S.height(x, y) - 0.1)
+    return fn
+
+
 def build(level_dir, level_name, scene):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
+    foot = foot_fn()
     # galvanised steel looks light grey under the overcast sky of the photos; a high metallic
     # factor made the rails mirror the (blue) sky cubemap and read dark from a distance
     mats = [bng.material("mp_guardrail", base_color=[0.80, 0.81, 0.82, 1], roughness=0.55, metallic=0.25,
@@ -82,6 +98,7 @@ def build(level_dir, level_name, scene):
     builders = {}
     for r in runs:
         P = np.array(r["pts"])
+        P[:, 2] = foot(P[:, 0], P[:, 1])
         c = P[len(P) // 2, :2]
         key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
         rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])

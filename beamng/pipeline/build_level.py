@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 from config import WORK, LEVEL_DIR, LEVEL_NAME, TER_SIZE, TER_HALF, DATASET
 import bng
+from road_mesh import CARVE_RING
 
 L = f"/levels/{LEVEL_NAME}"
 Image.MAX_IMAGE_PIXELS = None
@@ -97,13 +98,13 @@ ROAD_CLASSES = {  # cadastral class: (material, mesh cell m, uv tile m)
     "marciapiede": ("mp_sidewalk", 1.0, 1.25),
     "spartitraffico": ("mp_island", 1.0, 2.5),
 }
-CORRIDOR = 40.0
 CHUNK = 128.0
 
 
 def road_materials():
     a = f"{TL}/concrete/italy_asphalt/t_asphalt"
     s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
+    st = f"{TL}/brick/stone_brick_regular/t_stone_brick_regular"
     return [
         bng.material("mp_road_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", ground_type="ASPHALT"),
@@ -116,28 +117,43 @@ def road_materials():
         # 2022 resurfacing: new asphalt is about half as bright as the old surface in the photos
         bng.material("mp_road_asphalt_fresh", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", base_color=[0.5, 0.5, 0.52, 1], ground_type="ASPHALT"),
+        # stone face under a paved edge high above the ground (bridge sides, walls at steps)
+        bng.material("mp_road_wall", f"{st}_b.color.dds", f"{st}_nm.normal.dds", f"{st}_r.data.dds",
+                     f"{st}_ao.data.dds", ground_type="ROCK"),
     ]
 
 
 def road_height_fn():
-    """Paved-surface height (roadheight.py): the DTM inside the paved areas carried out to their
-    edges, so roads do not sag towards valley-side walls and embankments."""
+    """Paved-surface height (roadheight.py): the idealised surfaces of the paved areas, the
+    smoothed DTM away from them."""
     import roadheight
     return roadheight.height_fn()
 
 
+def ground_fn():
+    """Terrain before the road carve (smoothed DTM), for the depth of the skirts."""
+    from geo import Grid
+    from scipy.ndimage import gaussian_filter, map_coordinates
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    a = gaussian_filter(dtm.a, 0.6)
+
+    def fn(x, y):
+        r, c = dtm.rc(np.asarray(x), np.asarray(y))
+        return map_coordinates(a, [np.atleast_1d(r), np.atleast_1d(c)], order=1, mode="nearest")
+    return fn
+
+
 def stage_roads(scene, ctx):
-    """Cadastral paved surfaces within CORRIDOR m of the Street View route as collision meshes."""
-    import pickle
+    """Cadastral paved surfaces within roadheight.CORRIDOR m of the Street View route as collision
+    meshes, on the idealised surfaces of roadheight.py."""
     import shapely
     import road_mesh
+    import roadheight
     from rasterio import features
     from rasterio.transform import Affine
-    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
-    poses = json.load(open(os.path.join(WORK, "poses.json")))
-    track = shapely.LineString([p["pos"][:2] for p in poses if p["main_run"]])
-    corridor = track.buffer(CORRIDOR)
+    S = roadheight.load()
     hfn = road_height_fn()
+    ground = ground_fn()
     bng.write_materials(level_path("art", "shapes", "roads", "main.materials.json"), road_materials())
     builders = {}
     meshed = []
@@ -149,21 +165,24 @@ def stage_roads(scene, ctx):
     fresh = shapely.union_all([shapely.Polygon(r) for r in state.get("fresh_asphalt", [])]) \
         if state.get("fresh_asphalt") else None
     items = []
-    for cls, (mat, cell, uvt) in ROAD_CLASSES.items():
-        for g, props in av["LCSF"].get(cls, []):
-            if not g.intersects(corridor):
-                continue
-            gi = g.intersection(corridor)
-            if gi.is_empty or gi.area < 0.5:
-                continue
-            m_, c_, u_ = mat, cell, uvt
-            if cls == "spartitraffico" and any(gi.contains(q) for q in gone):
-                m_, c_, u_ = ROAD_CLASSES["strada_sentiero"]
-            if cls == "strada_sentiero" and fresh is not None and gi.intersects(fresh):
-                items.append((gi.intersection(fresh), "mp_road_asphalt_fresh", c_, u_))
-                gi = gi.difference(fresh)
-            items.append((gi, m_, c_, u_))
-    for gi, mat, cell, uvt in items:
+    for gi, cls, props in roadheight.paved_polygons():
+        mat, cell, uvt = ROAD_CLASSES[cls]
+        pid = roadheight.polygon_key(gi, S)
+        if cls == "spartitraffico" and any(gi.contains(q) for q in gone):
+            mat, cell, uvt = ROAD_CLASSES["strada_sentiero"]
+        if cls == "strada_sentiero" and fresh is not None and gi.intersects(fresh):
+            items.append((gi.intersection(fresh), "mp_road_asphalt_fresh", cell, uvt, pid))
+            gi = gi.difference(fresh)
+        items.append((gi, mat, cell, uvt, pid))
+
+    def key_fn(pid):
+        return lambda x, y: S.surfaces_at_polygon(x, y, pid)
+
+    def z_fn(pid):
+        return lambda x, y, comp: S.height(x, y, pid=pid, comp=int(comp))
+    n_wall = 0
+    tops = []
+    for gi, mat, cell, uvt, pid in items:
         if gi.is_empty or gi.area < 0.05:
             continue
         meshed.append(gi)
@@ -173,14 +192,27 @@ def stage_roads(scene, ctx):
                 piece = gi.intersection(shapely.box(tx * CHUNK, ty * CHUNK, (tx + 1) * CHUNK, (ty + 1) * CHUNK))
                 if piece.is_empty or piece.area < 0.05:
                     continue
-                V, T = road_mesh.mesh_polygon(piece, hfn, cell=cell)
-                if len(T) == 0:
-                    continue
-                mb = builders.setdefault((tx, ty), bng.MeshBuilder())
-                mb.add(mat, V, uvs=V[:, :2] / uvt, tris=T)
-                sk = road_mesh.skirt(V, T, depth=0.5)
-                mb.add(mat, sk, uvs=np.column_stack([sk[:, 0] + sk[:, 1], sk[:, 2]]) / uvt,
-                       normals=bng.flat_normals_soup(sk))
+                if pid is None:                  # a sliver without cells of its own: the height function
+                    V, T = road_mesh.mesh_polygon(piece, hfn, cell=cell)
+                    parts = [(None, V, T)]
+                else:                            # one mesh per surface of the polygon (walls inside it)
+                    parts = []
+                    for sub, comp in road_mesh.split_by_surface(piece, S, pid):
+                        kf = key_fn(pid) if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
+                        parts += road_mesh.mesh_polygon_surfaces(sub, z_fn(pid), kf, cell=cell)
+                for comp, V, T in parts:
+                    if len(T) == 0:
+                        continue
+                    mb = builders.setdefault((tx, ty), bng.MeshBuilder())
+                    mb.add(mat, V, uvs=V[:, :2] / uvt, tris=T)
+                    tops.append(V[T])
+                    kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S, ground))
+                    mb.add(mat, kerb, uvs=np.column_stack([kerb[:, 0] + kerb[:, 1], kerb[:, 2]]) / uvt,
+                           normals=bng.flat_normals_soup(kerb))
+                    if len(wall):
+                        mb.add("mp_road_wall", wall, uvs=np.column_stack([wall[:, 0] + wall[:, 1], wall[:, 2]]) / 1.6,
+                               normals=bng.flat_normals_soup(wall))
+                        n_wall += len(wall) // 6
     ntri = 0
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/roads/road_{tx:+03d}_{ty:+03d}.dae"
@@ -188,7 +220,8 @@ def stage_roads(scene, ctx):
         mb.write_dae(level_path(rel), name=f"road_{tx}_{ty}", origin=origin)
         ntri += mb.triangle_count()
         scene.add("MissionGroup/roads/surfaces", bng.tsstatic(f"{L}/{rel}", origin, collision=True, decal=True))
-    # terrain carve: vertices under the paved meshes drop 10 cm below the mesh surface
+    # terrain carve: vertices under the paved meshes drop 10 cm below the lowest paved surface
+    # within 0.8 m (so the terrain between two vertices never cuts through the lower side of a step)
     import terrain
     xs, ys = terrain.vertex_coords()
     tr = Affine(1.0, 0, xs[0] - 0.5, 0, 1.0, ys[0] - 0.5)          # row 0 = south
@@ -197,10 +230,15 @@ def stage_roads(scene, ctx):
                               dtype=np.uint8, all_touched=True).astype(bool)
     X, Y = np.meshgrid(xs, ys)
     ov = np.zeros(X.shape, np.float64)
-    ov[mask] = hfn(X[mask], Y[mask]) - 0.10
+    Xm, Ym = X[mask], Y[mask]
+    zc = hfn(Xm, Ym)
+    for dx, dy in CARVE_RING:
+        zc = np.minimum(zc, hfn(Xm + dx, Ym + dy))
+    ov[mask] = zc - 0.10
     ctx["terrain_override"] = (ov, mask, None)
     ctx["paved_union"] = union
-    print("road chunks", len(builders), "triangles", ntri, "carved vertices", int(mask.sum()))
+    ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops))
+    print("road chunks", len(builders), "triangles", ntri, "wall faces", n_wall, "carved vertices", int(mask.sum()))
 
 
 def stage_walls(scene, ctx):
@@ -228,8 +266,19 @@ def stage_fences(scene, ctx):
 
 
 def stage_markings(scene, ctx):
+    """Road paint on the road meshes themselves (their triangles, where they are built in the same
+    run), elsewhere on the road height function."""
     import markings_decals
-    markings_decals.build(LEVEL_DIR, scene, road_height_fn())
+    hfn = road_height_fn()
+    mesh = ctx.get("road_mesh_fn")
+
+    def on_road(x, y):
+        z = hfn(x, y)
+        if mesh is not None:
+            zm = mesh(x, y).reshape(np.shape(z))
+            z = np.where(np.isfinite(zm), zm, z)
+        return z
+    markings_decals.build(LEVEL_DIR, scene, on_road)
 
 
 def stage_ai(scene, ctx):
@@ -326,10 +375,11 @@ def stage_spawns(scene, ctx):
     poses = json.load(open(os.path.join(WORK, "poses.json")))
     main = [p for p in poses if p.get("main_run", True)]
     g = "MissionGroup/PlayerDropPoints"
+    hfn = road_height_fn()
     for k, idx in enumerate([2, len(main) // 2, len(main) - 3]):
         p, q = main[idx], main[idx + 1]
         x, y = p["pos"][0], p["pos"][1]
-        z = p["pos"][2] - 2.5 + 0.8
+        z = float(hfn([x], [y])[0]) + 0.8                          # 0.8 m above the road surface
         yaw = math.atan2(q["pos"][0] - x, q["pos"][1] - y)      # bearing of travel
         theta = math.atan2(q["pos"][1] - y, q["pos"][0] - x)    # travel direction, math angle
         name = ["spawn_magliaso", "spawn_mid", "spawn_pura"][k]

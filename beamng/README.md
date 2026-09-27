@@ -13,7 +13,9 @@ Questa pipeline ricostruisce in scala 1:1 la Strada Cantonale da Magliaso a Pura
 | `verifica/` | `VERIFICA.md` (confronto con tutte le 1464 viste), il grafico della concordanza lungo il percorso, le metriche per vista (`metrics_final.json`, e `metrics_full1.json` prima dell'ultimo ciclo di correzione) |
 | `dati/` | risultati di calcolo leggeri, per ricostruire il livello senza rifare i passi lunghi: pose calibrate delle panoramiche (`poses.json`), asse stradale, segnaletica e suo stato 2022, guardrail, muri di sostegno e altezze dei muri, recinzioni, lampioni, pali e cartelli, arredo, alberi e arbusti |
 
-La **mod pronta** (livello `magliaso_pura`, BeamNG.drive 0.39) è nella [release v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0). È costruita con `MAGLIASO_NO_PHOTO_TEXTURES=1`, quindi non contiene immagini Street View: facciate e muri hanno texture neutre nei colori misurati e le targhe sono a tinta unita. Le metriche in `verifica/` si riferiscono alla versione locale con le texture fotografiche.
+La **mod pronta** (livello `magliaso_pura`, BeamNG.drive 0.39) è nella [release v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1). È costruita con `MAGLIASO_NO_PHOTO_TEXTURES=1`, quindi non contiene immagini Street View: facciate e muri hanno texture neutre nei colori misurati e le targhe sono a tinta unita. Le metriche in `verifica/` si riferiscono alla versione locale con le texture fotografiche e alla geometria della v1.0.
+
+La **v1.1** corregge la strada della [v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0): le superfici sono lisce e non seguono più il rumore del modello del terreno, il ponte a 3,05 km e il tratto a sbalzo a 3,27 km sono alla quota della strada, i muri tra superfici a quote diverse sono gradini invece di rampe, e sulla carreggiata non ci sono più alberi né arbusti. La release è lo zip della v1.0 corretto da `patch_release.py` con il workflow `.github/workflows/release_v1.1.yml`. Ricostruendo il livello con `build_level.py` si ottengono le stesse correzioni, e in più muri e recinzioni si riallineano alla nuova superficie.
 
 ## Dati di lavoro
 
@@ -39,16 +41,17 @@ Le quote sono ortometriche (LN02). Il terreno BeamNG misura 4096 × 4096 m, con 
 | Raster | `build_rasters.py`, `landcover.py`, `extract_buildings.py`, `lidar_extract.py` | DTM/DSM 0,5 m, ortofoto, copertura del suolo, edifici, punti LiDAR vicino alla strada |
 | Pose camere | `calibrate_attitude.py`, `refine_poses.py`, `solve_poses.py`, `calib_camheight.py` | posizione e orientamento di ogni panoramica, registrati sull'ortofoto con precisione di circa 0,3 m (Viterbi lungo la traiettoria) |
 | Segmentazione | `segment_views.py` | Mask2Former Swin-L (Mapillary Vistas) su tutte le viste |
-| Strada | `road_profile.py`, `road_strip.py`, `pano_strip.py`, `roadheight.py` | asse e sezione della strada; "strisce raddrizzate" da ortofoto e da panoramiche; quota del piano stradale senza cedimenti ai bordi |
+| Strada | `road_profile.py`, `road_strip.py`, `pano_strip.py`, `roadheight.py`, `surface_fit.py` | asse e sezione della strada; "strisce raddrizzate" da ortofoto e da panoramiche; superficie idealizzata delle aree pavimentate: adattamento liscio e robusto al DTM (lastra sottile, pesi di Tukey), sezione piana e profilo più rigido sulla carreggiata della cantonale, ponti ricostruiti sopra i vuoti del DTM, gradini dove due superfici stanno a quote diverse |
 | Segnaletica | `markings.py`, `markings_photo.py`, `markings_raster.py`, `marking_votes.py`, `markings_state.py` | linee da ortofoto verificate nelle foto; stato di ottobre 2022: tratti senza segnaletica, bande rosse, mezzeria spostata |
 | Muri e barriere | `roadside_walls.py`, `wall_caps.py`, `guardrails.py`, `guardrails2.py`, `fences.py` | muri di sostegno; altezza visibile dei muri misurata nelle foto (via creste LiDAR false: tetti, balconi, guardrail sopra i muri); guardrail; ringhiere e recinzioni sui muri |
 | Oggetti | `poles.py`, `lamps.py`, `objects.py` | pali, cartelli (con l'immagine della targa), lampioni triangolati, arredo urbano |
-| Vegetazione | `trees.py`, `understory.py` | alberi dal modello di superficie normalizzato (posizione, altezza, chioma), siepi e cespugli |
+| Vegetazione | `trees.py`, `understory.py`, `clearance.py` | alberi dal modello di superficie normalizzato (posizione, altezza, chioma), siepi e cespugli; niente tronchi sulle superfici pavimentate, arbusti e siepi arretrati dal bordo |
 | Texture | `terrain_colors.py`, `texture_buildings.py`, `texture_walls.py` | colori misurati nelle foto; facciate e muri proiettati dalle panoramiche |
 | Livello | `build_level.py` | tutte le fasi, dalla strada agli spawn, più `info.json` |
 | Verifica | `validation.py`, `run_validation.ps1`, `validate_metrics.py`, `verify_report.py`, `bng_lua/magliaso_validate.lua` | giro della camera in gioco alle pose delle foto (anche tutte le 1464 viste), confronto per segmentazione, controllo della rete stradale per l'IA, rapporto `VERIFICA.md` |
 | Correzione | `photo_votes.py`, `missing_veg.py` | voti multi-vista delle etichette; arbusti che le foto mostrano e il gioco no (dal confronto sull'intero dataset) |
 | Pacchetto | `package.py` | zip della mod in `D:\beamng_magliaso\dist` |
+| Correzione di una release | `patch_release.py` | applica le correzioni della v1.1 (strade, terreno, segnaletica, IA, oggetti, vegetazione) a uno zip già costruito, usando solo lo zip e `dati/` |
 
 ## Ricostruire il livello
 
@@ -60,6 +63,14 @@ Per una versione senza immagini tratte da Street View (facciate, muri e cartelli
 
 ```bash
 MAGLIASO_NO_PHOTO_TEXTURES=1 D:/beamng_magliaso/venv/Scripts/python.exe -u build_level.py
+```
+
+La superficie delle strade (`roadheight.py` → `work\road_surface.npz`) si calcola alla prima fase che la usa; va cancellata per ricalcolarla, per esempio dopo aver cambiato i parametri in `surface_fit.py`. I guardrail e i muri vicini alla strada vengono riallineati alla nuova superficie durante la costruzione. `guardrails2.py` e `wall_caps.py` leggono la superficie solo quando si rifanno quei passi.
+
+Per aggiornare lo zip della v1.0 senza i dati di lavoro (circa 5 minuti; servono numpy, scipy, shapely e rasterio):
+
+```bash
+python patch_release.py magliaso_pura_v1.0.zip magliaso_pura_v1.1.zip
 ```
 
 La verifica si fa in tre passi:

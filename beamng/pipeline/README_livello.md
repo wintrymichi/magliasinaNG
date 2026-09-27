@@ -13,13 +13,13 @@ Ricostruzione in scala 1:1 dei 3,7 km di Strada Cantonale tra Magliaso e Pura (C
 | Elemento | Fonte | Precisione |
 |---|---|---|
 | Terreno 4 × 4 km, maglia 1 m | swissALTI3D 0,5 m (LiDAR) | quota ±0,3 m |
-| Strade e marciapiedi | misurazione ufficiale TI (limiti delle superfici) | posizione ±0,1–0,2 m; quota dal DTM, senza cedimenti verso i muri a valle |
+| Strade e marciapiedi | misurazione ufficiale TI (limiti delle superfici), quota dal DTM | posizione ±0,1–0,2 m; superficie liscia adattata al DTM, con le pendenze reali (vedi Versione 1.1) |
 | Edifici | swissBUILDINGS3D 3.0 (LOD2, tetti compresi) | ±0,3–0,5 m; facciate viste dalla strada con la texture delle foto |
 | Muri | misurazione ufficiale (muri) + muri di sostegno ricavati da DTM e foto | altezza visibile misurata nelle foto dove il LiDAR prendeva tetti, balconi o guardrail sopra il muro; texture fotografiche a circa 3 cm/px |
 | Guardrail (1,95 km), ringhiere e recinzioni sui muri (0,8 km) | voto multi-vista sulla segmentazione delle foto, LiDAR dove disponibile | posizione ±0,3 m |
 | Segnaletica | ortofoto 10 cm (tratteggi 3 m / 6 m, strisce, zebre gialle), verificata nelle foto | stato di ottobre 2022 (vedi sotto) |
 | Lampioni (73), pali e cartelli (50 pali, 67 targhe), delineatori, arredo urbano | triangolati dalle foto con le pose calibrate | ±0,3–0,5 m; le targhe riportano l'immagine vista nella foto, nessun testo inventato |
-| Alberi (~112 000), siepi e arbusti | modello di superficie LiDAR (posizione, altezza e chioma di ogni albero), ortofoto; 169 arbusti aggiunti dove le foto li mostrano e il gioco no | specie approssimate (latifoglie, conifere, palme, cipressi) con modelli vanilla |
+| Alberi (~112 000), siepi e arbusti | modello di superficie LiDAR (posizione, altezza e chioma di ogni albero), ortofoto; 169 arbusti aggiunti dove le foto li mostrano e il gioco no | specie approssimate (latifoglie, conifere, palme, cipressi) con modelli vanilla; nessuno sulla carreggiata |
 | Lago di Lugano, paesaggio lontano | misurazione ufficiale, Copernicus GLO-30 | — |
 
 ## Stato del 2022 riprodotto
@@ -29,6 +29,15 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 - **Nessuna segnaletica** dove la strada era in rifacimento o non era segnata: s ≈ 1,23–1,27 km, 1,52–1,82 km e 3,64–3,72 km. Nel cantiere l'asfalto nuovo è più scuro.
 - **Bande rosse** ai due bordi nel tratto s ≈ 2,29–2,44 km.
 - **Incrocio di Magliaso:** l'incrocio era stato ricostruito, quindi le due isole pedonali e l'isola dipinta del rilievo sono state rimosse, e la mezzeria segue la posizione visibile nelle foto.
+
+## Versione 1.1
+
+- **Strade lisce.** Strade, marciapiedi e piazzali non ricalcano più il modello del terreno punto per punto: la loro superficie è liscia e adattata ai dati. Pendenze e curve restano quelle reali, mentre il rumore del LiDAR, le gobbe e gli avvallamenti spariscono. Sulla cantonale la sezione della carreggiata è piana.
+- **Ponte e tratto a sbalzo.** Il modello del terreno rappresenta il suolo senza i ponti. Per questo la strada sul ponte del riale, a circa 3,05 km da Magliaso, scendeva di 7 m nel fosso, e il bordo a valle del tratto a circa 3,27 km cedeva di 3-4 m. Ora entrambi sono alla quota della strada, con i fianchi in pietra.
+- **Muri tra superfici a quote diverse.** Dove una strada, un piazzale o una terrazza sta più in alto o più in basso della superficie accanto, il modello del terreno aveva spalmato il muro in una rampa. Ora al suo posto c'è un gradino con una faccia in pietra, e il terreno non sporge più sopra l'asfalto.
+- **Carreggiata sgombra.** Gli alberi con il tronco sulla strada o a meno di 0,5 m dal bordo sono stati tolti. Gli arbusti e le siepi che sporgevano sulla carreggiata sono stati spostati indietro fino a 1,5 m; quelli che non ci stavano sono stati tolti.
+- **Il resto segue la strada.** Segnaletica, rete dell'IA, lampioni, pali, cartelli, arredo e guardrail stanno sulla nuova superficie. Verso 1,25 km la linea dell'IA della cantonale non passa più sopra il muro tra le due strade.
+- **Verifica.** Le cifre di `VERIFICA.md` si riferiscono alla geometria della v1.0.
 
 ## Precisione e verifica
 
