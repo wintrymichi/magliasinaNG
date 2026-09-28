@@ -1,16 +1,16 @@
-"""Zip the built level as a BeamNG mod: D:/beamng_magliaso/dist/<name>.zip with levels/magliaso_pura/...
+"""Zip the built level as a BeamNG mod: <ROOT>/dist/<name>.zip with levels/magliaso_pura/...
 
 Development files of the validation tour are left out. The archive goes into the user's
 mods folder (or is installed from the zip).
 """
 import os, sys, zipfile
-from config import LEVEL_DIR, LEVEL_NAME
+from config import LEVEL_DIR, LEVEL_NAME, ROOT
 
 SKIP = {"validation_views.json", "validation_route.json"}
 
 
 def main(name):
-    out_dir = r"D:\beamng_magliaso\dist"
+    out_dir = os.path.join(ROOT, "dist")
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, name + ".zip")
     n = size = 0

@@ -4,6 +4,7 @@
 Formats follow the vanilla levels shipped with BeamNG.drive 0.39
 (content/levels/template.zip, italy.zip).
 """
+import re
 import json, os, struct, uuid
 from xml.sax.saxutils import escape
 import numpy as np
@@ -169,6 +170,10 @@ def write_materials(path, mats):
 
 
 # ------------------------------------------------------------------ meshes
+_TRIM_ZEROS = re.compile(r"(\.\d*?)0+\b")     # 2.500 -> 2.5, 3.000 -> 3.
+_TRIM_DOT = re.compile(r"\.(?= |$)")            # 3. -> 3
+
+
 class MeshBuilder:
     """Triangle soup grouped by material; writes Z-up COLLADA 1.4.1."""
 
@@ -233,11 +238,15 @@ class MeshBuilder:
                          f'<bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/></instance_material>')
             off += len(V)
         V, N, T, Cc = np.concatenate(Vs), np.concatenate(Ns), np.concatenate(Ts), np.concatenate(Cs)
-        col_src = (f'<source id="g-c"><float_array id="g-ca" count="{Cc.size}">{" ".join(f"{v:.4f}" for v in Cc.ravel())}</float_array>'
+        # shortest text that keeps mm positions and 1e-4 texture coordinates (a v2.0 map has
+        # gigabytes of these); tiling texture coordinates far from 0 are moved by whole tiles
+        fl = lambda a, d: _TRIM_DOT.sub("", _TRIM_ZEROS.sub(r"\1", " ".join(f"{v:.{d}f}" for v in np.asarray(a).ravel())))
+        if len(T) and np.abs(T.mean(0)).max() > 2.0:
+            T = T - np.floor(T.mean(0))
+        col_src = (f'<source id="g-c"><float_array id="g-ca" count="{Cc.size}">{fl(Cc, 3)}</float_array>'
                    f'<technique_common><accessor source="#g-ca" count="{len(Cc)}" stride="4"><param name="R" type="float"/>'
                    f'<param name="G" type="float"/><param name="B" type="float"/><param name="A" type="float"/></accessor>'
                    f'</technique_common></source>') if use_col else ""
-        fl = lambda a: " ".join(f"{v:.5f}" for v in a.ravel())
         safe = "".join(ch if ch.isalnum() else "_" for ch in name).strip("_") or "mesh"
         safe = safe.rstrip("0123456789_") or "mesh"
         node = f"{safe}_a{int(detail)}"
@@ -247,11 +256,11 @@ class MeshBuilder:
 <library_effects>{"".join(effects)}</library_effects>
 <library_materials>{"".join(mats)}</library_materials>
 <library_geometries><geometry id="g" name="{node}"><mesh>
-<source id="g-p"><float_array id="g-pa" count="{V.size}">{fl(V)}</float_array>
+<source id="g-p"><float_array id="g-pa" count="{V.size}">{fl(V, 3)}</float_array>
 <technique_common><accessor source="#g-pa" count="{len(V)}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source>
-<source id="g-n"><float_array id="g-na" count="{N.size}">{fl(N)}</float_array>
+<source id="g-n"><float_array id="g-na" count="{N.size}">{fl(N, 3)}</float_array>
 <technique_common><accessor source="#g-na" count="{len(N)}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source>
-<source id="g-t"><float_array id="g-ta" count="{T.size}">{fl(T)}</float_array>
+<source id="g-t"><float_array id="g-ta" count="{T.size}">{fl(T, 4)}</float_array>
 <technique_common><accessor source="#g-ta" count="{len(T)}" stride="2"><param name="S" type="float"/><param name="T" type="float"/></accessor></technique_common></source>
 {col_src}
 <vertices id="g-v"><input semantic="POSITION" source="#g-p"/></vertices>

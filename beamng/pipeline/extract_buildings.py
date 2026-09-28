@@ -3,14 +3,18 @@
 Output work/buildings.pkl: list of dicts
   uuid, egid, kind (OBJEKTART), name, walls/roofs/floors: (n,3,3) float arrays (local x,y,z),
   bbox, footprint centroid.
-Only buildings whose bounding box intersects the terrain square are kept.
+Only buildings whose bounding box meets the playable area (area.py) + MARGIN are kept.
+The FileGDB is read with osgeo.ogr where the GDAL bindings are installed, otherwise with the
+GDAL library bundled with pyogrio (ogr_tin.py).
 """
 import glob, os, pickle
 import numpy as np
-from osgeo import ogr
-from config import DATA, WORK, TER_HALF, lv95_to_local
+import shapely
+from config import DATA, WORK, lv95_to_local
+import area
 
-ogr.UseExceptions()
+MARGIN = 100.0
+FIELDS = ["UUID", "EGID", "OBJEKTART", "NAME_KOMPLETT"]
 
 
 def tin_triangles(geom):
@@ -24,28 +28,40 @@ def tin_triangles(geom):
     return tris
 
 
+def features(g, lname):
+    """(fields, triangles (n, 3, 3) LV95) of a layer of a swissBUILDINGS3D FileGDB."""
+    try:
+        from osgeo import ogr
+    except ImportError:
+        from ogr_tin import read_tin_layer
+        yield from read_tin_layer(g, lname, FIELDS)
+        return
+    ogr.UseExceptions()
+    ds = ogr.Open(g)
+    for f in ds.GetLayerByName(lname):
+        geom = f.GetGeometryRef()
+        if geom is not None:
+            yield {k: f.GetField(k) for k in FIELDS}, np.array(tin_triangles(geom), float).reshape(-1, 3, 3)
+
+
 def main():
     gdbs = sorted(glob.glob(os.path.join(DATA, "buildings3d", "unz", "*.gdb")))
+    keep_area = area.polygon().buffer(MARGIN)
+    shapely.prepare(keep_area)
     blds = {}
     for g in gdbs:
-        ds = ogr.Open(g)
         for lname, key in (("Wall", "walls"), ("Roof", "roofs"), ("Floor", "floors")):
-            lay = ds.GetLayerByName(lname)
-            for f in lay:
-                geom = f.GetGeometryRef()
-                if geom is None:
-                    continue
-                tris = np.array(tin_triangles(geom), float)
+            for props, tris in features(g, lname):
                 if len(tris) == 0:
                     continue
                 x, y = lv95_to_local(tris[..., 0], tris[..., 1])
                 tris = np.stack([x, y, tris[..., 2]], -1)
-                if (tris[..., 0].max() < -TER_HALF or tris[..., 0].min() > TER_HALF or
-                        tris[..., 1].max() < -TER_HALF or tris[..., 1].min() > TER_HALF):
+                if not keep_area.intersects(shapely.box(tris[..., 0].min(), tris[..., 1].min(),
+                                                        tris[..., 0].max(), tris[..., 1].max())):
                     continue
-                uid = f.GetField("UUID")
-                b = blds.setdefault(uid, dict(uuid=uid, egid=f.GetField("EGID"), kind=f.GetField("OBJEKTART"),
-                                              name=f.GetField("NAME_KOMPLETT"), walls=[], roofs=[], floors=[],
+                uid = props["UUID"]
+                b = blds.setdefault(uid, dict(uuid=uid, egid=props["EGID"], kind=props["OBJEKTART"],
+                                              name=props["NAME_KOMPLETT"], walls=[], roofs=[], floors=[],
                                               sheet=os.path.basename(g)))
                 b[key].append(tris)
         print(g, len(blds), flush=True)
@@ -59,7 +75,7 @@ def main():
     kinds = {}
     for b in out:
         kinds[b["kind"]] = kinds.get(b["kind"], 0) + 1
-    print(len(out), "buildings in the terrain square;", kinds)
+    print(len(out), "buildings in the area;", kinds)
     pickle.dump(out, open(os.path.join(WORK, "buildings.pkl"), "wb"))
 
 

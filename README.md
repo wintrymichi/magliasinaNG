@@ -4,7 +4,7 @@ Percorso: 45.981686, 8.878474 → 46.001760, 8.860159 · 3,7 km, tutto sulla Str
 
 > **Le immagini non sono nel repository.** Le cartelle `panorami/`, `viste/` e `storici_2013_2014/` (9,4 GB) contengono immagini Google Street View e restano in locale. Il repository contiene i metadati (pose, date, posizioni) e gli script con cui le immagini si riscaricano: `sv_capture.py`, `expand.py`, `finalize.py`.
 
-**Mappa BeamNG.drive** ricostruita da questo dataset: vedi [`beamng/`](beamng/README.md). La mod è nella [release v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1), che rispetto alla [v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0) ha le strade lisce e la carreggiata senza alberi.
+**Mappa BeamNG.drive** ricostruita da questo dataset: vedi [`beamng/`](beamng/README.md). La mod è nella [release v2.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.0), che allarga la mappa a tutto il Malcantone (circa 51 km² tra Ponte Tresa, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio e Sessa, con la cantonale Magliaso–Gravesano) con ogni strada e sentiero guidabile. Le versioni precedenti, solo la cantonale, sono la [v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1) (strade lisce, carreggiata senza alberi) e la [v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0).
 
 ## Contenuto
 
@@ -36,9 +36,9 @@ Nomi delle viste: `NNNN_<panoId>_<direzione>_p<pitch>.jpg`
 
 ## Mappa BeamNG.drive
 
-La cartella [`beamng/`](beamng/README.md) contiene la pipeline che ricostruisce la strada in scala 1:1 come livello BeamNG.drive 0.39 (`magliaso_pura`):
+La cartella [`beamng/`](beamng/README.md) contiene la pipeline che ricostruisce in scala 1:1 come livello BeamNG.drive 0.39 (`magliaso_pura`) la strada e, dalla v2.0, tutto il Malcantone intorno:
 
-- le panoramiche danno le pose calibrate, gli oggetti, la segnaletica del 2022 e la verifica;
-- i dati ufficiali swisstopo e della misurazione ufficiale ticinese danno il terreno, gli edifici e le strade.
+- le panoramiche danno le pose calibrate, gli oggetti, la segnaletica del 2022 e la verifica della cantonale;
+- i dati ufficiali swisstopo e della misurazione ufficiale ticinese danno il terreno, la rete di strade e sentieri, i ponti, gli edifici, i muri e gli alberi di tutta l'area.
 
-La cartella contiene anche la verifica finale contro tutte le 1464 viste e i risultati di calcolo leggeri. La mod pronta da installare è nella [release v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1).
+La cartella contiene anche la verifica della cantonale contro tutte le 1464 viste, i controlli automatici della v2.0 e i risultati di calcolo leggeri. La mod pronta da installare è nella [release v2.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.0).

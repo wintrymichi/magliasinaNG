@@ -7,6 +7,8 @@ photographed facade colour, or a neutral plaster tone when the building was neve
 photographed. Roofs use a neutral clay-tile texture laid along the roof slope, tinted
 with the median SWISSIMAGE colour of that roof (footprint eroded 1.5 m against relief
 displacement). Collision on (visible mesh).
+v2.0: a passage is cut under every building that stands on a road or path of the network
+(PASSAGE_CLEAR m high, closed by a ceiling and side walls; network_ways, passages).
 """
 import json, os, pickle
 import numpy as np
@@ -81,9 +83,9 @@ def neutral_texture(src_zip_path, dst, gain=0.95):
 
 
 def roof_colors(blds):
-    with rasterio.open(os.path.join(WORK, "ortho05.tif")) as s:
-        o = s.read().transpose(1, 2, 0)
-        tr = s.transform
+    """Median orthophoto colour of every roof (footprint eroded 1.5 m against relief displacement)."""
+    from geo import ortho_sampler
+    ortho = ortho_sampler()
     cols = {}
     for b in blds:
         r = b["roofs"]
@@ -93,30 +95,232 @@ def roof_colors(blds):
         if fp.is_empty or fp.area < 1:
             fp = shapely.MultiPoint(r.reshape(-1, 3)[:, :2]).convex_hull
         x0, y0, x1, y1 = fp.bounds
-        xs = np.arange(x0, x1, 0.5); ys = np.arange(y0, y1, 0.5)
+        xs = np.arange(x0, x1, 1.0); ys = np.arange(y0, y1, 1.0)
         if len(xs) == 0 or len(ys) == 0:
             continue
         X, Y = np.meshgrid(xs, ys)
         inside = shapely.contains_xy(fp, X, Y)
         if not inside.any():
             continue
-        cc = ((X[inside] - tr.c) / tr.a).astype(int); rr = ((Y[inside] - tr.f) / tr.e).astype(int)
-        ok = (cc >= 0) & (cc < o.shape[1]) & (rr >= 0) & (rr < o.shape[0])
-        if ok.sum() < 3:
+        c = ortho(X[inside], Y[inside])
+        c = c[~np.isnan(c).any(1)]
+        if len(c) < 3:
             continue
-        cols[b["uuid"]] = np.median(o[rr[ok], cc[ok]], 0) / 255.0
+        cols[b["uuid"]] = np.median(c, 0) / 255.0
     return cols
 
 
-def build(level_dir, level_name, keep=None):
+# v2.0: a passage under every building that stands on a road or path of the network (a sottoportico,
+# the customs canopy over the road at Ponte Tresa, a lane under a bell tower, or a line of swissTLM3D
+# drawn a little into a house): the building is cut PASSAGE_CLEAR m high over the line along a band
+# around it and the cut is closed by a ceiling and side walls, so no car runs into a solid block
+PASSAGE_CLEAR = {"road": 4.2, "path": 3.0}                 # m of free height over the line
+PASSAGE_LEAST = {"road": 3.0, "path": 2.2}                 # m, least free height under a roof kept over it (cars, vans)
+# half width of the band cut (of the width of the line, at least m): the whole carriageway where the
+# line runs through the building, the way of a car around the line where the building stands beside it
+PASSAGE_HALF = {"road": (0.5, 1.2), "path": (0.5, 0.6)}
+PASSAGE_SIDE = {"road": (0.3, 1.0), "path": (0.3, 0.5)}
+PASSAGE_MARGIN = 0.15                                      # m added to the bands: no face left on their edge
+PASSAGE_BELOW = 1.0                                        # m under the line the cut reaches (the walls' feet)
+
+
+def network_ways(net, corridor=None):
+    """[(line, band through, band beside, stations (n, 3), kind)] of every line of the network
+    (network_mesh.Network) outside the Strada Cantonale corridor (its buildings were checked on the
+    panoramas); the bridges too (the customs canopy of Ponte Tresa stands over the start of the bridge
+    on the Tresa: the cut takes only the height of the deck). Round ends, so the bands of two lines
+    that meet at an angle leave no wedge between them."""
+    out = []
+    for s in net.segs:
+        a, n = s["first"], s["n"]
+        P = np.column_stack([net.x[a:a + n], net.y[a:a + n], net.z[a:a + n]])
+        line = shapely.LineString(P[:, :2])
+        w = float(np.median(net.w[a:a + n]))
+        bands = []
+        for f, least in (PASSAGE_HALF[s["kind"]], PASSAGE_SIDE[s["kind"]]):
+            band = line.buffer(max(f * w, least) + PASSAGE_MARGIN)
+            if corridor is not None and corridor.intersects(band):
+                band = band.difference(corridor)
+            bands.append(band)
+        if not bands[0].is_empty:
+            out.append((line, bands[0], bands[1], P, s["kind"]))
+    return out
+
+
+def footprint(b):
+    """Ground plan of a building: its floor triangles, the hull of its walls where it has none."""
+    fl = b.get("floors")
+    if fl is not None and len(fl):
+        g = shapely.union_all([q for q in (shapely.Polygon(t[:, :2]) for t in fl) if q.is_valid and q.area > 1e-6])
+        if not g.is_empty:
+            return g
+    return shapely.MultiPoint(b["walls"].reshape(-1, 3)[:, :2]).convex_hull
+
+
+def _polys(g):
+    return [q for q in getattr(g, "geoms", [g]) if q.geom_type == "Polygon" and q.area > 1e-5]
+
+
+def _triangulate(g, to3):
+    """Triangles (k, 3, 3) of the 2D polygons of g, lifted by to3((3, 2) -> (3, 3))."""
+    out = [to3(np.asarray(t.exterior.coords)[:3]) for q in _polys(g)
+           for t in shapely.constrained_delaunay_triangles(q).geoms]
+    return np.array(out).reshape(-1, 3, 3)
+
+
+def cut_passage(tris, P, zb, zt):
+    """The triangles tris (k, 3, 3) without their parts inside the passage: polygon P (plan) between
+    heights zb and zt; the pieces keep the facing of the triangle they come from."""
+    out = []
+    pb = P.bounds
+    for tri in tris:
+        n = np.cross(tri[1] - tri[0], tri[2] - tri[0])
+        nn = np.linalg.norm(n)
+        lo, hi = tri[:, :2].min(0), tri[:, :2].max(0)
+        if (nn < 1e-9 or hi[0] < pb[0] or lo[0] > pb[2] or hi[1] < pb[1] or lo[1] > pb[3]
+                or tri[:, 2].min() >= zt or tri[:, 2].max() <= zb):
+            out.append(tri[None])
+            continue
+        if abs(n[2]) < 0.05 * nn:                  # a wall: cut in its own plane (u along it, z)
+            h = np.array([-n[1], n[0]]) / np.hypot(n[0], n[1])
+            o = tri[0, :2]
+            u = (tri[:, :2] - o) @ h
+            inter = shapely.LineString([o + u.min() * h, o + u.max() * h]).intersection(P)
+            boxes = [shapely.box(uu.min(), zb, uu.max(), zt)
+                     for g in getattr(inter, "geoms", [inter]) if g.geom_type == "LineString" and g.length > 1e-3
+                     for uu in [(np.asarray(g.coords) - o) @ h]]
+            if not boxes:
+                out.append(tri[None])
+                continue
+            whole = shapely.Polygon(np.column_stack([u, tri[:, 2]]))
+            rest = whole.difference(shapely.union_all(boxes))
+            to3 = lambda c, o=o, h=h: np.column_stack([o + c[:, :1] * h, c[:, 1]])
+        else:                                      # a roof or a floor: seen from above, where under zt
+            below = []
+            for i in range(3):
+                p, q = tri[i], tri[(i + 1) % 3]
+                if p[2] < zt:
+                    below.append(p[:2])
+                if (p[2] < zt) != (q[2] < zt):
+                    below.append((p + (zt - p[2]) / (q[2] - p[2]) * (q - p))[:2])
+            if len(below) < 3:
+                out.append(tri[None])
+                continue
+            R = shapely.Polygon(below).buffer(0).intersection(P)
+            if R.area < 1e-4:
+                out.append(tri[None])
+                continue
+            whole = shapely.Polygon(tri[:, :2])
+            rest = whole.difference(R)
+            to3 = lambda c, t0=tri[0], n=n: np.column_stack(                 # on the plane of the triangle
+                [c, t0[2] - ((c[:, 0] - t0[0]) * n[0] + (c[:, 1] - t0[1]) * n[1]) / n[2]])
+        if rest.is_empty:
+            continue
+        if rest.equals(whole):
+            out.append(tri[None])
+            continue
+        T = _triangulate(rest, to3)
+        if len(T):
+            flip = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0]) @ n < 0
+            T[flip] = T[flip][:, ::-1]
+            out.append(T)
+    return np.concatenate(out) if out else np.zeros((0, 3, 3))
+
+
+def passage_shell(C, fp, zb, zt, top):
+    """Ceiling of the passage C (plan, inside the footprint fp) at zt, facing down, where the building
+    rises above it (top: its highest point), and its side walls from zb along the edges of C inside the
+    building, facing the passage."""
+    out = []
+    if top > zt + 0.2:
+        T = _triangulate(C, lambda c: np.column_stack([c, np.full(3, zt)]))
+        up = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0])[:, 2] > 0
+        T[up] = T[up][:, ::-1]
+        out.append(T)
+    zc = min(zt, top)
+    if zc < zb + 0.1:
+        return np.concatenate(out) if out else np.zeros((0, 3, 3))
+    inner = fp.buffer(-0.05)
+    for q in _polys(C):
+        q = shapely.geometry.polygon.orient(q, 1.0)            # the passage on the left of every edge
+        for ring in [q.exterior] + list(q.interiors):
+            c = np.asarray(ring.coords)
+            for a, b in zip(c[:-1], c[1:]):
+                if np.hypot(*(b - a)) < 0.02 or not inner.contains(shapely.Point(0.5 * (a + b))):
+                    continue
+                left = np.array([a[1] - b[1], b[0] - a[0], 0.0])
+                T = np.array([[np.r_[a, zb], np.r_[b, zb], np.r_[b, zc]], [np.r_[a, zb], np.r_[b, zc], np.r_[a, zc]]])
+                flip = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0]) @ left < 0
+                T[flip] = T[flip][:, ::-1]
+                out.append(T)
+    return np.concatenate(out) if out else np.zeros((0, 3, 3))
+
+
+def passages(b, walls, roofs, ways, tree):
+    """walls, roofs of building b with the passages of the ways (network_ways) that cross it cut out,
+    and the triangles closing them (ceilings and side walls, plastered)."""
+    if tree is None:
+        return walls, roofs, np.zeros((0, 3, 3))
+    fp = footprint(b)
+    hit = tree.query(fp, predicate="intersects")
+    if not len(hit):
+        return walls, roofs, np.zeros((0, 3, 3))
+    top = max(walls[:, :, 2].max() if len(walls) else -1e9, roofs[:, :, 2].max() if len(roofs) else -1e9)
+    cs, zbs, zts = [], [], []
+    for i in hit:
+        line, through, beside, S, kind = ways[i]
+        band = through if fp.intersects(line) else beside
+        C = band.intersection(fp)
+        if C.area < 0.05:
+            continue
+        near = shapely.contains_xy(C.buffer(2.0), S[:, 0], S[:, 1])
+        if not near.any():
+            near = np.zeros(len(S), bool)
+            near[np.argmin(shapely.distance(C, shapely.points(S[:, :2])))] = True
+        zb = float(S[near, 2].min()) - PASSAGE_BELOW
+        zr = float(S[near, 2].max())
+        zt = zr + PASSAGE_CLEAR[kind]
+        # the roof over the passage stays where the passage fits under it (a canopy just over the road)
+        if len(roofs):
+            rings = np.concatenate([roofs[:, :, :2], roofs[:, :1, :2]], axis=1)
+            over = roofs[shapely.intersects(C, shapely.polygons(rings))]
+            if len(over):
+                low = float(over[:, :, 2].min()) - 0.3
+                if zr + PASSAGE_LEAST[kind] <= low < zt:
+                    zt = low
+        if top <= zb + 0.1:                        # a deck high over the building: nothing to cut
+            continue
+        walls = cut_passage(walls, band, zb, zt)
+        roofs = cut_passage(roofs, band, zb, zt)
+        cs.append(C)
+        zbs.append(zb)
+        zts.append(zt)
+    if not cs:
+        return walls, roofs, np.zeros((0, 3, 3))
+    # one ceiling and one set of side walls for all the passages of the building: lines that meet or
+    # cross under it (the customs canopy of Ponte Tresa) keep each other's way free
+    return walls, roofs, passage_shell(shapely.union_all(cs), fp, min(zbs), max(zts), top)
+
+
+def build(level_dir, level_name, keep=None, ways=None):
+    """ways: network_ways, the passages to cut."""
     import texturing
     blds = pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb"))
     shp_dir = os.path.join(level_dir, "art", "shapes", "buildings")
     os.makedirs(shp_dir, exist_ok=True)
-    neutral_texture("/assets/materials/trim/plaster/t_highrise_plaster/t_highrise_plaster_b.color.dds",
-                    os.path.join(shp_dir, "t_plaster_neutral.png"))
-    neutral_texture("/levels/italy/art/shapes/buildings/Italy_bld_roof_tiles_d.dds",
-                    os.path.join(shp_dir, "t_rooftiles_neutral.png"), gain=1.0)
+    import vanilla
+    v1_walls = None
+    if vanilla.have_game():
+        neutral_texture("/assets/materials/trim/plaster/t_highrise_plaster/t_highrise_plaster_b.color.dds",
+                        os.path.join(shp_dir, "t_plaster_neutral.png"))
+        neutral_texture("/levels/italy/art/shapes/buildings/Italy_bld_roof_tiles_d.dds",
+                        os.path.join(shp_dir, "t_rooftiles_neutral.png"), gain=1.0)
+    else:                    # the grey copies of the released level, and its measured facade tones
+        for f in ("t_plaster_neutral.png", "t_rooftiles_neutral.png"):
+            vanilla.copy(f"art/shapes/buildings/{f}", os.path.join(shp_dir, f))
+        from scipy.spatial import cKDTree
+        wp, wc = vanilla.wall_colors()
+        v1_walls = (cKDTree(wp), wc) if len(wp) else None
     L = f"/levels/{level_name}/art/shapes/buildings"
     rcol = roof_colors(blds)
     atlas = texturing.Atlas(4096)
@@ -126,7 +330,8 @@ def build(level_dir, level_name, keep=None):
             continue
         c = (np.array(b["bbox"][0]) + np.array(b["bbox"][1])) / 2
         tiles.setdefault((int(np.floor(c[0] / TILE)), int(np.floor(c[1] / TILE))), []).append(b)
-    out, n_photo = [], 0
+    out, n_photo, n_pass = [], 0, 0
+    wtree = shapely.STRtree([w[1] for w in ways]) if ways else None
     for (tx, ty), bl in sorted(tiles.items()):
         mb = bng.MeshBuilder()
         origin = np.array([(tx + 0.5) * TILE, (ty + 0.5) * TILE, 0.0])
@@ -157,10 +362,19 @@ def build(level_dir, level_name, keep=None):
                 if meds:
                     wall_col = np.median(np.array(meds), 0) / 255.0
             rest = walls[~assigned]
+            rest, roofs, shell = passages(b, rest, roofs, ways, wtree)
+            if len(shell):
+                rest = np.concatenate([rest, shell])
+                n_pass += 1
             if len(rest):
                 V = rest.reshape(-1, 3)
+                stored = np.clip(wall_col / 0.9, 0, 1)
+                if v1_walls is not None and not os.path.exists(f):
+                    dd, jj = v1_walls[0].query(V[::3][:50])
+                    if (dd < 0.05).mean() > 0.5:           # the same building in the released level
+                        stored = np.median(v1_walls[1][jj[dd < 0.05]], 0)
                 mb.add("bld_plaster", V, uvs=wall_uvs(rest) / 2.5, normals=bng.flat_normals_soup(V),
-                       colors=np.r_[np.clip(wall_col / 0.9, 0, 1), 1.0])
+                       colors=np.r_[stored, 1.0])
             if len(roofs):
                 V = roofs.reshape(-1, 3)
                 col = rcol.get(b["uuid"], np.array([0.55, 0.42, 0.36]))
@@ -178,5 +392,6 @@ def build(level_dir, level_name, keep=None):
         cv2.imwrite(os.path.join(level_dir, rel), cv2.cvtColor(page, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 90])
         mats.append(bng.material(f"mp_bld_photo_{i}", f"/levels/{level_name}/{rel}", roughness=0.85))
     bng.write_materials(os.path.join(shp_dir, "main.materials.json"), mats)
-    print("building photo facades", n_photo, "atlas pages", len(atlas.pages) if n_photo else 0)
+    print("building photo facades", n_photo, "atlas pages", len(atlas.pages) if n_photo else 0,
+          "buildings with a passage", n_pass)
     return out

@@ -88,9 +88,63 @@ def classify(h, d, sharp, rgb, lc_garden):
     return cls
 
 
-def build(level_dir, level_name, scene, rng_seed=7):
+NEAR = 150.0          # m from a road: every tree measured is kept
+NEAR_PATH = (60.0, 40.0, 30.0, 20.0, 10.0, 0.0)   # m from a path: the widest that fits the cap
+CAP = 250_000         # forest items at most: farther trees are thinned to stay under it
+SHRUBS = 12_000       # of them left for the shrubs and hedges (about 10 000 in v2.0)
+
+
+def thin(x, y, h, dist, cap, dist_path=None):
+    """Indices of the trees kept: all within NEAR m of the roads and the widest band of NEAR_PATH
+    along the paths that fits, farther the tallest of every cell of a grid coarse enough to stay
+    within `cap` items in all."""
+    near = dist <= NEAR
+    if dist_path is not None:
+        for band in NEAR_PATH:
+            both = near | (dist_path <= band)
+            if both.sum() <= 0.92 * cap:
+                break
+        near = both
+        print("trees: every tree within %.0f m of the roads and %.0f m of the paths" % (NEAR, band))
+    far = np.flatnonzero(~near)
+    budget = cap - int(near.sum())
+    if len(far) <= budget:
+        return np.arange(len(x))
+    if budget <= 0:
+        return np.flatnonzero(near)
+    order = far[np.argsort(-h[far])]
+    for cell in np.arange(5.0, 60.0, 1.0):
+        key = np.floor(x[order] / cell).astype(np.int64) * 1_000_003 + np.floor(y[order] / cell).astype(np.int64)
+        _, first = np.unique(key, return_index=True)
+        if len(first) <= budget:
+            break
+    keep_far = order[np.sort(first)]
+    print("trees: %d within %.0f m of the network, %d of %d farther (tallest per %.0f m cell)" %
+          (int(near.sum()), NEAR, len(keep_far), len(far), cell))
+    return np.sort(np.concatenate([np.flatnonzero(near), keep_far]))
+
+
+def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
+    """drivable: clearance.Drivable of every road and path (v2.0; None: the cadastral paved
+    surfaces of the route corridor, v1.x). net_xy: (points, half widths) of the network lines,
+    for the thinning."""
     from landcover import CODE
     t = np.load(os.path.join(WORK, "trees.npz"))
+    # no trees where the cadastral land cover is missing (Italy, outside the area): there the
+    # buildings have no footprints and the canopy model would turn their roofs into trees
+    ok = t["lc"] != CODE["none"]
+    t = {k: t[k][ok] for k in t.files}
+    print("trees outside the cadastral survey dropped:", int((~ok).sum()))
+    if net_xy is not None:
+        from scipy.spatial import cKDTree
+        pts, hw, is_path = net_xy
+        txy = np.column_stack([t["x"], t["y"]])
+        dist = []
+        for m in (~is_path, is_path):
+            dd, jj = cKDTree(pts[m]).query(txy) if m.any() else (np.full(len(txy), 1e9), np.zeros(len(txy), int))
+            dist.append(dd - (hw[m][jj] if m.any() else 0.0))
+        keep = thin(t["x"], t["y"], t["h"], dist[0], CAP - SHRUBS, dist[1])
+        t = {k: v[keep] for k, v in t.items()}
     x, y, z, h, d = t["x"], t["y"], t["z"], t["h"], t["d"]
     garden = np.isin(t["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],
                                CODE["campo_prato_pascolo"], CODE["vigna"]])
@@ -162,12 +216,16 @@ def build(level_dir, level_name, scene, rng_seed=7):
         b = asset_bounds.cached([key[1]]).get(key[1])
         ext = (np.array(b[1]) - np.array(b[0])) if b else np.array([2.0, 2.0, 2.0])
         for j, (px, py, pz, yaw, sc, theta, kind) in enumerate(lst):
-            e = {"x": px, "y": py, "kind": kind, "r": 0.25 * (ext[0] + ext[1]) * sc}
+            e = {"x": px, "y": py, "kind": kind, "r": 0.25 * (ext[0] + ext[1]) * sc, "h": ext[2] * sc}
             if kind == "hedge":
                 e.update(r=0.5 * ext[1] * sc, L=0.5 * ext[0] * sc, theta=theta)
             entries.append(e)
             where.append((key, j))
-    res = clear_paved(entries, paved_dist_dir())
+    if drivable is not None:
+        from clearance import clear_network
+        res = clear_network(entries, drivable)
+    else:
+        res = clear_paved(entries, paved_dist_dir())
     from geo import Grid
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     new_items = {}
@@ -199,12 +257,16 @@ def build(level_dir, level_name, scene, rng_seed=7):
     os.makedirs(os.path.join(level_dir, "art", "forest"), exist_ok=True)
     json.dump(managed, open(os.path.join(level_dir, "art", "forest", "managedItemData.json"), "w"), indent=1)
     # the vanilla models' materials must be defined in this level
-    import copy_materials
-    used = sorted({m for (_, p) in items for m in asset_bounds.dae_material_names(p)})
-    found, missing = copy_materials.collect(used)
-    bng.write_materials(os.path.join(level_dir, "art", "forest", "main.materials.json"), list(found.values()))
-    if missing:
-        print("WARNING tree materials not found:", missing)
+    import vanilla
+    if vanilla.have_game():
+        import copy_materials
+        used = sorted({m for (_, p) in items for m in asset_bounds.dae_material_names(p)})
+        found, missing = copy_materials.collect(used)
+        bng.write_materials(os.path.join(level_dir, "art", "forest", "main.materials.json"), list(found.values()))
+        if missing:
+            print("WARNING tree materials not found:", missing)
+    else:                       # no game here: the definitions of the released level (same models)
+        vanilla.copy("art/forest/main.materials.json", os.path.join(level_dir, "art", "forest", "main.materials.json"))
     g = "MissionGroup/level_objects/vegetation"
     scene.add(g, {"name": "theForest", "class": "Forest", "persistentId": bng.pid(), "lodReflectScalar": 0.15})
     scene.add(g, {"class": "ForestWindEmitter", "persistentId": bng.pid(), "position": [0, 0, 400],

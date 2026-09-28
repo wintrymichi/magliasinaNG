@@ -12,7 +12,7 @@ import json, os, pickle
 import numpy as np
 import shapely
 from scipy.ndimage import gaussian_filter1d, median_filter
-from config import DATA, WORK, wgs_to_local, TER_HALF
+from config import DATA, WORK, wgs_to_local, TER_X0, TER_Y0, TER_X1, TER_Y1
 import bng
 from clearance import keep_to_surface
 
@@ -54,7 +54,38 @@ def recentre(P, road, maxw=8.0):
     return out, W
 
 
-def build(scene, hfn):
+# swissTLM3D class -> drivability for the AI (v2.0 network)
+TLM_DRIVE = {"10m Strasse": 1.0, "8m Strasse": 1.0, "6m Strasse": 1.0, "Autostrasse": 1.0, "Ausfahrt": 0.9,
+             "Einfahrt": 0.9, "Verbindung": 0.9, "4m Strasse": 0.8, "Platz": 0.5, "Raststaette": 0.5,
+             "3m Strasse": 0.5, "Zufahrt": 0.4, "Dienstzufahrt": 0.3}
+
+
+def network_roads(scene, g, net, main_zone):
+    """Every drivable swissTLM3D line of the network (not paths) as an AI road on the network
+    surface (bridge decks included); lines along the main route are left to it."""
+    n = 0
+    for s in net.segs:
+        if s["kind"] != "road" or s["class"] not in TLM_DRIVE:
+            continue
+        a, k = s["first"], s["n"]
+        P = np.column_stack([net.x[a:a + k], net.y[a:a + k]])
+        line = shapely.LineString(P)
+        # short links stay (a junction of two 3 m pieces would break the AI network otherwise)
+        if k < 2 or line.intersection(main_zone).length > 0.8 * line.length:
+            continue
+        step = max(1, int(round(4.0 / 2.0)))                   # every ~4 m, ends kept
+        idx = np.unique(np.r_[np.arange(0, k, step), k - 1])
+        drive = TLM_DRIVE[s["class"]] * (0.6 if s["surface"] == "natural" else 1.0)
+        width = np.clip(net.w[a + idx], 2.5, 12.0)
+        nodes = [[float(net.x[a + i]), float(net.y[a + i]), float(net.z[a + i]) + 0.1, float(w_)]
+                 for i, w_ in zip(idx, width)]
+        scene.add(g, {"name": f"tlm_{s['id']}", "class": "DecalRoad", "persistentId": bng.pid(), "position": nodes[0][:3],
+                      "drivability": round(drive, 2), "improvedSpline": True, "material": "road_invisible", "nodes": nodes})
+        n += 1
+    return n
+
+
+def build(scene, hfn, net=None):
     av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
     road = shapely.union_all([g for g, _ in av["LCSF"].get("strada_sentiero", [])]).buffer(0.05)
     shapely.prepare(road)
@@ -75,6 +106,9 @@ def build(scene, hfn):
                   "nodes": nodes, "lanesLeft": 1, "lanesRight": 1})
     main_line = shapely.LineString(np.column_stack([cx, cy]))
     main_zone = main_line.buffer(4.0)
+    if net is not None:                       # v2.0: the swissTLM3D network of the whole area
+        print("AI roads", 1 + network_roads(scene, g, net, main_zone))
+        return
     osm = json.load(open(os.path.join(DATA, "osm", "osm.json")))
     n_roads = 1
     for e in osm["elements"]:
@@ -87,8 +121,8 @@ def build(scene, hfn):
         if tags.get("access") in ("no", "private") and hw in ("service", "track"):
             continue
         P = np.array([wgs_to_local(q["lat"], q["lon"]) for q in e["geometry"]])
-        if np.abs(P).max() > TER_HALF - 5:
-            P = P[(np.abs(P) < TER_HALF - 5).all(1)]
+        inside = (P[:, 0] > TER_X0 + 5) & (P[:, 0] < TER_X1 - 5) & (P[:, 1] > TER_Y0 + 5) & (P[:, 1] < TER_Y1 - 5)
+        P = P[inside]
         if len(P) < 2:
             continue
         line = shapely.LineString(P)

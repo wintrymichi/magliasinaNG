@@ -9,13 +9,17 @@ import os
 from pyproj import Transformer
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET = r"C:\Users\michi\Documents\magliasinaNG"          # Street View images + poses
-ROOT = r"D:\beamng_magliaso"                               # heavy data / cache
+# every path can be moved with an environment variable (e.g. a build on another machine)
+DATASET = os.environ.get("MAGLIASO_DATASET") or r"C:\Users\michi\Documents\magliasinaNG"   # Street View images + poses
+ROOT = os.environ.get("MAGLIASO_ROOT") or r"D:\beamng_magliaso"                         # heavy data / cache
 DATA = os.path.join(ROOT, "data")
 WORK = os.path.join(ROOT, "work")
 LEVEL_NAME = "magliaso_pura"
-BEAMNG_USER = r"C:\Users\michi\AppData\Local\BeamNG\BeamNG.drive\current"
-BEAMNG_GAME = r"C:\Program Files (x86)\Steam\steamapps\common\BeamNG.drive"
+BEAMNG_USER = os.environ.get("MAGLIASO_BEAMNG_USER") or r"C:\Users\michi\AppData\Local\BeamNG\BeamNG.drive\current"
+BEAMNG_GAME = os.environ.get("MAGLIASO_BEAMNG_GAME") or r"C:\Program Files (x86)\Steam\steamapps\common\BeamNG.drive"
+# the released level (zip) whose copies of vanilla files stand in for the game install when
+# BEAMNG_GAME does not exist (textures, forest materials; see vanilla.py)
+REFERENCE_ZIP = os.environ.get("MAGLIASO_REFERENCE_ZIP") or os.path.join(ROOT, "dist", "magliaso_pura_v1.1.zip")
 # MAGLIASO_LEVEL_DIR builds the level somewhere else (e.g. the public variant next to the
 # personal one installed in the game)
 LEVEL_DIR = os.environ.get("MAGLIASO_LEVEL_DIR") or os.path.join(BEAMNG_USER, "levels", LEVEL_NAME)
@@ -23,9 +27,22 @@ LEVEL_DIR = os.environ.get("MAGLIASO_LEVEL_DIR") or os.path.join(BEAMNG_USER, "l
 # map origin (LV95) = centre of the Street View route, rounded to the metre
 E0, N0 = 2710830.0, 1094360.0
 K = 1.0001374973449562          # LV95 scale factor at the origin (pyproj get_factors)
-TER_SIZE = 4096                 # terrain samples per side
-TER_SQUARE = 1.0                # metres per terrain sample
-TER_HALF = TER_SIZE * TER_SQUARE / 2   # terrain spans [-TER_HALF, TER_HALF] in x and y
+# playable area (v2.0, Malcantone): the boundary drawn by the user (WGS84 lat, lon), widened by
+# AREA_MARGIN m and joined with the Street View route (ROUTE_MARGIN m around it) and with the
+# cantonal road Magliaso - Agno - Bioggio - Manno - Gravesano (dati/cantonale_gravesano.json,
+# strade_extra.py: EXTRA_ROAD_MARGIN m around it and the strip between it and the side P1-P2 of the
+# boundary); see area.py
+BOUNDARY = [(45.967056, 8.858833), (46.041250, 8.923417), (46.018500, 8.803833), (45.993111, 8.788028)]
+AREA_MARGIN = 150.0
+ROUTE_MARGIN = 60.0
+EXTRA_ROAD_MARGIN = 150.0
+# terrain block: TER_SIZE x TER_SIZE vertices TER_SQUARE m apart, vertex (0, 0) (south-west) at
+# (TER_X0, TER_Y0); it covers the area with ~0.6-2 km to spare
+TER_SIZE = 8192                 # terrain samples per side
+TER_SQUARE = 1.5                # metres per terrain sample
+TER_X0, TER_Y0 = -7230.0, -4731.0
+TER_X1 = TER_X0 + (TER_SIZE - 1) * TER_SQUARE
+TER_Y1 = TER_Y0 + (TER_SIZE - 1) * TER_SQUARE
 
 _to_lv95 = Transformer.from_crs("EPSG:4326", "EPSG:2056", always_xy=True)
 _to_wgs = Transformer.from_crs("EPSG:2056", "EPSG:4326", always_xy=True)
