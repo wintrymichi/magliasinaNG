@@ -115,6 +115,7 @@ def roof_colors(blds):
 # drawn a little into a house): the building is cut PASSAGE_CLEAR m high over the line along a band
 # around it and the cut is closed by a ceiling and side walls, so no car runs into a solid block
 PASSAGE_CLEAR = {"road": 4.2, "path": 3.0}                 # m of free height over the line
+PASSAGE_LEAST = {"road": 3.0, "path": 2.2}                 # m, least free height under a roof kept over it (cars, vans)
 # half width of the band cut (of the width of the line, at least m): the whole carriageway where the
 # line runs through the building, the way of a car around the line where the building stands beside it
 PASSAGE_HALF = {"road": (0.5, 1.2), "path": (0.5, 0.6)}
@@ -277,7 +278,16 @@ def passages(b, walls, roofs, ways, tree):
             near = np.zeros(len(S), bool)
             near[np.argmin(shapely.distance(C, shapely.points(S[:, :2])))] = True
         zb = float(S[near, 2].min()) - PASSAGE_BELOW
-        zt = float(S[near, 2].max()) + PASSAGE_CLEAR[kind]
+        zr = float(S[near, 2].max())
+        zt = zr + PASSAGE_CLEAR[kind]
+        # the roof over the passage stays where the passage fits under it (a canopy just over the road)
+        if len(roofs):
+            rings = np.concatenate([roofs[:, :, :2], roofs[:, :1, :2]], axis=1)
+            over = roofs[shapely.intersects(C, shapely.polygons(rings))]
+            if len(over):
+                low = float(over[:, :, 2].min()) - 0.3
+                if zr + PASSAGE_LEAST[kind] <= low < zt:
+                    zt = low
         if top <= zb + 0.1:                        # a deck high over the building: nothing to cut
             continue
         walls = cut_passage(walls, band, zb, zt)
