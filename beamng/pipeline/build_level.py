@@ -12,7 +12,6 @@ import numpy as np
 from PIL import Image
 from config import WORK, LEVEL_DIR, LEVEL_NAME, TER_SIZE, TER_SQUARE, TER_X0, TER_Y0
 import bng
-from road_mesh import CARVE_RING
 
 L = f"/levels/{LEVEL_NAME}"
 Image.MAX_IMAGE_PIXELS = None
@@ -59,10 +58,11 @@ def stage_terrain(scene, ctx):
         base_tex[m] = {"b": f"{L}/{rel}", "size": 256}
     override = ctx.get("terrain_override")
     posts = []
-    if "wall_samples" in ctx:
+    if "wall_feet" in ctx:
         import walls
+        rec = ctx.setdefault("wall_rec", {})
         posts.append(lambda H, xs, ys: walls.adjust_terrain_roadside(
-            ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_samples"], xs, ys, H)))
+            ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H, rec)))
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
@@ -76,6 +76,8 @@ def stage_terrain(scene, ctx):
     mats = terrain.terrain_materials(LEVEL_NAME, base_tex)
     os.makedirs(level_path("art", "terrains"), exist_ok=True)
     json.dump(mats, open(level_path("art", "terrains", "main.materials.json"), "w"), indent=1)
+    if ctx.get("wall_rec"):
+        stage_backfill(scene, ctx, H, base_tex)
     scene.add("MissionGroup/level_objects/terrain", {
         "name": "theTerrain", "class": "TerrainBlock", "persistentId": bng.pid(),
         "position": [TER_X0, TER_Y0, z0], "maxHeight": maxh, "squareSize": TER_SQUARE,
@@ -201,8 +203,22 @@ def stage_roads(scene, ctx):
     def key_fn(pid):
         return lambda x, y: S.surfaces_at_polygon(x, y, pid)
 
+    # no corridor surface under the ground either (an edge extrapolated from far cells of the v1.1
+    # surfaces, where a side street leaves the corridor): at most SUNK under the lowest bare ground
+    # within 1 m, as on the rest of the network (network_mesh.py)
+    from scipy import ndimage as ndi
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    bb = np.array([it[0].bounds for it in items if not it[0].is_empty])
+    win, _, _ = dtm.window(bb[:, 0].min() - 5, bb[:, 1].min() - 5, bb[:, 2].max() + 5, bb[:, 3].max() + 5, pad=4)
+    lo = Grid(ndi.minimum_filter(np.asarray(win.a, np.float32), size=5) - network_mesh.SUNK, win.x_min, win.y_max,
+              win.res)
+    del win
+
     def z_fn(pid):
-        return lambda x, y, comp: S.height(x, y, pid=pid, comp=int(comp))
+        return lambda x, y, comp: np.maximum(S.height(x, y, pid=pid, comp=int(comp)), lo.sample(x, y))
+
+    def h_fn(x, y):
+        return np.maximum(hfn(x, y), lo.sample(x, y))
 
     stats = {"stone faces": 0}
 
@@ -231,7 +247,7 @@ def stage_roads(scene, ctx):
                 if piece.is_empty or piece.area < 0.05:
                     continue
                 if pid is None:                  # a sliver without cells of its own: the height function
-                    V, T = road_mesh.mesh_polygon(piece, hfn, cell=cell)
+                    V, T = road_mesh.mesh_polygon(piece, h_fn, cell=cell)
                     parts = [(None, V, T)]
                 else:                            # one mesh per surface of the polygon (walls inside it)
                     parts = []
@@ -242,16 +258,15 @@ def stage_roads(scene, ctx):
                     if len(T):
                         add_surface(tx, ty, mat, uvt, V, T, S, ground, tops)
     print("corridor: %d chunks" % len(builders), flush=True)
-    # terrain carve of the corridor: vertices under the paved meshes drop 10 cm below the lowest
-    # paved surface nearby (so the terrain between two vertices never cuts through the lower side
-    # of a step)
+    # terrain carve of the corridor: the vertices whose triangles reach a paved mesh drop 10 cm
+    # below the lowest paved face within one terrain step (road_mesh.carve_window), so the terrain
+    # never reaches over a face, between the vertices and at the lower side of a step
     xs, ys = terrain.vertex_coords()
     sq = xs[1] - xs[0]
-    ring = [(dx * sq, dy * sq) for dx, dy in CARVE_RING]
     ov = np.full((len(ys), len(xs)), np.nan, np.float32)            # carve height, NaN = none
     cap = np.full((len(ys), len(xs)), np.inf, np.float32)           # highest ground (under decks)
     corridor = shapely.union_all(meshed)
-    union = shapely.union_all([m.buffer(0.35) for m in meshed])
+    union = shapely.union_all([m.buffer(sq) for m in meshed])
     bx0, by0, bx1, by1 = union.bounds
     c0, c1 = max(int(np.searchsorted(xs, bx0)) - 1, 0), min(int(np.searchsorted(xs, bx1)) + 1, len(xs))
     r0, r1 = max(int(np.searchsorted(ys, by0)) - 1, 0), min(int(np.searchsorted(ys, by1)) + 1, len(ys))
@@ -259,15 +274,13 @@ def stage_roads(scene, ctx):
     mask = features.rasterize([(union, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0,
                               dtype=np.uint8, all_touched=True).astype(bool)
     rr, cc = np.nonzero(mask)
-    Xm, Ym = xs[c0 + cc], ys[r0 + rr]
-    zc = hfn(Xm, Ym)
-    for dx, dy in ring:
-        zc = np.minimum(zc, hfn(Xm + dx, Ym + dy))
-    ov[r0 + rr, c0 + cc] = zc - 0.10
+    csurf = road_mesh.TriSurface(np.concatenate(tops))
+    zc = road_mesh.carve_window(csurf, xs, ys, r0 + rr, c0 + cc)
+    ok = np.isfinite(zc)
+    ov[r0 + rr[ok], c0 + cc[ok]] = zc[ok] - 0.10
     ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops))
     # the rest of the network, tile by tile
     net = network_mesh.Network(exclude=corridor)
-    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
 
     def on_carve(r, c, z):
         ov[r, c] = np.fmin(ov[r, c], z)
@@ -315,10 +328,14 @@ def stage_roads(scene, ctx):
     ctx["terrain_override"] = (np.nan_to_num(ov), m, None)
     ctx["terrain_cap"] = cap
     ctx["network"] = net
+    ctx["corridor"] = corridor
     k = np.isfinite(cap)
+    feet = shapely.to_wkb([f for _, f in net.deck_feet]) if net.deck_feet else np.zeros(0, object)
     np.savez(ROADS_STATE, shape=np.array(ov.shape), ov_i=np.flatnonzero(m), ov_v=ov[m], cap_i=np.flatnonzero(k),
              cap_v=cap[k], tops=np.concatenate(tops), chunks=np.array(sorted(builders), np.int32).reshape(-1, 2),
-             corridor=np.frombuffer(shapely.to_wkb(corridor), np.uint8))
+             corridor=np.frombuffer(shapely.to_wkb(corridor), np.uint8),
+             deck_kind=np.array([kd for kd, _ in net.deck_feet], dtype="U4"),
+             deck_foot=np.array([np.frombuffer(w, np.uint8) for w in feet] + [None], dtype=object)[:-1])
     print("road chunks", len(builders), "triangles", ntri, "stone faces", stats["stone faces"], "bridges", len(recs),
           "carved vertices", int(m.sum()), flush=True)
 
@@ -367,7 +384,7 @@ def stage_roads_reuse(scene, ctx):
     import shapely
     import road_mesh
     import network_mesh
-    st = np.load(ROADS_STATE)
+    st = np.load(ROADS_STATE, allow_pickle=True)
     shape = tuple(int(v) for v in st["shape"])
     ov = np.full(shape, np.nan, np.float32)
     ov.reshape(-1)[st["ov_i"]] = st["ov_v"]
@@ -382,7 +399,11 @@ def stage_roads_reuse(scene, ctx):
     ctx["terrain_override"] = (np.nan_to_num(ov), m, None)
     ctx["terrain_cap"] = cap
     ctx["road_mesh_fn"] = road_mesh.MeshSampler(st["tops"])
-    ctx["network"] = network_mesh.Network(exclude=shapely.from_wkb(st["corridor"].tobytes()))
+    ctx["corridor"] = shapely.from_wkb(st["corridor"].tobytes())
+    ctx["network"] = network_mesh.Network(exclude=ctx["corridor"])
+    if "deck_kind" in st.files:
+        ctx["network"].deck_feet = [(str(kd), shapely.from_wkb(w.tobytes()))
+                                    for kd, w in zip(st["deck_kind"], st["deck_foot"])]
     print("road meshes of the previous build:", len(st["chunks"]), "chunks, carved vertices", int(m.sum()), flush=True)
 
 
@@ -395,7 +416,9 @@ def stage_walls(scene, ctx):
                      f"{st}_ao.data.dds", ground_type="ROCK"),
         bng.material("mp_wall_stone_top", f"{cc}_b.color.dds", f"{cc}_nm.normal.dds", f"{cc}_r.data.dds",
                      ground_type="CONCRETE")])
-    ctx["wall_samples"] = walls.build(LEVEL_DIR, LEVEL_NAME, scene)
+    # no cadastral wall across a road or along the way of a line (v2.0 network)
+    free = walls.drive_free(ctx["network"], ctx.get("corridor")) if ctx.get("network") is not None else None
+    ctx["wall_samples"], ctx["wall_feet"] = walls.build(LEVEL_DIR, LEVEL_NAME, scene, free=free)
     from config import NO_PHOTO
     ctx["rwall_samples"] = walls.build_roadside(LEVEL_DIR, LEVEL_NAME, scene, photo=not NO_PHOTO)
 
@@ -529,7 +552,9 @@ def stage_backdrop(scene, ctx):
 
 def stage_buildings(scene, ctx):
     import buildings_mesh
-    tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME)
+    net = ctx.get("network")
+    ways = buildings_mesh.network_ways(net, ctx.get("corridor")) if net is not None else None
+    tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways)
     for shape, origin, ntri in tiles:
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
                                                           annotation="BUILDINGS"))
@@ -550,16 +575,45 @@ def stage_vegetation(scene, ctx):
         roads = [p["geom"] for p in net.polys if not p["cls"].startswith("strip_path")]
         paths = [p["geom"] for p in net.polys if p["cls"].startswith("strip_path")]
         roads += [g for g, _, _ in roadheight.paved_polygons()]
-        for s in net.segs:
-            if s["bridge"]:
-                a, n = s["first"], s["n"]
-                deck = shapely.LineString(np.column_stack([net.x[a:a + n], net.y[a:a + n]])).buffer(
-                    bridges.half_width({"width": net.w}, s), cap_style="flat")
-                (roads if s["kind"] == "road" else paths).append(deck)
+        if net.deck_feet:                          # the decks as built (carried on to the ground)
+            for kind, deck in net.deck_feet:
+                (roads if kind == "road" else paths).append(deck)
+        else:
+            for s in net.segs:
+                if s["bridge"]:
+                    a, n = s["first"], s["n"]
+                    deck = shapely.LineString(np.column_stack([net.x[a:a + n], net.y[a:a + n]])).buffer(
+                        bridges.half_width({"width": net.w}, s), cap_style="flat")
+                    (roads if s["kind"] == "road" else paths).append(deck)
         drv = clearance.Drivable(roads, paths)
         net_xy = (np.column_stack([net.x, net.y]), 0.5 * net.w,
                   np.array([net.segs[k]["kind"] == "path" for k in net.seg], bool))
-    vegetation.build(LEVEL_DIR, LEVEL_NAME, scene, drivable=drv, net_xy=net_xy)
+    counts = vegetation.build(LEVEL_DIR, LEVEL_NAME, scene, drivable=drv, net_xy=net_xy)
+    ctx["n_forest"] = sum(counts.values())
+
+
+def stage_backfill(scene, ctx, H, base_tex):
+    """The ground behind the retaining walls, where the terrain was lowered so that no terrain
+    triangle spans a wall (walls.carve_terrain): a mesh with the ground as it was, in the material
+    of the terrain layer there, cut at the roads, paths and bridge decks."""
+    import terrain
+    import walls
+    import roadheight
+    from geo import Grid
+    xs, ys = terrain.vertex_coords()
+    bng.write_materials(level_path("art", "shapes", "walls", "backfill.materials.json"), [
+        bng.material("mp_fill_" + m.lower(), base_tex[m]["b"], f"{det}_nm.png", ground_type=gm)
+        for m, (gm, det, mac, dsize, msize) in terrain.TERRAIN_MATS.items()])
+    drv = [g for g, _, _ in roadheight.paved_polygons()]
+    net = ctx.get("network")
+    if net is not None:
+        drv += [p["geom"] for p in net.polys]
+        drv += [foot for _, foot in getattr(net, "deck_feet", [])]
+    drv = [g for g in drv if g is not None and not g.is_empty]
+    layers = np.load(os.path.join(WORK, "terrain_layers.npy"), mmap_mode="r")
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    walls.build_backfill(LEVEL_DIR, LEVEL_NAME, scene, ctx["wall_rec"], H, xs, ys, ctx["wall_feet"], drv, layers,
+                         dtm.sample)
 
 
 def stage_spawns(scene, ctx):
@@ -631,23 +685,34 @@ PUBLIC_README = [
 
 
 def write_info(ctx):
+    import pickle
+    import area
+    import bridges
     spawns = ctx.get("spawns", [])
+    # the figures of the description, from what this build made
+    km2 = area.polygon().area / 1e6
+    n_bridges = sum(1 for b in json.load(open(bridges.PONTI, encoding="utf-8"))["ponti"] if not b.get("skip"))
+    n_buildings = len(pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb")))
+    n_trees = int(round(ctx.get("n_forest", 0) / 1000.0))
+    n_villages = sum(1 for s in spawns if s[0] not in ("spawn_magliaso", "spawn_mid", "spawn_pura"))
     info = {
         "title": "Malcantone - Magliaso, Pura e dintorni",
-        "description": "Ricostruzione in scala 1:1 di circa 46 km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
-                       "Magliaso, Manno, Cademario, Novaggio e Sessa: ogni strada e sentiero guidabile, 137 ponti, "
-                       "8490 edifici, circa 240 000 alberi, traffico IA. La Strada Cantonale Magliaso - Pura e' "
-                       "ricostruita da 366 panoramiche Street View (ottobre 2022). Dati ufficiali swisstopo "
-                       "(swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della misurazione "
-                       "ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei riordini "
-                       "fondiari, Cantone Ticino; Copernicus DEM GLO-30 (c) DLR e.V. / Airbus.",
+        "description": ("Ricostruzione in scala 1:1 di circa %d km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
+                        "Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio e Sessa: ogni strada e "
+                        "sentiero guidabile, %d ponti, %d edifici, circa %d 000 alberi, traffico IA. La Strada "
+                        "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
+                        "c'e' anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano. Dati ufficiali "
+                        "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
+                        "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
+                        "riordini fondiari, Cantone Ticino; Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
+                        % (round(km2), n_bridges, n_buildings, n_trees)),
         "previews": [f"{LEVEL_NAME}_preview.jpg"],
         "size": [TER_SIZE, TER_SIZE],
         "authors": "michi (pipeline: Claude)",
-        "biome": "Prealpi ticinesi, bosco di castagni, Lago di Lugano",
+        "biome": "Prealpi ticinesi, bosco di castagni, Lago di Lugano, valle del Vedeggio",
         "roads": "Strade cantonali, strade comunali, strade forestali, sentieri e mulattiere",
         "suitablefor": "Guida su strada di montagna, fuoristrada su sentieri",
-        "features": "Scala reale 1:1, terreno LiDAR, 12 x 12 km, 18 paesi",
+        "features": "Scala reale 1:1, terreno LiDAR, 12 x 12 km, %d paesi" % n_villages,
         "isAuxiliary": False, "supportsTraffic": True, "supportsTimeOfDay": True,
         "defaultSpawnPointName": spawns[0][0] if spawns else None,
         "spawnPoints": [{"objectname": s[0], "translationId": s[0]} for s in spawns],

@@ -5,9 +5,11 @@ Sets (default: all):
   bridges   every bridge of dati/ponti.json from the side (no trees) and from the approach
   roads     the driver's view every ROAD_EVERY m along all the roads
   paths     the driver's view every PATH_EVERY m along the paths
+  cantonale the driver's view every CANTONALE_EVERY m along the cantonal road Magliaso - Gravesano
+            (area.extra_roads), towards Gravesano and back
   villages  every village of the area from above at an angle
   corners   the four corners of the area
-  flagged   the places listed by check_level.py (beamng/verifica/check_level.json, "places")
+  flagged   the places listed by check_level.py (beamng/verifica/check_level.json, "places"), without trees
 Every view goes to <WORK>/review/<set>/ with an index.json (place, class, name); contact sheets of
 them and the overview go to beamng/verifica/mappa/.
     python review_map.py [set ...] [--level <folder>]
@@ -26,7 +28,8 @@ OUT = os.path.join(os.path.dirname(HERE), "verifica", "mappa")
 SHOTS = os.path.join(WORK, "review")
 ROAD_EVERY = 700.0
 PATH_EVERY = 2000.0
-SETS = ("overview", "bridges", "roads", "paths", "villages", "corners", "flagged")
+CANTONALE_EVERY = 250.0
+SETS = ("overview", "bridges", "roads", "paths", "cantonale", "villages", "corners", "flagged")
 
 
 def font(size):
@@ -110,7 +113,7 @@ def overview(r, tile=1024.0, ppm=1.0):
             big.paste(im, (int(i * tile / small), int((ny - 1 - j) * tile / small)))
             rows.append({"file": os.path.basename(p), "x0": tx, "y0": ty, "x1": tx + tile, "y1": ty + tile})
     d = ImageDraw.Draw(big)
-    B = [((x - x0) / small, (ny * tile - (y - y0)) / small) for x, y in np.array(area.boundary())]
+    B = [((x - x0) / small, (ny * tile - (y - y0)) / small) for x, y in np.asarray(area.boundary().exterior.coords)]
     d.line(B + [B[0]], fill=(255, 40, 40), width=3)
     f = font(22)
     for j in range(ny):
@@ -157,7 +160,8 @@ def road_views(r, net, kind, every):
         if k % 25 == 0:
             print(sub, k, flush=True)
     save_index(sub, rows)
-    return contact_sheets(entries, sub, title="Strade: vista del guidatore" if kind == "road" else "Sentieri: vista a piedi/in moto")
+    return contact_sheets(entries, "strade" if kind == "road" else "sentieri",
+                          title="Strade: vista del guidatore" if kind == "road" else "Sentieri: vista a piedi/in moto")
 
 
 def bridge_views(r, net):
@@ -211,6 +215,31 @@ def r_tree(net):
     return _TREE["t"]
 
 
+def cantonale_views(r, net):
+    """The driver's view every CANTONALE_EVERY m along the roads added to the area beyond the
+    boundary (area.extra_roads: the cantonal road Magliaso - Gravesano), both ways, at the network
+    station nearest each point."""
+    sub = os.path.join(SHOTS, "cantonale")
+    os.makedirs(sub, exist_ok=True)
+    tree = r_tree(net)
+    rows, entries = [], []
+    for road in area.extra_roads():
+        for s in np.arange(0.5 * CANTONALE_EVERY, road.length, CANTONALE_EVERY):
+            q, q1, q2 = road.interpolate(s), road.interpolate(max(s - 8.0, 0.0)), road.interpolate(min(s + 8.0, road.length))
+            heading = math.atan2(q2.y - q1.y, q2.x - q1.x)
+            _, j = tree.query([q.x, q.y])
+            x, y, z = float(net.x[j]), float(net.y[j]), float(net.z[j])
+            for way, h in (("verso Gravesano", heading), ("verso Magliaso", heading + math.pi)):
+                p = os.path.join(sub, f"{len(rows):03d}.jpg")
+                if not os.path.exists(p):
+                    r.shot(Camera.driver(x, y, z, h), p, near=300, far=3000)
+                rows.append({"file": os.path.basename(p), "km": round(s / 1000.0, 2), "way": way, "x": x, "y": y,
+                             "z": z})
+                entries.append((p, f"{s / 1000.0:.2f} km {way} ({x:.0f}, {y:.0f})"))
+    save_index("cantonale", rows)
+    return contact_sheets(entries, "cantonale", title="Cantonale Magliaso - Gravesano: vista del guidatore")
+
+
 def village_views(r, net):
     import places
     sub = os.path.join(SHOTS, "villages")
@@ -234,7 +263,7 @@ def village_views(r, net):
 def corner_views(r):
     sub = os.path.join(SHOTS, "corners")
     os.makedirs(sub, exist_ok=True)
-    B = np.array(area.boundary())
+    B = np.asarray(area.boundary().exterior.coords)[:-1]
     c = B.mean(0)
     entries = []
     for k, (x, y) in enumerate(B):
@@ -270,7 +299,7 @@ def flagged_views(r, net):
         if not os.path.exists(p):
             x, y, z = pl["x"], pl["y"], pl["z"]
             r.shot(Camera.orbit(x, y, z, 30.0, pl.get("az", 200.0), 35.0), p, near=150, far=1500,
-                   trees=pl.get("trees", True))
+                   trees=pl.get("trees", False))
         entries.append((p, f"{k:03d} {pl['what']} ({pl['x']:.0f}, {pl['y']:.0f})"))
     return contact_sheets(entries, "segnalati", title="Punti segnalati dai controlli")
 
@@ -297,6 +326,8 @@ def main(argv):
                 village_views(r, net)
             elif s == "corners":
                 corner_views(r)
+            elif s == "cantonale":
+                cantonale_views(r, net)
             elif s == "flagged":
                 flagged_views(r, net)
             print(f"[{s}: {time.time() - t:.0f} s]", flush=True)

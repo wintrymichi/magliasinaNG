@@ -42,8 +42,9 @@ BLEND_DZ = 0.40        # m, lines whose heights at a cell agree within this are 
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
 FILL_OFF = 2.0         # m, largest offset of a square or car park from the smoothed ground
+OFF_LINE = 1.5         # half widths from its line: beyond, a cell far from the ground keeps to the ground
 FILLED = -2            # line code of the cells of squares and car parks (harmonic fill)
-NODE_DECK = 8.0        # m around the junction where a line meets a bridge: the deck replaces its strip
+SUNK = 0.75            # m, deepest a survey surface may lie under the lowest bare ground within 1 m
 AV_CLASSES = {"strada_sentiero": "road", "marciapiede": "sidewalk", "spartitraffico": "island",
               "altro_rivestimento_duro": "hard"}
 
@@ -64,6 +65,7 @@ class Network:
         self.bridge = np.array([s["bridge"] for s in self.segs])
         self.polys = []                       # dicts: geom, cls, surface, segs
         self.deck_tops = []                   # bridge deck top triangles (bridges.py)
+        self.deck_feet = []                   # (kind, footprint) of every deck built (bridges.py)
         self._build_polygons(exclude)
 
     # ------------------------------------------------------------------ polygons
@@ -73,7 +75,7 @@ class Network:
         # bridge decks (bridges.py, as wide as the deck; survey polygons 1 m wider, so no sliver of
         # them is left beside a deck without a line to take its height from) and the corridor stay out
         import bridges
-        decks, decks_av, node_decks = [], [], {}
+        decks, decks_av, node_decks, deck_hw = [], [], {}, []
         for s in segs:
             if not s["bridge"]:
                 continue
@@ -82,6 +84,7 @@ class Network:
             hw = bridges.half_width({"width": self.w}, s)
             for nd in s["nodes"]:
                 node_decks.setdefault(nd, []).append(len(decks))
+            deck_hw.append(hw)
             decks.append(L.buffer(hw, cap_style="flat"))
             decks_av.append(L.buffer(hw + 1.0, cap_style="flat"))
         ex = [exclude] if exclude is not None else []
@@ -126,12 +129,13 @@ class Network:
                 near = av_tree.query(strip, predicate="intersects")
                 if len(near):
                     strip = strip.difference(shapely.union_all([road_like[i][0] for i in near]))
-            # the decks of the bridges it leads onto, near the junction only (a path that starts on
-            # a bridge and goes down under it keeps its way under), not the ones that pass over it
+            # the decks of the bridges it leads onto, where the two overlap at the junction only (a
+            # path that starts on a bridge and goes down under it keeps its way under), not the
+            # decks that pass over it
             holes = []
             for nd in s["nodes"]:
                 for i in node_decks.get(nd, []):
-                    near_node = shapely.Point(self.node_xy[nd]).buffer(NODE_DECK)
+                    near_node = shapely.Point(self.node_xy[nd]).buffer(deck_hw[i] + hw + 0.5)
                     holes.append(decks[i].intersection(near_node))
             for hole in holes + ([ex_geom] if not ex_geom.is_empty else []):
                 if not hole.is_empty and strip.intersects(hole):
@@ -156,7 +160,7 @@ class Network:
         print("drivable polygons %d, ha %s" % (len(self.polys), {k: round(v, 1) for k, v in area_by.items()}), flush=True)
 
     # ------------------------------------------------------------------ heights
-    def heights(self, X, Y, P, with_seg=False, own=None):
+    def heights(self, X, Y, P, with_seg=False, own=None, with_u=False):
         """Heights at points (X, Y) inside polygons P (index into self.polys); NaN where no line
         of the polygon is near (squares, car parks). with_seg: also the line that gave each height
         (-1 for none).
@@ -165,12 +169,19 @@ class Network:
         of a line it carries on along the end's grade. The line nearest the point (relative to its
         half width) wins; lines that agree with it within BLEND_DZ are blended (junctions).
         own: only this line (a strip along its line: a path beside a higher road keeps its own
-        height up to its edges)."""
+        height up to its edges). with_u: also the distance of each point from the winning line in
+        half widths (0 on the axis, 1 at the edge of its carriageway) and how far past the end of
+        that line the point lies (m, 0 alongside it).
+        A line gives heights only within REACH m of its carriageway, measured as the true distance:
+        the offset across the line alone would let a point far ahead of a bend, or far beyond the
+        end, take the height of a line it is nowhere near (a square beside a steep path)."""
         n = len(X)
         out = np.full(n, np.nan)
         segs_out = np.full(n, -1, np.int64)
+        u_out = np.full(n, np.inf)
+        e_out = np.zeros(n)
         if n == 0:
-            return (out, segs_out) if with_seg else out
+            return (out, segs_out, u_out, e_out) if with_u else ((out, segs_out) if with_seg else out)
         X = np.asarray(X, np.float64)
         Y = np.asarray(Y, np.float64)
         k = 12
@@ -219,7 +230,7 @@ class Network:
             off = np.where(take, t, off)
             ext = np.where(take, e, ext)
             hw = np.where(take, 0.5 * (self.w[a] + s * (self.w[b] - self.w[a])), hw)
-        ok &= np.isfinite(h) & (np.abs(off) <= hw + REACH)
+        ok &= np.isfinite(h) & (np.abs(off) <= hw + REACH) & (best_d <= hw + REACH)
         # one entry per line and point (neighbouring stations of a line give the same projection)
         order = np.argsort(np.where(ok, best_d, np.inf), axis=1)
         seg_o = np.take_along_axis(seg, order, 1)
@@ -242,6 +253,10 @@ class Network:
         good = has & (ws > 0)
         out[good] = (wt * np.nan_to_num(h_o)).sum(1)[good] / ws[good]
         segs_out[good] = seg_o[np.arange(n), best][good]
+        u_out[good] = u[np.arange(n), best][good]
+        e_out[good] = e_o[np.arange(n), best][good]
+        if with_u:
+            return out, segs_out, u_out, e_out
         return (out, segs_out) if with_seg else out
 
     def strip_height(self, pid):
@@ -289,20 +304,35 @@ class Network:
         Y = y1 - (rr + 0.5) * RES
         Z = np.full((H, W), np.nan)
         G = np.full((H, W), -1, np.int64)                   # line that gave the height
-        Z[rr, cc], G[rr, cc] = self.heights(X, Y, owner[rr, cc], with_seg=True)
+        U = np.full((H, W), np.inf)
+        E = np.zeros((H, W))
+        Z[rr, cc], G[rr, cc], U[rr, cc], E[rr, cc] = self.heights(X, Y, owner[rr, cc], with_seg=True, with_u=True)
+        # the smoothed DTM on the cells of the window (sampled: the window may reach past the edge
+        # of the DTM raster, near the corners of the area)
+        Xc = x0 + (np.arange(W) + 0.5) * RES
+        Yc = y1 - (np.arange(H) + 0.5) * RES
+        Ds = dtm.sample(np.tile(Xc, H), np.repeat(Yc, W)).reshape(H, W).astype(np.float64)
+        if np.isnan(Ds).any():
+            Ds = np.where(np.isnan(Ds), np.nanmean(Ds), Ds)
+        Dlo = ndi.minimum_filter(Ds, size=5) - SUNK             # lowest bare ground within 1 m
+        Ds = ndi.gaussian_filter(Ds, 4.0)
+        # a survey polygon reaching beyond the carriageway of its line onto ground far above or
+        # below it (a terrace, a yard behind a wall), or past the end of its line where the line's
+        # grade carried on leaves the ground: that part keeps to the ground
+        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF)
+        Z[off] = np.nan
+        G[off] = -1
         # squares and car parks: smoothed DTM, corrected to meet the roads around
         hole = m & np.isnan(Z)
         if hole.any():
-            # the smoothed DTM on the cells of the window (sampled: the window may reach past the
-            # edge of the DTM raster, near the corners of the area)
-            Xc = x0 + (np.arange(W) + 0.5) * RES
-            Yc = y1 - (np.arange(H) + 0.5) * RES
-            Ds = dtm.sample(np.tile(Xc, H), np.repeat(Yc, W)).reshape(H, W).astype(np.float64)
-            if np.isnan(Ds).any():
-                Ds = np.where(np.isnan(Ds), np.nanmean(Ds), Ds)
-            Ds = ndi.gaussian_filter(Ds, 4.0)
             Z = harmonic_fill(Z, m, Ds)
             G[hole] = FILLED                  # one smooth field: its cells are one surface however steep
+        # no paved surface under the ground: a cell given a height far below the bare ground (a line
+        # of the polygon that runs lower, a hairpin's lower leg, the fill pulled down by it) comes up
+        # to SUNK under it, as a surface of its own with a step to the rest
+        low = m & (Z < Dlo)
+        Z[low] = Dlo[low]
+        G[low] = FILLED
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
@@ -354,7 +384,7 @@ def harmonic_fill(Z, m, D):
 MATERIAL = {
     ("road", "hard"): ("mp_road_asphalt", 3.0, 1.25), ("road", "natural"): ("mp_road_asphalt", 3.0, 1.25),
     ("sidewalk", "hard"): ("mp_sidewalk", 2.0, 1.25), ("island", "hard"): ("mp_island", 2.0, 2.5),
-    ("hard", "hard"): ("mp_hard_asphalt", 4.0, 1.25),
+    ("hard", "hard"): ("mp_hard_asphalt", 2.0, 1.25),      # yards on steep ground: 2 m follows them
     ("strip_road", "hard"): ("mp_road_asphalt", 3.0, 1.25), ("strip_road", "natural"): ("mp_road_gravel", 3.0, 2.0),
     ("strip_path", "hard"): ("mp_path_paved", 2.0, 1.25), ("strip_path", "natural"): ("mp_path_dirt", 2.0, 2.0),
 }
@@ -382,6 +412,7 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
         S = surface_fit.Surface(own, np.zeros((4, 4)), np.zeros((4, 4), bool), np.zeros((4, 4), bool),
                                 X0 - MARGIN, Y0 - MARGIN + 2.0, RES)
     sub, _, _ = dtm.window(X0 - MARGIN, Y0 - MARGIN, X1 + MARGIN, Y1 + MARGIN, pad=4)
+    lo = Grid(ndi.minimum_filter(np.asarray(sub.a, np.float32), size=5) - SUNK, sub.x_min, sub.y_max, sub.res)
     sub.a = ndi.gaussian_filter(np.asarray(sub.a, np.float32), 0.6)
     ground = lambda x, y: sub.sample(x, y)
     n_tri = 0
@@ -406,7 +437,10 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
                         emit(cx, cy, mat, uvt, V, T)
                         n_tri += len(T)
                     continue
-                zf = (lambda pid_: (lambda x, y, comp: S.height(x, y, pid=pid_, comp=int(comp))))(int(pid))
+                # the vertices too: no deeper than SUNK under the bare ground (an edge extrapolated
+                # from far cells of its surface)
+                zf = (lambda pid_: (lambda x, y, comp: np.maximum(S.height(x, y, pid=pid_, comp=int(comp)),
+                                                                  lo.sample(x, y))))(int(pid))
                 kf_all = (lambda pid_: (lambda x, y: S.surfaces_at_polygon(x, y, pid_)))(int(pid))
                 for part, comp in road_mesh.split_by_surface(piece, S, int(pid)):
                     kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
@@ -418,9 +452,10 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
 
 
 def carve_tile(net, X0, Y0, xs, ys, surf, on_carve):
-    """Terrain carve of one tile: its vertices under the network meshes drop 0.1 m under the lowest
-    top face at the vertex and around it (surf: road_mesh.TriSurface of the meshes as built, those
-    of the neighbouring tiles too, so no slope can poke through any of them) -> on_carve(rows, cols, z)."""
+    """Terrain carve of one tile: every vertex whose terrain triangles reach a network mesh drops
+    0.1 m under the lowest top face within one terrain step of it (road_mesh.carve_window; surf:
+    road_mesh.TriSurface of the meshes as built, those of the neighbouring tiles too), so the terrain
+    stays under every face, between its vertices too -> on_carve(rows, cols, z)."""
     import road_mesh
     X1, Y1 = X0 + TILE, Y0 + TILE
     ids = net.ptree.query(shapely.box(X0, Y0, X1, Y1), predicate="intersects")
@@ -430,15 +465,12 @@ def carve_tile(net, X0, Y0, xs, ys, surf, on_carve):
         return
     sq = xs[1] - xs[0]
     tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)          # row 0 = south
-    ring = [(dx * sq, dy * sq) for dx, dy in road_mesh.CARVE_RING]
-    mask = features.rasterize([(net.polys[i]["geom"].buffer(0.35), 1) for i in ids], out_shape=(r1 - r0, c1 - c0),
+    # the vertices within one step (in x and in y) of a mesh: their triangles can reach over it
+    mask = features.rasterize([(net.polys[i]["geom"].buffer(sq), 1) for i in ids], out_shape=(r1 - r0, c1 - c0),
                               transform=tr, fill=0, dtype=np.uint8, all_touched=True).astype(bool)
     rr, cc = np.nonzero(mask)
     if not len(rr):
         return
-    Xv, Yv = xs[c0 + cc], ys[r0 + rr]
-    zc = surf.height(Xv, Yv, "low")
-    for dx, dy in ring:                              # NaN off the meshes: no vote
-        zc = np.fmin(zc, surf.height(Xv + dx, Yv + dy, "low"))
+    zc = road_mesh.carve_window(surf, xs, ys, r0 + rr, c0 + cc)
     ok = np.isfinite(zc)
     on_carve(r0 + rr[ok], c0 + cc[ok], zc[ok] - 0.10)

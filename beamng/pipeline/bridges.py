@@ -14,11 +14,14 @@ lowered to it.
 beamng/dati/ponti.json lists every bridge (swissTLM3D id, place, length, height above the ground,
 the check flags) and holds the manual corrections, read back at every build:
   "z0" / "z1": deck height at the first / last end (m), "profile": "straight" (a straight deck
-  between the ends), "type": "open" | "culvert", "skip": true (no deck: the road follows the
-  ground). bridge_report.py draws the profile and a view of every bridge for the review.
+  between the ends) or "tlm" (the 3D line of swissTLM3D, met to the network at the ends: a footbridge
+  over a road with its stairs), "type": "open" | "culvert", "skip": true (no deck: the road follows
+  the ground). bridge_report.py draws the profile and a view of every bridge for the review.
+No pier stands on a road or path of the network (the one under the bridge).
 """
 import json, os
 import numpy as np
+import shapely
 from config import WORK
 import network
 
@@ -55,9 +58,10 @@ def _quad(a, b, c, d, out):
     return t
 
 
-def deck_geometry(P, N, z, hw, ground, kind, typ):
+def deck_geometry(P, N, z, hw, ground, kind, typ, avoid=None):
     """Triangles (k, 3, 3) of a deck along stations P (n, 2) with normals N and deck heights z:
-    (top, sides and underside, parapets, piers), each facing outwards."""
+    (top, sides and underside, parapets, piers), each facing outwards. avoid: the drivable surfaces
+    under the bridge (no pier on them)."""
     n = len(P)
     L = P + N * hw
     R = P - N * hw
@@ -108,6 +112,8 @@ def deck_geometry(P, N, z, hw, ground, kind, typ):
                 continue
             Nn, Tt = N[i], T[i]
             hw_p, ht = hw * 0.8, PIER_W / 2
+            if avoid is not None and avoid.distance(shapely.Point(c)) < hw_p + ht + 0.3:
+                continue
             cs = [c + Nn * hw_p + Tt * ht, c - Nn * hw_p + Tt * ht, c - Nn * hw_p - Tt * ht, c + Nn * hw_p - Tt * ht]
             for q in range(4):
                 a_, b_ = cs[q], cs[(q + 1) % 4]
@@ -198,7 +204,12 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         g = ground(P[:, 0], P[:, 1])
         clear = z - SLAB - g
         typ = o.get("type") or ("culvert" if clear.max() < LOW else "open")
-        top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ)
+        avoid = None
+        if getattr(net, "ptree", None) is not None:
+            under = net.ptree.query(shapely.LineString(P).buffer(hw + 3.0), predicate="intersects")
+            if len(under):
+                avoid = shapely.union_all([net.polys[i]["geom"] for i in under])
+        top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ, avoid)
         mat_top = {("road", "hard"): "mp_road_asphalt", ("road", "natural"): "mp_road_gravel",
                    ("path", "hard"): "mp_path_paved", ("path", "natural"): "mp_path_dirt"}[(s["kind"], s["surface"])]
         cxy = P.mean(0)
@@ -211,6 +222,8 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         net.deck_tops.append(top)
         # ground under the deck no higher than the underside of the slab
         foot = shapely.LineString(P).buffer(hw, cap_style="flat")
+        if hasattr(net, "deck_feet"):
+            net.deck_feet.append((s["kind"], foot))
         x0, y0, x1, y1 = foot.bounds
         c0, c1 = int(np.searchsorted(xs, x0)) - 1, int(np.searchsorted(xs, x1)) + 1
         r0, r1 = int(np.searchsorted(ys, y0)) - 1, int(np.searchsorted(ys, y1)) + 1

@@ -17,7 +17,7 @@ Cross slope: the plane of the DTM across the carriageway, smoothed along the lin
 MAX_CROSS; none on bridges, tapered to none at their ends.
 Output: work/network_surface.npz: z (height), g (grade), c (cross slope) per station.
 """
-import json, os
+import collections, json, os
 import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import spsolve
@@ -32,6 +32,7 @@ MAX_CROSS = {"road": 0.08, "path": 0.15}
 CROSS_SMOOTH = {"road": 8.0, "path": 4.0}      # m, Gaussian smoothing of the cross slope along a line
 TAPER = 10.0                                    # m, cross slope fades to 0 at the ends of a bridge
 W_HOLD = 100.0                                  # weight of the Strada Cantonale surface
+W_DECK = 1e-3                                   # weight of the swissTLM3D deck height on a bridge
 STRAIGHT = 145.0                                # deg, two lines leaving a node this far apart carry on
 DIP = 1.5                                       # m, a bridge over a dip shallower than this rests on the ground
 ON_GROUND = 1.0                                 # m, ... if its swissTLM3D line is no higher above the DTM
@@ -120,6 +121,14 @@ def cantonale_hold(st):
     return near & np.isfinite(z), z
 
 
+def manual_bridges():
+    """The corrections of dati/ponti.json by swissTLM3D id (bridges.py keeps them there)."""
+    f = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "ponti.json")
+    if not os.path.exists(f):
+        return {}
+    return {b["tlm"]: b for b in json.load(open(f, encoding="utf-8"))["ponti"]}
+
+
 def solve(verbose=True):
     segs, st, node_pos = network.load()
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
@@ -149,6 +158,13 @@ def solve(verbose=True):
             above = np.nanmax(zt[a:a + n] - d[a:a + n]) if np.isfinite(zt[a:a + n]).any() else 0.0
             if (d[a:a + n] - line).min() > -DIP and above < ON_GROUND:
                 w0[a:a + n] = 1.0
+    # the type set by hand in dati/ponti.json decides: a culvert keeps the road on the ground (its
+    # data), an open bridge has none
+    manual = manual_bridges()
+    for s in segs:
+        t = manual.get(s["tlm"], {}).get("type") if s["bridge"] else None
+        if t in ("culvert", "open"):
+            w0[s["first"]:s["first"] + s["n"]] = 1.0 if t == "culvert" else 0.0
     w0[hold] = 0.0
     Rs, Cs, Vs, Ws, n_s = smooth_rows(st, segs, u, node_pos)
     S_mat = sp.csr_matrix((Vs, (Rs, Cs)), shape=(n_s, n_unk))
@@ -165,9 +181,18 @@ def solve(verbose=True):
     zt = st["z_tlm"]
     zdata[fixed] = np.where(np.isfinite(zt[fixed]) & (np.abs(zt[fixed] - d[fixed]) < 30), zt[fixed], d[fixed])
     w0[fixed] = 1.0
+    # a bridge with an end that joins nothing (a dead end, or the network cut at the edge of the area)
+    # has only the smoothness to hold it, which leaves its grade free (the deck would run on along
+    # any slope): a faint pull to the swissTLM3D line, the deck, holds it there. A bridge held at both
+    # ends keeps the curve between them.
+    degree = collections.Counter(nd for q in segs for nd in q["nodes"])
+    loose = np.array([segs[k]["bridge"] and min(degree[nd] for nd in segs[k]["nodes"]) == 1 for k in range(len(segs))])
+    deck = loose[seg] & (w0 == 0) & ~hold & ~fixed & np.isfinite(zt) & (np.abs(np.nan_to_num(zt) - d) < 30)
+    zdata[deck] = zt[deck]
+    w_deck = np.where(deck, W_DECK, 0.0)
     wt = w0.copy()
     for it, c in enumerate(TUKEY + (None,)):
-        ww = wt + np.where(hold, W_HOLD, 0.0)
+        ww = wt + np.where(hold, W_HOLD, 0.0) + w_deck
         A = Q + (Pm.T @ sp.diags(ww) @ Pm)
         b = Pm.T @ (ww * zdata)
         A = A + sp.eye(n_unk) * 1e-9
@@ -188,6 +213,23 @@ def solve(verbose=True):
     if verbose:
         print("  pieces without data (heights of swissTLM3D):", int(len(set(lab[u][fixed].tolist()))),
               "stations", int(fixed.sum()), flush=True)
+    # deck heights set by hand (dati/ponti.json: z0, z1, profile 'straight' or 'tlm'; bridges.py builds
+    # the deck on them): the line follows them too, from the heights at its ends where only the shape
+    # is set. 'tlm': the 3D line of swissTLM3D (a footbridge over a road with its stairs), moved to
+    # meet the network at both ends
+    for s in segs:
+        m = manual.get(s["tlm"], {}) if s["bridge"] else {}
+        a, n = s["first"], s["n"]
+        ss = st["s"][a:a + n]
+        f = (ss - ss[0]) / max(ss[-1] - ss[0], 1e-9)
+        if "z0" in m or "z1" in m or m.get("profile") == "straight":
+            z0, z1 = float(m.get("z0", z[a])), float(m.get("z1", z[a + n - 1]))
+            z[a:a + n] = z0 + (z1 - z0) * f
+        elif m.get("profile") == "tlm" and np.isfinite(zt[a:a + n]).sum() >= 2:
+            zl = zt[a:a + n].copy()
+            ok = np.isfinite(zl)
+            zl = np.interp(ss, ss[ok], zl[ok])
+            z[a:a + n] = zl + (z[a] - zl[0]) * (1 - f) + (z[a + n - 1] - zl[-1]) * f
     # grade and cross slope
     g = np.zeros(len(x))
     cross = np.zeros(len(x))

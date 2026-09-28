@@ -12,9 +12,14 @@ survey). Next to the road the top is capped at the road surface + 0.15 m where t
 show no wall above the road (wall_caps.py: the LiDAR crest caught guardrails and shrubs).
 Within 1 m of a paved surface (roadheight.py) a wall reaches from 0.4 m below it to at least
 0.15 m above it: the idealised road can be higher (a bridge) or lower (a smeared ramp removed)
-than the DTM the wall was measured on. Output meshes: prism sides + triangulated top, per 128 m chunk.
-Also returns a terrain carve (vertices on the low side within 1.1 m drop to the
-wall base) so no slope pokes out of the wall face.
+than the DTM the wall was measured on. v2.0: no wall stands more than FREE_OVER m above the way of a car
+(drive_free: the surveyed roads of the network and a band around every line; the survey and the
+swissTLM3D lines do not always agree, and a wall drawn across a street would close it).
+Output meshes: prism sides + triangulated top, per 128 m chunk.
+Also returns the footprints for the terrain: carve_terrain lowers every terrain vertex whose
+triangles touch a wall to the wall base, so no terrain triangle spans a wall and pokes out of its
+face (a 1.5 m terrain grid cannot hold a step inside a 0.3 m wall), and build_backfill covers the
+trench this leaves behind a retaining wall with the ground as it was (a mesh on the terrain grid).
 """
 import os, pickle
 import numpy as np
@@ -99,6 +104,68 @@ def _context():
 NEAR = {"road": 60.0, "path": 25.0}     # m, cadastral walls farther from every road and path are left out (v2.0)
 FINE = {"road": 15.0, "path": 8.0}      # m, finer vertices on the walls this close to a road or path
 STEP_FINE, STEP_COARSE = 1.0, 2.5       # m between the vertices of a wall outline (v1.x: 0.5 and 2)
+# no cadastral wall on the way of a car (v2.0): the surveyed walls and the swissTLM3D lines do not always
+# agree, and a wall drawn across a street or along the axis of a lane would close it
+FREE_ERODE = 0.6                         # m, a wall may reach this far onto a surveyed road (a parapet at its edge)
+FREE_BAND = {"road": 0.25, "path": 0.35}  # of the width of a line: the band around it kept free
+FREE_MIN = {"road": 1.0, "path": 0.5}    # m, the least half width of that band (a car is 1.8-2 m wide)
+FREE_OVER = 0.3                          # m, a wall is cut where it stands this much above the way
+FREE_MARGIN = 0.15                       # m added to the band: no wall face left on its very edge
+
+
+def drive_free(net, corridor=None):
+    """[(polygon, stations (n, 3) of its lines)] of the ways no cadastral wall may stand on: the roads
+    of the cadastral survey in the network (network_mesh.Network; eroded by FREE_ERODE: a wall may stand
+    on their edge) and a band around every line outside the bridges (the way the AI and a car take;
+    the strips of the lines without a survey polygon have the nominal width of swissTLM3D, often wider
+    than the lane between its walls). Not inside `corridor` (the Strada Cantonale Magliaso - Pura, whose
+    walls were checked on the panoramas)."""
+    def stations(ks):
+        ks = [k for k in ks if not net.segs[k]["bridge"]]
+        if not ks:
+            return np.zeros((0, 3))
+        idx = np.concatenate([np.arange(net.segs[k]["first"], net.segs[k]["first"] + net.segs[k]["n"]) for k in ks])
+        return np.column_stack([net.x[idx], net.y[idx], net.z[idx]])
+    out = []
+    for p in net.polys:
+        if p["cls"] == "road":
+            g = p["geom"].buffer(-FREE_ERODE)
+            if not g.is_empty:
+                out.append((g, stations(sorted(p["segs"]))))
+    for s in net.segs:
+        if s["bridge"]:
+            continue
+        a, n = s["first"], s["n"]
+        line = shapely.LineString(np.column_stack([net.x[a:a + n], net.y[a:a + n]]))
+        hw = max(FREE_BAND[s["kind"]] * float(np.median(net.w[a:a + n])), FREE_MIN[s["kind"]]) + FREE_MARGIN
+        out.append((line.buffer(hw), stations([s["id"]])))          # round ends: no wedge where lines meet
+    if corridor is not None and not corridor.is_empty:
+        shapely.prepare(corridor)
+        out = [(g.difference(corridor) if corridor.intersects(g) else g, Z) for g, Z in out]
+    return [(g, Z) for g, Z in out if not g.is_empty and len(Z)]
+
+
+def above_way(w, ctx):
+    """Union of the drivable ways (ctx["free"], drive_free) on which the measured wall piece w stands
+    more than FREE_OVER m above the way (nearest station of its lines), None where there is none: a
+    retaining wall under a road stays."""
+    free = ctx.get("free")
+    if not free:
+        return None
+    cut = []
+    V = w["allv"]
+    for i in ctx["free_tree"].query(w["poly"], predicate="intersects"):
+        F, Z = free[i]
+        near = shapely.dwithin(F, shapely.points(V), 1.0)
+        if not near.any():
+            continue
+        trees = ctx.setdefault("free_kd", {})
+        if i not in trees:
+            trees[i] = cKDTree(Z[:, :2])
+        zway = Z[trees[i].query(V[near])[1], 2]
+        if np.max(w["ztop"][near] - zway) > FREE_OVER:
+            cut.append(F)
+    return shapely.union_all(cut) if cut else None
 
 
 def wall_geometry(ctx=None):
@@ -119,7 +186,12 @@ def wall_geometry(ctx=None):
         return g.sample(x, y)
     import json as _json
     road = shapely.LineString(np.load(os.path.join(WORK, "road_profile.npz"))["center"])
+    # the walls beyond the 0.5 m DTM (outside the area) have no ground to be measured on
+    gx0, gy0, gx1, gy1 = dtm.bounds()
+    on_dtm = shapely.box(gx0, gy0, gx1, gy1).buffer(-(R_SEARCH + 1.0), join_style="mitre")
     for wi, (g, kind, props) in enumerate(wall_footprints(ctx["av"], ctx["mauer"])):
+        if not on_dtm.contains(g):
+            continue
         if ctx.get("near") is not None:
             c = g.representative_point()
             dist = {}
@@ -131,11 +203,9 @@ def wall_geometry(ctx=None):
             fine = any(dist[k] < FINE[k] for k in dist) or g.distance(road) < 60
         else:
             fine = g.distance(road) < 60
-        for pj, poly in enumerate(polygons(g)):
-            if poly.area < 0.05:
-                continue
-            if ctx["rw_zone"] is not None and poly.intersection(ctx["rw_zone"]).area > 0.5 * poly.area:
-                continue                                  # replaced by a photo-verified roadside wall
+
+        def measure(poly, key):
+            """The wall piece poly with the heights of its outline."""
             # fine vertex spacing where the walls are seen from the road, coarse far away
             step = (0.5 if ctx.get("near") is None else STEP_FINE) if fine else STEP_COARSE
             poly = shapely.segmentize(shapely.geometry.polygon.orient(poly, 1.0), step)
@@ -182,8 +252,24 @@ def wall_geometry(ctx=None):
                     zr = S.height(allv[near, 0], allv[near, 1])
                     zbot[near] = np.minimum(zbot[near], zr - 0.4)
                     ztop[near] = np.maximum(ztop[near], zr + 0.15)
-            yield dict(key=f"w{wi}_{pj}", poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
-                       zbot=zbot, samp=samp, dmax=dmax)
+            return dict(key=key, poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
+                        zbot=zbot, samp=samp, dmax=dmax)
+
+        for pj, poly in enumerate(polygons(g)):
+            if poly.area < 0.05:
+                continue
+            if ctx["rw_zone"] is not None and poly.intersection(ctx["rw_zone"]).area > 0.5 * poly.area:
+                continue                                  # replaced by a photo-verified roadside wall
+            w = measure(poly, f"w{wi}_{pj}")
+            # no wall standing on the way of a car: the parts on a drivable way that rise above it are cut
+            # away, the rest measured again
+            cut = above_way(w, ctx)
+            if cut is None:
+                yield w
+                continue
+            for pq, part in enumerate(polygons(w["poly"].difference(cut))):
+                if part.area >= 0.05:
+                    yield measure(part, f"w{wi}_{pj}_{pq}")
 
 
 def add_photo_pieces(mb, atlas, prefix, tex, T6, U6, u_lo, u_hi, z_lo, z_hi):
@@ -218,14 +304,18 @@ def exterior_ribbon(w):
     return ring, zb, zt
 
 
-def build(level_dir, level_name, scene, material="mp_wall_stone"):
+def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
+    """free: polygons no wall may stand in (drive_free)."""
     import cv2
     import texturing
     builders = {}
-    carve = []
+    carve, feet = [], []
     nwall = ntex = 0
     atlas = texturing.Atlas(4096)
-    for w in wall_geometry():
+    ctx = _context()
+    if free:
+        ctx["free"], ctx["free_tree"] = free, shapely.STRtree([f[0] for f in free])
+    for w in wall_geometry(ctx):
         poly, rings, allv, zbot, ztop, zlo = w["poly"], w["rings"], w["allv"], w["zbot"], w["ztop"], w["zlo"]
         samp, dmax = w["samp"], w["dmax"]
         key = {tuple(np.round(v, 3)): (b, t) for v, b, t in zip(allv, zbot, ztop)}
@@ -274,6 +364,7 @@ def build(level_dir, level_name, scene, material="mp_wall_stone"):
             top = np.concatenate(top)
             mb.add(material + "_top", top, uvs=top[:, :2] / 1.6, normals=bng.flat_normals_soup(top))
         carve.append(np.column_stack([allv, zlo, ztop]))
+        feet.append((poly, allv, zlo, ztop))
         nwall += 1
     ntri = 0
     for (tx, ty), mb in sorted(builders.items()):
@@ -293,7 +384,7 @@ def build(level_dir, level_name, scene, material="mp_wall_stone"):
                                      ground_type="ROCK"))
         bng.write_materials(os.path.join(level_dir, "art", "shapes", "walls", "photo_av.materials.json"), mats)
     print("walls", nwall, "photo-textured", ntex, "chunks", len(builders), "triangles", ntri)
-    return np.concatenate(carve) if carve else np.zeros((0, 4))
+    return (np.concatenate(carve) if carve else np.zeros((0, 4))), feet
 
 
 def near_vertices(samples, xs, ys, radius):
@@ -315,24 +406,173 @@ def near_vertices(samples, xs, ys, radius):
     return flat[m], pts[m], j[m]
 
 
-def carve_terrain(samples, xs, ys, H, radius=1.1):
-    """Terrain vertices within `radius` of a wall that lie below the wall's mid height
-    are lowered to the local wall base, so the terrain slope does not stick out of the face."""
-    if len(samples) == 0:
+def carve_terrain(feet, xs, ys, H, rec=None):
+    """Terrain vertices around the cadastral walls (feet: (footprint, vertices, base, top) of every
+    wall, from build): every vertex whose terrain triangles reach a face of a wall (the square of
+    one terrain step around it meets the outline) drops 2 cm under the base of the wall there. No
+    terrain triangle then spans a wall, so none rises across it and pokes out of the face on its
+    low side; inside a wide footprint (a platform) the ground under its top stays.
+    Behind a retaining wall this leaves a trench: rec (dict) collects the vertices lowered, their
+    height before, whether they lie on the high side and the wall top, for build_backfill."""
+    if not feet:
         return H
-    flat, pts, j = near_vertices(samples, xs, ys, radius)
-    Hf = H.ravel()
-    zlo = samples[j, 2]
-    zmid = 0.5 * (samples[j, 2] + samples[j, 3])
-    low_side = Hf[flat] < zmid
-    idx = flat[low_side]
-    Hf[idx] = np.minimum(Hf[idx], zlo[low_side] - 0.02)
+    sq = xs[1] - xs[0]
+    nx = len(xs)
+    Hf = H.reshape(-1)
+    flat_l, h0_l, high_l, in_l, top_l = [], [], [], [], []
+    for poly, allv, zlo, ztop in feet:
+        x0, y0, x1, y1 = poly.bounds
+        c0, c1 = max(int(np.floor((x0 - sq - xs[0]) / sq)), 0), min(int(np.ceil((x1 + sq - xs[0]) / sq)), nx - 1)
+        r0, r1 = max(int(np.floor((y0 - sq - ys[0]) / sq)), 0), min(int(np.ceil((y1 + sq - ys[0]) / sq)), len(ys) - 1)
+        if c1 < c0 or r1 < r0:
+            continue
+        C, R = np.meshgrid(np.arange(c0, c1 + 1), np.arange(r0, r1 + 1))
+        C, R = C.ravel(), R.ravel()
+        X, Y = xs[C], ys[R]
+        hit = shapely.intersects(shapely.box(X - sq, Y - sq, X + sq, Y + sq), poly.boundary)
+        if not hit.any():
+            continue
+        C, R, X, Y = C[hit], R[hit], X[hit], Y[hit]
+        j = cKDTree(allv).query(np.column_stack([X, Y]))[1]
+        zl, zt = zlo[j], ztop[j]
+        flat = R * nx + C
+        h0 = Hf[flat].copy()
+        # a wall base far under the terrain is no measurement (a wall at the edge of the DTM)
+        ok = np.isfinite(zl) & np.isfinite(zt) & (zl > h0 - 30.0)
+        if not ok.all():
+            C, R, X, Y, zl, zt, flat, h0 = C[ok], R[ok], X[ok], Y[ok], zl[ok], zt[ok], flat[ok], h0[ok]
+            if not len(flat):
+                continue
+        inside = shapely.contains_xy(poly, X, Y)
+        flat_l.append(flat); h0_l.append(h0); in_l.append(inside); top_l.append(zt)
+        high_l.append((h0 > 0.5 * (zl + zt)) & ~inside)
+        Hf[flat] = np.minimum(Hf[flat], zl - 0.02)
+    if rec is not None and flat_l:
+        flat = np.concatenate(flat_l)
+        order = np.argsort(flat, kind="stable")                  # first record: the height before any wall
+        flat, h0, high, inside, top = (flat[order], np.concatenate(h0_l)[order], np.concatenate(high_l)[order],
+                                       np.concatenate(in_l)[order], np.concatenate(top_l)[order])
+        first = np.r_[True, flat[1:] != flat[:-1]]
+        grp = np.cumsum(first) - 1
+        n = int(first.sum())
+        any_high = np.zeros(n, bool); np.logical_or.at(any_high, grp, high)
+        any_in = np.zeros(n, bool); np.logical_or.at(any_in, grp, inside)
+        top_max = np.full(n, -np.inf); np.maximum.at(top_max, grp, top)
+        rec.update(flat=flat[first], h0=h0[first], high=any_high & ~any_in, top=top_max)
     return Hf.reshape(H.shape)
 
 
-def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick=1.5, photo=True):
+BACKFILL_LIFT = 0.03   # m, the backfill over a lowered vertex stays this much over the ground it restores
+
+
+def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable, layers, ground):
+    """Mesh restoring the ground behind the retaining walls where carve_terrain lowered it: the
+    terrain squares around every vertex lowered on the high side of a wall, cut at the walls and at
+    the drivable surfaces (drivable: polygons), with the heights of the ground before the carve at
+    those vertices, the wall top at the vertices under or in front of the wall and the terrain as
+    built at the others, so the mesh meets the terrain along the edges of the squares. The material
+    of every square is that of its terrain layer (mp_fill_<layer>); layers: terrain layer per vertex,
+    ground(x, y): the bare ground (to tell the high side of a wall from the low one)."""
+    import terrain
+    if not rec or not len(rec.get("flat", [])):
+        return 0
+    sq = xs[1] - xs[0]
+    nx, ny = len(xs), len(ys)
+    Hf = H.reshape(-1)
+    flat, h0, high, top = rec["flat"], rec["h0"], rec["high"], rec["top"]
+    sunk = high & (h0 - Hf[flat] > 0.02)
+    B, Tw = {}, {}          # vertex -> backfill height on the high side / wall top under or before a wall
+    for f, a, hg, t, sk in zip(flat.tolist(), h0.tolist(), high.tolist(), top.tolist(), sunk.tolist()):
+        if hg:
+            B[f] = a + BACKFILL_LIFT if sk else a
+        else:
+            Tw[f] = t
+    r_s, c_s = np.divmod(flat[sunk], nx)
+    cells = set()
+    for dr in (-1, 0):
+        for dc in (-1, 0):
+            rr, cc = r_s + dr, c_s + dc
+            ok = (rr >= 0) & (rr < ny - 1) & (cc >= 0) & (cc < nx - 1)
+            cells.update(zip(rr[ok].tolist(), cc[ok].tolist()))
+    if not cells:
+        return 0
+    cells = sorted(cells)
+    fp = [f[0] for f in feet]
+    ftree = shapely.STRtree(fp)
+    zmid = [0.5 * (f[2] + f[3]) for f in feet]
+    vt = [cKDTree(f[1]) for f in feet]
+    dtree = shapely.STRtree(drivable) if drivable else None
+    names = list(terrain.TERRAIN_MATS)
+    builders = {}
+    n_tri = 0
+    for r, c in cells:
+        X0, Y0 = xs[c], ys[r]
+        cell = shapely.box(X0, Y0, X0 + sq, Y0 + sq)
+        corner = [r * nx + c, r * nx + c + 1, (r + 1) * nx + c, (r + 1) * nx + c + 1]    # 00, 10, 01, 11
+        walls_here = ftree.query(cell, predicate="intersects")
+        # a corner under or before the wall: the wall top where the square is cut at the wall (the
+        # backfill meets the top), the terrain past the end of a wall
+        z = np.array([B[k] if k in B else (Tw[k] if (k in Tw and len(walls_here)) else Hf[k]) for k in corner])
+        cut = cell
+        if len(walls_here):
+            cut = cut.difference(shapely.union_all([fp[i] for i in walls_here]))
+        if dtree is not None:
+            roads_here = dtree.query(cell, predicate="intersects")
+            if len(roads_here):
+                cut = cut.difference(shapely.union_all([drivable[i] for i in roads_here]).buffer(0.02))
+        if cut.is_empty or cut.area < 0.01:
+            continue
+        pieces = [g for g in getattr(cut, "geoms", [cut]) if g.geom_type == "Polygon" and g.area >= 0.01]
+        if len(walls_here):                              # only the pieces on the high side of the wall
+            keep = []
+            for g in pieces:
+                q = g.representative_point()
+                best, zm = np.inf, None
+                for i in walls_here:
+                    d, j = vt[i].query([q.x, q.y])
+                    if d < best:
+                        best, zm = d, zmid[i][j]
+                if ground(np.array([q.x]), np.array([q.y]))[0] > zm:
+                    keep.append(g)
+            pieces = keep
+        if not pieces:
+            continue
+        if len(pieces) == 1 and pieces[0].equals(cell):
+            # the terrain square itself, split along the diagonal of the terrain (Torque: alternating)
+            P = np.array([[X0, Y0], [X0 + sq, Y0], [X0, Y0 + sq], [X0 + sq, Y0 + sq]])
+            tri = [(0, 1, 3), (0, 3, 2)] if (r ^ c) & 1 == 0 else [(0, 1, 2), (1, 3, 2)]
+            V2 = np.concatenate([P[list(t)] for t in tri])
+        else:
+            V2 = np.concatenate([np.asarray(t.exterior.coords)[:3]
+                                 for g in pieces for t in shapely.constrained_delaunay_triangles(g).geoms])
+        fx, fy = np.clip((V2[:, 0] - X0) / sq, 0, 1), np.clip((V2[:, 1] - Y0) / sq, 0, 1)
+        Z = (z[0] * (1 - fx) * (1 - fy) + z[1] * fx * (1 - fy) + z[2] * (1 - fx) * fy + z[3] * fx * fy)
+        V = np.column_stack([V2, Z]).reshape(-1, 3, 3)
+        up = np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0])[:, 2] < 0
+        V[up] = V[up][:, ::-1]                           # counter-clockwise from above
+        mat = "mp_fill_" + names[int(layers[r, c])].lower()
+        key = (int(np.floor(X0 / CHUNK)), int(np.floor(Y0 / CHUNK)))
+        mb = builders.setdefault(key, {}).setdefault(mat, [])
+        mb.append(V.reshape(-1, 3))
+        n_tri += len(V)
+    for (tx, ty), mats in sorted(builders.items()):
+        mb = bng.MeshBuilder()
+        for mat, parts in mats.items():
+            T = np.concatenate(parts)
+            mb.add(mat, T, uvs=T[:, :2] / 4.0, normals=bng.flat_normals_soup(T))
+        rel = f"art/shapes/walls/backfill_{tx:+03d}_{ty:+03d}.dae"
+        origin = np.array([(tx + 0.5) * CHUNK, (ty + 0.5) * CHUNK, 0.0])
+        mb.write_dae(os.path.join(level_dir, rel), name="backfill", origin=origin)
+        scene.add("MissionGroup/walls", bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=True,
+                                                     decal=False))
+    print("backfill behind the walls: %d squares, %d triangles, %d chunks" % (len(cells), n_tri, len(builders)))
+    return n_tri
+
+
+def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick=1.75, photo=True):
     """Retaining walls detected along the route (roadside_walls.json): vertical face from
-    0.3 m below road level to the measured top, capped (1.5 m) over the terrain step.
+    0.3 m below road level to the measured top, capped (1.75 m, more than a terrain step) over the
+    terrain step.
     The face is textured from the panoramas (texturing.texture_ribbon)."""
     import json
     import cv2
@@ -410,16 +650,18 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
     return np.array(samples)
 
 
-def adjust_terrain_roadside(samples, xs, ys, H, behind=2.8, front=1.6, hidden=1.0):
+def adjust_terrain_roadside(samples, xs, ys, H, behind=3.4, front=1.6, hidden=1.6):
     """In front of a roadside wall the terrain drops to the wall base (road level),
-    behind it (up to 2.2 m) it rises to the wall top: the DTM smears walls into slopes."""
+    behind it (up to `behind` m) it rises to the wall top: the DTM smears walls into slopes.
+    `hidden` is more than one terrain step (1.5 m), so every line of vertices across the wall has a
+    lowered vertex behind the face and no terrain triangle rises across the face."""
     if len(samples) == 0:
         return H
     flat, pts, j = near_vertices(samples, xs, ys, max(behind, front) + 0.5)
     Hf = H.ravel()
     S = samples[j]
     off = ((pts - S[:, :2]) * S[:, 2:4]).sum(1)              # + behind the face, - in front
-    # vertices up to `hidden` m behind the face stay at road level (under the 1.5 m wide cap),
+    # vertices up to `hidden` m behind the face stay at road level (under the 1.75 m wide cap),
     # further back they rise to the crest: the terrain step is always hidden by the wall
     fr = (off < hidden) & (off > -front)
     bh = (off >= hidden) & (off <= behind)

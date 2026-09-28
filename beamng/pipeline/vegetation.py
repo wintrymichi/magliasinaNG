@@ -130,6 +130,11 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     for the thinning."""
     from landcover import CODE
     t = np.load(os.path.join(WORK, "trees.npz"))
+    # no trees where the cadastral land cover is missing (Italy, outside the area): there the
+    # buildings have no footprints and the canopy model would turn their roofs into trees
+    ok = t["lc"] != CODE["none"]
+    t = {k: t[k][ok] for k in t.files}
+    print("trees outside the cadastral survey dropped:", int((~ok).sum()))
     if net_xy is not None:
         from scipy.spatial import cKDTree
         pts, hw, is_path = net_xy
@@ -139,7 +144,7 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
             dd, jj = cKDTree(pts[m]).query(txy) if m.any() else (np.full(len(txy), 1e9), np.zeros(len(txy), int))
             dist.append(dd - (hw[m][jj] if m.any() else 0.0))
         keep = thin(t["x"], t["y"], t["h"], dist[0], CAP - SHRUBS, dist[1])
-        t = {k: t[k][keep] for k in t.files}
+        t = {k: v[keep] for k, v in t.items()}
     x, y, z, h, d = t["x"], t["y"], t["z"], t["h"], t["d"]
     garden = np.isin(t["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],
                                CODE["campo_prato_pascolo"], CODE["vigna"]])

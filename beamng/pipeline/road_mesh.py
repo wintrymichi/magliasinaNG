@@ -15,8 +15,10 @@ from shapely.geometry import box, Polygon, MultiPolygon
 
 SKIRT = 0.5            # m, kerb skirt under every paved edge
 DEEP = 1.0             # m, edges this far above the ground or the next surface get a wall face down to it
-# terrain carve: a vertex under a paved mesh drops below the lowest surface at these offsets (m)
+# terrain carve (v1.x): a vertex under a paved mesh drops below the lowest surface at these offsets,
+# in terrain steps (patch_release.py); v2.0 carves with carve_window
 CARVE_RING = ((0.8, 0), (-0.8, 0), (0, 0.8), (0, -0.8), (0.6, 0.6), (-0.6, 0.6), (0.6, -0.6), (-0.6, -0.6))
+CARVE_SUB = 3          # samples of the faces per terrain step in carve_window
 
 
 def grid_pieces(poly, cell):
@@ -351,3 +353,46 @@ class TriSurface:
             first = np.r_[True, qi[1:] != qi[:-1]]
             out[qi[first]] = z[first]
         return out
+
+
+def carve_window(surf, xs, ys, rows, cols, sub=CARVE_SUB, block=256):
+    """Lowest top face of `surf` (TriSurface) in the square of one terrain step around each terrain
+    vertex (rows, cols of the grid xs, ys); inf where the square holds no face. Every terrain
+    triangle that uses a vertex lies inside that square, so vertices kept under these heights hold
+    the whole terrain surface under the faces, between the vertices too (a ring of samples around
+    the vertex, as in v1.x, lets a triangle from a vertex 1.5-2.1 m off a narrow path reach over it).
+    The faces are sampled `sub` times per terrain step, in blocks of `block` x `block` vertices."""
+    from scipy.ndimage import minimum_filter
+    rows, cols = np.asarray(rows, np.int64), np.asarray(cols, np.int64)
+    out = np.full(len(rows), np.inf)
+    if not len(rows) or not len(surf.t):
+        return out
+    sq = xs[1] - xs[0]
+    f = sq / sub
+    key = (rows // block) * 1_000_003 + cols // block
+    order = np.argsort(key, kind="stable")
+    bounds = np.flatnonzero(np.r_[True, key[order][1:] != key[order][:-1], True])
+    for a, b in zip(bounds[:-1], bounds[1:]):
+        sel = order[a:b]
+        r, c = rows[sel], cols[sel]
+        rmin, cmin = r.min(), c.min()
+        fr = (r - rmin) * sub + sub                      # fine index of every vertex
+        fc = (c - cmin) * sub + sub
+        ny, nx = int(fr.max()) + sub + 1, int(fc.max()) + sub + 1
+        need = np.zeros((ny, nx), bool)
+        for dy in range(-sub, sub + 1):
+            for dx in range(-sub, sub + 1):
+                need[fr + dy, fc + dx] = True
+        iy, ix = np.nonzero(need)
+        h = surf.height(xs[cmin] - sq + ix * f, ys[rmin] - sq + iy * f, "low")
+        z = np.full((ny, nx), np.inf)
+        z[iy, ix] = np.where(np.isfinite(h), h, np.inf)
+        # the corners of the faces too: the lowest point of a face is one of them (a sliver narrower
+        # than the samples between them)
+        V = surf.t.reshape(-1, 3)
+        vc = np.round((V[:, 0] - (xs[cmin] - sq)) / f).astype(np.int64)
+        vr = np.round((V[:, 1] - (ys[rmin] - sq)) / f).astype(np.int64)
+        ok = (vc >= 0) & (vc < nx) & (vr >= 0) & (vr < ny)
+        np.minimum.at(z, (vr[ok], vc[ok]), V[ok, 2])
+        out[sel] = minimum_filter(z, size=2 * sub + 1, mode="constant", cval=np.inf)[fr, fc]
+    return out

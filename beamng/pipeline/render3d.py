@@ -25,10 +25,12 @@ ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-
 SKY = (0.70, 0.79, 0.88)
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
+RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
 GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props")
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [
+    ("mp_fill_", (-1.0, -1.0, -1.0)),       # the ground restored behind the walls: the orthophoto, as the terrain
     ("asphalt_fresh", (0.23, 0.23, 0.24)), ("mp_road_asphalt", (0.36, 0.36, 0.37)),
     ("hard_asphalt", (0.40, 0.40, 0.40)), ("sidewalk", (0.56, 0.56, 0.55)), ("island", (0.62, 0.62, 0.58)),
     ("road_wall", (0.56, 0.51, 0.45)), ("gravel", (0.64, 0.59, 0.49)), ("path_dirt", (0.55, 0.45, 0.33)),
@@ -335,11 +337,14 @@ class Renderer:
         if not os.path.exists(THREE):
             import requests
             open(THREE, "wb").write(requests.get(THREE_URL, timeout=60).content)
+        self._blob = b""
+        self._start()
+
+    def _start(self):
         from playwright.sync_api import sync_playwright
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.launch(args=ARGS)
         self.page = self._browser.new_page()
-        self._blob = b""
         three = open(THREE, "rb").read()
 
         def serve(route):
@@ -422,6 +427,12 @@ class Renderer:
             m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
             if not m.any():
                 continue
+            ground = col[:, 0, 0] < 0
+            if ground.any():                                 # coloured like the terrain around it
+                col = np.array(col, np.float32)
+                V = tw[ground].reshape(-1, 3)
+                rgb = L.ortho()(V[:, 0], V[:, 1]).T.astype(np.float32) / 255.0
+                col[ground] = np.nan_to_num(rgb, nan=0.4).reshape(-1, 3, 3)
             key = "paint" if "markings" in shape else "mesh"
             out[key][0].append(tw[m] - origin)
             out[key][1].append(col[m])
@@ -593,10 +604,14 @@ class Renderer:
 
     def shot(self, cam, out, **kw):
         self._blob = self.scene(cam, **kw)
-        self._n += 1
-        if self._n % RELOAD == 0:              # a fresh WebGL context now and then (SwiftShader memory)
+        n = self._n + 1
+        if n % RESTART == 0:                   # a new browser and driver: their memory only grows
+            self.close()
+            self._start()
+        elif n % RELOAD == 0:                  # a fresh WebGL context now and then (SwiftShader memory)
             self.page.reload()
             self.page.wait_for_function("window.ready === true", timeout=60000)
+        self._n = n
         url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
         data = base64.b64decode(url.split(",", 1)[1])
         os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)

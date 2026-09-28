@@ -28,12 +28,16 @@ LEVEL_DIR = os.environ.get("MAGLIASO_LEVEL_DIR") or os.path.join(BEAMNG_USER, "l
 E0, N0 = 2710830.0, 1094360.0
 K = 1.0001374973449562          # LV95 scale factor at the origin (pyproj get_factors)
 # playable area (v2.0, Malcantone): the boundary drawn by the user (WGS84 lat, lon), widened by
-# AREA_MARGIN m and joined with the Street View route (ROUTE_MARGIN m around it); see area.py
+# AREA_MARGIN m and joined with the Street View route (ROUTE_MARGIN m around it) and with the
+# cantonal road Magliaso - Agno - Bioggio - Manno - Gravesano (dati/cantonale_gravesano.json,
+# strade_extra.py: EXTRA_ROAD_MARGIN m around it and the strip between it and the side P1-P2 of the
+# boundary); see area.py
 BOUNDARY = [(45.967056, 8.858833), (46.041250, 8.923417), (46.018500, 8.803833), (45.993111, 8.788028)]
 AREA_MARGIN = 150.0
 ROUTE_MARGIN = 60.0
+EXTRA_ROAD_MARGIN = 150.0
 # terrain block: TER_SIZE x TER_SIZE vertices TER_SQUARE m apart, vertex (0, 0) (south-west) at
-# (TER_X0, TER_Y0); it covers the area with ~0.8-2 km to spare
+# (TER_X0, TER_Y0); it covers the area with ~0.6-2 km to spare
 TER_SIZE = 8192                 # terrain samples per side
 TER_SQUARE = 1.5                # metres per terrain sample
 TER_X0, TER_Y0 = -7230.0, -4731.0

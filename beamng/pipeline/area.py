@@ -1,5 +1,8 @@
 """The playable area of the map (v2.0): the boundary drawn by the user, widened by AREA_MARGIN,
-joined with the Street View route (ROUTE_MARGIN around it, so the whole original road stays in).
+joined with the Street View route (ROUTE_MARGIN around it, so the whole original road stays in) and
+with the cantonal road from Magliaso along the lake to Agno and up the Vedeggio valley to Gravesano
+(dati/cantonale_gravesano.json, strade_extra.py): EXTRA_ROAD_MARGIN around it and the strip between
+it and the side P1-P2 of the boundary, so no bare slope is left between the map and the road.
 
 Everything that is generated only where it can be seen or driven (roads, buildings, trees, raster
 data at 0.5 m) uses this polygon; the terrain block (config.TER_*) is a square around it and the
@@ -8,8 +11,8 @@ distant backdrop starts at the edge of that square.
 import json, os
 import numpy as np
 import shapely
-from config import (AREA_MARGIN, BOUNDARY, K, ROUTE_MARGIN, TER_SIZE, TER_SQUARE, TER_X0, TER_X1, TER_Y0,
-                    TER_Y1, local_to_lv95, wgs_to_local)
+from config import (AREA_MARGIN, BOUNDARY, EXTRA_ROAD_MARGIN, K, ROUTE_MARGIN, TER_SIZE, TER_SQUARE, TER_X0,
+                    TER_X1, TER_Y0, TER_Y1, local_to_lv95, lv95_to_local, wgs_to_local)
 
 DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
 _cache = {}
@@ -28,11 +31,34 @@ def route():
     return _cache["route"]
 
 
+EXTRA_ROADS = ("cantonale_gravesano.json",)
+
+
+def extra_roads():
+    """The roads added beyond the boundary (dati/<file> of EXTRA_ROADS, strade_extra.py), as local
+    lines."""
+    if "extra" not in _cache:
+        out = []
+        for name in EXTRA_ROADS:
+            f = os.path.join(DATI, name)
+            if os.path.exists(f):
+                E, N = np.array(json.load(open(f, encoding="utf-8"))["lv95"], np.float64).T
+                out.append(shapely.LineString(np.column_stack(lv95_to_local(E, N))))
+        _cache["extra"] = out
+    return _cache["extra"]
+
+
 def polygon():
     """The playable area (local coordinates)."""
     if "area" not in _cache:
-        _cache["area"] = shapely.union_all([boundary().buffer(AREA_MARGIN, join_style="mitre"),
-                                            route().buffer(ROUTE_MARGIN)])
+        parts = [boundary().buffer(AREA_MARGIN, join_style="mitre"), route().buffer(ROUTE_MARGIN)]
+        p1, p2 = np.asarray(boundary().exterior.coords)[:2]
+        for road in extra_roads():
+            # the strip between the road and the side P1-P2 (the road runs from its south end, near
+            # P1, to its north end, near P2), and the road with its margin
+            parts.append(shapely.Polygon(list(road.coords) + [tuple(p2), tuple(p1)]).buffer(0))
+            parts.append(road.buffer(EXTRA_ROAD_MARGIN))
+        _cache["area"] = shapely.union_all(parts)
     return _cache["area"]
 
 
