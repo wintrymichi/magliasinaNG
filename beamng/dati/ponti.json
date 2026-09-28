@@ -1,5 +1,5 @@
 {
- "note": "Bridges of the v2.0 network (bridges.py). Manual corrections: z0/z1 (deck height at the ends, m), profile 'straight', type 'open'|'culvert', skip true; note, checked.",
+ "note": "Bridges of the v2.0 network (bridges.py). Manual corrections: z0/z1 (deck height at the ends, m), profile 'straight'|'tlm', type 'open'|'culvert', skip true; note, checked.",
  "ponti": [
   {
    "tlm": "{6D5DE9B7-52CA-4E9D-84A2-6E89A446EA2A}",
@@ -864,7 +864,8 @@
    ],
    "max_height_m": 1.7,
    "auto_type": "culvert",
-   "note": "Passerella ripida (19 %) che parte dal nodo quasi parallela al sentiero: resta un gradino di circa 2 m tra i due nei primi metri.",
+   "type": "open",
+   "note": "Rampa a spirale di un giro (2,7 m di dislivello): l'ultimo tratto passa circa 2 m sotto il primo e sotto la fine del sentiero che arriva dalla strada. Il terreno è abbassato sotto il passaggio basso; aperta (solo la soletta, senza fianchi fino a terra), così il passaggio sotto resta libero.",
    "checked": true
   },
   {

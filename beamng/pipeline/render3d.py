@@ -373,12 +373,21 @@ class Renderer:
         self._pw.stop()
 
     # -------------------------------------------------------------- scene of one view
-    def _terrain(self, x0, y0, x1, y1, step, origin, texres, lower=0.0, cast=True):
+    def _span(self, x0, y0, x1, y1):
+        """(c0, c1, r0, r1): the terrain samples covering the rectangle (ends excluded)."""
         L = self.level
         c0 = max(int(math.floor((x0 - L.tx0) / L.sq)), 0)
         c1 = min(int(math.ceil((x1 - L.tx0) / L.sq)) + 1, L.n)
         r0 = max(int(math.floor((y0 - L.ty0) / L.sq)), 0)
         r1 = min(int(math.ceil((y1 - L.ty0) / L.sq)) + 1, L.n)
+        return c0, c1, r0, r1
+
+    def _terrain(self, span, step, origin, texres, lower=0.0, cast=True, hole=None, skirt=30.0):
+        """Terrain mesh of the samples `span` (see _span), one vertex every `step`. `hole`: the span of a
+        finer terrain drawn in its place; the cells inside it are left out and a skirt `skirt` m deep
+        hangs from the edge of the hole, so no gap shows where the two meet."""
+        L = self.level
+        c0, c1, r0, r1 = span
         if c1 - c0 < 2 or r1 - r0 < 2:
             return None
         h = L.heights(r0, r1, c0, c1, step) - lower
@@ -392,7 +401,35 @@ class Renderer:
         uv = np.stack([u, v], -1).reshape(-1, 2).astype(np.float32)
         i = np.arange(ny * nx, dtype=np.uint32).reshape(ny, nx)
         a, b, c, d = i[:-1, :-1], i[:-1, 1:], i[1:, 1:], i[1:, :-1]
-        idx = np.stack([a, b, c, a, c, d], -1).reshape(-1).astype(np.uint32)
+        keep = np.ones((ny - 1, nx - 1), bool)
+        if hole is not None:
+            cols, rows = c0 + np.arange(nx) * step, r0 + np.arange(ny) * step
+            in_c = (cols[:-1] >= hole[0]) & (cols[1:] <= hole[1] - 1)
+            in_r = (rows[:-1] >= hole[2]) & (rows[1:] <= hole[3] - 1)
+            keep = ~(in_r[:, None] & in_c[None, :])
+        idx = np.stack([a, b, c, a, c, d], -1)[keep].reshape(-1).astype(np.uint32)
+        if not keep.all():
+            # the skirt: vertical quads under the cell edges between a kept cell and the hole, facing
+            # the hole (the camera stands in it); their own vertices, not to bend the terrain normals
+            lk, rk = keep[:, :-1], keep[:, 1:]
+            bk, tk = keep[:-1, :], keep[1:, :]
+            P, Q = [], []
+            r, k = np.nonzero(lk & ~rk)                  # hole to +x: the edge runs to -y
+            P.append(i[r + 1, k + 1]); Q.append(i[r, k + 1])
+            r, k = np.nonzero(~lk & rk)                  # hole to -x: to +y
+            P.append(i[r, k + 1]); Q.append(i[r + 1, k + 1])
+            k, cc = np.nonzero(bk & ~tk)                 # hole to +y: to +x
+            P.append(i[k + 1, cc]); Q.append(i[k + 1, cc + 1])
+            k, cc = np.nonzero(~bk & tk)                 # hole to -y: to -x
+            P.append(i[k + 1, cc + 1]); Q.append(i[k + 1, cc])
+            P, Q = np.concatenate(P), np.concatenate(Q)
+            m, base = len(P), len(pos)
+            top = np.concatenate([pos[P], pos[Q]])
+            pos = np.concatenate([pos, top, top - np.float32([0, 0, skirt])])
+            uv = np.concatenate([uv, uv[P], uv[Q], uv[P], uv[Q]])
+            p, q = base + np.arange(m), base + m + np.arange(m)
+            p2, q2 = p + 2 * m, q + 2 * m
+            idx = np.concatenate([idx, np.stack([p, q, q2, p, q2, p2], -1).reshape(-1).astype(np.uint32)])
         tw = int(min(4096, max(2, round((xs[-1] - xs[0]) / texres))))
         th = int(min(4096, max(2, round((ys[-1] - ys[0]) / texres))))
         tx = np.linspace(xs[0], xs[-1], tw)
@@ -547,11 +584,21 @@ class Renderer:
             terrains.append({"pos": f"{name}_pos", "uv": f"{name}_uv", "idx": f"{name}_idx", "tex": f"{name}_tex",
                              "tw": t["tw"], "th": t["th"], "cast": t["cast"]})
         pad = 20.0 if cam["kind"] == "top" else 0.0
-        add_terrain(self._terrain(x0 - pad, y0 - pad, x1 + pad, y1 + pad, 1, origin, 2.0), "tn")
-        if cam["kind"] != "top":
+        near_span = self._span(x0 - pad, y0 - pad, x1 + pad, y1 + pad)
+        if cam["kind"] == "top":
+            add_terrain(self._terrain(near_span, 1, origin, 2.0), "tn")
+        else:
+            # the far terrain (a coarse grid) leaves a hole where the detailed one is: drawn under it, its
+            # cells stood over the roads in the cuts. The detailed terrain grows to the lines of the coarse
+            # grid, so the two meet edge to edge.
             step = max(4, int(math.ceil(2 * far / (300 * L.sq))))
-            add_terrain(self._terrain(cx - far, cy - far, cx + far, cy + far, step, origin, 8.0, lower=1.0, cast=False),
-                        "tf")
+            far_span = self._span(cx - far, cy - far, cx + far, cy + far)
+            c0, c1, r0, r1 = near_span
+            fc, fr = far_span[0], far_span[2]
+            near_span = (fc + (c0 - fc) // step * step, min(fc - (fc - c1 + 1) // step * step + 1, L.n),
+                         fr + (r0 - fr) // step * step, min(fr - (fr - r1 + 1) // step * step + 1, L.n))
+            add_terrain(self._terrain(near_span, 1, origin, 2.0), "tn")
+            add_terrain(self._terrain(far_span, step, origin, 8.0, lower=1.0, cast=False, hole=near_span), "tf")
             bd = self._backdrop(cx, cy, far * 1.8, origin)
             if bd is not None and len(bd[0]):
                 arrays["bd_pos"] = bd[0].reshape(-1).astype(np.float32)

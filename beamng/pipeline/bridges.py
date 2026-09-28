@@ -10,7 +10,7 @@ corridor (which keeps its v1.1 surface) gets:
 - where the deck is less than LOW m above the ground along the whole span (a culvert, a small
   stream under a road) the sides reach down to the ground instead.
 The ground under a bridge is not filled: only where it rises above the underside of the slab is it
-lowered to it.
+lowered to it (to the lower pass where a ramp winds under itself).
 beamng/dati/ponti.json lists every bridge (swissTLM3D id, place, length, height above the ground,
 the check flags) and holds the manual corrections, read back at every build:
   "z0" / "z1": deck height at the first / last end (m), "profile": "straight" (a straight deck
@@ -236,8 +236,20 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
             rr, cc = np.nonzero(m)
             if len(rr):
                 from scipy.spatial import cKDTree
-                j = cKDTree(P).query(np.column_stack([xs[c0 + cc], ys[r0 + rr]]))[1]
-                on_carve_min(r0 + rr, c0 + cc, z[j] - SLAB - 0.15)
+                tree = cKDTree(P)
+                pts = np.column_stack([xs[c0 + cc], ys[r0 + rr]])
+                j = tree.query(pts)[1]
+                zc = z[j]
+                # a ramp winding down under itself (the spiral footbridge of Manno): where another pass
+                # of the deck is also over a cell, the ground goes under the lower one
+                sp = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+                reach = hw + 0.5 * float(np.diff(sp).max(initial=0.0))
+                if any(abs(sp[p] - sp[q]) > 2 * reach for p, q in tree.query_pairs(reach)):
+                    for t, near in enumerate(tree.query_ball_point(pts, reach)):
+                        other = [k for k in near if abs(sp[k] - sp[j[t]]) > 2 * reach]
+                        if other:
+                            zc[t] = min(zc[t], z[other].min())
+                on_carve_min(r0 + rr, c0 + cc, zc - SLAB - 0.15)
         # checks for the review: deck against the 3D line of swissTLM3D (on a bridge its height is the
         # deck's), steepest grade, grade change where the deck meets the approaches
         ztlm = net.z_tlm[a:a + n] if getattr(net, "z_tlm", None) is not None else np.full(n, np.nan)
@@ -279,5 +291,5 @@ def save_records(records, reviewed=None):
                 e[k] = o[k]
         out.append(e)
     json.dump({"note": "Bridges of the v2.0 network (bridges.py). Manual corrections: z0/z1 (deck height at "
-                       "the ends, m), profile 'straight', type 'open'|'culvert', skip true; note, checked.",
+                       "the ends, m), profile 'straight'|'tlm', type 'open'|'culvert', skip true; note, checked.",
                "ponti": out}, open(PONTI, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
