@@ -1,6 +1,6 @@
 {
  "forest_items": 241135,
- "terrain_over_road": 8,
+ "terrain_over_road": 0,
  "trunks_on_surface": 0,
  "trunks_near_roads": 0,
  "shrubs_on_surface": 0,
@@ -9,7 +9,7 @@
  "network_bumps": 5809,
  "network_stations": 276930,
  "network_above_ground": 26,
- "terrain_over_road_max_m": 1.399,
+ "terrain_over_road_max_m": 0.0,
  "network_off_profile_max_m": 2.252,
  "network_bump_max_m": 4.275,
  "road_faces_under_water": 0,
@@ -800,13 +800,6 @@
    "y": 244.7,
    "z": 372.9,
    "score": 1.401
-  },
-  {
-   "what": "terreno sopra la strada",
-   "x": 3726.0,
-   "y": 4649.7,
-   "z": 334.54,
-   "score": 1.399
   },
   {
    "what": "strada sotto il terreno",
@@ -3009,6 +3002,13 @@
    "y": 2041.2,
    "z": 572.6,
    "score": 0.378
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 1945.0,
+   "y": 803.4,
+   "z": 369.5,
+   "score": 0.375
   }
  ]
 }
