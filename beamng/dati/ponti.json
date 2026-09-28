@@ -853,7 +853,9 @@
    "name": "",
    "dz_tlm_m": 0.76,
    "max_grade": 0.244,
-   "flags": [],
+   "flags": [
+    "terreno"
+   ],
    "x": 3726.4,
    "y": 4651.2,
    "length_m": 14.6,
@@ -863,7 +865,7 @@
     332.56
    ],
    "max_height_m": 1.7,
-   "auto_type": "culvert",
+   "auto_type": "open",
    "type": "open",
    "note": "Rampa a spirale di un giro (2,7 m di dislivello): l'ultimo tratto passa circa 2 m sotto il primo e sotto la fine del sentiero che arriva dalla strada. Il terreno è abbassato sotto il passaggio basso; aperta (solo la soletta, senza fianchi fino a terra), così il passaggio sotto resta libero.",
    "checked": true
