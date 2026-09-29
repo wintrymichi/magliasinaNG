@@ -9,7 +9,7 @@ Ricostruzione in scala 1:1 di circa 51 km² del Malcantone (Canton Ticino), tra 
   - `spawn_magliaso` (predefinito, all'incrocio di Magliaso), `spawn_mid` (a metà salita) e `spawn_pura` (in cima alla cantonale). Qui le auto partono nella corsia di marcia, rivolte verso Pura.
   - Un punto in ogni paese dell'area: `spawn_agno`, `spawn_bioggio`, `spawn_gravesano`, `spawn_magliaso_paese`, `spawn_manno`, `spawn_pura_paese`, `spawn_aranno`, `spawn_astano`, `spawn_banco`, `spawn_bedigliora`, `spawn_bosco_luganese`, `spawn_breno`, `spawn_cademario`, `spawn_cassina_d_agno`, `spawn_castelrotto`, `spawn_cimo`, `spawn_miglieglia`, `spawn_molinazzo_di_monteggio`, `spawn_monteggio`, `spawn_neggio`, `spawn_novaggio`, `spawn_ponte_tresa`, `spawn_purasca`, `spawn_sessa` e `spawn_vernate`. Per Curio c'è `spawn_pura`, a 160 m dal paese.
 - **Tutto è guidabile:** ogni strada e ogni sentiero dell'area ha una superficie solida, compresi mulattiere, scalinate e sentieri nel bosco.
-- **Traffico IA:** la rete stradale per l'IA copre tutte le strade carrozzabili.
+- **Traffico IA:** la rete stradale per l'IA copre tutte le strade carrozzabili, con i sensi unici, le rotonde e le carreggiate separate; le strade chiuse al traffico sono evitate.
 
 ## Cosa c'è e da dove viene
 
@@ -23,7 +23,10 @@ Ricostruzione in scala 1:1 di circa 51 km² del Malcantone (Canton Ticino), tra 
 | Guardrail, ringhiere e recinzioni della cantonale | voto multi-vista sulla segmentazione delle foto, LiDAR dove disponibile | posizione ±0,3 m |
 | Segnaletica della cantonale | ortofoto 10 cm (tratteggi 3 m / 6 m, strisce, zebre gialle), verificata nelle foto | stato di ottobre 2022 (vedi sotto) |
 | Lampioni, pali e cartelli, delineatori, arredo urbano della cantonale | triangolati dalle foto con le pose calibrate | ±0,3–0,5 m; le targhe riportano l'immagine vista nella foto, nessun testo inventato |
-| Alberi, siepi e arbusti (circa 241 000) | modello di superficie swissSURFACE3D (posizione, altezza e chioma di ogni albero), ortofoto | tutti entro 150 m dalle strade e 20 m dai sentieri, più radi oltre; specie approssimate con modelli vanilla; nessun tronco sulla carreggiata né a meno di 1 m dal bordo delle strade (0,5 m dei sentieri) |
+| Alberi, siepi e arbusti (circa 241 000) | modello di superficie swissSURFACE3D (posizione, altezza e chioma di ogni albero), ortofoto | tutti entro 150 m dalle strade e 20 m dai sentieri, più radi oltre; specie approssimate con modelli vanilla; nessun tronco sulla carreggiata né a meno di 1 m dal bordo delle strade (0,5 m dei sentieri), nessuna chioma nella sagoma libera (4,50 m sopra le carreggiate, 2,50 m sopra marciapiedi e sentieri), ogni pianta sul suolo |
+| Segnaletica orizzontale del resto della rete | ortofoto SWISSIMAGE 10 cm (2024): linee tracciate lungo ogni strada, segni vettorializzati | solo la vernice visibile nell'ortofoto; tratti coperti da alberi o ombra ricostruiti solo tra due parti viste (fino a 60 m) |
+| Sensi unici, cartelli STOP e precedenza, panchine e cestini del resto della rete | OpenStreetMap; rotonde e carreggiate separate da swissTLM3D | posizione di OSM, cartelli sul bordo della strada che li ha |
+| Ferrovia (FLP e FFS) | swissTLM3D (assi, quote, scartamento, ponti) | binari a scartamento reale alla quota di swissTLM3D, mai sotto il terreno, a filo della strada nei passaggi a livello; niente linea di contatto, niente binari sotto il parcheggio della stazione di Ponte Tresa |
 | Lago di Lugano, paesaggio lontano | swissALTI3D, Copernicus GLO-30 | — |
 
 ## Stato del 2022 riprodotto sulla cantonale
@@ -33,6 +36,15 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 - **Nessuna segnaletica** dove la strada era in rifacimento o non era segnata: s ≈ 1,23–1,27 km, 1,52–1,82 km e 3,64–3,72 km. Nel cantiere l'asfalto nuovo è più scuro.
 - **Bande rosse** ai due bordi nel tratto s ≈ 2,29–2,44 km.
 - **Incrocio di Magliaso:** l'incrocio era stato ricostruito, quindi le due isole pedonali e l'isola dipinta del rilievo sono state rimosse, e la mezzeria segue la posizione visibile nelle foto.
+
+## Versione 2.1
+
+- **Segnaletica orizzontale su tutta la rete**, rilevata nell'ortofoto SWISSIMAGE 10 cm del 2024: linee di mezzeria, di corsia e di bordo (tratteggiate o continue, nella posizione e con il ritmo misurati), strisce pedonali gialle, linee d'arresto, frecce e zebrature. Si dipinge solo ciò che l'ortofoto mostra; una linea nascosta da alberi od ombra continua solo se si vede ai due lati (fino a 60 m).
+- **Alberi fuori dalla sagoma libera delle strade:** nessuna chioma sotto 4,50 m sopra le carreggiate né sotto 2,50 m sopra marciapiedi, piazzali e sentieri (0,3 m di tolleranza sul bordo). Gli alberi sono stati spostati di al massimo 3 m o hanno un modello più stretto della stessa specie; pochissimi sono stati tolti. Ogni pianta poggia sul suolo e nessun tronco sta dentro muri o edifici.
+- **Traffico IA:** sensi unici (OpenStreetMap), rotonde in senso antiorario e carreggiate separate (swissTLM3D); le strade con divieto generale di circolazione sono evitate.
+- **Cartelli STOP e precedenza** di OpenStreetMap (pannelli svizzeri disegnati, non fotografati), **panchine e cestini**.
+- **Ferrovia:** binari della FLP Lugano–Ponte Tresa e delle FFS, con passaggi a livello e ponti.
+- **La Tresa a Ponte Tresa** ha l'acqua sotto il ponte di confine, fino alla traversa.
 
 ## Versione 2.0
 
@@ -71,12 +83,15 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 
 - Sul lato italiano ci sono solo il terreno e il paesaggio, senza strade, edifici e alberi.
 - Le gallerie non sono costruite.
-- swissTLM3D non indica i sensi unici, quindi l'IA li percorre in entrambi i sensi.
+- I sensi unici vengono da OpenStreetMap: dove OSM non li registra, l'IA percorre la strada nei due sensi.
+- Segnaletica verticale (limiti, località, direzioni), guardrail e linea di contatto della ferrovia ci sono solo dove esiste una fonte (le foto della cantonale Magliaso–Pura, i cartelli di OpenStreetMap).
+- Vedeggio, Magliasina e la Tresa a valle della traversa non hanno acqua.
 
 ## Fonti e licenze
 
 - © swisstopo: swissALTI3D, SWISSIMAGE, swissBUILDINGS3D, swissSURFACE3D, swissTLM3D, swissNAMES3D.
 - Misurazione ufficiale: Ufficio del catasto e dei riordini fondiari, Cantone Ticino.
+- © OpenStreetMap contributors (ODbL 1.0), estratto del 28.9.2026: sensi unici, cartelli STOP e precedenza, panchine e cestini (v2.1).
 - Copernicus DEM GLO-30: © DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, forniti nell'ambito di COPERNICUS da Unione Europea ed ESA.
 - Le texture fotografiche delle facciate e dei muri e le targhe dei cartelli derivano da immagini Google Street View e sono solo per uso personale. Per pubblicare la mod bisogna costruire la versione senza di esse (`MAGLIASO_NO_PHOTO_TEXTURES=1`).
 - Modelli 3D di alberi, lampioni e arredo: asset vanilla di BeamNG (East Coast USA, Italy), referenziati e non copiati.

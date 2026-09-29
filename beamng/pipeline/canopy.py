@@ -6,8 +6,8 @@ trunks off the drivable surfaces. The crowns themselves were never checked: a va
 the measured height carries its foliage down to a third of it (broad-leaved trees) or a fifth
 (conifers), and next to a road it hung into the carriageway at the height of a car. Real roads are
 kept clear by pruning: in Switzerland nothing may hang into the clearance profile, 4.50 m over the
-carriageway and 2.50 m over sidewalks and footpaths. The v2.0 release had 3469 trees with their
-crown in the profile (up to 6.9 m into it), 14 430 forest items more than 0.3 m above the ground (the
+carriageway and 2.50 m over sidewalks and footpaths. The v2.0 release had 3733 trees with their
+crown in the profile (up to 7.1 m into it), 14 430 forest items more than 0.3 m above the ground (the
 terrain is carved along the roads after the trees get their height from the DTM), 1052 more than 1 m
 under it and 144 trunks inside walls and buildings (check()).
 
