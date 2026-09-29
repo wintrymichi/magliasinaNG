@@ -84,6 +84,32 @@ def foot_fn():
     return fn
 
 
+SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "guardrails_sv.json")
+
+
+def sv_runs(existing):
+    """Guard rails of the rest of the network seen in the Street View panoramas (sv_guardrails.py, v2.2):
+    [{pts: [[x, y, z of the road edge, top height]], side}], without the ones along the rails of the
+    original route (existing runs, within 1.5 m)."""
+    if not os.path.exists(SV_RUNS):
+        return []
+    import shapely
+    old = shapely.union_all([shapely.LineString(np.array(r["pts"])[:, :2]).buffer(1.5) for r in existing
+                             if len(r["pts"]) > 1]) if existing else None
+    out = []
+    for r in json.load(open(SV_RUNS)):
+        P = np.array(r["pts"], float)
+        if len(P) < 2:
+            continue
+        if old is not None:
+            keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1])
+            if keep.sum() < 3:
+                continue
+            P = P[keep]
+        out.append({"pts": P, "side": r["side"]})
+    return out
+
+
 def build(level_dir, level_name, scene):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
     foot = foot_fn()
@@ -102,6 +128,16 @@ def build(level_dir, level_name, scene):
         c = P[len(P) // 2, :2]
         key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
         rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
+    # the rest of the network: the rails seen in the panoramas, on the edge of the road as built
+    extra = sv_runs(runs)
+    for r in extra:
+        P = r["pts"]
+        c = P[len(P) // 2, :2]
+        key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
+        rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
+    if extra:
+        print("guard rails seen in the panoramas:", len(extra), "runs,",
+              round(sum(np.linalg.norm(np.diff(r["pts"][:, :2], axis=0), axis=1).sum() for r in extra) / 1000, 2), "km")
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/guardrails/gr_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CH, (ty + 0.5) * CH, 0.0])
