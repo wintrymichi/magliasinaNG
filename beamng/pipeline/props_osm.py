@@ -12,9 +12,10 @@ Only objects that OSM records at a place are built, and only with models the lev
   props.py, turned along the nearest road or path;
 - street lights (highway=street_lamp): the Italian single-arm light of props.py, the arm over the
   nearest road.
-Nothing is placed on a carriageway, inside a building or a wall, in the middle of a road of the
-network (blocked, build_level.stage_props) or within CORRIDOR m of the Street View route; a sign that
-does not find free ground beside the road within 1.5 m is left out.
+Nothing is placed on the Italian side (outside the land of the cadastral survey), on a carriageway,
+inside a building or a wall, in the middle of a road of the network (blocked, build_level.stage_props)
+or within CORRIDOR m of the Street View route; a sign that does not find free ground beside the road
+within 1.5 m is left out.
     build(level_dir, scene, ground, on_carriageway, blocked, corridor_line) -> counts
 """
 import math, os
@@ -148,9 +149,16 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     wtree = shapely.STRtree([w["line"] for w in walk])
     near_route = lambda x, y: corridor_line is not None and corridor_line.distance(shapely.Point(x, y)) < CORRIDOR
     import area
+    import pickle
+    from config import WORK
     playable = area.polygon()
     shapely.prepare(playable)
     inside = lambda x, y: shapely.contains_xy(playable, x, y)
+    # only on the Swiss side, the land of the cadastral survey: the Italian side of the map has its
+    # terrain and landscape only, no streets or buildings for the furniture of OSM to stand by
+    lcsf = shapely.STRtree([g for geoms in pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))["LCSF"].values()
+                            for g, _ in geoms])
+    swiss = lambda x, y: len(lcsf.query(shapely.Point(x, y), predicate="within")) > 0
     counts = {"stop": 0, "give_way": 0, "bench": 0, "waste_basket": 0, "street_lamp": 0, "left_out": 0}
     sign_dir = os.path.join(level_dir, "art", "shapes", "signs")
     os.makedirs(sign_dir, exist_ok=True)
@@ -171,7 +179,7 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
         if kind not in ("stop", "give_way", "street_lamp", "bench", "waste_basket"):
             continue
         x, y = n["x"], n["y"]
-        if near_route(x, y) or not inside(x, y):
+        if near_route(x, y) or not inside(x, y) or not swiss(x, y):
             continue
         if kind in ("stop", "give_way"):
             placed = False
