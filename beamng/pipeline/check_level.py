@@ -20,6 +20,9 @@
   paths counted apart;
 - trees and shrubs: forest items whose trunk is on a road or path or closer than the clearance of
   clearance.py (1 m roads, 0.5 m paths), and shrubs on the drivable surface;
+- crowns and ground (canopy.check): crowns in the clearance profile of the roads (4.5 m over the
+  carriageways, 2.5 m over sidewalks, yards and paths), trunks inside walls, buildings, parapets,
+  guardrails, fences or street furniture, plants floating over the ground or sunk into it;
 - AI network: connected components of the AI roads (ends closer than 3 m are joined);
 - forest item count and the size of the level folder.
 Prints a table and writes beamng/verifica/check_level.json with the counts and the places of the
@@ -63,7 +66,9 @@ LIMITS = {"terrain_over_road": 50, "terrain_over_road_max_m": 1.5, "road_seams":
           "network_holes": 10, "network_off_profile": 500, "network_off_profile_max_m": 3.0,
           "network_bumps": 7000, "network_bump_max_m": 5.0, "terrain_pits": 0,
           "road_obstacles": 30, "path_obstacles": 160,
-          "forest_items": 250_000, "ai_components_over_1km": 1}
+          "forest_items": 250_000, "ai_components_over_1km": 1,
+          # v2.1 (canopy.py): what is left is at the tolerance of the rule (0.3 m of crown over an edge)
+          "crowns_in_profile": 10, "trunks_in_solids": 10, "forest_floating": 0, "forest_buried": 10}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
 PATH_MATS = ("mp_path_dirt", "mp_path_paved")
 SKIP_MATS = ("mp_road_wall", "mp_bridge_parapet")
@@ -304,6 +309,9 @@ def main(lv=None):
             items.append((o["pos"][0], o["pos"][1], o["pos"][2], shrub))
     res["forest_items"] = len(items)
     F = np.array(items, np.float64).reshape(-1, 4)
+    import canopy
+    res.update(canopy.check(lv, places))
+    print("canopy:", {k: v for k, v in res.items() if k != "forest_items"}, flush=True)
     # network stations and their profile
     net = None
     try:

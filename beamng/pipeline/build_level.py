@@ -764,7 +764,19 @@ def main():
         globals()["stage_roads_reuse" if st == "roads" and reuse else f"stage_{st}"](scene, ctx)
         print(f"[stage {st}: {time.time() - t0:.0f} s]", flush=True)
     scene.write(LEVEL_DIR)
+    if "vegetation" in stages:
+        # crowns out of the clearance profile of the roads, trunks out of walls and buildings, every
+        # plant on the ground: on the level as written, with all its meshes (canopy.py)
+        import canopy
+        t0 = time.time()
+        ctx["canopy"] = canopy.run(LEVEL_DIR, record=os.path.join(WORK, "canopy_fixes.json"))
+        ctx["n_forest"] = ctx["canopy"]["items_after"]
+        print(f"[stage canopy: {time.time() - t0:.0f} s]", flush=True)
     write_info(ctx)
+    # what the v2.1 steps did, for the reports (zone_report.py)
+    stats = {k: ctx[k] for k in ("canopy", "railway", "osm_props", "network_paint") if k in ctx}
+    if stats:
+        json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
     print("level written to", LEVEL_DIR)
 
 
