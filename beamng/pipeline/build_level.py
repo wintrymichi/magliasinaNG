@@ -482,12 +482,42 @@ def stage_ai(scene, ctx):
 
 
 def stage_props(scene, ctx):
+    """Objects of the Street View route (props.py, or taken over from the released level), then the
+    signs and furniture OpenStreetMap records on the rest of the network (props_osm.py)."""
     if not os.path.isdir(os.path.join(WORK, "signs")):              # no photo data here: take them over
         import carryover
         carryover.props(LEVEL_DIR, scene, new_ground(ctx))
-        return
-    import props
-    props.build(LEVEL_DIR, LEVEL_NAME, scene, road_height_fn())
+    else:
+        import props
+        props.build(LEVEL_DIR, LEVEL_NAME, scene, road_height_fn())
+    import pickle
+    import shapely
+    import area
+    import markings_net
+    import props_osm
+    from road_mesh import TriSurface
+    tops = markings_net.road_tops(LEVEL_DIR)
+    carr = TriSurface(markings_net.road_tops(LEVEL_DIR, ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_road_gravel")))
+    surf = TriSurface(tops)
+    terrain_z = new_ground(ctx)
+
+    def ground(x, y):
+        zr = surf.height(x, y, "high")
+        zt = terrain_z(x, y)
+        return np.where(np.isfinite(zr), np.maximum(zr, zt), zt)
+    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+    solid = [g.buffer(0.3) for g, _ in av["LCSF"].get("edificio", [])] + \
+            [g.buffer(0.3) for layer in ("SOSF", "SOLI") for g, _ in av[layer].get("muro", [])]
+    stree = shapely.STRtree(solid)
+
+    def blocked(x, y):
+        pts = shapely.points(np.asarray(x, float), np.asarray(y, float))
+        out = np.zeros(len(pts), bool)
+        i, _ = stree.query(pts, predicate="within")
+        out[i] = True
+        return out
+    ctx["osm_props"] = props_osm.build(LEVEL_DIR, scene, ground, lambda x, y: np.isfinite(carr.height(x, y, "high")),
+                                       blocked, area.route())
 
 
 def stage_sky(scene, ctx):
