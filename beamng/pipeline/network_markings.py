@@ -488,6 +488,8 @@ YELLOW_BG = 16         # R + G - 2 B of the ground 0.2-1 m around yellow paint: 
 VEHICLE_W = 1.0        # m, a blob this wide may be a vehicle seen from above (white or yellow body):
 VEHICLE_DARK = 55      # its box, 0.3 m wider, holds windows and its shadow, darker than the road (luminance)
 VEHICLE_SHARE = 0.12   # share of the box that dark
+GLARE_DARK = 45        # a light blob with this dark a ring around it (1 m) is the glare on a dark vehicle
+GLARE_SHARE = 0.35     # (or the edge of a shadow), not paint on the grey asphalt
 
 
 def other_paint(block, carriage, lines_near, marked=None):
@@ -544,6 +546,14 @@ def other_paint(block, carriage, lines_near, marked=None):
             comp = lab == k
             if not sun[comp].mean() > 0.5:
                 continue
+            if color == "white":                          # glare on a dark car: the ring around it is dark
+                bx_, by_, bw_, bh_ = stt[k][:4]
+                r0, r1, c0, c1 = max(by_ - 12, 0), min(by_ + bh_ + 12, n), max(bx_ - 12, 0), min(bx_ + bw_ + 12, n)
+                sub = comp[r0:r1, c0:c1].astype(np.uint8)
+                ring = (cv2.dilate(sub, np.ones((21, 21), np.uint8)) > 0) & ~(cv2.dilate(sub, np.ones((3, 3), np.uint8)) > 0)
+                ring &= ok[r0:r1, c0:c1]
+                if ring.sum() and (L[r0:r1, c0:c1][ring] < GLARE_DARK).mean() > GLARE_SHARE:
+                    continue
             if color == "yellow":                         # on asphalt: the ground around it is grey
                 bx_, by_, bw_, bh_ = stt[k][:4]
                 r0, r1, c0, c1 = max(by_ - 12, 0), min(by_ + bh_ + 12, n), max(bx_ - 12, 0), min(bx_ + bw_ + 12, n)
