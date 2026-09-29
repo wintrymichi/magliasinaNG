@@ -435,8 +435,11 @@ def stage_fences(scene, ctx):
 
 def stage_markings(scene, ctx):
     """Road paint on the road meshes themselves (their triangles, where they are built in the same
-    run), elsewhere on the road height function."""
+    run), elsewhere on the road height function. The Strada Cantonale keeps the paint measured for
+    v1.x; the rest of the network gets the paint measured in the orthophoto (network_markings.py,
+    markings_net.py)."""
     import markings_decals
+    import markings_net
     hfn = road_height_fn()
     mesh = ctx.get("road_mesh_fn")
 
@@ -449,8 +452,9 @@ def stage_markings(scene, ctx):
     if not os.path.exists(os.path.join(WORK, "road_strip.npz")):      # no photo data here: take them over
         import carryover
         carryover.markings(LEVEL_DIR, scene, mesh, new_ground(ctx))
-        return
-    markings_decals.build(LEVEL_DIR, scene, on_road)
+    else:
+        markings_decals.build(LEVEL_DIR, scene, on_road)
+    ctx["network_paint"] = markings_net.build(LEVEL_DIR, scene, ctx.get("network"))
 
 
 def new_ground(ctx):
