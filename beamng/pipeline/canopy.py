@@ -23,8 +23,9 @@ writing the level; `python canopy.py <level folder>` runs it on any built level)
 3. ground: every item stands on the ground under it (the terrain, or the ground mesh behind the
    retaining walls where that is higher), SINK m into it at the lowest point around its trunk.
 Crown shapes are the ones render3d.py draws: broad-leaved crowns an ellipsoid from 0.34 h to the
-top, conifers a cone from 0.18 h (full radius) to the top, shrubs from the ground; the radius is
-half the mean horizontal extent of the model (dati/asset_bounds.json) at its scale.
+top, conifers a cone from 0.18 h (full radius) to the top, shrubs from the ground, all measured from
+the position of the item (the origin of the model, SINK m in the ground); the radius is half the mean
+horizontal extent of the model (dati/asset_bounds.json) at its scale.
 check_level.py measures the same things with crown_intrusion() and ground_offsets().
     python canopy.py [level folder]
 """
@@ -600,8 +601,8 @@ def run(lv, verbose=True, record=None):
             kind = kinds[i]
             tree = kind in ("broadleaf", "conifer")
             h, r = H[i], R[i]
-            base = F.z[i] + sink[i]
-            over, k, ux, uy = plant_intrusion(T, F, i, F.x[i], F.y[i], base, kind, h, r)
+            base = F.z[i] + sink[i]                         # the ground; the model (and its crown) from F.z
+            over, k, ux, uy = plant_intrusion(T, F, i, F.x[i], F.y[i], F.z[i], kind, h, r)
             in_solid = tree and T.blocked(F.x[i], F.y[i], base, h) is not None
             # a trunk closer to a drivable face than clearance.py allows (a tree of a later edit)
             near_road = tree and not in_solid and over <= 0 and T.near_surface(F.x[i], F.y[i])
@@ -698,7 +699,7 @@ def _fix(F, T, ground, trees, moved_to, i, kind, ux, uy, limit, fam, sink, stats
                 elif tree and T.blocked(x, y, zb, h):
                     continue
                 F.t[i], F.s[i] = t, s
-                over, _, _, _ = plant_intrusion(T, F, i, x, y, zb, kind, h, r)
+                over, _, _, _ = plant_intrusion(T, F, i, x, y, zb - sink, kind, h, r)
                 if over > 0:
                     F.t[i], F.s[i] = t0_, s0
                     continue
@@ -744,7 +745,7 @@ def check(lv, places=None):
         T = TileRasters(tx, ty, roads, solids, props, water)
         for i in np.flatnonzero((tx_all == tx) & (ty_all == ty)):
             base = F.z[i] + sink[i]
-            over, k, _, _ = plant_intrusion(T, F, i, F.x[i], F.y[i], base, kinds[i], H[i], R[i])
+            over, k, _, _ = plant_intrusion(T, F, i, F.x[i], F.y[i], F.z[i], kinds[i], H[i], R[i])
             if over > 0:
                 res["crowns_in_profile"] += 1
                 res["crowns_in_profile_by_class"][CLASS_NAMES[k]] += 1
