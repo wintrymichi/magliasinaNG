@@ -11,7 +11,10 @@ Only objects that OSM records at a place are built, and only with models the lev
 - benches (amenity=bench) and litter bins (amenity=waste_basket): the vanilla bench and bin of
   props.py, turned along the nearest road or path;
 - street lights (highway=street_lamp): the Italian single-arm light of props.py, the arm over the
-  nearest road.
+  nearest road;
+- bus stops (highway=bus_stop, v2.2): a grey pole beside the road with the yellow stop sign across it
+  (a bus and the name of the stop in black, drawn here as the signs along the streets of the area look)
+  and a timetable board; where OSM records a shelter, a steel and glass shelter with a bench behind it.
 Nothing is placed on the Italian side (outside the land of the cadastral survey), on a carriageway,
 inside a building or a wall, in the middle of a road of the network (blocked, build_level.stage_props)
 or within CORRIDOR m of the Street View route; a sign that does not find free ground beside the road
@@ -72,6 +75,149 @@ def giveway_texture(n=256):
     d.polygon(tri(1.0), fill=RED + (255,))
     d.polygon(tri(0.62), fill=(255, 255, 255, 255))
     return img
+
+
+def save_rgba(img, folder, name):
+    """An RGBA sign image as <name>_b.color.png (RGB) and <name>_o.data.png (opacity)."""
+    img = img.convert("RGBA")
+    rgb = Image.new("RGB", img.size, (128, 128, 128))
+    rgb.paste(img.convert("RGB"), (0, 0), img.split()[3])
+    rgb.save(os.path.join(folder, f"{name}_b.color.png"))
+    img.split()[3].save(os.path.join(folder, f"{name}_o.data.png"))
+
+
+BUS_YELLOW = (250, 200, 30)
+
+
+def bus_texture(name, w=256, h=320):
+    """RGBA of a bus stop sign as seen along the streets of the area: a yellow plate with a black rim,
+    a bus drawn in black and the name of the stop (from OpenStreetMap). Drawn here, not photographed."""
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([2, 2, w - 3, h - 3], radius=14, fill=BUS_YELLOW + (255,), outline=(20, 20, 20, 255), width=6)
+    # the bus: body, windows, wheels
+    bx0, by0, bx1, by1 = w * 0.16, h * 0.14, w * 0.84, h * 0.55
+    d.rounded_rectangle([bx0, by0, bx1, by1], radius=12, fill=(20, 20, 20, 255))
+    ww = (bx1 - bx0 - 30) / 3
+    for k in range(3):
+        x0 = bx0 + 10 + k * (ww + 5)
+        d.rectangle([x0, by0 + 12, x0 + ww, by0 + (by1 - by0) * 0.5], fill=BUS_YELLOW + (255,))
+    for cx in (bx0 + (bx1 - bx0) * 0.24, bx0 + (bx1 - bx0) * 0.76):
+        d.ellipse([cx - 16, by1 - 12, cx + 16, by1 + 20], fill=(20, 20, 20, 255), outline=BUS_YELLOW + (255,), width=4)
+    # the name of the stop, split on its comma (village, stop)
+    parts = [q.strip() for q in (name or "").split(",") if q.strip()][:2]
+    y = h * 0.66
+    for q in parts:
+        px = 30
+        f = _font(px)
+        while d.textlength(q, font=f) > w - 30 and px > 12:
+            px -= 2
+            f = _font(px)
+        d.text(((w - d.textlength(q, font=f)) / 2, y), q, font=f, fill=(20, 20, 20, 255))
+        y += px + 8
+    return img
+
+
+def timetable_texture(w=128, h=192):
+    """A timetable board: white paper behind a frame, lines of print (no real text)."""
+    img = Image.new("RGBA", (w, h), (235, 235, 230, 255))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, w - 1, h - 1], outline=(40, 40, 40, 255), width=5)
+    d.rectangle([8, 8, w - 9, 30], fill=BUS_YELLOW + (255,))
+    rng = np.random.default_rng(4)
+    for y in range(40, h - 12, 7):
+        x1 = int(rng.uniform(0.45, 0.9) * (w - 16)) + 8
+        d.line([12, y, x1, y], fill=(90, 90, 90, 255), width=2)
+    return img
+
+
+def box(c, t, n, w, dpt, z0, z1):
+    """Triangles of a box centred at c (2D), w along t, dpt along n, from z0 to z1."""
+    corners = [c + t * sx * w / 2 + n * sy * dpt / 2 for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    out = []
+    for i in range(4):
+        a, b = corners[i], corners[(i + 1) % 4]
+        out += [np.r_[a, z0], np.r_[b, z0], np.r_[b, z1], np.r_[a, z0], np.r_[b, z1], np.r_[a, z1]]
+    top = [np.r_[corners[i], z1] for i in (0, 1, 2)] + [np.r_[corners[i], z1] for i in (0, 2, 3)]
+    return np.array(out + top)
+
+
+def bus_stop(mb, scene, g, node, x, y, ground, on_carriageway, blocked, wtree, drive, sign_dir, textures, mats):
+    """A bus stop at an OSM node: the pole with the yellow sign across the road (both faces) and the
+    timetable, off the carriageway; a shelter with a bench behind it where OSM records one. Returns
+    (x, y, shelter) or None."""
+    t = node["tags"]
+    base = np.array([x, y])
+    # the road it serves: the nearest drivable way
+    lines = [w["line"] for w in drive]
+    if not lines:
+        return None
+    if "_tree" not in textures:
+        textures["_tree"] = shapely.STRtree(lines)
+    j = textures["_tree"].nearest(shapely.Point(x, y))
+    line = lines[j]
+    q = np.asarray(shapely.shortest_line(line, shapely.Point(x, y)).coords)[0]
+    s_ = line.project(shapely.Point(q))
+    a_ = np.asarray(line.interpolate(max(s_ - 2, 0)).coords[0])
+    b_ = np.asarray(line.interpolate(min(s_ + 2, line.length)).coords[0])
+    tng = (b_ - a_) / max(np.hypot(*(b_ - a_)), 1e-9)
+    out = base - q
+    if np.hypot(*out) < 0.5:                              # on the axis: the right of the way's direction
+        out = np.array([tng[1], -tng[0]])
+    out = out / max(np.hypot(*out), 1e-9)
+    # off the carriageway: from the road outwards, the first free ground
+    c = None
+    for dist in np.arange(0.0, 8.0, 0.25):
+        p = q + out * dist
+        if not on_carriageway([p[0]], [p[1]])[0]:
+            for extra in (0.4, 0.8, 1.2):
+                cand = q + out * (dist + extra)
+                if not on_carriageway([cand[0]], [cand[1]])[0] and not blocked([cand[0]], [cand[1]])[0]:
+                    c = cand
+                    break
+            break
+    if c is None:
+        return None
+    name = t.get("name", "")
+    import hashlib
+    key = "bus_" + hashlib.md5(name.encode("utf-8")).hexdigest()[:10]
+    if key not in textures:
+        save_rgba(bus_texture(name), sign_dir, key)
+        S_ = f"{L}/art/shapes/signs"
+        mats.append(bng.material(f"mp_osm_{key}", f"{S_}/{key}_b.color.png", roughness=0.35, alpha_test=100,
+                                 ground_type="METAL", detail={"opacityMap": f"{S_}/{key}_o.data.png"}))
+        textures[key] = True
+    z = float(ground([c[0]], [c[1]])[0])
+    top = z + 2.75
+    V = tube(c, z - 0.3, top + 0.05, r=0.035)
+    mb.add("mp_osm_pole", V, uvs=V[:, :2] + V[:, 2:3], normals=bng.flat_normals_soup(V))
+    for nrm in (tng, -tng):                              # the sign faces both ways along the road
+        plate(mb, f"mp_osm_{key}", c, nrm, top - 0.25, 0.40, 0.50)
+    tt = c - out * 0.0 + out * 0.05
+    plate(mb, "mp_osm_timetable", tt, -out, z + 1.35, 0.30, 0.45)
+    shelter = t.get("shelter") == "yes"
+    if shelter:
+        sc = c + out * 1.6 - tng * 2.0
+        pts = [sc + tng * u + out * v for u in (-1.6, 1.6) for v in (-0.8, 0.8)]
+        if any(on_carriageway([p[0]], [p[1]])[0] or blocked([p[0]], [p[1]])[0] for p in pts):
+            shelter = False
+        else:
+            zs = float(ground([sc[0]], [sc[1]])[0])
+            for u in (-1.5, 1.5):
+                for v in (-0.65, 0.65):
+                    P = box(sc + tng * u + out * v, tng, out, 0.08, 0.08, zs, zs + 2.35)
+                    mb.add("mp_osm_shelter_frame", P, uvs=P[:, :2], normals=bng.flat_normals_soup(P))
+            R = box(sc, tng, out, 3.3, 1.7, zs + 2.35, zs + 2.45)
+            mb.add("mp_osm_shelter_roof", R, uvs=R[:, :2], normals=bng.flat_normals_soup(R))
+            Gb = box(sc + out * 0.66, tng, out, 3.0, 0.02, zs + 0.15, zs + 2.3)
+            mb.add("mp_osm_shelter_glass", Gb, uvs=Gb[:, :2], normals=bng.flat_normals_soup(Gb))
+            for u in (-1.48, 1.48):
+                Gs = box(sc + tng * u, tng, out, 0.02, 1.2, zs + 0.15, zs + 2.3)
+                mb.add("mp_osm_shelter_glass", Gs, uvs=Gs[:, :2], normals=bng.flat_normals_soup(Gs))
+            theta = math.atan2(-out[1], -out[0])
+            scene.add(g + "/furniture", bng.tsstatic(BENCH, (sc[0] + out[0] * 0.3, sc[1] + out[1] * 0.3, zs),
+                                                      rot=bng.rot_local_x_to(theta + math.pi / 2), collision=True))
+    return float(c[0]), float(c[1]), shelter
 
 
 def tube(c, z0, z1, r=0.03, n=8):
@@ -159,24 +305,33 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     lcsf = shapely.STRtree([g for geoms in pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))["LCSF"].values()
                             for g, _ in geoms])
     swiss = lambda x, y: len(lcsf.query(shapely.Point(x, y), predicate="within")) > 0
-    counts = {"stop": 0, "give_way": 0, "bench": 0, "waste_basket": 0, "street_lamp": 0, "left_out": 0}
+    counts = {"stop": 0, "give_way": 0, "bench": 0, "waste_basket": 0, "street_lamp": 0, "bus_stop": 0, "shelter": 0,
+              "left_out": 0}
     sign_dir = os.path.join(level_dir, "art", "shapes", "signs")
     os.makedirs(sign_dir, exist_ok=True)
-    stop_texture().save(os.path.join(sign_dir, "osm_stop.png"))
-    giveway_texture().save(os.path.join(sign_dir, "osm_giveway.png"))
-    mats = [bng.material("mp_osm_stop", f"{L}/art/shapes/signs/osm_stop.png", roughness=0.35, alpha_test=100,
-                         ground_type="METAL"),
-            bng.material("mp_osm_giveway", f"{L}/art/shapes/signs/osm_giveway.png", roughness=0.35, alpha_test=100,
-                         ground_type="METAL"),
+    # v2.2: RGB colour and a separate opacity map, the naming of the BeamNG texture cooker
+    save_rgba(stop_texture(), sign_dir, "osm_stop")
+    save_rgba(giveway_texture(), sign_dir, "osm_giveway")
+    save_rgba(timetable_texture(), sign_dir, "osm_timetable")
+    S_ = f"{L}/art/shapes/signs"
+    mats = [bng.material("mp_osm_stop", f"{S_}/osm_stop_b.color.png", roughness=0.35, alpha_test=100,
+                         ground_type="METAL", detail={"opacityMap": f"{S_}/osm_stop_o.data.png"}),
+            bng.material("mp_osm_giveway", f"{S_}/osm_giveway_b.color.png", roughness=0.35, alpha_test=100,
+                         ground_type="METAL", detail={"opacityMap": f"{S_}/osm_giveway_o.data.png"}),
+            bng.material("mp_osm_timetable", f"{S_}/osm_timetable_b.color.png", roughness=0.4, ground_type="METAL"),
             bng.material("mp_osm_sign_back", base_color=[0.55, 0.56, 0.57, 1], roughness=0.5, metallic=0.5),
-            bng.material("mp_osm_pole", base_color=[0.62, 0.63, 0.64, 1], roughness=0.5, metallic=0.6)]
+            bng.material("mp_osm_pole", base_color=[0.62, 0.63, 0.64, 1], roughness=0.5, metallic=0.6),
+            bng.material("mp_osm_shelter_frame", base_color=[0.30, 0.32, 0.34, 1], roughness=0.45, metallic=0.7),
+            bng.material("mp_osm_shelter_glass", base_color=[0.55, 0.62, 0.66, 1], roughness=0.08, metallic=0.1),
+            bng.material("mp_osm_shelter_roof", base_color=[0.70, 0.71, 0.72, 1], roughness=0.5, metallic=0.4)]
+    bus_textures = {}
     mb = bng.MeshBuilder()
     g = "MissionGroup/props/osm"
     placed_list = []
     for n in nodes:
         t = n["tags"]
-        kind = t.get("highway") if t.get("highway") in ("stop", "give_way", "street_lamp") else t.get("amenity")
-        if kind not in ("stop", "give_way", "street_lamp", "bench", "waste_basket"):
+        kind = t.get("highway") if t.get("highway") in ("stop", "give_way", "street_lamp", "bus_stop") else t.get("amenity")
+        if kind not in ("stop", "give_way", "street_lamp", "bench", "waste_basket", "bus_stop"):
             continue
         x, y = n["x"], n["y"]
         if near_route(x, y) or not inside(x, y) or not swiss(x, y):
@@ -230,6 +385,15 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
                     break
             if not placed:
                 counts["left_out"] += 1
+            continue
+        if kind == "bus_stop":
+            c = bus_stop(mb, scene, g, n, x, y, ground, on_carriageway, blocked, wtree, drive, sign_dir, bus_textures, mats)
+            if c is None:
+                counts["left_out"] += 1
+            else:
+                counts["bus_stop"] = counts.get("bus_stop", 0) + 1
+                counts["shelter"] = counts.get("shelter", 0) + int(c[2])
+                placed_list.append([round(float(c[0]), 2), round(float(c[1]), 2), "bus_stop", n["id"]])
             continue
         # furniture and lamps: off the carriageway, not in a building or wall
         if on_carriageway([x], [y])[0] or blocked([x], [y])[0]:
