@@ -187,6 +187,14 @@ def build():
                      "surface": "hard" if props.get("BELAGSART") == "Hart" else "natural",
                      "structure": structure, "bridge": structure in BRIDGE, "stairs": "Treppe" in structure,
                      "level": int(props.get("STUFE") or 0), "name": props.get("STRNAME") or props.get("NAME") or "",
+                     # roundabout, general traffic ban or not passable by car, owner (Kanton, Bund),
+                     # through / connecting road, carriageways drawn apart
+                     "roundabout": props.get("KREISEL") == "Wahr",
+                     "ban": props.get("VERKEHRSBE") in ("Allgemeine Verkehrsbeschraenkung", "Gesperrt")
+                            or props.get("BEFAHRBARK") == "Falsch",
+                     "owner": props.get("EIGENTUEME") if props.get("EIGENTUEME") not in (None, "k_W") else "",
+                     "importance": props.get("VERKEHRSBD") if props.get("VERKEHRSBD") not in (None, "k_W") else "",
+                     "separated": props.get("RICHTUNGSG") == "Wahr",
                      "nodes": [int(na), int(nb)], "length": float(s[-1]), "n": len(Q), "first": count})
         count += len(Q)
         sx.append(Q[:, 0]); sy.append(Q[:, 1]); sz.append(Q[:, 2]); sss.append(s)
