@@ -7,8 +7,10 @@ west of Ponte Tresa, where the ground is up to 40 m below the lake (the river le
 Lake mask on a GRID m grid around the terrain block (out to the backdrop radius):
 - swissALTI3D 2 m: the lake surface is flat at the lake level (median DTM over the surveyed lake);
 - Copernicus (Italian side): flat cells at the Copernicus height of the Swiss part of the lake;
-- only cells connected to the largest lake body, with the Tresa outlet at Ponte Tresa closed
-  (DAM m around the first point of the river in swissTLM3D).
+- only cells connected to the largest lake body, with the Tresa closed at its weir (DAM m around the
+  first point of the river in swissTLM3D more than WEIR_DROP m under its outlet, about 420 m down from
+  the lake): the reach between the lake and the weir, under the border bridge of Ponte Tresa, is at
+  the level of the lake and has its water (v2.0 closed the outlet itself: the bridge crossed a dry bed).
 The lake within NEAR m of the terrain block is covered by a few axis-aligned rectangles that contain
 no dry land lower than the lake (they may cover higher land, where the water stays under the
 ground); every rectangle becomes a WaterBlock of THICK m whose middle is at the lake level (+/-
@@ -28,6 +30,7 @@ GRID = 25.0
 RADIUS = 24000.0
 NEAR = 2000.0
 DAM = 60.0
+WEIR_DROP = 0.5      # m under the outlet: the Tresa has left the level of the lake
 THICK = 1.0
 GRID_ELEMENT = 25.0
 LOW = 0.5            # m, dry land this far below the lake must not be covered
@@ -50,21 +53,29 @@ def lake_level():
     return float(np.median(v)) if len(v) else 270.5
 
 
-def tresa_outlet():
-    """First point (upstream end) of the Tresa in swissTLM3D (local x, y)."""
+def tresa_dam():
+    """Where the Tresa leaves the level of the lake (local x, y): along its swissTLM3D line from the
+    outlet, the first point more than WEIR_DROP m under it (the weir of Ponte Tresa); the outlet
+    itself when the line does not drop within the area."""
     f = os.path.join(DATA, "tlm", "TLM_FLIESSGEWAESSER.json")
     if not os.path.exists(f):
         return None
-    best = None
-    for ft in json.load(open(f))["features"]:
-        if (ft["props"].get("NAME") or "") != "Tresa":
-            continue
-        P = np.array(ft["parts"][0])
-        if best is None or P[0, 2] > best[2]:
-            best = P[0]
-    if best is None:
+    parts = [np.array(P) for ft in json.load(open(f))["features"] if (ft["props"].get("NAME") or "") == "Tresa"
+             for P in ft["parts"] if len(P) >= 2]
+    if not parts:
         return None
-    x, y = lv95_to_local(best[0], best[1])
+    parts.sort(key=lambda P: -P[0, 2])
+    line = [parts.pop(0)]
+    while parts:                                   # the pieces downstream, end to start
+        end = line[-1][-1, :2]
+        k = min(range(len(parts)), key=lambda i: np.hypot(*(parts[i][0, :2] - end)))
+        if np.hypot(*(parts[k][0, :2] - end)) > 1.0:
+            break
+        line.append(parts.pop(k))
+    P = np.concatenate(line)
+    drop = np.flatnonzero(P[:, 2] < P[0, 2] - WEIR_DROP)
+    q = P[drop[0]] if len(drop) else P[0]
+    x, y = lv95_to_local(q[0], q[1])
     return float(x), float(y)
 
 
@@ -78,7 +89,7 @@ def lake_mask(level, cx, cy):
     lc_cop = float(np.nanmedian(hc[swiss])) if swiss.any() else level
     cop = np.isnan(hs) & (np.abs(hc - lc_cop) < 0.6) & (rng < 0.6)
     water = ndi.binary_closing(swiss | cop, iterations=1) & (swiss | cop | np.isnan(hs))
-    out = tresa_outlet()
+    out = tresa_dam()
     dam = np.zeros(water.shape, bool)
     if out is not None:
         X = x0 + (np.arange(water.shape[1]) + 0.5) * GRID
