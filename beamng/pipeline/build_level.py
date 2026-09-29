@@ -674,7 +674,7 @@ def stage_vegetation(scene, ctx):
 def stage_backfill(scene, ctx, H, base_tex):
     """The ground behind the retaining walls, where the terrain was lowered so that no terrain
     triangle spans a wall (walls.carve_terrain): a mesh with the ground as it was, in the material
-    of the terrain layer there, cut at the roads, paths and bridge decks."""
+    of the terrain layer there, cut at the roads, paths, bridge decks and railway tracks."""
     import terrain
     import walls
     import roadheight
@@ -688,6 +688,13 @@ def stage_backfill(scene, ctx, H, base_tex):
     if net is not None:
         drv += [p["geom"] for p in net.polys]
         drv += [foot for _, foot in getattr(net, "deck_feet", [])]
+    # nor over the railway (railway.py): the bed of every track with its shoulders
+    if "railway" in ctx.get("stages", STAGES):
+        import railway
+        import shapely
+        drv += [shapely.LineString(Q[:, :2]).buffer(railway.SLEEPER_LEN[p["OBJEKTART"]] / 2 + railway.BALLAST_EXTRA +
+                                                     railway.EMBANK_MAX, cap_style="flat")
+                for p, Q in railway.tracks() if p.get("KUNSTBAUTE") != "Bruecke"]
     drv = [g for g in drv if g is not None and not g.is_empty]
     layers = np.load(os.path.join(WORK, "terrain_layers.npy"), mmap_mode="r")
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
