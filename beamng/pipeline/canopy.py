@@ -6,12 +6,13 @@ trunks off the drivable surfaces. The crowns themselves were never checked: a va
 the measured height carries its foliage down to a third of it (broad-leaved trees) or a fifth
 (conifers), and next to a road it hung into the carriageway at the height of a car. Real roads are
 kept clear by pruning: in Switzerland nothing may hang into the clearance profile, 4.50 m over the
-carriageway and 2.50 m over sidewalks and footpaths. The v2.0 release had 3787 trees with their
-crown in the profile, 12 980 forest items more than 0.3 m above the ground (the terrain is carved
-along the roads after the trees get their height from the DTM) and about 50 trunks inside walls.
+carriageway and 2.50 m over sidewalks and footpaths. The v2.0 release had 3469 trees with their
+crown in the profile (up to 6.9 m into it), 14 430 forest items more than 0.3 m above the ground (the
+terrain is carved along the roads after the trees get their height from the DTM), 1052 more than 1 m
+under it and 144 trunks inside walls and buildings (check()).
 
-This step reads everything from the level folder once the rest is built, so the level build
-(build_level.py, stage 'canopy') and the fix of a released level (patch_v21.py) run the same code:
+This step reads everything from the level folder once the rest is built (build_level.py runs it after
+writing the level; `python canopy.py <level folder>` runs it on any built level):
 1. crowns: no foliage of a tree in the clearance profile of a drivable surface, CLEAR[class] m over
    its faces (EDGE_TOL m of overhang allowed at the edges). A tree that reaches in moves outwards,
    up to MOVE m, onto free ground (not onto a surface, a wall, a building, another trunk or into
@@ -375,12 +376,14 @@ class TileRasters:
         tr = Affine(RES, 0, self.x_min, 0, -RES, self.y_max)
         box = shapely.box(self.x_min, self.y_max - n * RES, self.x_min + n * RES, self.y_max)
         idx = roads.near(tx, ty)
+        self.exact = {}                                      # the faces themselves, per class (near_surface)
         if len(idx):
             T, K = roads.tri[idx], roads.extra[idx]
             for c in (2, 1, 0):                              # carriageways win over the rest
                 sel = K == c
                 if not sel.any():
                     continue
+                self.exact[c] = TriSurface(T[sel])
                 zc = raster_max_heights(T[sel], self.x_min, self.y_max, (n, n))
                 m = np.isfinite(zc)
                 self.cls[m] = c
@@ -490,9 +493,19 @@ class TileRasters:
                 return SOLID_NAMES[g]
         return None
 
+    def near_surface(self, x, y, clear=TRUNK_CLEAR):
+        """A drivable face on the trunk or within clear[class] - 0.05 m of it, on the faces themselves
+        and in plan, as check_level.py measures it (12 points around the trunk)."""
+        a = np.linspace(0, 2 * np.pi, 12, endpoint=False)
+        for c, S in self.exact.items():
+            rad = clear[c] - 0.05
+            if np.isfinite(S.height(np.r_[x, x + rad * np.cos(a)], np.r_[y, y + rad * np.sin(a)], "high")).any():
+                return True
+        return False
+
     def trunk_free(self, x, y, zb, top, clear=TRUNK_CLEAR):
         """A place a trunk may be moved to: not blocked, clear of the drivable faces at its level
-        (clear[class] m) and not in the lake."""
+        (clear[class] m), and of all of them in plan (near_surface), and not in the lake."""
         rr, cc, d, _, _ = self.window(x, y, max(clear.max(), TRUNK_R))
         if not len(rr) or self.blocked(x, y, zb, top):
             return False
@@ -506,7 +519,7 @@ class TileRasters:
         for x0, y0, x1, y1, wz in self.water:
             if x0 < x < x1 and y0 < y < y1 and zb < wz - UNDER_WATER:
                 return False
-        return True
+        return not self.near_surface(x, y, clear)
 
 
 # ---------------------------------------------------------------------- the step
@@ -559,7 +572,7 @@ def run(lv, verbose=True, record=None):
     kinds = F.kinds[F.t]
     stats = {"items": int(len(F.x)), "moved": 0, "swapped": 0, "scaled": 0, "removed": 0,
              "in_profile_before": [0, 0, 0], "trunks_in_solids_before": 0, "trunks_in_solids_moved": 0,
-             "trunks_in_solids_removed": 0}
+             "trunks_in_solids_removed": 0, "trunks_near_roads_before": 0}
     if verbose:
         print("canopy: %d forest items, %d drivable faces, %d solid faces, %d faces of ground behind walls "
               "(%.0f s)" % (len(F.x), len(tops), len(solid[0]), len(fill), time.time() - t0), flush=True)
@@ -590,10 +603,20 @@ def run(lv, verbose=True, record=None):
             base = F.z[i] + sink[i]
             over, k, ux, uy = plant_intrusion(T, F, i, F.x[i], F.y[i], base, kind, h, r)
             in_solid = tree and T.blocked(F.x[i], F.y[i], base, h) is not None
-            if over <= 0 and not in_solid:
+            # a trunk closer to a drivable face than clearance.py allows (a tree of a later edit)
+            near_road = tree and not in_solid and over <= 0 and T.near_surface(F.x[i], F.y[i])
+            if over <= 0 and not in_solid and not near_road:
                 continue
             if over > 0:
                 stats["in_profile_before"][k] += 1
+            if near_road:
+                stats["trunks_near_roads_before"] += 1          # away from the surface cells around it
+                rr, cc, d, X, Y = T.window(F.x[i], F.y[i], 1.5)
+                s_ = T.cls[rr, cc] >= 0
+                if s_.any():
+                    v = np.array([F.x[i] - X[s_].mean(), F.y[i] - Y[s_].mean()])
+                    nv = np.hypot(*v)
+                    ux, uy = (v / nv) if nv > 1e-6 else (1.0, 0.0)
             if in_solid:
                 stats["trunks_in_solids_before"] += 1
                 if over <= 0:                                   # away from the solid cells around it
@@ -607,7 +630,7 @@ def run(lv, verbose=True, record=None):
             x_old, y_old, t_old, s_old = F.x[i], F.y[i], F.t[i], F.s[i]
             done = _fix(F, T, ground, (tree_kd, tree_ids), moved_to, i, kind, ux, uy, limit, fam if tree else None,
                         sink[i], stats)
-            why = CLASS_NAMES[k] if over > 0 else "tronco in un oggetto solido"
+            why = CLASS_NAMES[k] if over > 0 else ("tronco in un oggetto solido" if in_solid else "tronco a bordo strada")
             if done is None:
                 F.alive[i] = False
                 stats["removed"] += 1
