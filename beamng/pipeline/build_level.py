@@ -68,7 +68,8 @@ def stage_terrain(scene, ctx):
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
     if "railway" in ctx.get("stages", STAGES):
         import railway                                   # the ground under the tracks at their height
-        posts.append(railway.carve_terrain)
+        keep = override[1] if override else None         # not the ground of the roads
+        posts.append(lambda H, xs, ys: railway.carve_terrain(H, xs, ys, keep))
 
     def post(H, xs, ys):
         for fn in posts:

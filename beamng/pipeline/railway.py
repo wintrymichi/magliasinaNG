@@ -40,6 +40,7 @@ RAISE = 2.5                   # m, the line may stand this far over the terrain 
 COVER = 1.0                   # m, a line this far under the terrain across its whole bed runs under a deck: left out
 CARVE_W = 0.3                 # m of the terrain lowered beyond the ballast (carve_terrain)
 CARVE_MAX = 4.0               # m, deepest the terrain is lowered under a track
+CUT_SLOPE = 1.5               # m of rise per m of the sides of a cutting, beyond the flat bed
 EMBANK = 1.5                  # horizontal m per m of height of the ballast embankment (at least BALLAST_SLOPE)
 EMBANK_MAX = 3.0              # m, widest embankment beside the ballast
 FLUSH = 0.008                 # m, heads of the rails over the road surface at a level crossing
@@ -77,39 +78,48 @@ def tracks():
     return out
 
 
-def carve_terrain(H, xs, ys):
+def carve_terrain(H, xs, ys, keep=None):
     """Terrain heights H (rows ys, columns xs) with the ground under the tracks (outside bridges) no
-    higher than the line of swissTLM3D minus 0.05 m, within SLEEPER_LEN / 2 + BALLAST_EXTRA + CARVE_W
-    m of the axis, lowered by at most CARVE_MAX m; not where the ground is higher than the line by
-    COVER m all across the bed (a deck over the tracks)."""
+    higher than the line of swissTLM3D minus 0.05 m within half = SLEEPER_LEN / 2 + BALLAST_EXTRA +
+    CARVE_W m of the axis, and beyond it no higher than a side of CUT_SLOPE (a cutting, smooth on the
+    terrain grid); lowered by at most CARVE_MAX m, not at the vertices of keep (the ground carved for
+    the roads, whose walls stand there), not where the ground is higher than the line by COVER m all
+    across the bed (a deck over the tracks)."""
     from scipy.spatial import cKDTree
-    from scipy.ndimage import maximum_filter1d
+    from scipy.ndimage import maximum_filter1d, minimum_filter1d
     sq = xs[1] - xs[0]
     n = 0
     for props, Q in tracks():
         if props.get("KUNSTBAUTE") == "Bruecke":
             continue
         half = SLEEPER_LEN[props["OBJEKTART"]] / 2 + BALLAST_EXTRA + CARVE_W
+        reach = half + CARVE_MAX / CUT_SLOPE
         P3, _ = resample(Q, 0.5)
-        c0 = max(int(np.floor((P3[:, 0].min() - half - xs[0]) / sq)), 0)
-        c1 = min(int(np.ceil((P3[:, 0].max() + half - xs[0]) / sq)) + 1, len(xs))
-        r0 = max(int(np.floor((P3[:, 1].min() - half - ys[0]) / sq)), 0)
-        r1 = min(int(np.ceil((P3[:, 1].max() + half - ys[0]) / sq)) + 1, len(ys))
+        c0 = max(int(np.floor((P3[:, 0].min() - reach - xs[0]) / sq)), 0)
+        c1 = min(int(np.ceil((P3[:, 0].max() + reach - xs[0]) / sq)) + 1, len(xs))
+        r0 = max(int(np.floor((P3[:, 1].min() - reach - ys[0]) / sq)), 0)
+        r1 = min(int(np.ceil((P3[:, 1].max() + reach - ys[0]) / sq)) + 1, len(ys))
         if c1 <= c0 or r1 <= r0:
             continue
         X, Y = np.meshgrid(xs[c0:c1], ys[r0:r1])
-        d, j = cKDTree(P3[:, :2]).query(np.column_stack([X.ravel(), Y.ravel()]), distance_upper_bound=half)
+        d, j = cKDTree(P3[:, :2]).query(np.column_stack([X.ravel(), Y.ravel()]), distance_upper_bound=reach)
         inb = np.flatnonzero(np.isfinite(d))
         if not len(inb):
             continue
         sub = H[r0:r1, c0:c1].ravel()
-        h, z = sub[inb], P3[j[inb], 2] - 0.05
-        # a deck: the ground over the line all across the bed (the lowest vertex of every station)
+        h, z, d = sub[inb], P3[j[inb], 2] - 0.05, d[inb]
+        bed = d <= half
+        # a deck: the ground over the line all across the bed, the lowest vertex of the bed within 3 m
+        # along the line (the vertices nearest to one station may all lie on one side of it)
         low = np.full(len(P3), np.inf)
-        np.minimum.at(low, j[inb], h - z)
+        np.minimum.at(low, j[inb][bed], (h - z)[bed])
+        low = minimum_filter1d(low, 13)                                                          # +- 3 m
         deck = maximum_filter1d((np.isfinite(low) & (low > COVER)).astype(np.uint8), 13) > 0   # +- 3 m
-        cut = (h > z) & (h - z <= CARVE_MAX) & ~deck[j[inb]]
-        sub[inb[cut]] = z[cut]
+        target = z + np.maximum(d - half, 0.0) * CUT_SLOPE
+        cut = (h > target) & (h - target <= CARVE_MAX) & ~deck[j[inb]]
+        if keep is not None:
+            cut &= ~keep[r0:r1, c0:c1].ravel()[inb]
+        sub[inb[cut]] = target[cut]
         H[r0:r1, c0:c1] = sub.reshape(r1 - r0, c1 - c0)
         n += int(cut.sum())
     print("railway: terrain lowered under the tracks at %d vertices" % n)
