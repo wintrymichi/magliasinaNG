@@ -1,16 +1,20 @@
-"""OpenStreetMap data of the area (download_osm.py -> data/osm/osm_area.json) in local coordinates.
+"""OpenStreetMap data of the area in local coordinates: data/osm/osm_area.json where download_osm.py
+has fetched it, else the extract the release is built with, dati/osm_area.json.gz (download_osm.py
+--pin refreshes it), so the one-way streets and the signs of a release do not change with OSM.
 
 OSM records what swisstopo and the cadastral survey do not: one-way streets, street names, speed
 limits, pedestrian crossings, stop and give-way points, traffic signals, bus stops, street lamps,
 guard rails. Everything taken from it is matched to the swissTLM3D network (network.py), which
 stays the geometry of reference. (c) OpenStreetMap contributors, ODbL.
 """
-import json, os
+import gzip, json, os
 import numpy as np
 import shapely
 from config import DATA, wgs_to_local
 
 PATH = os.path.join(DATA, "osm", "osm_area.json")
+DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
+PINNED = os.path.join(DATI, "osm_area.json.gz")
 # highway values a car drives on
 DRIVE = {"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link", "secondary",
          "secondary_link", "tertiary", "tertiary_link", "unclassified", "residential", "living_street",
@@ -18,15 +22,24 @@ DRIVE = {"motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary
 _cache = {}
 
 
+def source(path=PATH, pinned=PINNED):
+    """The file to read: the download, else the extract kept in the repository; None without both."""
+    return path if os.path.exists(path) else (pinned if os.path.exists(pinned) else None)
+
+
+def read(path):
+    return json.load(gzip.open(path, "rt", encoding="utf-8") if path.endswith(".gz") else open(path, encoding="utf-8"))
+
+
 def available():
-    return os.path.exists(PATH)
+    return source() is not None
 
 
 def load():
     """(ways, nodes): ways with 'xy' (n, 2) local coordinates and 'line', nodes with 'x', 'y'."""
     if "data" in _cache:
         return _cache["data"]
-    d = json.load(open(PATH, encoding="utf-8"))
+    d = read(source())
     ways, nodes = [], []
     for e in d["elements"]:
         if e["type"] == "way" and "geometry" in e:

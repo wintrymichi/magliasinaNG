@@ -6,10 +6,13 @@ benches and the railway details.
 One query over the bounding box of the area (area.py) + MARGIN m; output data/osm/osm_area.json
 (Overpass JSON with the geometry of every way), and the municipalities (admin_level 8, their
 boundaries come from swissBOUNDARIES3D) in data/osm/communes.json for the zones of zone_report.py.
-Re-runnable: existing files are kept.
-(c) OpenStreetMap contributors, ODbL.
+Re-runnable: existing files are kept. The release is built with the extract kept in the repository
+(dati/osm_area.json.gz, dati/osm_communes.json.gz), so that it does not change with OSM or depend on
+the Overpass servers; --pin copies the downloaded files there.
+    python download_osm.py [--pin]
+(c) OpenStreetMap contributors, ODbL 1.0: the extracts in dati/ are under the ODbL.
 """
-import json, os, time
+import gzip, json, os, shutil, sys, time
 import requests
 from config import DATA, local_to_lv95, lv95_to_wgs
 import area
@@ -19,6 +22,8 @@ URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.system
 MARGIN = 300.0
 OUT = os.path.join(DATA, "osm", "osm_area.json")
 COMMUNES = os.path.join(DATA, "osm", "communes.json")
+DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
+PINNED = {OUT: os.path.join(DATI, "osm_area.json.gz"), COMMUNES: os.path.join(DATI, "osm_communes.json.gz")}
 QUERY_COMMUNES = """[out:json][timeout:300];
 relation["boundary"="administrative"]["admin_level"="8"]({bbox});
 out body geom;
@@ -82,6 +87,11 @@ def main():
         for e in d["elements"]:
             n[e["type"]] = n.get(e["type"], 0) + 1
         print(os.path.basename(path), "OSM elements", n, "timestamp", d.get("osm3s", {}).get("timestamp_osm_base"))
+    if "--pin" in sys.argv[1:]:
+        for path, pinned in PINNED.items():
+            with open(path, "rb") as src, gzip.open(pinned, "wb", compresslevel=9) as dst:
+                shutil.copyfileobj(src, dst)
+            print("kept in the repository:", pinned)
 
 
 if __name__ == "__main__":
