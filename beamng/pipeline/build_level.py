@@ -413,13 +413,27 @@ def stage_roads_reuse(scene, ctx):
 
 def stage_walls(scene, ctx):
     import walls
-    st = f"{TL}/brick/stone_brick_regular/t_stone_brick_regular"
-    cc = f"{TL}/concrete/t_italy_bld_old_concrete/t_italy_bld_old_concrete"
+    import bld_textures
+    # v2.2: original procedural textures (bld_textures.py): rubble stone (shared with the rustici) and
+    # board-formed concrete, instead of the vanilla regular stone bricks
+    bdir, wdir = level_path("art", "shapes", "buildings"), level_path("art", "shapes", "walls")
+    os.makedirs(bdir, exist_ok=True)
+    bld_textures.stone_wall(bdir)
+    bld_textures.plaster(bdir)
+    bld_textures.walls(wdir)
+    st, cc = f"{L}/art/shapes/buildings/t_bld_stone", f"{L}/art/shapes/walls/t_wall_concrete"
     bng.write_materials(level_path("art", "shapes", "walls", "main.materials.json"), [
-        bng.material("mp_wall_stone", f"{st}_b.color.dds", f"{st}_nm.normal.dds", f"{st}_r.data.dds",
-                     f"{st}_ao.data.dds", ground_type="ROCK"),
-        bng.material("mp_wall_stone_top", f"{cc}_b.color.dds", f"{cc}_nm.normal.dds", f"{cc}_r.data.dds",
-                     ground_type="CONCRETE")])
+        bng.material("mp_wall_stone", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
+                     f"{st}_ao.data.png", ground_type="ROCK"),
+        bng.material("mp_wall_stone_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
+                     ground_type="CONCRETE"),
+        bng.material("mp_wall_concrete", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
+                     ground_type="CONCRETE"),
+        bng.material("mp_wall_concrete_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
+                     ground_type="CONCRETE"),
+        bng.material("mp_wall_plaster", f"{L}/art/shapes/buildings/t_bld_plaster_b.color.png",
+                     f"{L}/art/shapes/buildings/t_bld_plaster_nm.normal.png",
+                     f"{L}/art/shapes/buildings/t_bld_plaster_r.data.png", vert_color=True, ground_type="CONCRETE")])
     # no cadastral wall across a road or along the way of a line (v2.0 network)
     free = walls.drive_free(ctx["network"], ctx.get("corridor")) if ctx.get("network") is not None else None
     ctx["wall_samples"], ctx["wall_feet"] = walls.build(LEVEL_DIR, LEVEL_NAME, scene, free=free)
@@ -633,7 +647,7 @@ def stage_buildings(scene, ctx):
     import buildings_mesh
     net = ctx.get("network")
     ways = buildings_mesh.network_ways(net, ctx.get("corridor")) if net is not None else None
-    tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways)
+    tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways, net=net)
     for shape, origin, ntri in tiles:
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
                                                           annotation="BUILDINGS"))
@@ -778,7 +792,8 @@ def write_info(ctx):
     # the figures of the description, from what this build made
     km2 = area.polygon().area / 1e6
     n_bridges = sum(1 for b in json.load(open(bridges.PONTI, encoding="utf-8"))["ponti"] if not b.get("skip"))
-    n_buildings = len(pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb")))
+    import buildings_mesh
+    n_buildings = len(buildings_mesh.load_buildings())
     n_trees = int(round(ctx.get("n_forest", 0) / 1000.0))
     n_villages = sum(1 for s in spawns if s[0] not in ("spawn_magliaso", "spawn_mid", "spawn_pura"))
     info = {

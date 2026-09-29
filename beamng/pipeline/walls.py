@@ -33,7 +33,34 @@ import bng
 
 CHUNK = 128.0
 R_SEARCH = 1.2
-PIECE = 3800          # px: longest photo-texture piece of a wall (atlas pages are 4096 px)
+# m of wall per repeat of the texture of each material (bld_textures.py, v2.2: original textures)
+WALL_TILE = {"mp_wall_stone": 3.0, "mp_wall_stone_top": 4.0, "mp_wall_concrete": 4.0, "mp_wall_concrete_top": 4.0,
+             "mp_wall_plaster": 5.0}
+WALL_MATERIALS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "wall_materials.json")
+_wall_mat = {}
+
+
+def wall_material(x, y, default):
+    """(material, vertex colour or None) of the cadastral wall piece whose middle is at (x, y): what the
+    panoramas showed (sv_walls.py -> dati/wall_materials.json, [[x, y, "stone" | "concrete" | "plaster", n,
+    contrast, saturation, luminance, rgb], ...], matched within 1.5 m: the survey is downloaded at every
+    build), otherwise the default."""
+    if "tree" not in _wall_mat:
+        rows = []
+        if os.path.exists(WALL_MATERIALS):
+            import json as _json
+            rows = _json.load(open(WALL_MATERIALS)).get("walls", [])
+        _wall_mat["tree"] = cKDTree(np.array([[r[0], r[1]] for r in rows])) if rows else None
+        _wall_mat["rows"] = rows
+    if _wall_mat["tree"] is None:
+        return default, None
+    d, j = _wall_mat["tree"].query([x, y])
+    if d > 1.5:
+        return default, None
+    r = _wall_mat["rows"][j]
+    if r[2] == "plaster":
+        return "mp_wall_plaster", np.clip(np.asarray(r[7] if len(r) > 7 else (0.85, 0.82, 0.75), float) / 0.9, 0, 1)
+    return {"stone": "mp_wall_stone", "concrete": "mp_wall_concrete"}.get(r[2], default), None
 
 
 def wall_footprints(av, skip_polys):
@@ -323,6 +350,7 @@ def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
         ck = (int(np.floor(cx / CHUNK)), int(np.floor(cy / CHUNK)))
         mb = builders.setdefault(ck, bng.MeshBuilder())
         tex = None
+        wmat, wcol = wall_material(poly.representative_point().x, poly.representative_point().y, material)
         tf = os.path.join(WORK, "wall_tex", f"{w['key']}.npz")
         if os.path.exists(tf) and not NO_PHOTO:
             d = np.load(tf)
@@ -349,8 +377,8 @@ def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
                 add_photo_pieces(mb, atlas, "mp_wall_photo", tex, tris.reshape(n, 6, 3), U.reshape(n, 6), u0, u1,
                                  np.minimum(zb[a], zb[b]), np.maximum(zt[a], zt[b]))
             else:
-                mb.add(material, tris, uvs=np.column_stack([U, tris[:, 2]]) / 1.6,
-                       normals=bng.flat_normals_soup(tris))
+                mb.add(wmat, tris, uvs=np.column_stack([U, tris[:, 2]]) / WALL_TILE.get(wmat, 1.6),
+                       normals=bng.flat_normals_soup(tris), colors=None if wcol is None else np.r_[wcol, 1.0])
         tri = shapely.constrained_delaunay_triangles(poly)
         top = []
         for t in tri.geoms:
@@ -362,7 +390,8 @@ def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
             top.append(v3)
         if top:
             top = np.concatenate(top)
-            mb.add(material + "_top", top, uvs=top[:, :2] / 1.6, normals=bng.flat_normals_soup(top))
+            tmat = "mp_wall_concrete_top" if wmat == "mp_wall_plaster" else wmat + "_top"
+            mb.add(tmat, top, uvs=top[:, :2] / WALL_TILE.get(tmat, 1.6), normals=bng.flat_normals_soup(top))
         carve.append(np.column_stack([allv, zlo, ztop]))
         feet.append((poly, allv, zlo, ztop))
         nwall += 1
@@ -616,7 +645,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
             flip = True
             tri = t3[:, ::-1].reshape(-1, 3)
             uu = uu.reshape(-1, 3)[:, ::-1].ravel()
-        mat, uv = material, np.column_stack([uu, tri[:, 2]]) / 1.6
+        mat, uv = material, np.column_stack([uu, tri[:, 2]]) / WALL_TILE.get(material, 1.6)
         img = None
         if photo:
             img, (L, v0, vlen) = texturing.texture_ribbon(face, zb, zt, -side, poses, cache, dsm)
@@ -630,7 +659,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
         t3 = cap.reshape(-1, 3, 3)
         if np.mean(np.cross(t3[:, 1] - t3[:, 0], t3[:, 2] - t3[:, 0])[:, 2]) < 0:
             cap = t3[:, ::-1].reshape(-1, 3)
-        mb.add(material + "_top", cap, uvs=cap[:, :2] / 1.6, normals=bng.flat_normals_soup(cap))
+        mb.add(material + "_top", cap, uvs=cap[:, :2] / WALL_TILE.get(material + "_top", 1.6), normals=bng.flat_normals_soup(cap))
         for k in range(len(P)):
             samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], zb[k] + 0.3, zt[k]])
     if photo:

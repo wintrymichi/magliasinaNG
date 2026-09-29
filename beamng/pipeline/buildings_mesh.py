@@ -1,12 +1,14 @@
 """Building meshes from swissBUILDINGS3D 3.0 (LOD2), grouped into 256 m tiles.
 
-Facades seen in the Street View panoramas carry their projected photo texture
-(texture_buildings.py -> work/facades, packed here into 4096 px atlases). All other
-walls use a neutral plaster texture tinted (vertex colour) with the building's own
-photographed facade colour, or a neutral plaster tone when the building was never
-photographed. Roofs use a neutral clay-tile texture laid along the roof slope, tinted
-with the median SWISSIMAGE colour of that roof (footprint eroded 1.5 m against relief
-displacement). Collision on (visible mesh).
+Facades seen in the Street View panoramas of the original route carry their projected photo texture
+in the personal build (texture_buildings.py -> work/facades, packed here into 4096 px atlases). All
+other walls (all of them in the public build) use the original procedural textures of
+bld_textures.py (v2.2): plaster tinted (vertex colour) with the building's own facade tone (measured
+in the photos where the building was seen, otherwise the style of its age and use, facades.py) or
+rubble stone, with windows, doors, garage doors, shop fronts and a plinth band laid out on every
+facade (facades.py). Roofs: canal tiles, flat tiles, stone slabs, metal sheet or gravel after their
+slope, colour and age, laid along the slope and tinted with the median SWISSIMAGE colour of the roof
+(footprint eroded 1.5 m against relief displacement). Collision on (visible mesh).
 v2.0: a passage is cut under every building that stands on a road or path of the network
 (PASSAGE_CLEAR m high, closed by a ceiling and side walls; network_ways, passages).
 """
@@ -17,10 +19,10 @@ import rasterio
 import shapely
 from PIL import Image
 import bng
-from config import NO_PHOTO, WORK, BEAMNG_GAME
+from config import NO_PHOTO, WORK
 
 TILE = 256.0
-DEFAULT_WALL = np.array([0.84, 0.80, 0.72])
+V1_DEFAULT = np.array([0.84, 0.80, 0.72])        # plaster tone of v1.x buildings without photos
 
 
 def wall_uvs(tris):
@@ -64,22 +66,6 @@ def orient(b):
             t[flip] = t[flip][:, ::-1]
         out[part] = t
     return out
-
-
-def neutral_texture(src_zip_path, dst, gain=0.95):
-    """Grey-normalised copy of a vanilla texture (keeps pattern, colour comes from vertex colours)."""
-    import zipfile, io
-    p = src_zip_path.lstrip("/")
-    if p.startswith("levels/"):
-        z = zipfile.ZipFile(os.path.join(BEAMNG_GAME, "content", "levels", p.split("/")[1] + ".zip"))
-    else:
-        z = zipfile.ZipFile(os.path.join(BEAMNG_GAME, "content", "assets", "materials", "trim.zip"))
-    names = {n.lower(): n for n in z.namelist()}
-    im = np.asarray(Image.open(io.BytesIO(z.read(names[p.lower()]))).convert("RGB")).astype(np.float32)
-    g = im.mean(-1, keepdims=True)
-    g = g / max(g.mean(), 1) * 255 * gain
-    out = np.clip(np.repeat(g, 3, -1), 0, 255).astype(np.uint8)
-    Image.fromarray(out).save(dst)
 
 
 def roof_colors(blds):
@@ -302,27 +288,61 @@ def passages(b, walls, roofs, ways, tree):
     return walls, roofs, passage_shell(shapely.union_all(cs), fp, min(zbs), max(zts), top)
 
 
-def build(level_dir, level_name, keep=None, ways=None):
-    """ways: network_ways, the passages to cut."""
-    import texturing
+def load_buildings():
+    """The buildings of the level: swissBUILDINGS3D (buildings.pkl) without the ones gone from the ground
+    and with the ones of the cadastral survey it does not model (missing_buildings.py, v2.2)."""
     blds = pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb"))
+    diff = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "buildings_diff.json")
+    added = os.path.join(WORK, "buildings_added.pkl")
+    if os.path.exists(diff):
+        gone = {r["uuid"] for r in json.load(open(diff)).get("gone", [])}
+        blds = [b for b in blds if b["uuid"] not in gone]
+    if os.path.exists(added):
+        blds += pickle.load(open(added, "rb"))
+    return blds
+
+
+def street_index(net):
+    """(cKDTree of the stations of the roads of the network, main street per station) for the facades
+    (which side of a building faces the street, shop fronts on the main streets)."""
+    if net is None:
+        return None
+    from scipy.spatial import cKDTree
+    main_cls = {"10m Strasse", "8m Strasse", "6m Strasse", "Autostrasse", "Autobahn"}
+    road = np.array([net.segs[k]["kind"] == "road" for k in net.seg], bool)
+    main = np.array([net.segs[k]["class"] in main_cls or net.segs[k].get("owner") == "Kanton" for k in net.seg], bool)
+    return cKDTree(np.column_stack([net.x[road], net.y[road]])), main[road]
+
+
+def build(level_dir, level_name, keep=None, ways=None, net=None):
+    """ways: network_ways, the passages to cut; net: the network (network_mesh.Network) for the
+    facades' streets."""
+    import texturing
+    import facades
+    import bld_textures
+    from geo import Grid
+    blds = load_buildings()
     shp_dir = os.path.join(level_dir, "art", "shapes", "buildings")
     os.makedirs(shp_dir, exist_ok=True)
     import vanilla
     v1_walls = None
-    if vanilla.have_game():
-        neutral_texture("/assets/materials/trim/plaster/t_highrise_plaster/t_highrise_plaster_b.color.dds",
-                        os.path.join(shp_dir, "t_plaster_neutral.png"))
-        neutral_texture("/levels/italy/art/shapes/buildings/Italy_bld_roof_tiles_d.dds",
-                        os.path.join(shp_dir, "t_rooftiles_neutral.png"), gain=1.0)
-    else:                    # the grey copies of the released level, and its measured facade tones
-        for f in ("t_plaster_neutral.png", "t_rooftiles_neutral.png"):
-            vanilla.copy(f"art/shapes/buildings/{f}", os.path.join(shp_dir, f))
+    if not vanilla.have_game():              # the facade tones of the released level (measured in the photos)
         from scipy.spatial import cKDTree
         wp, wc = vanilla.wall_colors()
         v1_walls = (cKDTree(wp), wc) if len(wp) else None
+    # v2.2: original procedural textures (bld_textures.py): plaster, stone, plinth, openings, roofs
+    index, means = bld_textures.build(shp_dir)
     L = f"/levels/{level_name}/art/shapes/buildings"
     rcol = roof_colors(blds)
+    fps = [footprint(b) for b in blds]
+    pos = {b["uuid"]: i for i, b in enumerate(blds)}
+    gwr = facades.gwr_join(blds, fps)
+    measured = {}
+    if os.path.exists(facades.FACADE_COLORS):
+        measured = json.load(open(facades.FACADE_COLORS))
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    ctx = facades.Context(blds, fps, lambda x, y: dtm.sample(x, y), street_index(net))
+    em = facades.Emitter(index)
     atlas = texturing.Atlas(4096)
     tiles = {}
     for b in blds:
@@ -331,7 +351,9 @@ def build(level_dir, level_name, keep=None, ways=None):
         c = (np.array(b["bbox"][0]) + np.array(b["bbox"][1])) / 2
         tiles.setdefault((int(np.floor(c[0] / TILE)), int(np.floor(c[1] / TILE))), []).append(b)
     out, n_photo, n_pass = [], 0, 0
+    stats = {"openings": 0, "gwr": 0, "measured": 0, "roofs": {}, "use": {}, "stone": 0}
     wtree = shapely.STRtree([w[1] for w in ways]) if ways else None
+    mean = lambda k: np.array(means[k], float)
     for (tx, ty), bl in sorted(tiles.items()):
         mb = bng.MeshBuilder()
         origin = np.array([(tx + 0.5) * TILE, (ty + 0.5) * TILE, 0.0])
@@ -339,7 +361,7 @@ def build(level_dir, level_name, keep=None, ways=None):
             ob = orient(b)
             walls, roofs = ob["walls"], ob["roofs"]
             assigned = np.zeros(len(walls), bool)
-            wall_col = DEFAULT_WALL
+            wall_col = None
             f = os.path.join(WORK, "facades", f"{b['uuid'].strip('{}')}.npz")
             if len(walls) and os.path.exists(f):
                 d = np.load(f)
@@ -361,37 +383,107 @@ def build(level_dir, level_name, keep=None, ways=None):
                     n_photo += 1
                 if meds:
                     wall_col = np.median(np.array(meds), 0) / 255.0
+            if wall_col is None and v1_walls is not None and len(walls):
+                V0 = walls.reshape(-1, 3)
+                dd, jj = v1_walls[0].query(V0[::3][:50])
+                if (dd < 0.05).mean() > 0.5:               # the same building in the released level
+                    c1 = np.median(v1_walls[1][jj[dd < 0.05]], 0)
+                    # the default tone of the buildings never photographed is no measurement
+                    if np.abs(c1 - V1_DEFAULT / 0.9).max() > 0.01:
+                        wall_col = np.clip(c1 * 0.9, 0, 1)
+            sv = measured.get(b["uuid"], {})
+            if wall_col is None and sv:                     # the tone seen in the panoramas (sv_facades.py)
+                wall_col = facades.sv_tone(sv["rgb"])
+            rec = gwr.get(b["uuid"], {})
+            fp = fps[pos[b["uuid"]]]
+            height = float(b["bbox"][1][2] - b["bbox"][0][2])
+            style = facades.style_of(b, rec, fp.area, height, rcol.get(b["uuid"]), measured=wall_col,
+                                     shutter=sv.get("shutter") if sv.get("shutter_frac", 0) >= 0.05 else None)
+            stats["gwr"] += bool(rec)
+            stats["measured"] += wall_col is not None
+            stats["use"][style["use"]] = stats["use"].get(style["use"], 0) + 1
             rest = walls[~assigned]
+            # windows, doors and plinth on the walls of the building (not in its passages)
+            if len(rest) and style["use"] != "none":
+                stats["openings"] += facades.layout_building(b, rest, style, ctx, em)
             rest, roofs, shell = passages(b, rest, roofs, ways, wtree)
             if len(shell):
                 rest = np.concatenate([rest, shell])
                 n_pass += 1
             if len(rest):
                 V = rest.reshape(-1, 3)
-                stored = np.clip(wall_col / 0.9, 0, 1)
-                if v1_walls is not None and not os.path.exists(f):
-                    dd, jj = v1_walls[0].query(V[::3][:50])
-                    if (dd < 0.05).mean() > 0.5:           # the same building in the released level
-                        stored = np.median(v1_walls[1][jj[dd < 0.05]], 0)
-                mb.add("bld_plaster", V, uvs=wall_uvs(rest) / 2.5, normals=bng.flat_normals_soup(V),
-                       colors=np.r_[stored, 1.0])
+                if style["stone"]:
+                    stats["stone"] += 1
+                    mb.add("bld_stone", V, uvs=wall_uvs(rest) / 3.0, normals=bng.flat_normals_soup(V),
+                           colors=np.r_[np.clip(0.97 + 0.03 * (style["tone"] - style["tone"].mean()), 0, 1), 1.0])
+                else:
+                    tone = np.clip(style["tone"] / mean("t_bld_plaster"), 0, 1)
+                    mb.add("bld_plaster", V, uvs=wall_uvs(rest) / 5.0, normals=bng.flat_normals_soup(V),
+                           colors=np.r_[tone, 1.0])
+            # chimneys: plastered stacks with a concrete cap
+            stack, cap = facades.chimneys(b, roofs, style)
+            if len(stack):
+                V = stack.reshape(-1, 3)
+                mb.add("bld_plaster", V, uvs=wall_uvs(stack) / 5.0, normals=bng.flat_normals_soup(V),
+                       colors=np.r_[np.clip(style["tone"] / mean("t_bld_plaster"), 0, 1), 1.0])
+                V = cap.reshape(-1, 3)
+                mb.add("bld_roof_flat", V, uvs=V[:, :2] / 4.0, normals=bng.flat_normals_soup(V),
+                       colors=np.r_[np.clip(np.array([0.62, 0.62, 0.60]) / mean("t_roof_flat"), 0, 1), 1.0])
+                stats["chimneys"] = stats.get("chimneys", 0) + len(stack) // 8
             if len(roofs):
-                V = roofs.reshape(-1, 3)
                 col = rcol.get(b["uuid"], np.array([0.55, 0.42, 0.36]))
-                mb.add("bld_roof", V, uvs=roof_uvs(roofs), normals=bng.flat_normals_soup(V),
-                       colors=np.r_[np.clip(col / 0.85, 0, 1), 1.0])
+                nrm = np.cross(roofs[:, 1] - roofs[:, 0], roofs[:, 2] - roofs[:, 0])
+                slope = np.degrees(np.arccos(np.clip(np.abs(nrm[:, 2]) / np.maximum(np.linalg.norm(nrm, axis=1), 1e-12),
+                                                     0, 1)))
+                kinds = np.array([facades.roof_kind(style, sl, col) for sl in slope])
+                for kind in np.unique(kinds):
+                    rt = roofs[kinds == kind]
+                    V = rt.reshape(-1, 3)
+                    stats["roofs"][kind] = stats["roofs"].get(kind, 0) + 1
+                    mb.add(f"bld_roof_{kind}", V, uvs=roof_uvs(rt, bld_textures.ROOF_TILE[kind]),
+                           normals=bng.flat_normals_soup(V),
+                           colors=np.r_[np.clip(col / mean(f"t_roof_{kind}"), 0, 1), 1.0])
+        # the openings and plinths of the tile's buildings
+        if em.V:
+            V = np.concatenate(em.V).reshape(-1, 3)
+            mb.add("bld_openings", V, uvs=np.concatenate(em.UV).reshape(-1, 2), normals=bng.flat_normals_soup(V))
+        if em.PV:
+            V = np.concatenate(em.PV).reshape(-1, 3)
+            C = np.repeat(np.array([np.r_[np.clip(c / mean("t_bld_plinth"), 0, 1), 1.0] for c in em.PC]), 6, 0)
+            mb.add("bld_plinth", V, uvs=np.concatenate(em.PUV).reshape(-1, 2), normals=bng.flat_normals_soup(V),
+                   colors=C)
+        em.V, em.UV, em.PV, em.PUV, em.PC = [], [], [], [], []
         if mb.empty():
             continue
         rel = f"art/shapes/buildings/bld_{tx:+03d}_{ty:+03d}.dae"
         mb.write_dae(os.path.join(level_dir, rel), name="bld", origin=origin)
         out.append((f"/levels/{level_name}/{rel}", origin, mb.triangle_count()))
-    mats = [bng.material("bld_plaster", f"{L}/t_plaster_neutral.png", roughness=0.9, vert_color=True),
-            bng.material("bld_roof", f"{L}/t_rooftiles_neutral.png", roughness=0.8, vert_color=True)]
+    T = lambda n, k: f"{L}/{n}_{k}"
+    mats = [bng.material("bld_plaster", T("t_bld_plaster", "b.color.png"), T("t_bld_plaster", "nm.normal.png"),
+                         T("t_bld_plaster", "r.data.png"), vert_color=True),
+            bng.material("bld_stone", T("t_bld_stone", "b.color.png"), T("t_bld_stone", "nm.normal.png"),
+                         T("t_bld_stone", "r.data.png"), T("t_bld_stone", "ao.data.png"), vert_color=True),
+            bng.material("bld_plinth", T("t_bld_plinth", "b.color.png"), T("t_bld_plinth", "nm.normal.png"),
+                         T("t_bld_plinth", "r.data.png"), vert_color=True),
+            bng.material("bld_openings", T("t_bld_openings", "b.color.png"), T("t_bld_openings", "nm.normal.png"),
+                         T("t_bld_openings", "r.data.png"), T("t_bld_openings", "ao.data.png"), alpha_test=110,
+                         detail={"opacityMap": T("t_bld_openings", "o.data.png")})]
+    for kind in bld_textures.ROOF_TILE:
+        n = f"t_roof_{kind}"
+        mats.append(bng.material(f"bld_roof_{kind}", T(n, "b.color.png"), T(n, "nm.normal.png"), T(n, "r.data.png"),
+                                 vert_color=True, metallic=0.3 if kind == "metal" else None))
     for i, page in enumerate(atlas.pages if n_photo else []):     # no empty page without photo facades
         rel = f"art/shapes/buildings/bld_photo_{i}.jpg"
         cv2.imwrite(os.path.join(level_dir, rel), cv2.cvtColor(page, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 90])
         mats.append(bng.material(f"mp_bld_photo_{i}", f"/levels/{level_name}/{rel}", roughness=0.85))
     bng.write_materials(os.path.join(shp_dir, "main.materials.json"), mats)
+    # the atlas index and the texture means are for this build only (not level files)
+    for fn in ("bld_openings.json", "bld_textures.json"):
+        if os.path.exists(os.path.join(shp_dir, fn)):
+            os.replace(os.path.join(shp_dir, fn), os.path.join(WORK, fn))
+    stats["photo_facades"] = n_photo
+    stats["passages"] = n_pass
+    json.dump(stats, open(os.path.join(WORK, "buildings_stats.json"), "w"), indent=1)
     print("building photo facades", n_photo, "atlas pages", len(atlas.pages) if n_photo else 0,
-          "buildings with a passage", n_pass)
+          "buildings with a passage", n_pass, "stats", {k: v for k, v in stats.items()})
     return out
