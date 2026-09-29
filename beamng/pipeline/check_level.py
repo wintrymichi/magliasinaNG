@@ -20,7 +20,12 @@
   paths counted apart;
 - trees and shrubs: forest items whose trunk is on a road or path or closer than the clearance of
   clearance.py (1 m roads, 0.5 m paths), and shrubs on the drivable surface;
+- crowns and ground (canopy.check): crowns in the clearance profile of the roads (4.5 m over the
+  carriageways, 2.5 m over sidewalks, yards and paths), trunks inside walls, buildings, parapets,
+  guardrails, fences or street furniture, plants floating over the ground or sunk into it;
 - AI network: connected components of the AI roads (ends closer than 3 m are joined);
+- files: every file inside the level folder that its json files refer to exists; the vanilla files
+  it refers to are listed;
 - forest item count and the size of the level folder.
 Prints a table and writes beamng/verifica/check_level.json with the counts and the places of the
 problems (worst first, one per PLACE_CELL m; review_map.py draws them); exit code 1 when a limit is
@@ -32,7 +37,7 @@ import numpy as np
 import shapely
 import patch_release as pr
 from road_mesh import TriSurface as Surface
-from config import LEVEL_DIR
+from config import LEVEL_DIR, LEVEL_NAME
 
 TERRAIN_TOL = 0.10
 SEAM_TOL = 0.02
@@ -43,8 +48,8 @@ UNDER_TOL = 1.25         # m of a road face under the lowest bare ground within 
 OBST_Z = (0.5, 1.6)      # m over the profile: a car along a road or path crosses no mesh up to its roof
 PIT_TOL = 20.0           # m of terrain under the bare ground (a hole in the terrain)
 LAKE_Z = 271.5           # m, the DTM up to here is the lake and its shore (the lake bed lies under it)
-OBST_GROUPS = ("roads/surfaces", "roads/guardrails", "roads/fences", "walls", "buildings", "props")
-OBST_WHAT = ("ponte o gradino", "guardrail", "recinzione", "muro", "edificio", "oggetto")
+OBST_GROUPS = ("roads/surfaces", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway")
+OBST_WHAT = ("ponte o gradino", "guardrail", "recinzione", "muro", "edificio", "oggetto", "binario")
 TILE = 512.0
 PLACE_CELL = 40.0
 MAX_PLACES = 400
@@ -63,7 +68,10 @@ LIMITS = {"terrain_over_road": 50, "terrain_over_road_max_m": 1.5, "road_seams":
           "network_holes": 10, "network_off_profile": 500, "network_off_profile_max_m": 3.0,
           "network_bumps": 7000, "network_bump_max_m": 5.0, "terrain_pits": 0,
           "road_obstacles": 30, "path_obstacles": 160,
-          "forest_items": 250_000, "ai_components_over_1km": 1}
+          "forest_items": 250_000, "ai_components_over_1km": 1,
+          # v2.1 (canopy.py): what is left is at the tolerance of the rule (0.3 m of crown over an edge)
+          "crowns_in_profile": 10, "trunks_in_solids": 10, "forest_floating": 0, "forest_buried": 10,
+          "missing_files": 0}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
 PATH_MATS = ("mp_path_dirt", "mp_path_paved")
 SKIP_MATS = ("mp_road_wall", "mp_bridge_parapet")
@@ -92,10 +100,50 @@ def face_samples(T):
     return np.concatenate(pts)
 
 
+FILE_EXT = (".dae", ".cdae", ".dts", ".png", ".dds", ".jpg", ".jpeg", ".tga", ".ter", ".json", ".ogg", ".wav")
+EDITOR_ONLY = {"heightmapImage"}        # the source image of a terrain import in the editor, not loaded by the game
+
+
+def file_refs(lv):
+    """Files the json files of the level refer to (shapes of the objects, textures of the materials,
+    terrain, water, sky): {path: the file that refers to it} of those inside the level folder that are
+    missing, and the sorted paths outside it (vanilla assets of the game, not checked here)."""
+    pref = f"/levels/{LEVEL_NAME}/".lower()
+    missing, vanilla = {}, set()
+
+    def walk(v, src):
+        if isinstance(v, dict):
+            for k, x in v.items():
+                if k not in EDITOR_ONLY:
+                    walk(x, src)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x, src)
+        elif isinstance(v, str) and v.startswith("/") and v.lower().endswith(FILE_EXT):
+            if v.lower().startswith(pref):
+                if not os.path.exists(os.path.join(lv, *v[len(pref):].split("/"))):
+                    missing.setdefault(v, src)
+            else:
+                vanilla.add(v)
+    for dp, _, fs in os.walk(lv):
+        for f in fs:
+            if not f.endswith(".json"):
+                continue
+            path = os.path.join(dp, f)
+            rel = os.path.relpath(path, lv).replace("\\", "/")
+            try:
+                walk(json.load(open(path, encoding="utf-8")), rel)
+            except json.JSONDecodeError:                  # one object per line (items.level.json, forest)
+                for o in pr.items(path):
+                    walk(o, rel)
+    return missing, sorted(vanilla)
+
+
 def solid_meshes(lv):
     """Triangles (k, 3, 3) of every mesh of the level a car collides with and the index in
     OBST_GROUPS of each: the pipeline's own shapes (roads and bridges, walls, buildings, guardrails,
-    fences); the vanilla props of the route are not in the level folder (checked in v1.x)."""
+    fences, OSM signs, railway); the vanilla props of the route are not in the level folder (checked
+    in v1.x)."""
     tris, grp = [], []
     for gi, g in enumerate(OBST_GROUPS):
         for dp, _, fs in os.walk(os.path.join(lv, "main", "MissionGroup", *g.split("/"))):
@@ -304,6 +352,9 @@ def main(lv=None):
             items.append((o["pos"][0], o["pos"][1], o["pos"][2], shrub))
     res["forest_items"] = len(items)
     F = np.array(items, np.float64).reshape(-1, 4)
+    import canopy
+    res.update(canopy.check(lv, places))
+    print("canopy:", {k: v for k, v in res.items() if k != "forest_items"}, flush=True)
     # network stations and their profile
     net = None
     try:
@@ -523,6 +574,10 @@ def main(lv=None):
                 L[lab[a]] = L.get(lab[a], 0) + l
             LIMITS["ai_components_over_1km"] = sum(1 for v in L.values() if v > 1000)
             res["network_road_pieces_over_1km"] = LIMITS["ai_components_over_1km"]
+    missing, vanilla = file_refs(lv)
+    res["missing_files"] = len(missing)
+    res["missing_file_list"] = dict(sorted(missing.items())[:50])
+    res["vanilla_file_list"] = vanilla
     size = 0
     for dp, _, fs in os.walk(lv):
         size += sum(os.path.getsize(os.path.join(dp, f)) for f in fs)
@@ -533,7 +588,7 @@ def main(lv=None):
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(res, open(OUT, "w"), indent=1, ensure_ascii=False)
     for k, v in res.items():
-        if k == "places":
+        if k == "places" or k.endswith("_list"):
             continue
         flag = "  <-- over the limit %s" % LIMITS[k] if k in bad else ""
         print("%-28s %s%s" % (k, v, flag))

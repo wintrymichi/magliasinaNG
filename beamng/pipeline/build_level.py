@@ -66,6 +66,10 @@ def stage_terrain(scene, ctx):
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
+    if "railway" in ctx.get("stages", STAGES):
+        import railway                                   # the ground under the tracks at their height
+        keep = override[1] if override else None         # not the ground of the roads
+        posts.append(lambda H, xs, ys: railway.carve_terrain(H, xs, ys, keep))
 
     def post(H, xs, ys):
         for fn in posts:
@@ -435,8 +439,11 @@ def stage_fences(scene, ctx):
 
 def stage_markings(scene, ctx):
     """Road paint on the road meshes themselves (their triangles, where they are built in the same
-    run), elsewhere on the road height function."""
+    run), elsewhere on the road height function. The Strada Cantonale keeps the paint measured for
+    v1.x; the rest of the network gets the paint measured in the orthophoto (network_markings.py,
+    markings_net.py)."""
     import markings_decals
+    import markings_net
     hfn = road_height_fn()
     mesh = ctx.get("road_mesh_fn")
 
@@ -449,8 +456,9 @@ def stage_markings(scene, ctx):
     if not os.path.exists(os.path.join(WORK, "road_strip.npz")):      # no photo data here: take them over
         import carryover
         carryover.markings(LEVEL_DIR, scene, mesh, new_ground(ctx))
-        return
-    markings_decals.build(LEVEL_DIR, scene, on_road)
+    else:
+        markings_decals.build(LEVEL_DIR, scene, on_road)
+    ctx["network_paint"] = markings_net.build(LEVEL_DIR, scene, ctx.get("network"))
 
 
 def new_ground(ctx):
@@ -472,18 +480,89 @@ def new_ground(ctx):
     return fn
 
 
+def terrain_top_fn(ctx):
+    """The terrain surface of this build at (x, y): the higher of the two ways a square can be split."""
+    import terrain
+    H = ctx["H"]
+    xs, ys = terrain.vertex_coords()
+    sq = xs[1] - xs[0]
+
+    def fn(x, y):
+        c = (np.asarray(x, float) - xs[0]) / sq
+        r = (np.asarray(y, float) - ys[0]) / sq
+        c0 = np.clip(np.floor(c).astype(np.int64), 0, len(xs) - 2)
+        r0 = np.clip(np.floor(r).astype(np.int64), 0, len(ys) - 2)
+        fc, fr = np.clip(c - c0, 0, 1), np.clip(r - r0, 0, 1)
+        z00, z10, z01, z11 = H[r0, c0], H[r0, c0 + 1], H[r0 + 1, c0], H[r0 + 1, c0 + 1]
+        a = np.where(fc >= fr, z00 + fc * (z10 - z00) + fr * (z11 - z10), z00 + fr * (z01 - z00) + fc * (z11 - z01))
+        b = np.where(fc + fr <= 1, z00 + fc * (z10 - z00) + fr * (z01 - z00),
+                     z11 + (1 - fc) * (z01 - z11) + (1 - fr) * (z10 - z11))
+        return np.maximum(a, b)
+    return fn
+
+
+def stage_railway(scene, ctx):
+    """Tracks of the railway lines (railway.py) on the terrain of this build, flush with the roads at
+    the level crossings."""
+    import railway
+    import markings_net
+    from road_mesh import TriSurface
+    from geo import Grid
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    ctx["railway"] = railway.build(LEVEL_DIR, scene, terrain_top_fn(ctx), TriSurface(markings_net.road_tops(LEVEL_DIR)),
+                                   lambda x, y: dtm.sample(x, y))
+
+
 def stage_ai(scene, ctx):
     import ai_roads
     ai_roads.build(scene, road_height_fn(), ctx.get("network"))
 
 
 def stage_props(scene, ctx):
+    """Objects of the Street View route (props.py, or taken over from the released level), then the
+    signs and furniture OpenStreetMap records on the rest of the network (props_osm.py)."""
     if not os.path.isdir(os.path.join(WORK, "signs")):              # no photo data here: take them over
         import carryover
         carryover.props(LEVEL_DIR, scene, new_ground(ctx))
-        return
-    import props
-    props.build(LEVEL_DIR, LEVEL_NAME, scene, road_height_fn())
+    else:
+        import props
+        props.build(LEVEL_DIR, LEVEL_NAME, scene, road_height_fn())
+    import pickle
+    import shapely
+    import area
+    import markings_net
+    import props_osm
+    from road_mesh import TriSurface
+    tops = markings_net.road_tops(LEVEL_DIR)
+    carr = TriSurface(markings_net.road_tops(LEVEL_DIR, ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_road_gravel")))
+    surf = TriSurface(tops)
+    terrain_z = new_ground(ctx)
+
+    def ground(x, y):
+        zr = surf.height(x, y, "high")
+        zt = terrain_z(x, y)
+        return np.where(np.isfinite(zr), np.maximum(zr, zt), zt)
+    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+    solid = [g.buffer(0.3) for g, _ in av["LCSF"].get("edificio", [])] + \
+            [g.buffer(0.3) for layer in ("SOSF", "SOLI") for g, _ in av[layer].get("muro", [])]
+    # nor in the middle of a road of the network (the half of its width a car drives through, as
+    # check_level.py sweeps it, + 0.5 m), where a junction or a yard is not surveyed as carriageway
+    net = ctx.get("network")
+    for s in (net.segs if net is not None else []):
+        a, n = s["first"], s["n"]
+        if s["kind"] == "road" and n >= 2:
+            solid.append(shapely.LineString(np.column_stack([net.x[a:a + n], net.y[a:a + n]])).buffer(
+                0.25 * float(np.median(net.w[a:a + n])) + 0.5, cap_style="flat"))
+    stree = shapely.STRtree(solid)
+
+    def blocked(x, y):
+        pts = shapely.points(np.asarray(x, float), np.asarray(y, float))
+        out = np.zeros(len(pts), bool)
+        i, _ = stree.query(pts, predicate="within")
+        out[i] = True
+        return out
+    ctx["osm_props"] = props_osm.build(LEVEL_DIR, scene, ground, lambda x, y: np.isfinite(carr.height(x, y, "high")),
+                                       blocked, area.route())
 
 
 def stage_sky(scene, ctx):
@@ -595,7 +674,7 @@ def stage_vegetation(scene, ctx):
 def stage_backfill(scene, ctx, H, base_tex):
     """The ground behind the retaining walls, where the terrain was lowered so that no terrain
     triangle spans a wall (walls.carve_terrain): a mesh with the ground as it was, in the material
-    of the terrain layer there, cut at the roads, paths and bridge decks."""
+    of the terrain layer there, cut at the roads, paths, bridge decks and railway tracks."""
     import terrain
     import walls
     import roadheight
@@ -609,6 +688,13 @@ def stage_backfill(scene, ctx, H, base_tex):
     if net is not None:
         drv += [p["geom"] for p in net.polys]
         drv += [foot for _, foot in getattr(net, "deck_feet", [])]
+    # nor over the railway (railway.py): the bed of every track with its shoulders
+    if "railway" in ctx.get("stages", STAGES):
+        import railway
+        import shapely
+        drv += [shapely.LineString(Q[:, :2]).buffer(railway.SLEEPER_LEN[p["OBJEKTART"]] / 2 + railway.BALLAST_EXTRA +
+                                                     railway.EMBANK_MAX, cap_style="flat")
+                for p, Q in railway.tracks() if p.get("KUNSTBAUTE") != "Bruecke"]
     drv = [g for g in drv if g is not None and not g.is_empty]
     layers = np.load(os.path.join(WORK, "terrain_layers.npy"), mmap_mode="r")
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
@@ -741,8 +827,8 @@ def write_info(ctx):
               open(level_path("main.decals.json"), "w"))
 
 
-STAGES = ["roads", "walls", "water", "terrain", "sky", "backdrop", "buildings", "guardrails", "fences", "markings", "ai",
-          "props", "vegetation", "spawns"]
+STAGES = ["roads", "walls", "water", "terrain", "railway", "sky", "backdrop", "buildings", "guardrails", "fences",
+          "markings", "ai", "props", "vegetation", "spawns"]
 
 
 def main():
@@ -758,13 +844,25 @@ def main():
             os.makedirs(os.path.dirname(roads))
             shutil.move(keep, roads)
     os.makedirs(LEVEL_DIR, exist_ok=True)
-    scene, ctx = bng.Scene(), {}
+    scene, ctx = bng.Scene(), {"stages": stages}
     for st in stages:
         t0 = time.time()
         globals()["stage_roads_reuse" if st == "roads" and reuse else f"stage_{st}"](scene, ctx)
         print(f"[stage {st}: {time.time() - t0:.0f} s]", flush=True)
     scene.write(LEVEL_DIR)
+    if "vegetation" in stages:
+        # crowns out of the clearance profile of the roads, trunks out of walls and buildings, every
+        # plant on the ground: on the level as written, with all its meshes (canopy.py)
+        import canopy
+        t0 = time.time()
+        ctx["canopy"] = canopy.run(LEVEL_DIR, record=os.path.join(WORK, "canopy_fixes.json"))
+        ctx["n_forest"] = ctx["canopy"]["items_after"]
+        print(f"[stage canopy: {time.time() - t0:.0f} s]", flush=True)
     write_info(ctx)
+    # what the v2.1 steps did, for the reports (zone_report.py)
+    stats = {k: ctx[k] for k in ("canopy", "railway", "osm_props", "network_paint") if k in ctx}
+    if stats:
+        json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
     print("level written to", LEVEL_DIR)
 
 

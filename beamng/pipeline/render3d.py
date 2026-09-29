@@ -26,7 +26,7 @@ SKY = (0.70, 0.79, 0.88)
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
-GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props")
+GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway")
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [
@@ -38,6 +38,9 @@ MAT_COLORS = [
     ("paint_red", (0.75, 0.2, 0.18)), ("paint", (0.96, 0.96, 0.94)), ("guardrail", (0.80, 0.81, 0.82)),
     ("chainlink", (0.55, 0.58, 0.55)), ("fence", (0.5, 0.5, 0.5)), ("wall_stone_top", (0.70, 0.69, 0.66)),
     ("wall_stone", (0.60, 0.55, 0.48)), ("bld_roof", (0.58, 0.36, 0.30)), ("bld", (0.86, 0.83, 0.77)),
+    ("rail_head", (0.62, 0.62, 0.63)), ("rail_steel", (0.33, 0.30, 0.28)), ("sleeper", (0.55, 0.54, 0.51)),
+    ("ballast", (0.50, 0.48, 0.45)), ("rail_deck", (0.70, 0.69, 0.66)), ("osm_stop", (0.76, 0.07, 0.11)),
+    ("osm_giveway", (0.95, 0.95, 0.95)),
     ("pole", (0.55, 0.56, 0.58)), ("sign", (0.9, 0.9, 0.92)), ("delineator_black", (0.1, 0.1, 0.1)),
     ("delineator", (0.95, 0.95, 0.95)), ("cabinet", (0.6, 0.6, 0.55)), ("backdrop", (0.35, 0.42, 0.28)),
 ]
