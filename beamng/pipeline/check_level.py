@@ -46,8 +46,8 @@ UNDER_TOL = 1.25         # m of a road face under the lowest bare ground within 
 OBST_Z = (0.5, 1.6)      # m over the profile: a car along a road or path crosses no mesh up to its roof
 PIT_TOL = 20.0           # m of terrain under the bare ground (a hole in the terrain)
 LAKE_Z = 271.5           # m, the DTM up to here is the lake and its shore (the lake bed lies under it)
-OBST_GROUPS = ("roads/surfaces", "roads/guardrails", "roads/fences", "walls", "buildings", "props")
-OBST_WHAT = ("ponte o gradino", "guardrail", "recinzione", "muro", "edificio", "oggetto")
+OBST_GROUPS = ("roads/surfaces", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway")
+OBST_WHAT = ("ponte o gradino", "guardrail", "recinzione", "muro", "edificio", "oggetto", "binario")
 TILE = 512.0
 PLACE_CELL = 40.0
 MAX_PLACES = 400
@@ -100,7 +100,8 @@ def face_samples(T):
 def solid_meshes(lv):
     """Triangles (k, 3, 3) of every mesh of the level a car collides with and the index in
     OBST_GROUPS of each: the pipeline's own shapes (roads and bridges, walls, buildings, guardrails,
-    fences); the vanilla props of the route are not in the level folder (checked in v1.x)."""
+    fences, OSM signs, railway); the vanilla props of the route are not in the level folder (checked
+    in v1.x)."""
     tris, grp = [], []
     for gi, g in enumerate(OBST_GROUPS):
         for dp, _, fs in os.walk(os.path.join(lv, "main", "MissionGroup", *g.split("/"))):

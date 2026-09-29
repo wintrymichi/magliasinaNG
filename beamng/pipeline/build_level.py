@@ -66,6 +66,9 @@ def stage_terrain(scene, ctx):
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
+    if "railway" in ctx.get("stages", STAGES):
+        import railway                                   # the ground under the tracks at their height
+        posts.append(railway.carve_terrain)
 
     def post(H, xs, ys):
         for fn in posts:
@@ -476,6 +479,39 @@ def new_ground(ctx):
     return fn
 
 
+def terrain_top_fn(ctx):
+    """The terrain surface of this build at (x, y): the higher of the two ways a square can be split."""
+    import terrain
+    H = ctx["H"]
+    xs, ys = terrain.vertex_coords()
+    sq = xs[1] - xs[0]
+
+    def fn(x, y):
+        c = (np.asarray(x, float) - xs[0]) / sq
+        r = (np.asarray(y, float) - ys[0]) / sq
+        c0 = np.clip(np.floor(c).astype(np.int64), 0, len(xs) - 2)
+        r0 = np.clip(np.floor(r).astype(np.int64), 0, len(ys) - 2)
+        fc, fr = np.clip(c - c0, 0, 1), np.clip(r - r0, 0, 1)
+        z00, z10, z01, z11 = H[r0, c0], H[r0, c0 + 1], H[r0 + 1, c0], H[r0 + 1, c0 + 1]
+        a = np.where(fc >= fr, z00 + fc * (z10 - z00) + fr * (z11 - z10), z00 + fr * (z01 - z00) + fc * (z11 - z01))
+        b = np.where(fc + fr <= 1, z00 + fc * (z10 - z00) + fr * (z01 - z00),
+                     z11 + (1 - fc) * (z01 - z11) + (1 - fr) * (z10 - z11))
+        return np.maximum(a, b)
+    return fn
+
+
+def stage_railway(scene, ctx):
+    """Tracks of the railway lines (railway.py) on the terrain of this build, flush with the roads at
+    the level crossings."""
+    import railway
+    import markings_net
+    from road_mesh import TriSurface
+    from geo import Grid
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    ctx["railway"] = railway.build(LEVEL_DIR, scene, terrain_top_fn(ctx), TriSurface(markings_net.road_tops(LEVEL_DIR)),
+                                   lambda x, y: dtm.sample(x, y))
+
+
 def stage_ai(scene, ctx):
     import ai_roads
     ai_roads.build(scene, road_height_fn(), ctx.get("network"))
@@ -775,8 +811,8 @@ def write_info(ctx):
               open(level_path("main.decals.json"), "w"))
 
 
-STAGES = ["roads", "walls", "water", "terrain", "sky", "backdrop", "buildings", "guardrails", "fences", "markings", "ai",
-          "props", "vegetation", "spawns"]
+STAGES = ["roads", "walls", "water", "terrain", "railway", "sky", "backdrop", "buildings", "guardrails", "fences",
+          "markings", "ai", "props", "vegetation", "spawns"]
 
 
 def main():
@@ -792,7 +828,7 @@ def main():
             os.makedirs(os.path.dirname(roads))
             shutil.move(keep, roads)
     os.makedirs(LEVEL_DIR, exist_ok=True)
-    scene, ctx = bng.Scene(), {}
+    scene, ctx = bng.Scene(), {"stages": stages}
     for st in stages:
         t0 = time.time()
         globals()["stage_roads_reuse" if st == "roads" and reuse else f"stage_{st}"](scene, ctx)
