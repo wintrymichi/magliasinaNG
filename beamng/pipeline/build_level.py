@@ -544,6 +544,14 @@ def stage_props(scene, ctx):
     av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
     solid = [g.buffer(0.3) for g, _ in av["LCSF"].get("edificio", [])] + \
             [g.buffer(0.3) for layer in ("SOSF", "SOLI") for g, _ in av[layer].get("muro", [])]
+    # nor in the middle of a road of the network (the half of its width a car drives through, as
+    # check_level.py sweeps it, + 0.5 m), where a junction or a yard is not surveyed as carriageway
+    net = ctx.get("network")
+    for s in (net.segs if net is not None else []):
+        a, n = s["first"], s["n"]
+        if s["kind"] == "road" and n >= 2:
+            solid.append(shapely.LineString(np.column_stack([net.x[a:a + n], net.y[a:a + n]])).buffer(
+                0.25 * float(np.median(net.w[a:a + n])) + 0.5, cap_style="flat"))
     stree = shapely.STRtree(solid)
 
     def blocked(x, y):

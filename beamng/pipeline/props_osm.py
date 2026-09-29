@@ -12,9 +12,10 @@ Only objects that OSM records at a place are built, and only with models the lev
   props.py, turned along the nearest road or path;
 - street lights (highway=street_lamp): the Italian single-arm light of props.py, the arm over the
   nearest road.
-Nothing is placed on a carriageway, inside a building or a wall, or within CORRIDOR m of the Street
-View route; a sign that does not find free ground beside the road within 1.5 m is left out.
-    build(level_dir, scene, ground, drivable) -> counts
+Nothing is placed on a carriageway, inside a building or a wall, in the middle of a road of the
+network (blocked, build_level.stage_props) or within CORRIDOR m of the Street View route; a sign that
+does not find free ground beside the road within 1.5 m is left out.
+    build(level_dir, scene, ground, on_carriageway, blocked, corridor_line) -> counts
 """
 import math, os
 import numpy as np
@@ -128,7 +129,7 @@ def approach(way_nodes, way_xy, k, branches, direction):
 
 def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     """ground(x, y) -> z of the surface (road or terrain); on_carriageway(x, y) -> bool array;
-    blocked(x, y) -> bool array (building, wall); corridor_line: the Street View route."""
+    blocked(x, y) -> bool array (building, wall, middle of a road); corridor_line: the Street View route."""
     if not osm.available():
         print("no OSM data (download_osm.py): no signs and furniture from OSM")
         return {}
