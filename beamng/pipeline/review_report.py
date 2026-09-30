@@ -143,7 +143,12 @@ def write_md(rows):
     tot = {"km": sum(r["km"] for r in rows), "x": sum(r["km"] for r in rows if r["stato"] == "[x]"),
            "t": sum(r["km"] for r in rows if r["stato"] == "[~]")}
     L += ["Totale: %.1f km di strade, %.1f km verificati sulle foto (`[x]`), %.1f km in parte (`[~]`)." %
-          (tot["km"], tot["x"], tot["t"]), ""]
+          (tot["km"], tot["x"], tot["t"]), "",
+          "Le misure prese nelle foto sono state controllate a campione guardando le foto stesse: i guardrail "
+          "rilevati (tratti a caso con la linea del guardrail proiettata nella panoramica: tutti veri e allineati), "
+          "le classi dei muri (la pietra è affidabile; calcestruzzo e intonaco solo quando le foto sono chiare, "
+          "altrimenti resta la pietra) e il tono delle facciate (schiarito: le foto lo danno più scuro e più "
+          "grigio). I luoghi confrontati e l'esito di ognuno sono in `dati/qa_review.json`.", ""]
     for z in zones:
         rs = [r for r in rows if r["zona"] == z]
         L += ["## %s" % z, "",

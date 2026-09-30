@@ -56,6 +56,45 @@ Revisione del livello v2.0 confrontato con fonti reali: l'ortofoto SWISSIMAGE 10
 - **La Tresa a Ponte Tresa** (`water.py`): la diga del modello del lago è alla traversa, 420 m a valle, e non più alla foce. Il tratto al livello del lago, sotto il ponte di confine, ha l'acqua.
 - **Zone, strade e registro** (`zone_report.py`): `verifica/ZONE.md` (stato per comune), `verifica/STRADE.md` (ogni strada della rete con lo stato di ogni aspetto) e `verifica/REGISTRO.md` (differenze trovate, azione, stato).
 
+## Versione 2.2: revisione su Street View, facciate, guardrail e guidabilità
+
+Revisione sistematica di tutta la mappa confrontata con Google Street View, usato **solo come riferimento
+visivo**: nessuna immagine Street View entra nel livello o nel repository. Dalle foto si prendono solo
+misure (tono di un intonaco, colore delle persiane, presenza di un guardrail, materiale di un muro);
+tutto quello che si vede viene ridisegnato con texture originali.
+
+- **Street View di tutta l'area** (`sv_coverage.py`, `sv_fetch.py`): 18 382 panoramiche elencate (solo i
+  metadati, in `dati/sv_coverage.json.gz`), una ogni 20 m di strada scaricata in locale per la revisione
+  (6807). `sv_segment.py` le segmenta (Mask2Former, Mapillary Vistas) nella fascia del bordo strada.
+- **Revisione foto/mappa** (`sv_review.py`): per ogni luogo, ortofoto, panoramica e mappa renderizzata dalla
+  stessa camera; i risultati sono in `dati/qa_review.json` (`qa_log.py`) e, strada per strada, in
+  `verifica/REVISIONE.md` (`review_report.py`).
+- **Facciate** (`facades.py`, `bld_textures.py`, `buildings_mesh.py`): finestre con persiane, tapparelle o
+  serramenti moderni, porte, portoni, garage, vetrine, finestre di chiese e stalle, zoccoli e comignoli su
+  ogni edificio, secondo categoria, epoca e piani del Registro federale degli edifici (`download_gwr.py`,
+  estratto fissato in `dati/gwr_area.json.gz`). Nei nuclei swissBUILDINGS3D unisce file di case in un
+  blocco: le facciate vengono tagliate ai confini delle case della misurazione ufficiale e ogni casa ha il
+  suo record, i suoi piani, la sua porta e il suo tono. I piani partono dal terreno del fronte strada.
+  Vetrine dove OpenStreetMap registra un negozio, bar o ufficio (`dati/osm_pois.json.gz`). Il tono
+  dell'intonaco e il colore delle persiane sono misurati nelle panoramiche (`sv_facades.py` →
+  `dati/facade_colors.json`). Coperture in coppi, tegole, piode, lamiera o piane con texture originali.
+- **Edifici mancanti** (`missing_buildings.py`): gli edifici della misurazione ufficiale che
+  swissBUILDINGS3D non ha (costruiti dopo il rilievo 3D) vengono aggiunti con l'altezza dal modello di
+  superficie o dai piani del GWR; quelli demoliti tolti. Elenco in `dati/buildings_diff.json`.
+- **Guardrail di tutta la rete** (`sv_guardrails.py` → `dati/guardrails_sv.json`, `guardrail_mesh.py`): i
+  bordi di ogni strada proiettati nelle panoramiche segmentate; un guardrail c'è dove la maggioranza delle
+  viste lo mostra. Costruito appena fuori dall'ultima faccia della strada, alla quota del bordo.
+- **Muri** (`walls.py`, `sv_walls.py` → `dati/wall_materials.json`): texture originali di pietra,
+  calcestruzzo e intonaco; il materiale viene dalle panoramiche solo dove le foto sono chiare.
+- **Fermate dei bus e cartelli** (`props_osm.py`): le fermate di OSM con palo, cartello giallo, orario e,
+  dove c'è, pensilina.
+- **Guidabilità** (`network_mesh.py`, `drive_test.py`): le superfici sono continue tra carreggiata,
+  marciapiedi e piazzali e agli incroci (il salto viene distribuito su 4 m nel dominio dei gradienti,
+  le carreggiate principali restano fisse); la prova di guida virtuale (modello quarter-car, 640 km su
+  tutta la rete) misura gradini, ruote staccate, accelerazioni e buchi prima e dopo (`verifica/drive_test_v2.1.json`,
+  `verifica/drive_test.json`).
+- **Screenshot** del livello per la documentazione (`screenshots.py`, render con le texture del livello).
+
 ## Dati di lavoro
 
 I dati pesanti (non nel repository) stanno in `D:\beamng_magliaso\`: `data\` = download, `work\` = risultati intermedi, `venv\` = Python 3.13 con CUDA torch. Il livello viene scritto in `%LOCALAPPDATA%\BeamNG\BeamNG.drive\current\levels\magliaso_pura`.
@@ -92,6 +131,9 @@ Le quote sono ortometriche (LN02). Il terreno BeamNG misura 12,3 × 12,3 km: 819
 | Rete (v2.0) | `network.py`, `network_surface.py`, `network_mesh.py`, `bridges.py`, `water.py`, `places.py`, `strade_extra.py` | rete stradale e sentieri swissTLM3D, profilo liscio, superfici guidabili, ponti, lago, paesi, cantonale Magliaso–Gravesano |
 | Verifica (v2.0) | `check_level.py`, `review_map.py`, `bridge_report.py`, `render3d.py` | controlli su tutta la mappa, screenshot 3D, schede dei ponti |
 | Senza il gioco | `prepare_work.py`, `vanilla.py`, `carryover.py`, `ogr_tin.py` | costruzione nel cloud: risultati leggeri da `dati/`, file vanilla e oggetti della cantonale dallo zip della v1.1, lettura dei TIN di swissBUILDINGS3D |
+| Street View (v2.2) | `sv_coverage.py`, `sv_fetch.py`, `sv_segment.py`, `sv_facades.py`, `sv_guardrails.py`, `sv_walls.py` | copertura (metadati), panoramiche di revisione in locale, segmentazione della fascia del bordo strada; misure: tono delle facciate, persiane, guardrail, materiale dei muri |
+| Edifici (v2.2) | `download_gwr.py`, `missing_buildings.py`, `bld_textures.py`, `facades.py` | registro degli edifici, edifici mancanti e demoliti, texture originali, facciate per casa |
+| Revisione (v2.2) | `sv_review.py`, `qa_log.py`, `review_report.py`, `drive_test.py`, `drive_context.py`, `screenshots.py` | confronto foto/mappa dalla stessa camera, registro dei luoghi rivisti, `verifica/REVISIONE.md`, prova di guida virtuale, screenshot |
 | Pacchetto | `package.py` | zip della mod in `<MAGLIASO_ROOT>/dist` |
 | Correzione di una release | `patch_release.py` | applica le correzioni della v1.1 (strade, terreno, segnaletica, IA, oggetti, vegetazione) a uno zip già costruito, usando solo lo zip e `dati/` |
 
@@ -116,11 +158,9 @@ python package.py magliaso_pura_v2.0
 
 `build_level.py --reuse-roads` rifà tutte le fasi tranne la rete stradale, che è la più lunga (circa 13 minuti). Riusa le mesh stradali della costruzione precedente e `work/roads_state.npz`.
 
-Per una versione senza immagini tratte da Street View (facciate, muri e cartelli fotografici), da usare per la pubblicazione:
-
-```bash
-MAGLIASO_NO_PHOTO_TEXTURES=1 D:/beamng_magliaso/venv/Scripts/python.exe -u build_level.py
-```
+Dalla v2.2 il livello non contiene mai immagini tratte da Street View: è il comportamento predefinito
+(`config.NO_PHOTO`). Solo `MAGLIASO_NO_PHOTO_TEXTURES=0` rimette le texture fotografiche delle versioni 1.x
+locali, per studio privato; quella versione non va distribuita.
 
 La superficie delle strade (`roadheight.py` → `work\road_surface.npz`) si calcola alla prima fase che la usa; va cancellata per ricalcolarla, per esempio dopo aver cambiato i parametri in `surface_fit.py`. I guardrail e i muri vicini alla strada vengono riallineati alla nuova superficie durante la costruzione. `guardrails2.py` e `wall_caps.py` leggono la superficie solo quando si rifanno quei passi.
 
@@ -143,4 +183,6 @@ La verifica si fa in tre passi:
 - © swisstopo: swissTLM3D (rete stradale e sentieri, ponti), swissNAMES3D (paesi), SWISSIMAGE 2 m (v2.0).
 - © OpenStreetMap contributors (ODbL): strade secondarie per la rete dell'IA nelle versioni 1.x (dalla v2.0 la rete dell'IA viene da swissTLM3D).
 - Copernicus DEM GLO-30 (© DLR e.V. / Airbus, fornito nell'ambito di COPERNICUS da UE ed ESA): sfondo lontano.
-- Google Street View (panoramiche del dataset): riferimento per pose, oggetti, colori e verifica. Il repository e la release non contengono immagini Street View. Solo costruendo il livello in locale con le panoramiche (senza `MAGLIASO_NO_PHOTO_TEXTURES`) facciate, muri e cartelli ricevono le texture proiettate dalle foto; quella versione è per uso personale.
+- Registro federale degli edifici e delle abitazioni (REA/GWR, Ufficio federale di statistica): categoria, epoca e piani degli edifici (v2.2).
+- © OpenStreetMap contributors (ODbL): sensi unici, cartelli, fermate, arredo e, dalla v2.2, negozi ed esercizi (`dati/osm_pois.json.gz`).
+- Google Street View: solo riferimento visivo per pose, oggetti, colori, guardrail, materiali e verifica. Il repository e la release non contengono immagini Street View; dalla v2.2 le texture fotografiche non si usano nemmeno nelle costruzioni locali (salvo `MAGLIASO_NO_PHOTO_TEXTURES=0`, per studio privato).

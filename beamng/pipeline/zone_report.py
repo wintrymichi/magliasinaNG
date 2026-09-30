@@ -254,6 +254,78 @@ def it(v, digits=1):
     return ("%.*f" % (digits, v)).replace(".", ",") if isinstance(v, (int, float)) else str(v)
 
 
+def v22_rows(checks):
+    """The rows of the v2.2 revision (Street View review, facades, guard rails, walls, drivability), with the
+    figures of this build."""
+    bs = load_json(os.path.join(WORK, "buildings_stats.json"), {})
+    diff = load_json(os.path.join(DATI, "buildings_diff.json"), {})
+    rails = load_json(os.path.join(DATI, "guardrails_sv.json"), [])
+    walls = load_json(os.path.join(DATI, "wall_materials.json"), {"walls": []})["walls"]
+    qa = load_json(os.path.join(DATI, "qa_review.json"), {"luoghi": []})["luoghi"]
+    d0 = load_json(os.path.join(VER, "drive_test_v2.1.json"), {})
+    d1 = load_json(os.path.join(VER, "drive_test.json"), {})
+    op = load_json(os.path.join(WORK, "build_stats.json"), {}).get("osm_props", {})
+    wc = {}
+    for w in walls:
+        wc[w[2]] = wc.get(w[2], 0) + 1
+    n = lambda v: len(v) if isinstance(v, list) else (v or 0)
+
+    def ev(d, cls, k):
+        return d.get("events", {}).get(cls, {}).get(k, 0)
+
+    def drop(cls, k):
+        a, b = ev(d0, cls, k), ev(d1, cls, k)
+        return "%d → %d (%+d %%)" % (a, b, round(100 * (b - a) / a)) if a else "%d → %d" % (a, b)
+    rows = [
+        ("Tutta la mappa", "Edifici", "blocchi di plastica senza aperture: ogni edificio un volume intonacato di un solo colore",
+         "facciate con %d aperture (finestre con persiane, tapparelle o serramenti moderni, porte, portoni, garage, "
+         "vetrine, finestre di chiese e stalle), zoccoli e %d comignoli, secondo uso, epoca e piani del Registro "
+         "federale degli edifici (%d edifici collegati); coperture in coppi, tegole, piode, lamiera o piane; tutte "
+         "le texture disegnate dalla pipeline" % (bs.get("openings", 0), bs.get("chimneys", 0), bs.get("gwr", 0)),
+         "Risolto"),
+        ("Nuclei dei paesi", "Edifici", "swissBUILDINGS3D unisce le file di case in un blocco: una sola facciata, un solo "
+         "record del registro (a Magliaso una fila di case resa come ufficio del 1996)",
+         "facciate tagliate ai confini delle case della misurazione ufficiale: %d case in blocchi, ognuna con il suo "
+         "record, i suoi piani, la sua porta e il suo tono" % bs.get("parts", 0), "Risolto"),
+        ("Tutta la mappa", "Edifici", "tono delle facciate", "misurato nelle panoramiche Street View per %d edifici "
+         "(la luce e l'ombra delle foto corrette), altrove dalle tinte tipiche per epoca" % bs.get("measured", 0),
+         "Risolto (dove visti)"),
+        ("Tutta la mappa", "Edifici", "edifici della misurazione ufficiale assenti da swissBUILDINGS3D (costruiti dopo il "
+         "rilievo 3D) e edifici demoliti",
+         "%d aggiunti con l'altezza dal modello di superficie o dai piani del registro, %d demoliti tolti; %d non "
+         "aggiunti perché il modello di superficie non li mostra (dati/buildings_diff.json)" %
+         (n(diff.get("added")), n(diff.get("gone")), n(diff.get("not_added"))), "Risolto"),
+        ("Paesi", "Edifici", "vetrine al piano terra", "%d edifici con un negozio, bar o ufficio di OpenStreetMap o ad uso "
+         "misto del registro su una strada principale" % bs.get("shops", 0), "Risolto (dove registrati)"),
+        ("Rete stradale", "Guardrail", "guardrail solo sulla cantonale Magliaso-Pura (v2.1)",
+         "%d tratti, %s km, visti nelle panoramiche Street View segmentate lungo tutta la rete e costruiti sul bordo "
+         "della strada; a campione sulle foto 11 su 11 corretti" % (len(rails), it(sum(r["length"] for r in rails) / 1000)),
+         "Risolto (dove le panoramiche arrivano)"),
+        ("Rete stradale", "Muri", "tutti i muri con la stessa texture di mattoni di pietra regolari (vanilla)",
+         "texture originali di pietra, calcestruzzo e intonaco; materiale visto nelle panoramiche per %d muri "
+         "(pietra %d, calcestruzzo %d, intonaco %d), altrove pietra" % (sum(v for k, v in wc.items() if k != "unknown"),
+                                                                     wc.get("stone", 0), wc.get("concrete", 0),
+                                                                     wc.get("plaster", 0)), "Risolto (dove visti)"),
+        ("Paesi", "Fermate dei bus", "fermate assenti", "%d fermate di OpenStreetMap con palo, cartello e orario, %d con "
+         "pensilina" % (op.get("bus_stop", 0), op.get("shelter", 0)), "Risolto (dove registrate)"),
+        ("Rete stradale", "Guidabilità", "gradini agli incroci e tra carreggiata, marciapiedi e piazzali (prova di guida "
+         "virtuale sulle strade secondarie, eventi v2.1 → v2.2)",
+         "superfici continue: celle di poligoni diversi collegate, giunzioni distribuite su 4 m; gradini %s, ruote "
+         "staccate %s, accelerazioni forti %s" % (drop("minor", "STEP"), drop("minor", "LIFT"), drop("minor", "HARD")),
+         "Risolto"),
+        ("Rete stradale", "Guidabilità", "strade principali (eventi v2.1 → v2.2)", "gradini %s, ruote staccate %s, "
+         "accelerazioni forti %s" % (drop("main", "STEP"), drop("main", "LIFT"), drop("main", "HARD")), "Risolto"),
+        ("Rete stradale", "Ostacoli", "finestre, porte e zoccoli sospesi nei passaggi sotto gli edifici",
+         "posati dopo il taglio dei passaggi; ostacoli ora: %s" % ", ".join(
+             "%s %d" % kv for kv in sorted(checks.get("obstacles_by_kind", {}).items())), "Risolto"),
+        ("Paesi", "Revisione foto/mappa", "%d luoghi confrontati nelle panoramiche (foto e mappa dalla stessa camera)" % len(qa),
+         "%d coincidono, %d differenze corrette, %d da verificare (dati/qa_review.json, verifica/REVISIONE.md)" %
+         (sum(q["esito"] == "coincide" for q in qa), sum(q["esito"] == "differenza" and q["stato"] == "risolto" for q in qa),
+          sum(q["stato"] == "da verificare" for q in qa)), "Controllato"),
+    ]
+    return rows
+
+
 def write_register(stats, checks, mk, road_rows):
     """REGISTRO.md: the differences between the map (v2.0) and the reality found in this revision, what
     was done and what is left, with the figures of this build."""
@@ -346,9 +418,14 @@ def write_register(stats, checks, mk, road_rows):
                      "lasciati: gradini tra superfici agli incroci, muri e pali del percorso v1.x misurati nelle foto",
                      "Richiede verifica"))
     L = ["# Registro delle differenze", "",
-         "Differenze tra la mappa v2.0 e la realtà trovate in questa revisione, con l'azione e lo stato. Generato da "
-         "`pipeline/zone_report.py` con i numeri di questa costruzione (`work/build_stats.json`, `check_level.json`).", "",
+         "Differenze tra la mappa e la realtà trovate nelle revisioni, con l'azione e lo stato. Generato da "
+         "`pipeline/zone_report.py` con i numeri di questa costruzione (`work/build_stats.json`, "
+         "`work/buildings_stats.json`, `check_level.json`, `drive_test.json`).", "",
+         "## Revisione v2.2 (Street View, edifici, guardrail, guidabilità)", "",
          "| Zona | Elemento | Problema | Azione | Stato |", "|---|---|---|---|---|"]
+    L += ["| %s | %s | %s | %s | %s |" % r for r in v22_rows(checks)]
+    L += ["", "## Revisione v2.1 (sulla mappa v2.0)", "",
+          "| Zona | Elemento | Problema | Azione | Stato |", "|---|---|---|---|---|"]
     L += ["| %s | %s | %s | %s | %s |" % r for r in rows]
     open(os.path.join(VER, "REGISTRO.md"), "w", encoding="utf-8").write("\n".join(L) + "\n")
 
