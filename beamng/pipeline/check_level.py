@@ -14,7 +14,8 @@
   (swissALTI3D) within 1 m of them (a surface given the height of a line it is not on: the terrain
   carve would open a pit around it);
 - road continuity: vertices of neighbouring road chunks at the same place and different heights;
-- holes in the terrain: vertices more than PIT_TOL m under the bare ground outside the lake;
+- holes in the terrain: vertices more than PIT_TOL m under the bare ground outside the lake (v2.2: the
+  carve under a road at the foot of a higher rock face is counted apart, terrain_carve_cliffs);
 - obstacles on the carriageway: from every station to the next, on the axis and half way to each
   edge (of the median width of the line), OBST_Z m over the surface a car drives on, no mesh with collision is crossed (a deck, parapet
   or culvert block across a road, a pier, a wall, a building, a step of the surface), roads and
@@ -50,6 +51,8 @@ FLOAT_TOL = 1.5          # m of a road above the ground under it (listed for the
 UNDER_TOL = 1.25         # m of a road face under the lowest bare ground within 1 m
 OBST_Z = (0.5, 1.6)      # m over the profile: a car along a road or path crosses no mesh up to its roof
 PIT_TOL = 20.0           # m of terrain under the bare ground (a hole in the terrain)
+CARVE_TOL = 0.5          # m under the lowest road face within one terrain step: the carve under the roads
+FILL_TOL = 1.0           # m under the bare ground of a backfill face over a terrain vertex: the ground held
 LAKE_Z = 271.5           # m, the DTM up to here is the lake and its shore (the lake bed lies under it)
 OBST_GROUPS = ("roads/surfaces", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway")
 OBST_WHAT = ("ponte o gradino", "guardrail", "recinzione", "muro", "edificio", "oggetto", "binario")
@@ -267,14 +270,20 @@ def obstacles(lv, net, places, zsurf=None):
     return res
 
 
-def terrain_pits(ter, bare, places, filled=None):
+def terrain_pits(ter, bare, places, filled=None, tri=None, lv=None):
     """Terrain vertices more than PIT_TOL m under the bare ground (swissALTI3D 0.5 m, nearest cell;
     not the cells filled from Copernicus, `filled`) where the ground is above the lake: a height the
-    terrain was given by mistake (a wall measured beyond the edge of the DTM lowered it by 300 m once)."""
+    terrain was given by mistake (a wall measured beyond the edge of the DTM lowered it by 300 m once).
+    v2.2: a vertex within one terrain step of a road or path face and no more than CARVE_TOL m under the
+    lowest face there has the height of the carve that keeps the terrain under the roads
+    (road_mesh.carve_window), at the top of a rock face over PIT_TOL m high beside the road; a vertex
+    under the backfill mesh of a retaining wall (walls.build_backfill: the ground as it was, over the
+    terrain lowered to the foot of the wall) is covered (a wall on the rock face of Monte Caslano over Via
+    Torrazza). Both are counted apart (terrain_carve_cliffs) and listed for the review, not mistakes."""
     a = bare.a if bare.a.ndim == 2 else bare.a[0]
     cols = np.floor((ter.x0 + np.arange(ter.n) * ter.sq - bare.x_min) / bare.res).astype(np.int64)
     cc = np.flatnonzero((cols >= 0) & (cols < a.shape[1]))
-    n, worst = 0, 0.0
+    X, Y, H, Dz = [], [], [], []
     for r0 in range(0, ter.n, 256):
         rows = np.floor((bare.y_max - (ter.y0 + np.arange(r0, min(r0 + 256, ter.n)) * ter.sq)) / bare.res).astype(np.int64)
         rr = np.flatnonzero((rows >= 0) & (rows < a.shape[0]))
@@ -286,12 +295,45 @@ def terrain_pits(ter, bare, places, filled=None):
         if filled is not None:
             bad &= ~np.asarray(filled[rows[rr][:, None], cols[cc][None, :]], bool)
         if bad.any():
-            n += int(bad.sum())
-            worst = max(worst, float(d[bad].max()))
             i, j = np.nonzero(bad)
-            places.add("buco nel terreno", ter.x0 + cc[j] * ter.sq, ter.y0 + (r0 + rr[i]) * ter.sq,
-                       ter.h[r0 + rr[i], cc[j]], d[bad])
-    return {"terrain_pits": n, "terrain_pit_max_m": round(worst, 2)}
+            X.append(ter.x0 + cc[j] * ter.sq); Y.append(ter.y0 + (r0 + rr[i]) * ter.sq)
+            H.append(ter.h[r0 + rr[i], cc[j]]); Dz.append(d[bad])
+    X, Y, H, Dz = (np.concatenate(v) if v else np.zeros(0) for v in (X, Y, H, Dz))
+    carve = np.zeros(len(X), bool)
+    if tri is not None and len(X):
+        c3 = tri.mean(1)
+        for k in range(len(X)):
+            m = (np.abs(c3[:, 0] - X[k]) <= ter.sq) & (np.abs(c3[:, 1] - Y[k]) <= ter.sq)
+            carve[k] = bool(m.any()) and H[k] >= float(tri[m][:, :, 2].min()) - CARVE_TOL
+    # behind a retaining wall the terrain drops to the foot of the wall and the backfill mesh of walls.py
+    # holds the ground as it was: a vertex under a backfill face within FILL_TOL m of the bare ground is
+    # covered (a wall on a rock face over PIT_TOL m high)
+    covered = np.zeros(len(X), bool)
+    if lv is not None:
+        fills = {}
+        for k in np.flatnonzero(~carve):
+            key = (int(np.floor(X[k] / 128.0)), int(np.floor(Y[k] / 128.0)))
+            if key not in fills:
+                f = os.path.join(lv, "art", "shapes", "walls", "backfill_%+03d_%+03d.dae" % key)
+                T = np.zeros((0, 3, 3))
+                if os.path.exists(f):
+                    V, _, _, _, parts = pr.read_dae(f)
+                    V = V + np.array([(key[0] + 0.5) * 128.0, (key[1] + 0.5) * 128.0, 0.0])
+                    T = np.concatenate([V[idx[:, 0].reshape(-1, 3)] for _, idx in parts]) if parts else T
+                fills[key] = T
+            T = fills[key]
+            if len(T):
+                near = ((T[:, :, 0].min(1) <= X[k] + 0.3) & (T[:, :, 0].max(1) >= X[k] - 0.3) &
+                        (T[:, :, 1].min(1) <= Y[k] + 0.3) & (T[:, :, 1].max(1) >= Y[k] - 0.3))
+                covered[k] = bool(near.any()) and float(T[near][:, :, 2].max()) >= H[k] + Dz[k] - FILL_TOL
+    pit = ~carve & ~covered
+    for sel, what in ((pit, "buco nel terreno"), (carve, "intaglio sopra una strada (parete di roccia)"),
+                      (covered, "terreno sotto il riempimento di un muro su una parete")):
+        if sel.any():
+            places.add(what, X[sel], Y[sel], H[sel], Dz[sel])
+    return {"terrain_pits": int(pit.sum()), "terrain_pit_max_m": round(float(Dz[pit].max()), 2) if pit.any() else 0.0,
+            "terrain_carve_cliffs": int((carve | covered).sum()),
+            "terrain_carve_cliff_max_m": round(float(Dz[carve | covered].max()), 2) if (carve | covered).any() else 0.0}
 
 
 def road_tops(lv):
@@ -501,7 +543,7 @@ def main(lv=None):
         places.add("strada sott'acqua", c3[wet, 0], c3[wet, 1], c3[wet, 2], np.ones(int(wet.sum())))
     if bare is not None:
         f = os.path.join(WORK, "dtm05_nodata.npy")
-        res.update(terrain_pits(ter, bare, places, np.load(f, mmap_mode="r") if os.path.exists(f) else None))
+        res.update(terrain_pits(ter, bare, places, np.load(f, mmap_mode="r") if os.path.exists(f) else None, tri, lv))
     if net is not None:
         res.update(obstacles(lv, net, places, zsurf))
     # road faces under the bare ground, band by band of the DTM

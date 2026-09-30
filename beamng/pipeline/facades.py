@@ -203,6 +203,7 @@ def age_class(year):
 
 
 SV_SAT = 1.25          # the tones measured in the panoramas come out greyer than the facades (haze, shade)
+SV_BLUE = 0.35         # ... but a blue cast is the light of the sky in the shade: less saturation there
 SV_LIFT = 0.60         # ... and darker: the luminance L becomes 1 - (1 - L) SV_LIFT (a facade in the shade, the
                        # exposure of the camera against the sky), the hue and saturation stay
 SV_SHUTTERS = ("verde", "verde_scuro", "bordeaux", "grigio")   # shutter colours the measurement tells apart
@@ -214,10 +215,13 @@ SHOP_FRONT = ("shop=", "craft=", "office=", "amenity=restaurant", "amenity=cafe"
 
 def sv_tone(rgb):
     """A tone measured in the panoramas: its saturation brought back (SV_SAT around its luminance) and its
-    luminance lifted (SV_LIFT)."""
+    luminance lifted (SV_LIFT). A blue or violet tone is the sky in the shade on a white or grey facade
+    (blue facades are rare here): its saturation goes down to SV_BLUE instead."""
+    import colorsys
     c = np.asarray(rgb, float)
     y = float(c @ np.array([0.2126, 0.7152, 0.0722]))
-    c = y + (c - y) * SV_SAT
+    hue = colorsys.rgb_to_hsv(*np.clip(c, 0, 1))[0] * 360.0
+    c = y + (c - y) * (SV_BLUE if 180.0 <= hue < 290.0 else SV_SAT)
     y2 = 1.0 - (1.0 - y) * SV_LIFT
     return np.clip(c * (y2 / max(y, 1e-3)), 0, 1)
 
