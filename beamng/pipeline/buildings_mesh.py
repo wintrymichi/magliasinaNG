@@ -564,7 +564,13 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             C = np.repeat(np.array([np.r_[np.clip(c / mean("t_bld_plinth"), 0, 1), 1.0] for c in em.PC]), 6, 0)
             mb.add("bld_plinth", V, uvs=np.concatenate(em.PUV).reshape(-1, 2), normals=bng.flat_normals_soup(V),
                    colors=C)
-        em.V, em.UV, em.PV, em.PUV, em.PC = [], [], [], [], []
+        if em.BV:                                        # balcony slabs, plastered in the tone of the house
+            V = np.concatenate(em.BV).reshape(-1, 3)
+            C = np.repeat(np.array([np.r_[np.clip(c / mean("t_bld_plaster"), 0, 1), 1.0] for c in em.BC]), 6, 0)
+            mb.add("bld_plaster", V, uvs=np.column_stack([V[:, 0] + V[:, 1], V[:, 2]]) / 5.0,
+                   normals=bng.flat_normals_soup(V), colors=C)
+            stats["balconies"] = stats.get("balconies", 0) + len(em.BC) // 5
+        em.V, em.UV, em.PV, em.PUV, em.PC, em.BV, em.BC = [], [], [], [], [], [], []
         if mb.empty():
             continue
         rel = f"art/shapes/buildings/bld_{tx:+03d}_{ty:+03d}.dae"

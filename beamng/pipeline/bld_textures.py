@@ -22,7 +22,7 @@ Textures (BeamNG texture cooker naming: *.color.png sRGB, *.normal.png OpenGL ta
 import json, os, sys
 import numpy as np
 from PIL import Image
-from scipy.ndimage import gaussian_filter, zoom, distance_transform_edt, map_coordinates
+from scipy.ndimage import gaussian_filter, distance_transform_edt
 
 PPM = 136                     # atlas pixels per metre
 ATLAS = (4096, 2048)          # width, height of the openings atlas
@@ -466,6 +466,27 @@ def m_barn(rng, color=(0.36, 0.27, 0.19), ww=1.6, wh=1.6):
     return cv
 
 
+def m_railing(rng, kind="dark", ww=2.0, wh=1.05):
+    """The railing of a balcony, seen from the street: a top rail, a bottom rail and bars (metal), or a
+    frosted glass panel in a metal frame; transparent between the bars."""
+    cv = Canvas(ww, wh, rng)
+    metal = {"dark": (0.20, 0.21, 0.22), "light": (0.82, 0.82, 0.80), "green": (0.18, 0.28, 0.21),
+             "glass": (0.62, 0.63, 0.64)}[kind]
+    col = np.array(metal, np.float32)
+    if kind == "glass":
+        m = cv.box(0.03, 0.06, ww - 0.03, wh - 0.06)
+        frost = cv.painted((0.74, 0.77, 0.78), 0.03) * (0.92 + 0.10 * cv.Y / wh)[..., None]
+        cv.paint(m, frost, height=0.01, rough=0.15)
+    else:
+        for x in np.arange(0.06, ww - 0.03, 0.11):
+            cv.paint(cv.box(x - 0.009, 0.06, x + 0.009, wh - 0.05), col, height=0.02, rough=0.45, metal=0.5)
+    cv.paint(cv.box(0.0, wh - 0.05, ww, wh), col, height=0.03, rough=0.4, metal=0.5)          # top rail
+    cv.paint(cv.box(0.0, 0.04, ww, 0.07), col, height=0.02, rough=0.45, metal=0.5)             # bottom rail
+    for x in (0.0, ww - 0.04):                                                                # posts
+        cv.paint(cv.box(x, 0.0, x + 0.04, wh), col, height=0.03, rough=0.45, metal=0.5)
+    return cv
+
+
 def modules(rng):
     """Every module of the atlas: name -> Canvas."""
     out = {}
@@ -506,6 +527,14 @@ def modules(rng):
     out["church"] = m_church(rng)
     out["barn"] = m_barn(rng)
     out["barn_door"] = m_door(rng, (0.34, 0.26, 0.19), "boards", "granite", ww=1.4, wh=2.0)
+    # v2.2 balconies: the door onto the balcony (shutters or roller shutter) and the railings
+    for name, col in SHUTTER.items():
+        out[f"bal_{name}"] = m_shutters(rng, col, True, "plaster", ww=0.95, wh=2.2, curtain=0.3, panes=4)
+    for name, col, down in (("bal_roller_white", (0.88, 0.88, 0.86), 0.3), ("bal_roller_grey", (0.60, 0.61, 0.62), 0.4),
+                            ("bal_roller_brown", (0.40, 0.30, 0.22), 0.25)):
+        out[name] = m_roller(rng, col, down, ww=1.2, wh=2.2)
+    for kind in ("dark", "light", "green", "glass"):
+        out[f"railing_{kind}"] = m_railing(rng, kind)
     return out
 
 

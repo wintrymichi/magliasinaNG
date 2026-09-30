@@ -18,6 +18,9 @@ Until v2.1 every building was a block of plaster in one tone without a window. N
   blank); the ground floor facing the nearest street gets the door (and a garage door or shop fronts
   where the building's use has them), lower floors appear where the ground falls away;
 - a plinth band runs along the foot of the walls;
+- balconies on many houses of the 1950s-2020s (a slab in the tone of the house, a railing of bars or
+  frosted glass drawn in the atlas, the door onto it): one per bay, in pairs or along the whole facade,
+  on the front and the sunny side (apartment blocks of four floors or more on every side but the north);
 - roofs: flat roofs (gravel) below 8 degrees, pitched roofs in canal tiles (coppi), flat tiles, stone
   slabs (piode) or metal sheet after their colour in the orthophoto and the building's age and use.
 The openings are quads 3 cm in front of the wall with the atlas of bld_textures.py (alpha clip); the
@@ -38,6 +41,14 @@ BLOCK_OUT = 0.7          # m in front of an opening: another building there hide
 DARK_ROOF = 0.2          # luminance of a roof in the orthophoto under which its colour is the shade, not the roof
 PART_MIN = 12.0          # m2, least house of the survey inside a block of swissBUILDINGS3D that gets its own facades
 FLOOR_MIN = 2.6          # m, lowest floor height the register's number of floors may give (it counts attics too)
+MAIN_FRONT = 8.0         # m: a main street at most this much farther than the nearest road is the front
+BAL_SLAB = 0.16          # m, thickness of a balcony slab
+BAL_RAIL = 1.05          # m, height of its railing
+BAL_P = {"mid": 0.45, "late": 0.7, "new": 0.65}    # houses of these ages with balconies
+BAL_MODE = {"mid": {"each": 60, "pair": 40}, "late": {"each": 30, "pair": 40, "run": 30},
+            "new": {"each": 20, "pair": 30, "run": 50}}
+BAL_RAILS = {"mid": {"dark": 50, "green": 20, "light": 30}, "late": {"dark": 40, "light": 40, "glass": 20},
+             "new": {"glass": 50, "light": 30, "dark": 20}}
 FACADE_COLORS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "facade_colors.json")
 
 # plaster tones (sRGB) by age, from what is seen along the streets of the Malcantone
@@ -190,7 +201,7 @@ def age_class(year):
 
 
 SV_SAT = 1.25          # the tones measured in the panoramas come out greyer than the facades (haze, shade)
-SV_LIFT = 0.70         # ... and darker: the luminance L becomes 1 - (1 - L) SV_LIFT (a facade in the shade, the
+SV_LIFT = 0.60         # ... and darker: the luminance L becomes 1 - (1 - L) SV_LIFT (a facade in the shade, the
                        # exposure of the camera against the sky), the hue and saturation stay
 SV_SHUTTERS = ("verde", "verde_scuro", "bordeaux", "grigio")   # shutter colours the measurement tells apart
 SV_BROWN = ("marrone", "legno")                                 # brown: also dark glass and shade, so more is needed
@@ -281,6 +292,11 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=F
             # shop fronts on the ground floor: a shop of OSM in the building, or a building of the register
             # used in part for trade or offices (mixed use) on a main street
             "shop": bool(shop), "mixed": cat in (1030, 1040) or klass in (1220, 1230),
+            # balconies (1950s-2020s houses): how many, how they run along the facade, the railing
+            "balcony": use == "house" and not stone and age in BAL_P and rng.random() < BAL_P[age],
+            "bal_mode": pick(rng, BAL_MODE[age]) if age in BAL_MODE else "each",
+            "bal_rail": pick(rng, BAL_RAILS[age]) if age in BAL_RAILS else "dark",
+            "bal_depth": float(rng.uniform(1.1, 1.5)),
             "seed": int(rng.integers(1 << 30))}
 
 
@@ -343,9 +359,18 @@ class Context:
         if self.streets is None:
             return None, 1e9, False
         tree, main = self.streets
-        d, j = tree.query([cx, cy])
+        dd, jj = tree.query([cx, cy], k=24)
+        ok = np.isfinite(dd)
+        dd, jj = dd[ok], jj[ok]
+        if not len(dd):
+            return None, 1e9, False
+        # a main street not much farther than the nearest road is the front (the square of a village core
+        # rather than the alley behind the house)
+        m = main[jj] & (dd < dd[0] + MAIN_FRONT)
+        k = int(np.argmax(m)) if m.any() else 0
+        d, j = float(dd[k]), int(jj[k])
         v = tree.data[j] - np.array([cx, cy])
-        return v / max(np.linalg.norm(v), 1e-9), float(d), bool(main[j])
+        return v / max(np.linalg.norm(v), 1e-9), d, bool(main[j])
 
 
 def facade_polygon(tris, a):
@@ -385,6 +410,7 @@ class Emitter:
         self.index = index
         self.V, self.UV = [], []                # openings: triangles (k, 3, 3), uvs (k, 3, 2)
         self.PV, self.PUV, self.PC = [], [], []  # plinth
+        self.BV, self.BC = [], []                # balcony slabs (k, 2, 3, 3), colour of each
 
     def quad(self, o, a, n, u0, u1, z0, z1, uv, off):
         """A quad of the facade plane point o + u a + z up, off in front of it, uv (u0, v0, u1, v1)."""
@@ -399,6 +425,40 @@ class Emitter:
         V, T = self.quad(o, a, n, uc - m["w"] / 2, uc + m["w"] / 2, zb, zb + m["h"], m["uv"], OFFSET)
         self.V.append(V)
         self.UV.append(T)
+
+    def balcony(self, o, a, n, u0, u1, zf, depth, rail, color):
+        """A balcony on the facade plane (o, a along it, n out): a slab with its top at zf, depth m out from
+        the wall between u0 and u1, and the railing module `rail` on its three free sides (both faces)."""
+        z0, z1 = zf - BAL_SLAB, zf
+        P = lambda u, dd, z: o + u * a + n * dd + np.array([0.0, 0.0, z])
+        quads = [(P(u0, 0.02, z1), P(u0, depth, z1), P(u1, depth, z1), P(u1, 0.02, z1)),          # top
+                 (P(u0, 0.02, z0), P(u1, 0.02, z0), P(u1, depth, z0), P(u0, depth, z0)),          # bottom
+                 (P(u0, depth, z0), P(u1, depth, z0), P(u1, depth, z1), P(u0, depth, z1)),        # front
+                 (P(u1, 0.02, z0), P(u1, 0.02, z1), P(u1, depth, z1), P(u1, depth, z0)),          # side u1
+                 (P(u0, 0.02, z0), P(u0, depth, z0), P(u0, depth, z1), P(u0, 0.02, z1))]          # side u0
+        for q in quads:
+            self.BV.append(np.array([[q[0], q[1], q[2]], [q[0], q[2], q[3]]]))
+            self.BC.append(color)
+        m = self.index[rail]
+        uv = m["uv"]
+        top = z1 + BAL_RAIL
+        # front: segments of about the module's width, textured facing out and facing in
+        nseg = max(1, int(round((u1 - u0) / m["w"])))
+        edges = np.linspace(u0 + 0.02, u1 - 0.02, nseg + 1)
+        for ua, ub in zip(edges[:-1], edges[1:]):
+            c = [P(ua, depth - 0.02, z1), P(ub, depth - 0.02, z1), P(ub, depth - 0.02, top), P(ua, depth - 0.02, top)]
+            self._rail(c, uv)
+        for u, sgn in ((u0 + 0.02, 1), (u1 - 0.02, -1)):
+            c = [P(u, depth - 0.02, z1), P(u, 0.05, z1), P(u, 0.05, top), P(u, depth - 0.02, top)]
+            if sgn < 0:
+                c = [c[1], c[0], c[3], c[2]]
+            self._rail(c, uv)
+
+    def _rail(self, c, uv):
+        t = [(uv[0], uv[1]), (uv[2], uv[1]), (uv[2], uv[3]), (uv[0], uv[3])]
+        for cc, tt in ((c, t), ([c[1], c[0], c[3], c[2]], [t[1], t[0], t[3], t[2]])):
+            self.V.append(np.array([[cc[0], cc[1], cc[2]], [cc[0], cc[2], cc[3]]]))
+            self.UV.append(np.array([[tt[0], tt[1], tt[2]], [tt[0], tt[2], tt[3]]]))
 
     def plinth(self, o, a, n, us, zlo, zhi, color):
         for k in range(len(us) - 1):
@@ -597,9 +657,73 @@ def layout_building(b, walls, style, ctx, em):
         if np.isfinite(e_f) and use not in ("church", "tower"):
             k_max = max(n_f, int(np.floor((e_f - EAVE_GAP - fb0) / h_f + 0.25)))
         n_shop = 0
+        # balconies: on the front and the sunny side of a house that has them, on bays chosen once for the
+        # facade (every floor the same)
+        bal_bays = np.zeros(len(ucs), bool)
+        # (the front and the south; apartment blocks of four floors or more on every side but the north)
+        sunny = n[1] < (0.3 if n_f >= 4 else -0.3)
+        if style.get("balcony") and W >= 5.0 and len(ucs) >= 2 and (not side or sunny):
+            mode = style["bal_mode"]
+            if mode == "run":
+                bal_bays[:] = True
+            elif mode == "pair":
+                start = int(rng.integers(2))
+                for j in range(start, len(ucs) - 1, 3):
+                    bal_bays[j:j + 2] = True
+            else:
+                bal_bays = rng.random(len(ucs)) < 0.7
+        bay_w = (ucs[1] - ucs[0]) if len(ucs) > 1 else W
+        runs = []                                        # (first, last) bays of every balcony
+        j = 0
+        while j < len(ucs):
+            if bal_bays[j]:
+                j1 = j
+                while j1 + 1 < len(ucs) and bal_bays[j1 + 1] and style["bal_mode"] != "each":
+                    j1 += 1
+                runs.append((j, j1))
+                j = j1 + 1
+            else:
+                j += 1
         for k in range(k_min, k_max):
             fb = fb0 + k * h_f
+            done_bal = set()
+            if k >= 1 and runs and h_f >= 2.6:
+                for j0, j1 in runs:
+                    ua = ucs[j0] - bay_w / 2 + 0.15
+                    ub = ucs[j1] + bay_w / 2 - 0.15
+                    ua, ub = max(ua, us[0] + 0.25), min(ub, us[-1] - 0.25)
+                    depth = style["bal_depth"]
+                    if ub - ua < 1.2:
+                        continue
+                    # the railing inside the wall's outline, nothing in front (another building)
+                    if not inner.contains(shapely.box(ua, fb - BAL_SLAB, ub, fb + BAL_RAIL + 0.3)):
+                        continue
+                    xs = o[0] + np.array([ua, 0.5 * (ua + ub), ub]) * a[0] + n[0] * (depth + 0.3)
+                    ys = o[1] + np.array([ua, 0.5 * (ua + ub), ub]) * a[1] + n[1] * (depth + 0.3)
+                    if ctx.blocked(b["uuid"], xs, ys, np.full(3, fb + 0.5)).any():
+                        continue
+                    if fb - BAL_SLAB < max(gl(ua), gl(ub)) + 2.2:          # well above the ground
+                        continue
+                    em.balcony(o, a, n, ua, ub, fb, depth, "railing_" + style["bal_rail"],
+                               np.clip(np.asarray(style["tone"]) * 1.04, 0, 1))
+                    count += 1
+                    for jj in range(j0, j1 + 1):
+                        done_bal.add(jj)
             for j, uc in enumerate(ucs):
+                if j in done_bal:                        # the door onto the balcony
+                    fam = style["family"]
+                    if fam in ("shutters", "granite"):
+                        nm = "bal_" + style["shutter"]
+                    elif fam == "roller":
+                        nm = "bal_roller_" + {"bianco": "white", "grigio": "grey", "marrone": "brown",
+                                              "legno": "brown"}.get(style["shutter"], "white")
+                    else:
+                        nm = "modern_tall"
+                    m = em.index[nm]
+                    if fits(uc, m["w"], fb + 0.02, m["h"]):
+                        em.opening(nm, o, a, n, uc, fb + 0.02)
+                        count += 1
+                    continue
                 if not keep[j] and not (k == 0 and fi == front and not door_done):
                     continue
                 name = None
