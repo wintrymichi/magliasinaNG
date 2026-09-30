@@ -1,44 +1,144 @@
-Strada Cantonale (Magliaso → Pura)
+<div align="center">
 
-Percorso: 45.981686, 8.878474 → 46.001760, 8.860159 · 3,7 km, tutto sulla Strada Cantonale.
+# Malcantone · BeamNG.drive
 
-> **Le immagini non sono nel repository.** Le cartelle `panorami/`, `viste/` e `storici_2013_2014/` (9,4 GB) contengono immagini Google Street View e restano in locale. Il repository contiene i metadati (pose, date, posizioni) e gli script con cui le immagini si riscaricano: `sv_capture.py`, `expand.py`, `finalize.py`.
+**Il Malcantone (Canton Ticino) ricostruito in scala 1:1 per BeamNG.drive: 52 km² di paesi, strade, sentieri, boschi e lago tra Ponte Tresa, Caslano, Agno, Bioggio, Gravesano e Arosio.**
 
-**Mappa BeamNG.drive** ricostruita da questo dataset: vedi [`beamng/`](beamng/README.md). La mod è nella [release v2.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.0), che allarga la mappa a tutto il Malcantone (circa 51 km² tra Ponte Tresa, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio e Sessa, con la cantonale Magliaso–Gravesano) con ogni strada e sentiero guidabile. Le versioni precedenti, solo la cantonale, sono la [v1.1](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.1) (strade lisce, carreggiata senza alberi) e la [v1.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v1.0).
+![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
+![Versione](https://img.shields.io/badge/versione-2.2-blue)
+![Scala](https://img.shields.io/badge/scala-1%3A1-brightgreen)
+![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
+![Dati](https://img.shields.io/badge/dati-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
 
-## Contenuto
+![Magliaso e il Lago di Lugano](beamng/verifica/screenshots/01_magliaso_lago.jpg)
 
-| Cartella/file | Cosa c'è |
+</div>
+
+La mappa è costruita da una pipeline Python a partire dai dati aperti di swisstopo, dalla misurazione ufficiale del Cantone Ticino, dal Registro federale degli edifici e da OpenStreetMap. Le panoramiche Google Street View servono solo come **riferimento visivo**: pose, misure, confronti. Nessuna immagine Street View è nel repository o nella mappa; tutto ciò che si vede nelle foto (facciate, persiane, cartelli, guardrail, muri) è ridisegnato con texture originali.
+
+## In breve
+
+| | |
 |---|---|
-| `panorami/` | Panorami 360° equirettangolari, 6656×3328, uno ogni ~10 m. Nome: `NNNN_<panoId>.jpg` (NNNN = ordine lungo la strada) |
-| `viste/` | 16 viste prospettiche per panorama (FOV 90°, 1600×1200): 8 direzioni × 2 inclinazioni |
-| `panoramas.csv / .json` | Per ogni panorama: lat, lon, quota (m), data, heading, pitch/roll della camera, distanza lungo la strada |
-| `panoramas.geojson` | Posizioni dei panorami (apribile in QGIS / geojson.io) |
-| `cameras.json` | Per ogni vista: file, posizione GPS, quota, direzione bussola (yaw), pitch, FOV → pose note per la fotogrammetria |
-| `panoramas_all_dates.json` | Anche i panorami storici (2013/2014) trovati sullo stesso tratto, non scaricati |
-| `sv_capture.py`, `expand.py`, `finalize.py` | Script usati (ri-eseguibili) |
+| **Area** | circa 52 km², terreno di 12,3 × 12,3 km a 1,5 m (LiDAR swissALTI3D) |
+| **Strade e sentieri** | 228 km di strade e 337 km di sentieri, mulattiere e scalinate, tutti guidabili; 167 ponti; dalla v2.2 anche il passo sopra Gravesano fino ad Arosio, la cantonale Ponte Tresa–Caslano e Via Torrazza |
+| **Edifici** | 12 792 edifici (swissBUILDINGS3D e misurazione ufficiale) con facciate, finestre, persiane, porte, vetrine, zoccoli e comignoli |
+| **Guardrail** | quelli della cantonale Magliaso–Pura e, dalla v2.2, 10,5 km su tutta la rete, dove le panoramiche li mostrano |
+| **Vegetazione** | circa 240 000 alberi e arbusti dal modello di superficie, fuori dalla sagoma libera delle strade |
+| **Segnaletica** | linee, strisce pedonali e segni rilevati nell'ortofoto 10 cm, cartelli STOP e precedenza, fermate dei bus |
+| **Traffico IA** | rete completa con sensi unici, rotonde e carreggiate separate |
+| **Punti di partenza** | 30, uno in ogni paese |
 
-Nomi delle viste: `NNNN_<panoId>_<direzione>_p<pitch>.jpg`
-- direzione relativa al senso di marcia: `fwd`, `fwd_r`, `right`, `back_r`, `back`, `back_l`, `left`, `fwd_l` (passi di 45°, quindi ~45° di sovrapposizione tra viste adiacenti)
-- `p00` = orizzonte, `p25` = 25° verso l'alto (facciate, tetti, versanti)
+## Galleria
 
-## Note sulla copertura
+> Render del livello costruito, fatti senza il gioco (`beamng/pipeline/screenshots.py`: three.js con le texture dei materiali della mappa). In BeamNG.drive luce, cielo, vegetazione e terreno sono quelli del gioco.
 
-- Immagini quasi tutte di **ottobre 2022** (coerenti tra loro). 3 panorami del 2013 usati solo dove il 2022 manca.
-- **Buco di ~110 m** a circa 1,28–1,36 km dall'inizio (≈ 45.9858, 8.8692 → 45.9869, 8.8694): Google non ha panorami lì in nessuna data vicina alla strada.
-- La barra/ombra della Google car è visibile in basso nelle viste `p00` verso `fwd`/`back`: meglio mascherarla o usare le `p25` per le facciate.
+| | |
+|---|---|
+| ![Agno, il nucleo e la Collegiata](beamng/verifica/screenshots/02_agno_nucleo.jpg)<br>*Agno, il nucleo e la Collegiata* | ![Cademario](beamng/verifica/screenshots/03_cademario.jpg)<br>*Cademario* |
+| ![Novaggio](beamng/verifica/screenshots/04_novaggio.jpg)<br>*Novaggio* | ![Ponte Tresa, il ponte di confine](beamng/verifica/screenshots/05_ponte_tresa.jpg)<br>*Ponte Tresa, il ponte di confine* |
+| ![Bioggio e Manno, piano del Vedeggio](beamng/verifica/screenshots/06_bioggio_manno.jpg)<br>*Bioggio e Manno, piano del Vedeggio* | ![Astano](beamng/verifica/screenshots/07_astano.jpg)<br>*Astano* |
+| ![Sessa](beamng/verifica/screenshots/08_sessa.jpg)<br>*Sessa* | ![Il passo sopra Gravesano verso Arosio (la Penudria)](beamng/verifica/screenshots/09_passo_arosio.jpg)<br>*Il passo sopra Gravesano verso Arosio (la Penudria)* |
+| ![Caslano e Via Torrazza lungo il lago](beamng/verifica/screenshots/10_caslano_torrazza.jpg)<br>*Caslano e Via Torrazza lungo il lago* | ![Magliaso, via verso il nucleo](beamng/verifica/screenshots/11_magliaso_strada.jpg)<br>*Magliaso, via verso il nucleo* |
+| ![La cantonale verso Pura](beamng/verifica/screenshots/12_pura_cantonale.jpg)<br>*La cantonale verso Pura* | ![Agno, una via del nucleo](beamng/verifica/screenshots/13_agno_via.jpg)<br>*Agno, una via del nucleo* |
+| ![Il passo sopra Gravesano verso Arosio](beamng/verifica/screenshots/14_passo_tornante.jpg)<br>*Il passo sopra Gravesano verso Arosio* |  |
 
-## Uso per la ricostruzione 3D
+## Novità della v2.2
 
-- **COLMAP / RealityCapture / Metashape**: usa `viste/` (immagini prospettiche, intrinseci noti: fx = fy = 800 px, cx = 800, cy = 600, nessuna distorsione). Le posizioni GPS in `cameras.json` servono come prior/georeferenziazione.
-- **Metashape** accetta anche direttamente i panorami sferici di `panorami/` (camera type "Spherical").
-- **Gaussian Splatting / NeRF** (nerfstudio, Postshot…): elabora prima le `viste/` con COLMAP, poi allena.
+- **Strade nuove.** Il passo sopra Gravesano fino ad Arosio (Stradón da Rós, la «Penudria», con i suoi tornanti), la cantonale Ponte Tresa – Caslano – Magliaso e Via Torrazza a Caslano finivano sul bordo della mappa: oltre c'era solo il terreno. Ora sono strade vere (7,2 km in più) con un corridoio di 100 m di edifici, alberi e muri, riviste su Street View come il resto.
+- **Edifici con le facciate.** Fino alla v2.1 ogni edificio era un volume intonacato senza aperture. Ora gli edifici hanno in tutto 165 533 aperture (finestre con persiane, tapparelle o serramenti moderni, porte, portoni, garage, vetrine, finestre di chiese e stalle), 5 915 balconi, zoccoli e 3 348 comignoli, distribuiti per piani e campate secondo uso, epoca e numero di piani del Registro federale degli edifici. Coperture in coppi, tegole, piode, lamiera o tetto piano. Tutte le texture sono disegnate dalla pipeline: nessuna foto.
+- **Nuclei dei paesi casa per casa.** swissBUILDINGS3D unisce le file di case in un solo blocco; ora ogni casa della misurazione ufficiale ha le sue facciate, i suoi piani, la sua porta e il suo tono (4 508 case in blocchi). I piani partono dal marciapiede del fronte strada, anche sui pendii.
+- **Colori misurati nelle foto.** Il tono dell'intonaco di 3 637 edifici e il colore delle persiane dove è chiaro vengono dalle panoramiche Street View (solo i valori numerici).
+- **Vetrine** dove OpenStreetMap registra un negozio, un bar o un ufficio (173 edifici), **garage** con le porte, **rustici** in pietra.
+- **Edifici mancanti:** 538 edifici della misurazione ufficiale costruiti dopo il rilievo 3D sono stati aggiunti; 14 demoliti tolti.
+- **Guardrail su tutta la rete.** 326 tratti (10,5 km) di guardrail visti nelle panoramiche Street View, costruiti sul bordo della strada. Fino alla v2.1 c'erano solo quelli della cantonale Magliaso–Pura.
+- **Muri** con texture originali di pietra, calcestruzzo e intonaco; il materiale viene dalle foto dove si vede bene.
+- **Fermate dei bus** di OpenStreetMap con palo, cartello, orario e pensilina.
+- **Strade più guidabili.** Le superfici sono continue tra carreggiata, marciapiedi e piazzali e agli incroci: il salto tra due strade che si incontrano viene distribuito su qualche metro, le carreggiate principali restano come sono. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 62 % di gradini in meno sulle strade secondarie (1695 → 646) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 56 % sulle secondarie e del 58 % sulle principali, i colpi forti del 24 % e le torsioni brusche del 58 % sulle secondarie.
+- **Nessun ostacolo nei passaggi** sotto gli edifici: finestre e zoccoli non restano sospesi sopra la strada.
 
-## Mappa BeamNG.drive
+## Installazione
 
-La cartella [`beamng/`](beamng/README.md) contiene la pipeline che ricostruisce in scala 1:1 come livello BeamNG.drive 0.39 (`magliaso_pura`) la strada e, dalla v2.0, tutto il Malcantone intorno:
+1. Scaricare `magliaso_pura_v2.2.zip` dalla pagina delle [release](https://github.com/wintrymichi/magliasinaNG/releases).
+2. Copiarlo in `Documents/BeamNG.drive/current/mods/` (o installarlo dal gestore delle mod), togliendo le versioni precedenti: il livello si chiama sempre `magliaso_pura`.
+3. Nel gioco: *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*.
 
-- le panoramiche danno le pose calibrate, gli oggetti, la segnaletica del 2022 e la verifica della cantonale;
-- i dati ufficiali swisstopo e della misurazione ufficiale ticinese danno il terreno, la rete di strade e sentieri, i ponti, gli edifici, i muri e gli alberi di tutta l'area.
+## Come è costruita
 
-La cartella contiene anche la verifica della cantonale contro tutte le 1464 viste, i controlli automatici della v2.0 e i risultati di calcolo leggeri. La mod pronta da installare è nella [release v2.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.0).
+```mermaid
+flowchart LR
+    subgraph Fonti
+        A[swissALTI3D / swissSURFACE3D<br/>terreno e superficie]
+        B[swissTLM3D<br/>rete, ponti, ferrovia]
+        C[Misurazione ufficiale TI<br/>carreggiate, edifici, muri]
+        D[swissBUILDINGS3D<br/>edifici 3D]
+        E[Registro edifici GWR<br/>uso, epoca, piani]
+        F[OpenStreetMap<br/>sensi unici, cartelli, negozi]
+        G[Street View<br/>solo riferimento e misure]
+    end
+    A & B & C --> R[Rete e profilo<br/>network_surface.py]
+    R --> M[Superfici guidabili<br/>network_mesh.py]
+    D & C & E & F --> H[Edifici e facciate<br/>facades.py]
+    G -. toni, persiane, guardrail, muri .-> H
+    G -. revisione foto/mappa .-> Q[Verifica]
+    M & H --> L[Livello BeamNG<br/>build_level.py]
+    L --> Q[check_level.py<br/>drive_test.py]
+```
+
+Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2.2.yml` (su un server GitHub, in circa un'ora): scarica i dati ufficiali, costruisce il livello, lo controlla e pubblica la release. I dettagli di ogni passo sono in [`beamng/README.md`](beamng/README.md).
+
+## Qualità e verifica
+
+- **Controlli automatici su tutta la mappa** (`check_level.py`, [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terreno sopra le strade, buchi, gradini, giunzioni tra blocchi, ostacoli sulla carreggiata cercati lungo ogni strada e sentiero, alberi nella sagoma libera, rete dell'IA, file mancanti.
+- **Prova di guida virtuale** (`drive_test.py`): un'auto (modello quarter-car sulle quattro ruote) percorre tutte le strade nei due sensi e tutti i sentieri, 670 km, sulle superfici del livello come sono scritte. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 62 % di gradini in meno sulle strade secondarie (1695 → 646) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 56 % sulle secondarie e del 58 % sulle principali, i colpi forti del 24 % e le torsioni brusche del 58 % sulle secondarie.
+- **Revisione su Street View** ([`beamng/verifica/REVISIONE.md`](beamng/verifica/REVISIONE.md)): per ogni strada la copertura delle panoramiche, gli edifici misurati, i guardrail e i muri visti, gli eventi della prova di guida prima e dopo, e i luoghi confrontati foto/mappa dalla stessa camera con i problemi trovati e le correzioni.
+
+## Struttura del repository
+
+| Percorso | Contenuto |
+|---|---|
+| [`beamng/pipeline/`](beamng/pipeline) | la pipeline: download dei dati, rete stradale, superfici, edifici, facciate, vegetazione, livello, controlli |
+| [`beamng/dati/`](beamng/dati) | risultati leggeri fissati per la release (pose, segnaletica, guardrail, colori, estratti di GWR e OSM) |
+| [`beamng/verifica/`](beamng/verifica) | controlli, prova di guida, revisione strada per strada, screenshot |
+| [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md) | note della release |
+| `panoramas.*`, `cameras.json`, `sv_capture.py`, … | il dataset originale della cantonale Magliaso–Pura (metadati delle panoramiche, vedi sotto) |
+
+## Il dataset delle panoramiche
+
+Il progetto è nato da un dataset di panoramiche Street View lungo la Strada Cantonale da Magliaso a Pura (45.981686, 8.878474 → 46.001760, 8.860159, 3,7 km, quasi tutte di ottobre 2022). **Le immagini non sono nel repository**: le cartelle `panorami/`, `viste/` e `storici_2013_2014/` (9,4 GB) restano in locale. Il repository contiene i metadati e gli script con cui si riscaricano.
+
+| Cartella / file | Contenuto |
+|---|---|
+| `panorami/` *(solo in locale)* | panoramiche 360° equirettangolari, 6656 × 3328, una ogni ~10 m; nome `NNNN_<panoId>.jpg` (NNNN = ordine lungo la strada) |
+| `viste/` *(solo in locale)* | 16 viste prospettiche per panoramica (FOV 90°, 1600 × 1200): 8 direzioni × 2 inclinazioni |
+| `panoramas.csv` / `.json` | per ogni panoramica: lat, lon, quota, data, heading, pitch e roll della camera, distanza lungo la strada |
+| `panoramas.geojson` | posizioni delle panoramiche (si apre in QGIS o su geojson.io) |
+| `cameras.json` | per ogni vista: file, posizione GPS, quota, direzione (yaw), pitch, FOV: pose note per la fotogrammetria |
+| `panoramas_all_dates.json` | anche le panoramiche storiche (2013/2014) dello stesso tratto, non scaricate |
+| `sv_capture.py`, `expand.py`, `finalize.py` | gli script (rieseguibili) che scaricano e preparano le immagini |
+
+Le viste si chiamano `NNNN_<panoId>_<direzione>_p<pitch>.jpg`: la direzione è relativa al senso di marcia (`fwd`, `fwd_r`, `right`, `back_r`, `back`, `back_l`, `left`, `fwd_l`, a passi di 45°), `p00` è l'orizzonte e `p25` guarda 25° verso l'alto (facciate, tetti, versanti).
+
+**Copertura.** Quasi tutte le immagini sono di ottobre 2022; tre panoramiche del 2013 coprono i punti dove il 2022 manca. Tra 1,28 e 1,36 km dall'inizio (45.9858, 8.8692 → 45.9869, 8.8694) c'è un buco di circa 110 m senza panoramiche in nessuna data vicina. La barra e l'ombra dell'auto di Google si vedono in basso nelle viste `p00` verso `fwd`/`back`.
+
+**Ricostruzione 3D.** Le `viste/` vanno bene per COLMAP, RealityCapture e Metashape (intrinseci noti: fx = fy = 800 px, cx = 800, cy = 600, nessuna distorsione; le posizioni GPS di `cameras.json` servono da georeferenziazione); Metashape accetta anche le panoramiche sferiche (camera "Spherical"); per Gaussian Splatting o NeRF si passa prima dalle `viste/` con COLMAP.
+
+## Fonti e licenze
+
+- © swisstopo: swissALTI3D, swissSURFACE3D, SWISSIMAGE, swissBUILDINGS3D 3.0, swissTLM3D, swissNAMES3D (dati geografici aperti della Confederazione).
+- Misurazione ufficiale: Ufficio del catasto e dei riordini fondiari, Cantone Ticino (geodienste.ch).
+- Registro federale degli edifici e delle abitazioni (Ufficio federale di statistica).
+- © OpenStreetMap contributors, ODbL 1.0: gli estratti in `beamng/dati/osm_*.json.gz` sono sotto la ODbL.
+- Copernicus DEM GLO-30 (© DLR e.V. / Airbus, fornito nell'ambito di COPERNICUS da UE ed ESA): paesaggio lontano.
+- Google Street View: solo riferimento visivo; nessuna immagine è distribuita.
+
+## Limiti noti
+
+- La mappa non è stata provata dentro BeamNG.drive durante questa revisione: le verifiche sono automatiche (`check_level.py`, `drive_test.py`) e sui render del livello confrontati con le panoramiche.
+- Facciate: numero e posizione di finestre, balconi e porte sono plausibili (uso, epoca e piani del registro) ma non copiati uno per uno. Il tono viene dalle foto per 3 637 edifici; in ombra alcune tinte escono sbagliate (una facciata crema resa rosa). Pietra a vista, portici e zoccoli alti un piano non sono modellati.
+- Piazzali della misurazione ufficiale che scavalcano un salto di quota diventano rampe ripide accanto alla strada (per esempio in Via Torrazza a Caslano).
+- Alcuni edifici di swissBUILDINGS3D hanno i muri solo sotto una parte del tetto (un capannone a Pura).
+- Guardrail e materiale dei muri solo dove le panoramiche li vedono; 736 muri senza un materiale sicuro restano in pietra.
+- La prova di guida segnala ancora punti da sistemare: l'incrocio ripido di Castelrotto, le strade parallele di Via Giuseppe Soldati, le estremità dei ponti di Via Mondonico e Via Roncaccio, il passaggio a livello di Via Grumo, i bordi dei corridoi; sui sentieri gli eventi sono quasi invariati.
+- Le strade nuove finiscono al bordo del loro corridoio di 100 m (oltre, come altrove, c'è solo il terreno): Arosio e Caslano sono compresi solo in parte.
+- Revisione foto/mappa: 116 luoghi, 20 differenze ancora da verificare (elenco in `beamng/dati/qa_review.json`).
