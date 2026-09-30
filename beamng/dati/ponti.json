@@ -3,7 +3,7 @@
  "ponti": [
   {
    "tlm": "{6D5DE9B7-52CA-4E9D-84A2-6E89A446EA2A}",
-   "seg": 4259,
+   "seg": 4507,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.41,
@@ -25,7 +25,7 @@
   },
   {
    "tlm": "{8A5082C3-9D84-4ED1-888E-27403D256FA9}",
-   "seg": 4500,
+   "seg": 4773,
    "class": "4m Strasse",
    "name": "",
    "dz_tlm_m": 11.38,
@@ -49,7 +49,7 @@
   },
   {
    "tlm": "{720F7CF8-9BD5-4425-AFCC-CCCBD7FC5FC2}",
-   "seg": 122,
+   "seg": 133,
    "class": "8m Strasse",
    "name": "Via Grumo",
    "dz_tlm_m": 0.34,
@@ -73,7 +73,7 @@
   },
   {
    "tlm": "{BB58593E-A07B-4A5E-AD05-4AE6429B4733}",
-   "seg": 5332,
+   "seg": 5639,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.78,
@@ -94,7 +94,7 @@
   },
   {
    "tlm": "{DA3167DB-4BA2-40BB-9EBA-AACF9112D65F}",
-   "seg": 3142,
+   "seg": 3336,
    "class": "4m Strasse",
    "name": "Lüsc",
    "dz_tlm_m": 0.35,
@@ -117,7 +117,7 @@
   },
   {
    "tlm": "{DCFAFD6C-7227-4C01-8BF3-BCA50BCE49A3}",
-   "seg": 157,
+   "seg": 172,
    "class": "10m Strasse",
    "name": "",
    "dz_tlm_m": 0.25,
@@ -140,7 +140,7 @@
   },
   {
    "tlm": "{A6995468-1DA6-4B88-95A8-203F982B7DE6}",
-   "seg": 343,
+   "seg": 390,
    "class": "4m Strasse",
    "name": "Via Ponte di Vello",
    "dz_tlm_m": 0.15,
@@ -163,7 +163,7 @@
   },
   {
    "tlm": "{1FBC8743-2001-49DE-97E4-9A212D4A1F93}",
-   "seg": 3237,
+   "seg": 3432,
    "class": "4m Strasse",
    "name": "",
    "dz_tlm_m": 0.17,
@@ -186,7 +186,7 @@
   },
   {
    "tlm": "{213750AE-AA35-42A2-A1C1-C3CA457403B1}",
-   "seg": 4219,
+   "seg": 4467,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.13,
@@ -212,7 +212,7 @@
   },
   {
    "tlm": "{64A39882-D232-4D30-BD27-939A609275DF}",
-   "seg": 1777,
+   "seg": 1910,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.06,
@@ -235,7 +235,7 @@
   },
   {
    "tlm": "{B07D63B6-393A-4C6B-B4B2-2DECA418A7F0}",
-   "seg": 3775,
+   "seg": 3998,
    "class": "3m Strasse",
    "name": "Via Monte Oliveto",
    "dz_tlm_m": 0.23,
@@ -258,7 +258,7 @@
   },
   {
    "tlm": "{C0BDF5F4-4E15-46DC-B55B-85E1C723D6EF}",
-   "seg": 4001,
+   "seg": 4249,
    "class": "1m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.0,
@@ -281,7 +281,7 @@
   },
   {
    "tlm": "{6CE0952F-511B-477E-A804-F6B99102488A}",
-   "seg": 1881,
+   "seg": 2014,
    "class": "4m Strasse",
    "name": "",
    "dz_tlm_m": 0.17,
@@ -304,7 +304,7 @@
   },
   {
    "tlm": "{BCB458F1-F90B-4A8F-A3BF-8E45417666BD}",
-   "seg": 1579,
+   "seg": 1712,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 1.2,
@@ -328,7 +328,7 @@
   },
   {
    "tlm": "{DABB7677-3A07-44B4-9BD4-8ADB69C2E7CF}",
-   "seg": 2250,
+   "seg": 2399,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.3,
@@ -349,7 +349,7 @@
   },
   {
    "tlm": "{945F5732-C40D-4CEA-9F1B-69CE24C54491}",
-   "seg": 1467,
+   "seg": 1598,
    "class": "4m Strasse",
    "name": "Via Giacomo Donati",
    "dz_tlm_m": 0.14,
@@ -372,7 +372,7 @@
   },
   {
    "tlm": "{8C4D6E69-177F-40DD-9B6B-9954DD1C4E77}",
-   "seg": 1487,
+   "seg": 1618,
    "class": "4m Strasse",
    "name": "Via Agostino de Marchi",
    "dz_tlm_m": 0.23,
@@ -418,7 +418,7 @@
   },
   {
    "tlm": "{7F0495EF-DE9E-4CD5-BE85-CED882B62DBD}",
-   "seg": 2780,
+   "seg": 2954,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.26,
@@ -441,7 +441,7 @@
   },
   {
    "tlm": "{8920829E-6812-4C35-8CC0-6F37A38AFA2E}",
-   "seg": 3998,
+   "seg": 4246,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.83,
@@ -464,7 +464,7 @@
   },
   {
    "tlm": "{0A7B83BD-0A11-4DA7-994D-1C88B2EBFC54}",
-   "seg": 3182,
+   "seg": 3376,
    "class": "4m Strasse",
    "name": "Via Funtanín",
    "dz_tlm_m": 0.4,
@@ -487,7 +487,7 @@
   },
   {
    "tlm": "{F95E0F62-E107-45B1-90AF-F6BDFFAD573B}",
-   "seg": 5357,
+   "seg": 5664,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.08,
@@ -511,7 +511,7 @@
   },
   {
    "tlm": "{6EC39617-CB10-4D5E-A1DC-9EF11FBC1BAA}",
-   "seg": 2518,
+   "seg": 2684,
    "class": "4m Strasse",
    "name": "Via Selva",
    "dz_tlm_m": 0.04,
@@ -533,7 +533,7 @@
   },
   {
    "tlm": "{C47A4717-F422-4D76-8D1E-2AA8CAE1D946}",
-   "seg": 3179,
+   "seg": 3373,
    "class": "3m Strasse",
    "name": "Via Ponte di Vello",
    "dz_tlm_m": 0.21,
@@ -556,7 +556,7 @@
   },
   {
    "tlm": "{25F73F38-CB6F-43DA-9FBA-99AC3DA87AF9}",
-   "seg": 1457,
+   "seg": 1588,
    "class": "4m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.38,
@@ -578,8 +578,27 @@
    "checked": true
   },
   {
+   "tlm": "{77823B20-CB72-44AA-97EB-8679915AAAC6}",
+   "seg": 3544,
+   "class": "2m Weg",
+   "name": "",
+   "dz_tlm_m": 0.98,
+   "max_grade": 0.026,
+   "flags": [],
+   "x": 1201.1,
+   "y": -2406.9,
+   "length_m": 18.7,
+   "width_m": 2.6,
+   "z_ends": [
+    271.6,
+    272.02
+   ],
+   "max_height_m": 1.5,
+   "auto_type": "culvert"
+  },
+  {
    "tlm": "{38027131-73A5-4F62-ACC4-1055DA7B8057}",
-   "seg": 3921,
+   "seg": 4159,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 3.04,
@@ -604,7 +623,7 @@
   },
   {
    "tlm": "{70381334-909F-4563-ABAC-D41AC388BC62}",
-   "seg": 4286,
+   "seg": 4534,
    "class": "1m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.24,
@@ -628,7 +647,7 @@
   },
   {
    "tlm": "{A0B95221-514F-4DD9-ABC4-E31EB976337B}",
-   "seg": 2127,
+   "seg": 2276,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.14,
@@ -651,7 +670,7 @@
   },
   {
    "tlm": "{044365B5-3BD4-40B3-8CC5-E3770A698CEB}",
-   "seg": 225,
+   "seg": 241,
    "class": "10m Strasse",
    "name": "Via Lugano",
    "dz_tlm_m": 0.25,
@@ -672,7 +691,7 @@
   },
   {
    "tlm": "{9FFF3597-A9E2-4EC5-80F4-49D8B7B0FFE4}",
-   "seg": 2557,
+   "seg": 2726,
    "class": "4m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.18,
@@ -693,7 +712,7 @@
   },
   {
    "tlm": "{C6B2E4A7-619B-4BDA-B70D-FDBF0664C899}",
-   "seg": 5326,
+   "seg": 5633,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.11,
@@ -714,7 +733,7 @@
   },
   {
    "tlm": "{8D6BD58E-BE01-4850-A730-2A05505FE308}",
-   "seg": 3181,
+   "seg": 3375,
    "class": "4m Strasse",
    "name": "Romanino",
    "dz_tlm_m": 0.37,
@@ -735,7 +754,7 @@
   },
   {
    "tlm": "{8D0BD4F7-D957-4757-AFF5-C648D0EECDAC}",
-   "seg": 36,
+   "seg": 39,
    "class": "8m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.12,
@@ -756,7 +775,7 @@
   },
   {
    "tlm": "{7DE14058-3A2F-44B3-8DC3-071C4845EF68}",
-   "seg": 222,
+   "seg": 238,
    "class": "8m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.12,
@@ -779,7 +798,7 @@
   },
   {
    "tlm": "{34DE98D5-C2DA-45AB-B7A8-B6034630798A}",
-   "seg": 2481,
+   "seg": 2638,
    "class": "2m Weg",
    "name": "Case del Gatto",
    "dz_tlm_m": 0.24,
@@ -802,7 +821,7 @@
   },
   {
    "tlm": "{F430D13E-D1F9-4DFE-9ECF-E44553ADF5BC}",
-   "seg": 1097,
+   "seg": 1201,
    "class": "2m Weg",
    "name": "Via Néda",
    "dz_tlm_m": 0.11,
@@ -825,7 +844,7 @@
   },
   {
    "tlm": "{D4838BC0-D595-41D8-A0B0-59C7FAE3F1EB}",
-   "seg": 2035,
+   "seg": 2184,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.54,
@@ -848,7 +867,7 @@
   },
   {
    "tlm": "{33D49A1C-D1CE-4D24-9155-CF003B9BA64F}",
-   "seg": 5398,
+   "seg": 5708,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.76,
@@ -869,7 +888,7 @@
   },
   {
    "tlm": "{846B7665-CDA3-49AB-A5AB-16AFC8AB43D3}",
-   "seg": 154,
+   "seg": 169,
    "class": "6m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.23,
@@ -890,7 +909,7 @@
   },
   {
    "tlm": "{6C791257-7660-4096-9D70-AA0DA20FEE7B}",
-   "seg": 3988,
+   "seg": 4236,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.08,
@@ -912,7 +931,7 @@
   },
   {
    "tlm": "{AC90B8BC-1B26-4A0F-A21C-133ACCDE2907}",
-   "seg": 4238,
+   "seg": 4486,
    "class": "1m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.0,
@@ -933,7 +952,7 @@
   },
   {
    "tlm": "{D5322DE3-0C9C-4DEF-B9E2-19EFD3369834}",
-   "seg": 4101,
+   "seg": 4349,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 1.43,
@@ -957,7 +976,7 @@
   },
   {
    "tlm": "{BF56BEA9-9733-4503-98FC-2714880E8518}",
-   "seg": 3466,
+   "seg": 3674,
    "class": "4m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.08,
@@ -978,7 +997,7 @@
   },
   {
    "tlm": "{B7B976B6-D6A1-4C95-B9DB-6F48AE36F092}",
-   "seg": 5324,
+   "seg": 5631,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.4,
@@ -999,7 +1018,7 @@
   },
   {
    "tlm": "{9B6A52FD-AAEA-4EB7-8281-D6CA06A9F50B}",
-   "seg": 3184,
+   "seg": 3378,
    "class": "3m Strasse",
    "name": "ai Vezzán",
    "dz_tlm_m": 0.22,
@@ -1020,7 +1039,7 @@
   },
   {
    "tlm": "{AAA62FCA-DCC3-4102-93C8-B304602F2800}",
-   "seg": 4915,
+   "seg": 5200,
    "class": "4m Strasse",
    "name": "Via Astano",
    "dz_tlm_m": 0.05,
@@ -1043,7 +1062,7 @@
   },
   {
    "tlm": "{31BC3E99-159E-46DF-A9E4-F8B4B28A855A}",
-   "seg": 4012,
+   "seg": 4260,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.4,
@@ -1066,7 +1085,7 @@
   },
   {
    "tlm": "{EE20FCAB-DA8B-467F-9955-22D53A7ACE31}",
-   "seg": 4053,
+   "seg": 4301,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.04,
@@ -1088,7 +1107,7 @@
   },
   {
    "tlm": "{AFD65CAC-1E22-48E7-A270-0A5E5FA33A3D}",
-   "seg": 1617,
+   "seg": 1750,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.89,
@@ -1109,7 +1128,7 @@
   },
   {
    "tlm": "{24B17053-795D-4D7C-AFB2-1FE60370DB05}",
-   "seg": 1828,
+   "seg": 1961,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.16,
@@ -1130,7 +1149,7 @@
   },
   {
    "tlm": "{D95061BF-EE7C-4EE9-AFD4-9FBEA7AE2185}",
-   "seg": 3773,
+   "seg": 3996,
    "class": "4m Strasse",
    "name": "Via Fornasette",
    "dz_tlm_m": 0.19,
@@ -1151,7 +1170,7 @@
   },
   {
    "tlm": "{2C14F86D-7688-4749-B8D4-7D4E109E5E21}",
-   "seg": 1716,
+   "seg": 1849,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.25,
@@ -1174,7 +1193,7 @@
   },
   {
    "tlm": "{3B38CE37-6D67-4B49-B238-5078A83CBB05}",
-   "seg": 3408,
+   "seg": 3610,
    "class": "4m Strasse",
    "name": "Via Cademario",
    "dz_tlm_m": 0.07,
@@ -1197,7 +1216,7 @@
   },
   {
    "tlm": "{E43295F1-DAC7-4EF3-872E-60DF571DB293}",
-   "seg": 2528,
+   "seg": 2697,
    "class": "3m Strasse",
    "name": "Via Molinazzo",
    "dz_tlm_m": 0.09,
@@ -1219,7 +1238,7 @@
   },
   {
    "tlm": "{F01C1FB3-13FD-4FF2-A85C-6789ADDC21AF}",
-   "seg": 3412,
+   "seg": 3614,
    "class": "4m Strasse",
    "name": "Ur Stradón",
    "dz_tlm_m": 0.14,
@@ -1242,7 +1261,7 @@
   },
   {
    "tlm": "{C82A8029-ED8C-4639-95B5-4F38EE76368B}",
-   "seg": 4291,
+   "seg": 4539,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.15,
@@ -1263,7 +1282,7 @@
   },
   {
    "tlm": "{9A5F1A6E-F482-41F3-B0A8-FD50FC4BE3A5}",
-   "seg": 5400,
+   "seg": 5710,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 1.44,
@@ -1288,7 +1307,7 @@
   },
   {
    "tlm": "{4FBABD70-BE8B-4FF1-AD66-A2475977550A}",
-   "seg": 1917,
+   "seg": 2066,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.07,
@@ -1311,7 +1330,7 @@
   },
   {
    "tlm": "{D8D06397-6DCC-4581-92E5-B82ECC97F73F}",
-   "seg": 1589,
+   "seg": 1722,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.13,
@@ -1334,7 +1353,7 @@
   },
   {
    "tlm": "{9A2C29BC-6302-42AE-BFE0-CA7ABD177AB8}",
-   "seg": 5328,
+   "seg": 5635,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.21,
@@ -1355,7 +1374,7 @@
   },
   {
    "tlm": "{EF795269-D68B-435D-BE80-91B76980FF8F}",
-   "seg": 5443,
+   "seg": 5754,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 3.51,
@@ -1380,7 +1399,7 @@
   },
   {
    "tlm": "{CB110D68-CE72-4922-8907-0F2601C88B19}",
-   "seg": 4588,
+   "seg": 4863,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.04,
@@ -1403,7 +1422,7 @@
   },
   {
    "tlm": "{7A7400AB-5C8D-4628-9452-5FA87D0F3915}",
-   "seg": 2446,
+   "seg": 2603,
    "class": "4m Strasse",
    "name": "Strada Regina",
    "dz_tlm_m": 0.01,
@@ -1425,8 +1444,29 @@
    "checked": true
   },
   {
+   "tlm": "{47267888-3643-4A4D-816C-BDA9C717FDF4}",
+   "seg": 4024,
+   "class": "3m Strasse",
+   "name": "Focón",
+   "dz_tlm_m": 0.12,
+   "max_grade": 0.026,
+   "flags": [
+    "terreno"
+   ],
+   "x": 2574.5,
+   "y": 6244.0,
+   "length_m": 10.1,
+   "width_m": 5.1,
+   "z_ends": [
+    815.16,
+    814.9
+   ],
+   "max_height_m": 2.8,
+   "auto_type": "open"
+  },
+  {
    "tlm": "{91E36956-7E73-4D3F-936B-DE22D43AFF2A}",
-   "seg": 4645,
+   "seg": 4920,
    "class": "4m Strasse",
    "name": "Ra Stráda da Brén",
    "dz_tlm_m": 0.03,
@@ -1449,7 +1489,7 @@
   },
   {
    "tlm": "{38831718-22C0-48B8-BD4A-7F07C6024DCA}",
-   "seg": 4898,
+   "seg": 5180,
    "class": "3m Strasse",
    "name": "Via Selva",
    "dz_tlm_m": 0.02,
@@ -1471,7 +1511,7 @@
   },
   {
    "tlm": "{B84270D4-7E79-4FD9-B3C5-E8B4EF99D24C}",
-   "seg": 4917,
+   "seg": 5202,
    "class": "4m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.01,
@@ -1492,7 +1532,7 @@
   },
   {
    "tlm": "{0BD6B537-902C-4A50-816F-BCAAEFA2BB9B}",
-   "seg": 5090,
+   "seg": 5388,
    "class": "1m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.0,
@@ -1512,7 +1552,7 @@
   },
   {
    "tlm": "{FD0CDBC0-A085-46B0-B15A-715A926E8301}",
-   "seg": 1596,
+   "seg": 1729,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.18,
@@ -1535,7 +1575,7 @@
   },
   {
    "tlm": "{DE1ECBFA-A9F1-4ABF-AB4A-292E7173B8D4}",
-   "seg": 830,
+   "seg": 877,
    "class": "2m Weg",
    "name": "Strada ai Boschi",
    "dz_tlm_m": 0.15,
@@ -1556,7 +1596,7 @@
   },
   {
    "tlm": "{B8BC586E-A31C-4323-87FF-EC214FF7427E}",
-   "seg": 2096,
+   "seg": 2245,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.06,
@@ -1579,7 +1619,7 @@
   },
   {
    "tlm": "{09837D9E-A6F1-4212-8C7A-BD72955AFA0E}",
-   "seg": 3489,
+   "seg": 3697,
    "class": "4m Strasse",
    "name": "Via la Barca",
    "dz_tlm_m": 0.19,
@@ -1601,7 +1641,7 @@
   },
   {
    "tlm": "{0F20FB6D-97D4-4825-9BF3-3423589566A2}",
-   "seg": 2073,
+   "seg": 2222,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.67,
@@ -1622,7 +1662,7 @@
   },
   {
    "tlm": "{9258F446-A0C8-4A2A-B150-F938C71AA09A}",
-   "seg": 2031,
+   "seg": 2180,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.48,
@@ -1645,7 +1685,7 @@
   },
   {
    "tlm": "{4670E8E7-2C08-4209-B7A6-0332876C4764}",
-   "seg": 4913,
+   "seg": 5198,
    "class": "4m Strasse",
    "name": "Via Mavögn",
    "dz_tlm_m": 0.04,
@@ -1668,7 +1708,7 @@
   },
   {
    "tlm": "{8D5C8AE8-8EBF-475E-87D0-3FA949AB5776}",
-   "seg": 504,
+   "seg": 551,
    "class": "2m Weg",
    "name": "Via Madrallo",
    "dz_tlm_m": 0.22,
@@ -1691,7 +1731,7 @@
   },
   {
    "tlm": "{69D7EE89-8FE5-47E2-8C65-C1204067AC15}",
-   "seg": 5191,
+   "seg": 5489,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.03,
@@ -1712,7 +1752,7 @@
   },
   {
    "tlm": "{F5981C53-BAB5-40E0-BB1F-FB5CAEAB5C86}",
-   "seg": 5334,
+   "seg": 5641,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.38,
@@ -1733,7 +1773,7 @@
   },
   {
    "tlm": "{1724EE48-1373-417E-8C2E-380D89F35EA6}",
-   "seg": 3946,
+   "seg": 4194,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.11,
@@ -1754,7 +1794,7 @@
   },
   {
    "tlm": "{52CBD916-3D5E-4A45-A9C1-B4213DC0D700}",
-   "seg": 1675,
+   "seg": 1808,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.38,
@@ -1777,7 +1817,7 @@
   },
   {
    "tlm": "{43F9319B-1129-411A-81AD-0D52B205E161}",
-   "seg": 2410,
+   "seg": 2567,
    "class": "3m Strasse",
    "name": "Via Morina",
    "dz_tlm_m": 0.11,
@@ -1800,7 +1840,7 @@
   },
   {
    "tlm": "{F3B110A8-9987-48DC-A240-00EEDA5307E0}",
-   "seg": 821,
+   "seg": 868,
    "class": "2m Weg",
    "name": "Strada ara Morèla",
    "dz_tlm_m": 0.11,
@@ -1823,7 +1863,7 @@
   },
   {
    "tlm": "{92205D01-C0CA-48DB-9630-E8145DCE8AD2}",
-   "seg": 5311,
+   "seg": 5618,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.15,
@@ -1844,7 +1884,7 @@
   },
   {
    "tlm": "{67939755-EA81-4341-84C4-93EECF8A30A5}",
-   "seg": 393,
+   "seg": 440,
    "class": "2m Weg",
    "name": "Via Vei",
    "dz_tlm_m": 0.12,
@@ -1865,7 +1905,7 @@
   },
   {
    "tlm": "{5BF11E82-9B68-4CC8-A64E-3239ED26DAA0}",
-   "seg": 3765,
+   "seg": 3986,
    "class": "3m Strasse",
    "name": "Via Roncaccio",
    "dz_tlm_m": 0.17,
@@ -1886,7 +1926,7 @@
   },
   {
    "tlm": "{67F1E9CF-E82A-46F6-A92D-A1A1E18D3A73}",
-   "seg": 577,
+   "seg": 624,
    "class": "3m Strasse",
    "name": "Via Mondonico",
    "dz_tlm_m": 0.28,
@@ -1932,7 +1972,7 @@
   },
   {
    "tlm": "{710151B5-3397-4D0E-886F-F89CD46B7544}",
-   "seg": 4000,
+   "seg": 4248,
    "class": "1m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.0,
@@ -1953,7 +1993,7 @@
   },
   {
    "tlm": "{7A17086F-F526-4CD3-9795-C90C69AB79BB}",
-   "seg": 3882,
+   "seg": 4120,
    "class": "3m Strasse",
    "name": "Via Costa",
    "dz_tlm_m": 0.06,
@@ -1976,7 +2016,7 @@
   },
   {
    "tlm": "{B1ED9FE3-43BD-4AB5-9C17-8FA04963ED10}",
-   "seg": 4484,
+   "seg": 4757,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.44,
@@ -1997,7 +2037,7 @@
   },
   {
    "tlm": "{A00AF8BE-B98A-4716-AAB8-E1D27CD653E8}",
-   "seg": 5201,
+   "seg": 5499,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.04,
@@ -2018,7 +2058,7 @@
   },
   {
    "tlm": "{CD20D53E-239E-477A-9BD5-31DCDB161268}",
-   "seg": 1681,
+   "seg": 1814,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.09,
@@ -2039,7 +2079,7 @@
   },
   {
    "tlm": "{7A21984A-C23D-48B5-8870-0FE7DAD547A2}",
-   "seg": 3346,
+   "seg": 3546,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.24,
@@ -2060,7 +2100,7 @@
   },
   {
    "tlm": "{7572982F-2669-48F0-81AA-C591D9094D3F}",
-   "seg": 534,
+   "seg": 581,
    "class": "4m Strasse",
    "name": "Via S. Maurizio",
    "dz_tlm_m": 0.1,
@@ -2082,7 +2122,7 @@
   },
   {
    "tlm": "{CDD53F24-A91C-44F0-B6BA-F476F007BA28}",
-   "seg": 1519,
+   "seg": 1652,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.32,
@@ -2105,7 +2145,7 @@
   },
   {
    "tlm": "{1E9BECA5-CDA8-4FC9-AE94-ABFE16D254EB}",
-   "seg": 1955,
+   "seg": 2104,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.07,
@@ -2126,7 +2166,7 @@
   },
   {
    "tlm": "{F9DDE9EF-3DD9-4AB4-90B6-6AEEEBD3C43B}",
-   "seg": 4208,
+   "seg": 4456,
    "class": "2m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.0,
@@ -2147,7 +2187,7 @@
   },
   {
    "tlm": "{6B6B02A6-6E17-4FBA-A09A-B34B50244EE2}",
-   "seg": 4563,
+   "seg": 4838,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.05,
@@ -2168,7 +2208,7 @@
   },
   {
    "tlm": "{B053769A-E6F8-4A0F-BD15-EC055A609361}",
-   "seg": 5011,
+   "seg": 5307,
    "class": "4m Strasse",
    "name": "Via Ponte di Vello",
    "dz_tlm_m": 0.37,
@@ -2189,7 +2229,7 @@
   },
   {
    "tlm": "{5B3EBD83-8B35-4F6B-9D91-9665531D1A0B}",
-   "seg": 4698,
+   "seg": 4973,
    "class": "4m Strasse",
    "name": "Via Mavögn",
    "dz_tlm_m": 0.17,
@@ -2212,7 +2252,7 @@
   },
   {
    "tlm": "{F5539B14-3263-441C-8E06-FE5AFFACF56B}",
-   "seg": 5127,
+   "seg": 5425,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.51,
@@ -2233,7 +2273,7 @@
   },
   {
    "tlm": "{08A1A9B5-0939-456D-84F1-4F61FCCA1D21}",
-   "seg": 1785,
+   "seg": 1918,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.01,
@@ -2254,7 +2294,7 @@
   },
   {
    "tlm": "{DD9352AD-4ABA-4E8F-976A-48162EF790C3}",
-   "seg": 4474,
+   "seg": 4747,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.12,
@@ -2275,7 +2315,7 @@
   },
   {
    "tlm": "{4C4643BB-DBC5-44FB-87F9-11857C8902C0}",
-   "seg": 3870,
+   "seg": 4108,
    "class": "4m Strasse",
    "name": "Via Cademario",
    "dz_tlm_m": 0.05,
@@ -2296,7 +2336,7 @@
   },
   {
    "tlm": "{D9B3DC0E-9EF6-4E9E-A8CC-A8BA2CD3481E}",
-   "seg": 4058,
+   "seg": 4306,
    "class": "4m Strasse",
    "name": "",
    "dz_tlm_m": 0.27,
@@ -2319,7 +2359,7 @@
   },
   {
    "tlm": "{A3B59DF4-7755-4C88-987C-02B7F65F4EBA}",
-   "seg": 4135,
+   "seg": 4383,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.09,
@@ -2340,7 +2380,7 @@
   },
   {
    "tlm": "{BEE613AA-3B80-492B-9C33-FE23E1182EB9}",
-   "seg": 4142,
+   "seg": 4390,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.34,
@@ -2360,7 +2400,7 @@
   },
   {
    "tlm": "{152F6105-A31D-4139-8233-804D71C47551}",
-   "seg": 5364,
+   "seg": 5671,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 2.04,
@@ -2384,8 +2424,27 @@
    "checked": true
   },
   {
+   "tlm": "{8E178438-456B-44F2-BCEA-4BD153F61454}",
+   "seg": 2530,
+   "class": "3m Strasse",
+   "name": "Scernéscia",
+   "dz_tlm_m": 0.28,
+   "max_grade": 0.011,
+   "flags": [],
+   "x": 2724.8,
+   "y": 6084.8,
+   "length_m": 6.8,
+   "width_m": 3.8,
+   "z_ends": [
+    780.94,
+    780.89
+   ],
+   "max_height_m": 3.0,
+   "auto_type": "open"
+  },
+  {
    "tlm": "{29956E78-110E-4B29-9B7B-78969F58F636}",
-   "seg": 2782,
+   "seg": 2956,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.08,
@@ -2408,7 +2467,7 @@
   },
   {
    "tlm": "{C09CDA38-D08D-491C-959A-30A524960D89}",
-   "seg": 2797,
+   "seg": 2971,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.1,
@@ -2429,7 +2488,7 @@
   },
   {
    "tlm": "{F030BF75-BE0B-45D0-8D67-E363F1439E6A}",
-   "seg": 3839,
+   "seg": 4077,
    "class": "4m Strasse",
    "name": "Via Ponte di Vello",
    "dz_tlm_m": 0.25,
@@ -2450,7 +2509,7 @@
   },
   {
    "tlm": "{3589F59A-2E49-4ECB-B5B4-A0D8BBA51542}",
-   "seg": 4206,
+   "seg": 4454,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.16,
@@ -2471,7 +2530,7 @@
   },
   {
    "tlm": "{B4331E51-CB16-4322-965B-3CA52C825712}",
-   "seg": 2184,
+   "seg": 2333,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.12,
@@ -2492,7 +2551,7 @@
   },
   {
    "tlm": "{9D925B83-C6DE-4234-8D02-E2F916F3F9F2}",
-   "seg": 4060,
+   "seg": 4308,
    "class": "4m Strasse",
    "name": "",
    "dz_tlm_m": 0.41,
@@ -2515,7 +2574,7 @@
   },
   {
    "tlm": "{97CB8C8E-C3B9-4912-989C-34E148F312E7}",
-   "seg": 4922,
+   "seg": 5207,
    "class": "4m Strasse",
    "name": "Via Scerèe",
    "dz_tlm_m": 0.2,
@@ -2538,7 +2597,7 @@
   },
   {
    "tlm": "{FD40F0D1-505E-4322-99EF-899F10888104}",
-   "seg": 4155,
+   "seg": 4403,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.09,
@@ -2559,7 +2618,7 @@
   },
   {
    "tlm": "{358A1365-A6D7-4E7C-9758-FC0D48DA37F1}",
-   "seg": 4411,
+   "seg": 4684,
    "class": "2m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.15,
@@ -2580,7 +2639,7 @@
   },
   {
    "tlm": "{E5DCFCA6-9303-42D6-B417-6719075A2CEF}",
-   "seg": 1502,
+   "seg": 1633,
    "class": "4m Strasse",
    "name": "Via Grumo",
    "dz_tlm_m": 0.14,
@@ -2603,7 +2662,7 @@
   },
   {
    "tlm": "{4E8F53F6-51DB-473F-8DFB-E250FF5D57B5}",
-   "seg": 5024,
+   "seg": 5320,
    "class": "4m Strasse",
    "name": "",
    "dz_tlm_m": 0.01,
@@ -2624,7 +2683,7 @@
   },
   {
    "tlm": "{3EDBB3D2-41A5-43B2-B5C5-8CE1A5BAE1B6}",
-   "seg": 3915,
+   "seg": 4153,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.12,
@@ -2645,7 +2704,7 @@
   },
   {
    "tlm": "{2D59EC25-0854-48D8-BBE4-5954C09FEC22}",
-   "seg": 3975,
+   "seg": 4223,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.02,
@@ -2666,7 +2725,7 @@
   },
   {
    "tlm": "{69E31A61-C366-4AAD-8DF3-178BF80CC568}",
-   "seg": 2279,
+   "seg": 2428,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.05,
@@ -2687,7 +2746,7 @@
   },
   {
    "tlm": "{3102152C-7197-4140-B2FF-DDD56D525BB4}",
-   "seg": 2995,
+   "seg": 3174,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.23,
@@ -2708,7 +2767,7 @@
   },
   {
    "tlm": "{6EE3C59B-4A39-4199-9800-E9A7A840C439}",
-   "seg": 4636,
+   "seg": 4911,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.06,
@@ -2729,7 +2788,7 @@
   },
   {
    "tlm": "{1D0FC815-506B-4D1E-986D-EEC608A4A9BA}",
-   "seg": 1653,
+   "seg": 1786,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.34,
@@ -2752,7 +2811,7 @@
   },
   {
    "tlm": "{44B04D2D-E819-42C9-92AF-574923459B33}",
-   "seg": 4641,
+   "seg": 4916,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.24,
@@ -2773,7 +2832,7 @@
   },
   {
    "tlm": "{0C867394-8ECB-43DE-B3F8-5D523A000D4A}",
-   "seg": 4684,
+   "seg": 4959,
    "class": "4m Strasse",
    "name": "Via Gaggio",
    "dz_tlm_m": 0.1,
@@ -2795,7 +2854,7 @@
   },
   {
    "tlm": "{91AE3EF4-C3A5-4F38-9D43-A3C732415B9C}",
-   "seg": 4475,
+   "seg": 4748,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.17,
@@ -2816,7 +2875,7 @@
   },
   {
    "tlm": "{AB172247-7296-428D-A7BE-BA9E8FB64630}",
-   "seg": 5362,
+   "seg": 5669,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.16,
@@ -2836,7 +2895,7 @@
   },
   {
    "tlm": "{F2E21A3C-472E-4656-B5B4-418D5A419A3D}",
-   "seg": 4410,
+   "seg": 4683,
    "class": "1m Wegfragment",
    "name": "",
    "dz_tlm_m": 0.2,
@@ -2857,7 +2916,7 @@
   },
   {
    "tlm": "{E056AD37-9B16-457A-B7B9-5234F3C71771}",
-   "seg": 4921,
+   "seg": 5206,
    "class": "4m Strasse",
    "name": "Via Sótt ara Còsta",
    "dz_tlm_m": 0.2,
@@ -2880,7 +2939,7 @@
   },
   {
    "tlm": "{1049E350-7B03-4928-9236-FD704BA64203}",
-   "seg": 5085,
+   "seg": 5383,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.07,
@@ -2900,7 +2959,7 @@
   },
   {
    "tlm": "{ABD5CBE8-2D9E-4AE8-B309-FFD28231485F}",
-   "seg": 4407,
+   "seg": 4680,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 1.02,
@@ -2924,7 +2983,7 @@
   },
   {
    "tlm": "{52764C70-1D68-4A2F-98A0-FC70325619E7}",
-   "seg": 5330,
+   "seg": 5637,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.16,
@@ -2944,8 +3003,30 @@
    "checked": true
   },
   {
+   "tlm": "{543F9E2A-58A9-41DF-98AB-2AFBE9AAF9D5}",
+   "seg": 4022,
+   "class": "3m Strasse",
+   "name": "Cámpa",
+   "dz_tlm_m": 0.38,
+   "max_grade": 0.043,
+   "flags": [
+    "terreno",
+    "prolungato 10 m"
+   ],
+   "x": 2533.7,
+   "y": 6312.3,
+   "length_m": 4.9,
+   "width_m": 4.9,
+   "z_ends": [
+    832.61,
+    832.39
+   ],
+   "max_height_m": 4.7,
+   "auto_type": "open"
+  },
+  {
    "tlm": "{19927EE8-DC76-4BC7-BFC0-7F75C1599563}",
-   "seg": 5249,
+   "seg": 5555,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.16,
@@ -2966,7 +3047,7 @@
   },
   {
    "tlm": "{987B66A7-FB32-4AA5-89E1-03E07473229D}",
-   "seg": 4409,
+   "seg": 4682,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.08,
@@ -2987,7 +3068,7 @@
   },
   {
    "tlm": "{63998D5E-8F4D-42BF-9AA2-F2F2501F24DB}",
-   "seg": 5205,
+   "seg": 5503,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.09,
@@ -3007,7 +3088,7 @@
   },
   {
    "tlm": "{246BE295-C510-407D-B135-C3C5ED37EBA9}",
-   "seg": 5386,
+   "seg": 5693,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.33,
@@ -3027,7 +3108,7 @@
   },
   {
    "tlm": "{34807DCC-338D-4945-8A0A-8986B71DAB59}",
-   "seg": 4089,
+   "seg": 4337,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.07,
@@ -3048,7 +3129,7 @@
   },
   {
    "tlm": "{A9AC5CF2-5C6E-452E-9EAC-17D57A3C7C12}",
-   "seg": 5374,
+   "seg": 5681,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.3,
@@ -3069,7 +3150,7 @@
   },
   {
    "tlm": "{622FFF2B-D7D6-4762-A94A-7AA612E11E6A}",
-   "seg": 5413,
+   "seg": 5723,
    "class": "4m Strasse",
    "name": "Via Cantonale",
    "dz_tlm_m": 0.03,
@@ -3092,7 +3173,7 @@
   },
   {
    "tlm": "{FFA9EB61-AF55-4279-9C86-AAF47B48B12E}",
-   "seg": 2132,
+   "seg": 2281,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 1.3,
@@ -3115,7 +3196,7 @@
   },
   {
    "tlm": "{12B835B6-7297-4646-83F0-FBB327A00DA8}",
-   "seg": 5125,
+   "seg": 5423,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.8,
@@ -3136,7 +3217,7 @@
   },
   {
    "tlm": "{450E621E-EFB7-4B72-9E61-3CD75769AAD8}",
-   "seg": 4510,
+   "seg": 4783,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.62,
@@ -3159,7 +3240,7 @@
   },
   {
    "tlm": "{74EEE6F6-698D-4498-8B72-556DD0FE5F84}",
-   "seg": 5159,
+   "seg": 5457,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.12,
@@ -3180,7 +3261,7 @@
   },
   {
    "tlm": "{B1FBB2FB-2B19-4BE1-A3D1-5FB091B35D29}",
-   "seg": 4851,
+   "seg": 5133,
    "class": "1m Weg",
    "name": "Campo Lungo",
    "dz_tlm_m": 0.08,
@@ -3201,7 +3282,7 @@
   },
   {
    "tlm": "{DD887E96-3414-48EE-B383-5B1872E88DEC}",
-   "seg": 4405,
+   "seg": 4678,
    "class": "3m Strasse",
    "name": "",
    "dz_tlm_m": 0.62,
@@ -3224,7 +3305,7 @@
   },
   {
    "tlm": "{A2396CBA-C76A-4561-A737-C8EB3523BA92}",
-   "seg": 4699,
+   "seg": 4974,
    "class": "2m Weg",
    "name": "Via Vinéra",
    "dz_tlm_m": 0.22,
@@ -3247,7 +3328,7 @@
   },
   {
    "tlm": "{3EA8DF69-80BB-4630-ADB5-0A2F8E7BEDD1}",
-   "seg": 4056,
+   "seg": 4304,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.02,
@@ -3268,7 +3349,7 @@
   },
   {
    "tlm": "{82C4D4B3-6ABD-4A2C-9C0C-75B1AFDB5DF6}",
-   "seg": 5246,
+   "seg": 5552,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.16,
@@ -3289,7 +3370,7 @@
   },
   {
    "tlm": "{DF80703E-4ECD-4CB5-88E4-27EADF1CF655}",
-   "seg": 3984,
+   "seg": 4232,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.33,
@@ -3310,7 +3391,7 @@
   },
   {
    "tlm": "{AD34C72E-804E-41CE-8E91-E07CE49D3F57}",
-   "seg": 4126,
+   "seg": 4374,
    "class": "2m Weg",
    "name": "",
    "dz_tlm_m": 0.12,
@@ -3330,7 +3411,7 @@
   },
   {
    "tlm": "{58D2033B-C6D0-496E-BC0D-F713A871FDC7}",
-   "seg": 4639,
+   "seg": 4914,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.33,
@@ -3351,7 +3432,7 @@
   },
   {
    "tlm": "{37B3851D-86AF-4965-A0BD-39E418ACB0B9}",
-   "seg": 503,
+   "seg": 550,
    "class": "2m Weg",
    "name": "ara Scísa",
    "dz_tlm_m": 0.22,
@@ -3372,7 +3453,7 @@
   },
   {
    "tlm": "{B7A47266-D238-42A1-B479-7385DDFC1727}",
-   "seg": 4538,
+   "seg": 4813,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 1.25,
@@ -3395,7 +3476,7 @@
   },
   {
    "tlm": "{514503AB-4144-470E-9E27-B47ACE398B4D}",
-   "seg": 4717,
+   "seg": 4992,
    "class": "4m Strasse",
    "name": "Via Crosa",
    "dz_tlm_m": 0.09,
@@ -3416,7 +3497,7 @@
   },
   {
    "tlm": "{BB25E420-CD44-4354-B68B-C2DD95F9A27C}",
-   "seg": 5322,
+   "seg": 5629,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.1,
@@ -3437,7 +3518,7 @@
   },
   {
    "tlm": "{54F2B3C5-A2DD-44B5-8D4E-7A90FED15AEE}",
-   "seg": 5497,
+   "seg": 5811,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.09,
@@ -3457,7 +3538,7 @@
   },
   {
    "tlm": "{EE7F84BD-EE21-42DE-80A5-C2A7908D5736}",
-   "seg": 5369,
+   "seg": 5676,
    "class": "1m Weg",
    "name": "",
    "dz_tlm_m": 0.18,
@@ -3478,7 +3559,7 @@
   },
   {
    "tlm": "{1EF75DE6-4655-4877-A797-EFB3AC385B9C}",
-   "seg": 1251,
+   "seg": 1355,
    "class": "4m Strasse",
    "name": "Via alle Bolle",
    "dz_tlm_m": 0.08,
@@ -3499,7 +3580,7 @@
   },
   {
    "tlm": "{0E1285C0-717F-40A0-B2F6-D31DDFA00C8C}",
-   "seg": 4858,
+   "seg": 5140,
    "class": "1m Weg",
    "name": "ai Runchítt",
    "dz_tlm_m": 0.19,
@@ -3520,7 +3601,7 @@
   },
   {
    "tlm": "{641C64FD-4D49-4065-B20E-DF4A9D4B41E8}",
-   "seg": 4943,
+   "seg": 5228,
    "class": "2m Weg",
    "name": "In Oncèla",
    "dz_tlm_m": 0.07,

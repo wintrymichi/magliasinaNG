@@ -57,6 +57,32 @@ def load():
     return ways, nodes
 
 
+POIS = os.path.join(DATA, "osm", "pois.json")
+POIS_PINNED = os.path.join(DATI, "osm_pois.json.gz")
+# points of interest whose building has a shop front on the ground floor (v2.2)
+POI_KEYS = ("shop", "amenity", "craft", "office", "tourism")
+
+
+def pois():
+    """[(x, y, kind)] of the shops, bars, restaurants, offices, workshops and hotels of the area (download_osm.py
+    POIS, else the extract kept in the repository); kind: 'shop=bakery', 'amenity=bar' ..."""
+    src = source(POIS, POIS_PINNED)
+    if src is None:
+        return []
+    out = []
+    for e in read(src)["elements"]:
+        c = e.get("center") or ({"lat": e["lat"], "lon": e["lon"]} if "lat" in e else None)
+        if c is None:
+            continue
+        t = e.get("tags", {})
+        k = next((k for k in POI_KEYS if k in t), None)
+        if k is None:
+            continue
+        x, y = wgs_to_local(c["lat"], c["lon"])
+        out.append((float(x), float(y), "%s=%s" % (k, t[k])))
+    return out
+
+
 def oneway_dir(tags):
     """+1 one-way in the direction of the way, -1 against it, 0 both ways."""
     ow = tags.get("oneway")

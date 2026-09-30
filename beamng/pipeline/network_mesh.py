@@ -10,9 +10,15 @@ Drivable polygons (away from the Strada Cantonale corridor, which keeps the v1.1
 Heights, per 0.5 m cell of a tile: every polygon belongs to the lines that run in it (a strip to
 its own line and the lines at its ends); a cell takes the height of those lines at its projection
 on them (linear between stations) and across the cross slope, blended between lines that agree
-within BLEND_DZ (junctions); where they disagree (two roads at different levels, a wall between)
-the nearest line wins and a step remains. Cells far from any line (squares, car parks) get the
-smoothed DTM corrected harmonically to meet the roads around them.
+within BLEND_DZ; where they disagree (two roads at different levels, a wall between) the nearest
+line wins and a step remains. v2.2: lines that meet at a node near the cell are one junction and
+always blend (fading out between JUNCTION_R0 and JUNCTION_R1 m from the node), so a side road does
+not end in a step against the road it joins. Cells far from any line (squares, car parks) get the
+smoothed DTM corrected harmonically to meet the roads around them. v2.2: neighbouring cells of
+different polygons (carriageway, sidewalk, yard) are one surface where their heights agree, and
+where the height passes from one line to another, from a polygon to the next or to a filled
+square, the cells within SEAM_R m of the seam are relaxed (Laplace over the linked cells), so the
+passage is a ramp and not a kerb a car hits.
 The cells of a tile make a surface_fit.Surface, so the meshing, the skirts and stone faces at the
 steps and the terrain carve are the ones of v1.1 (road_mesh.py). Tiles of TILE m (whole 128 m
 chunks) with MARGIN m of context.
@@ -39,6 +45,13 @@ RES = 0.5
 CHUNK = 128.0
 STEP_Z = 0.30          # m, neighbouring cells further apart: a step (wall)
 BLEND_DZ = 0.40        # m, lines whose heights at a cell agree within this are blended
+JUNCTION_R0 = 8.0      # m from the node where two lines meet: within, they blend whatever their heights
+JUNCTION_R1 = 16.0     # m ... fading out up to here
+SEAM_R = 4.0           # m around a seam between the heights of two lines or two polygons: relaxed
+SEAM_DZ = 0.01         # m, a smaller difference between the heights of two lines or polygons is no seam
+JUNCTION_BLEND = False # lines meeting at a node blend whatever their heights (JUNCTION_R0/R1)
+JUNCTION_DZ = 1.0      # m, the cells of two lines meeting at a node within JUNCTION_R0 m are one surface up to this
+MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
 FILL_OFF = 2.0         # m, largest offset of a square or car park from the smoothed ground
@@ -61,8 +74,11 @@ class Network:
         self.seg = st["seg"]
         self.z, self.g, self.c = ns["z"], ns["g"], ns["c"]
         self.nx, self.ny = ns["nx"], ns["ny"]
+        self.n0 = np.array([sg["nodes"][0] for sg in self.segs], np.int64)     # end nodes of every line
+        self.n1 = np.array([sg["nodes"][-1] for sg in self.segs], np.int64)
         self.tree = cKDTree(np.column_stack([self.x, self.y]))
         self.bridge = np.array([s["bridge"] for s in self.segs])
+        self.main = np.array([s["kind"] == "road" and s["class"] in MAIN_CLASSES for s in self.segs])
         self.polys = []                       # dicts: geom, cls, surface, segs
         self.deck_tops = []                   # bridge deck top triangles (bridges.py)
         self.deck_feet = []                   # (kind, footprint) of every deck built (bridges.py)
@@ -247,7 +263,18 @@ class Network:
         has = ok_o.any(1)
         zb = h_o[np.arange(n), best]
         wt = np.where(ok_o, np.exp(-2.0 * u ** 2) / (1.0 + e_o), 0.0)
-        wt = np.where(np.abs(np.nan_to_num(h_o) - zb[:, None]) <= BLEND_DZ, wt, 0.0)
+        # lines meeting the winning line at a node near the point: one junction, blended whatever their
+        # heights (fading out from JUNCTION_R0 to JUNCTION_R1 m from the node); the others only where they
+        # agree with it within BLEND_DZ (a road passing above or below)
+        sw = seg_o[np.arange(n), best]
+        a0, a1 = self.n0[sw][:, None], self.n1[sw][:, None]
+        b0, b1 = self.n0[seg_o], self.n1[seg_o]
+        shared = np.where((a0 == b0) | (a0 == b1), a0, np.where((a1 == b0) | (a1 == b1), a1, -1))
+        sn = np.maximum(shared, 0)
+        dn = np.where(shared >= 0, np.hypot(Xb - self.node_xy[sn, 0], Yb - self.node_xy[sn, 1]), np.inf)
+        fj = np.clip((JUNCTION_R1 - dn) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
+        agree = np.abs(np.nan_to_num(h_o) - zb[:, None]) <= BLEND_DZ
+        wt = wt * np.where(agree, 1.0, fj if JUNCTION_BLEND else 0.0)
         wt[np.arange(n), best] = np.where(has, np.maximum(wt[np.arange(n), best], 1e-12), 0.0)
         ws = wt.sum(1)
         good = has & (ws > 0)
@@ -258,6 +285,24 @@ class Network:
         if with_u:
             return out, segs_out, u_out, e_out
         return (out, segs_out) if with_seg else out
+
+    def _junction_links(self, Ga, Gb, xs, ys):
+        """Pairs of neighbouring cells (lines Ga, Gb) whose lines meet at a node within JUNCTION_R0 m of the
+        pair (xs: x of the pairs' columns, ys: y of their rows)."""
+        out = np.zeros(Ga.shape, bool)
+        cand = (Ga >= 0) & (Gb >= 0) & (Ga != Gb)
+        if not cand.any():
+            return out
+        r, c = np.nonzero(cand)
+        a, b = Ga[r, c], Gb[r, c]
+        a0, a1, b0, b1 = self.n0[a], self.n1[a], self.n0[b], self.n1[b]
+        shared = np.where((a0 == b0) | (a0 == b1), a0, np.where((a1 == b0) | (a1 == b1), a1, -1))
+        ok = shared >= 0
+        px, py = xs[c], ys[r]
+        sn = np.maximum(shared, 0)
+        d = np.hypot(px - self.node_xy[sn, 0], py - self.node_xy[sn, 1])
+        out[r[ok & (d < JUNCTION_R0)], c[ok & (d < JUNCTION_R0)]] = True
+        return out
 
     def strip_height(self, pid):
         """Height function of a strip polygon: the surface of its own line (nearest station of its
@@ -336,12 +381,112 @@ class Network:
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
-        LR, LD = surface_fit.link_same(owner, m)
-        same_r = (G[:, :-1] == G[:, 1:]) & (G[:, :-1] != -1)
-        same_d = (G[:-1, :] == G[1:, :]) & (G[:-1, :] != -1)
-        LR[:, :-1] &= same_r | (np.abs(Z[:, :-1] - Z[:, 1:]) < STEP_Z)
-        LD[:-1, :] &= same_d | (np.abs(Z[:-1, :] - Z[1:, :]) < STEP_Z)
+        # v2.2: cells of neighbouring polygons too (the carriageway and its sidewalk, a yard beside the road)
+        LR = np.zeros(owner.shape, bool)
+        LD = np.zeros(owner.shape, bool)
+        LR[:, :-1] = m[:, :-1] & m[:, 1:]
+        LD[:-1, :] = m[:-1, :] & m[1:, :]
+        same_r = (G[:, :-1] == G[:, 1:]) & (G[:, :-1] != -1) & (owner[:, :-1] == owner[:, 1:])
+        same_d = (G[:-1, :] == G[1:, :]) & (G[:-1, :] != -1) & (owner[:-1, :] == owner[1:, :])
+        # two lines that meet at a node near the cells are one junction: their cells are linked up to
+        # JUNCTION_DZ apart (the step between them is spread by relax_seams, not left as a kerb)
+        jun_r = self._junction_links(G[:, :-1], G[:, 1:], x0 + (np.arange(W - 1) + 1.0) * RES,
+                                     y1 - (np.arange(H) + 0.5) * RES)
+        jun_d = self._junction_links(G[:-1, :], G[1:, :], x0 + (np.arange(W) + 0.5) * RES,
+                                     y1 - (np.arange(H - 1) + 1.0) * RES)
+        LR[:, :-1] &= same_r | (np.abs(Z[:, :-1] - Z[:, 1:]) < STEP_Z) | (jun_r & (np.abs(Z[:, :-1] - Z[:, 1:]) < JUNCTION_DZ))
+        LD[:-1, :] &= same_d | (np.abs(Z[:-1, :] - Z[1:, :]) < STEP_Z) | (jun_d & (np.abs(Z[:-1, :] - Z[1:, :]) < JUNCTION_DZ))
+        # the carriageways of the main roads keep their surface: the side roads, yards and paths meeting
+        # them take up the difference (a main road does not bend to a side road)
+        main_cell = (G >= 0) & self.main[np.maximum(G, 0)] & (U <= 1.0)
+        Z = relax_seams(Z, G, owner, LR, LD, main_cell)
         return surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES), ids
+
+
+def relax_seams(Z, G, owner, LR, LD, fixed_cells=None):
+    """Z with the jumps at the seams spread over SEAM_R m. A seam is a link between two cells whose heights
+    come from different lines, or that lie in different polygons, and differ by more than SEAM_DZ. Around
+    the seams (cells within SEAM_R m, linked) the heights are solved again keeping the height difference
+    of every link but the seams', which becomes zero (a gradient-domain edit: the crown, the grade and
+    the vertical curves of the roads stay, only the jump is spread smoothly over the zone); the cells
+    outside the zone keep their heights, and so do fixed_cells (the carriageways of the main roads) unless
+    the seam is between two of them."""
+    jr = LR[:, :-1] & ((G[:, :-1] != G[:, 1:]) | (owner[:, :-1] != owner[:, 1:])) & \
+        (np.abs(Z[:, :-1] - Z[:, 1:]) > SEAM_DZ)
+    jd = LD[:-1, :] & ((G[:-1, :] != G[1:, :]) | (owner[:-1, :] != owner[1:, :])) & \
+        (np.abs(Z[:-1, :] - Z[1:, :]) > SEAM_DZ)
+    seam = np.zeros(Z.shape, bool)
+    seam[:, :-1] |= jr
+    seam[:, 1:] |= jr
+    seam[:-1, :] |= jd
+    seam[1:, :] |= jd
+    if not seam.any():
+        return Z
+    linked = np.zeros(Z.shape, bool)
+    linked[:, :-1] |= LR[:, :-1]
+    linked[:, 1:] |= LR[:, :-1]
+    linked[:-1, :] |= LD[:-1, :]
+    linked[1:, :] |= LD[:-1, :]
+    zone = ndi.binary_dilation(seam, iterations=int(round(SEAM_R / RES))) & linked & np.isfinite(Z)
+    if fixed_cells is not None:
+        both = np.zeros(Z.shape, bool)                  # seams between two fixed cells
+        fr = jr & fixed_cells[:, :-1] & fixed_cells[:, 1:]
+        fd = jd & fixed_cells[:-1, :] & fixed_cells[1:, :]
+        both[:, :-1] |= fr
+        both[:, 1:] |= fr
+        both[:-1, :] |= fd
+        both[1:, :] |= fd
+        free = ndi.binary_dilation(both, iterations=int(round(SEAM_R / RES))) if both.any() else both
+        zone &= ~fixed_cells | free
+        if not zone.any():
+            return Z
+    ur, uc = np.nonzero(zone)
+    idx = -np.ones(Z.shape, np.int64)
+    idx[ur, uc] = np.arange(len(ur))
+    H, W = Z.shape
+    rows, cols, vals = [], [], []
+    b = np.zeros(len(ur))
+    diag = np.zeros(len(ur))
+    # the four links of every cell of the zone: (neighbour offset, link present, target difference z_i - z_j)
+    Zc = np.nan_to_num(Z)
+    for dr_, dc_ in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+        r2, c2 = ur + dr_, uc + dc_
+        ok = (r2 >= 0) & (r2 < H) & (c2 >= 0) & (c2 < W)
+        r2c, c2c = np.clip(r2, 0, H - 1), np.clip(c2, 0, W - 1)
+        if dc_ == 1:
+            lk, jump = LR[ur, uc], _pad(jr, 1)[ur, uc]
+        elif dc_ == -1:
+            lk, jump = LR[ur, np.maximum(uc - 1, 0)] & (uc > 0), _pad(jr, 1)[ur, np.maximum(uc - 1, 0)] & (uc > 0)
+        elif dr_ == 1:
+            lk, jump = LD[ur, uc], _pad(jd, 0)[ur, uc]
+        else:
+            lk, jump = LD[np.maximum(ur - 1, 0), uc] & (ur > 0), _pad(jd, 0)[np.maximum(ur - 1, 0), uc] & (ur > 0)
+        lk = lk & ok
+        g = np.where(jump, 0.0, Zc[ur, uc] - Zc[r2c, c2c])            # keep the difference, but not a jump
+        diag += lk
+        b += np.where(lk, g, 0.0)
+        nb_unk = lk & zone[r2c, c2c]
+        rows.append(np.flatnonzero(nb_unk))
+        cols.append(idx[r2c, c2c][nb_unk])
+        vals.append(-np.ones(int(nb_unk.sum())))
+        nb_kn = lk & ~zone[r2c, c2c]
+        b[nb_kn] += Zc[r2c, c2c][nb_kn]
+    fixed = diag == 0                                   # a cell without links keeps its height
+    diag = np.where(fixed, 1.0, diag + 1e-4)            # (a weak pull to its own height: no free piece)
+    b = np.where(fixed, Zc[ur, uc], b + 1e-4 * Zc[ur, uc])
+    A = sp.csr_matrix((np.concatenate(vals + [diag]), (np.concatenate(rows + [np.arange(len(ur))]),
+                                                        np.concatenate(cols + [np.arange(len(ur))]))),
+                      shape=(len(ur), len(ur)))
+    out = Z.copy()
+    out[ur, uc] = spsolve(A.tocsc(), b)
+    return out
+
+
+def _pad(J, axis):
+    """A link mask (H, W-1) or (H-1, W) padded with False to (H, W)."""
+    if axis == 1:
+        return np.concatenate([J, np.zeros((J.shape[0], 1), bool)], axis=1)
+    return np.concatenate([J, np.zeros((1, J.shape[1]), bool)], axis=0)
 
 
 def harmonic_fill(Z, m, D):

@@ -104,7 +104,7 @@ CHUNK = 128.0
 def road_materials():
     a = f"{TL}/concrete/italy_asphalt/t_asphalt"
     s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
-    st = f"{TL}/brick/stone_brick_regular/t_stone_brick_regular"
+    st = f"{L}/art/shapes/buildings/t_bld_stone"          # v2.2: the rubble stone of the walls (bld_textures.py)
     return [
         bng.material("mp_road_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", ground_type="ASPHALT"),
@@ -118,8 +118,8 @@ def road_materials():
         bng.material("mp_road_asphalt_fresh", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", base_color=[0.5, 0.5, 0.52, 1], ground_type="ASPHALT"),
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
-        bng.material("mp_road_wall", f"{st}_b.color.dds", f"{st}_nm.normal.dds", f"{st}_r.data.dds",
-                     f"{st}_ao.data.dds", ground_type="ROCK"),
+        bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
+                     f"{st}_ao.data.png", ground_type="ROCK"),
         # v2.0 network: unpaved roads and paths (textures made by road_textures), paved paths,
         # bridge parapets
         bng.material("mp_road_gravel", f"{L}/art/shapes/roads/t_gravel_b.png",
@@ -183,6 +183,8 @@ def stage_roads(scene, ctx):
     hfn = road_height_fn()
     ground = ground_fn()
     road_textures()
+    import bld_textures
+    bld_textures.stone_wall(level_path("art", "shapes", "buildings"))     # the stone faces (mp_road_wall)
     bng.write_materials(level_path("art", "shapes", "roads", "main.materials.json"), road_materials())
     builders = {}
     meshed = []
@@ -413,13 +415,27 @@ def stage_roads_reuse(scene, ctx):
 
 def stage_walls(scene, ctx):
     import walls
-    st = f"{TL}/brick/stone_brick_regular/t_stone_brick_regular"
-    cc = f"{TL}/concrete/t_italy_bld_old_concrete/t_italy_bld_old_concrete"
+    import bld_textures
+    # v2.2: original procedural textures (bld_textures.py): rubble stone (shared with the rustici) and
+    # board-formed concrete, instead of the vanilla regular stone bricks
+    bdir, wdir = level_path("art", "shapes", "buildings"), level_path("art", "shapes", "walls")
+    os.makedirs(bdir, exist_ok=True)
+    bld_textures.stone_wall(bdir)
+    bld_textures.plaster(bdir)
+    bld_textures.walls(wdir)
+    st, cc = f"{L}/art/shapes/buildings/t_bld_stone", f"{L}/art/shapes/walls/t_wall_concrete"
     bng.write_materials(level_path("art", "shapes", "walls", "main.materials.json"), [
-        bng.material("mp_wall_stone", f"{st}_b.color.dds", f"{st}_nm.normal.dds", f"{st}_r.data.dds",
-                     f"{st}_ao.data.dds", ground_type="ROCK"),
-        bng.material("mp_wall_stone_top", f"{cc}_b.color.dds", f"{cc}_nm.normal.dds", f"{cc}_r.data.dds",
-                     ground_type="CONCRETE")])
+        bng.material("mp_wall_stone", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
+                     f"{st}_ao.data.png", ground_type="ROCK"),
+        bng.material("mp_wall_stone_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
+                     ground_type="CONCRETE"),
+        bng.material("mp_wall_concrete", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
+                     ground_type="CONCRETE"),
+        bng.material("mp_wall_concrete_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
+                     ground_type="CONCRETE"),
+        bng.material("mp_wall_plaster", f"{L}/art/shapes/buildings/t_bld_plaster_b.color.png",
+                     f"{L}/art/shapes/buildings/t_bld_plaster_nm.normal.png",
+                     f"{L}/art/shapes/buildings/t_bld_plaster_r.data.png", vert_color=True, ground_type="CONCRETE")])
     # no cadastral wall across a road or along the way of a line (v2.0 network)
     free = walls.drive_free(ctx["network"], ctx.get("corridor")) if ctx.get("network") is not None else None
     ctx["wall_samples"], ctx["wall_feet"] = walls.build(LEVEL_DIR, LEVEL_NAME, scene, free=free)
@@ -429,7 +445,7 @@ def stage_walls(scene, ctx):
 
 def stage_guardrails(scene, ctx):
     import guardrail_mesh
-    guardrail_mesh.build(LEVEL_DIR, LEVEL_NAME, scene)
+    guardrail_mesh.build(LEVEL_DIR, LEVEL_NAME, scene, road_fn=ctx.get("road_mesh_fn"))
 
 
 def stage_fences(scene, ctx):
@@ -633,7 +649,7 @@ def stage_buildings(scene, ctx):
     import buildings_mesh
     net = ctx.get("network")
     ways = buildings_mesh.network_ways(net, ctx.get("corridor")) if net is not None else None
-    tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways)
+    tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways, net=net)
     for shape, origin, ntri in tiles:
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
                                                           annotation="BUILDINGS"))
@@ -756,41 +772,36 @@ def stage_spawns(scene, ctx):
     print("spawn points", [s[0] for s in ctx["spawns"]])
 
 
-PUBLIC_README = [
-    ("facciate viste dalla strada con la texture delle foto",
-     "intonaco neutro nel colore misurato nelle foto (versione pubblica: nessuna texture fotografica)"),
-    ("; texture fotografiche a circa 3 cm/px", "; texture di pietra vanilla"),
-    ("le targhe riportano l'immagine vista nella foto, nessun testo inventato",
-     "targhe nella forma e nel colore misurati nelle foto (versione pubblica: senza l'immagine del cartello)"),
-    ("- Le texture fotografiche delle facciate e dei muri e le targhe dei cartelli derivano da immagini Google "
-     "Street View e sono solo per uso personale. Per pubblicare la mod bisogna costruire la versione senza di esse "
-     "(`MAGLIASO_NO_PHOTO_TEXTURES=1`).",
-     "- Questa è la **versione pubblica**: non contiene immagini tratte da Google Street View. Le panoramiche sono "
-     "servite solo come riferimento per misure, posizioni e colori."),
-]
+# v2.2: the level's README describes the level as built by default (no imagery from the panoramas); the
+# replacements of the public variant of v2.x are not needed any more
+PUBLIC_README = []
 
 
 def write_info(ctx):
-    import pickle
     import area
     import bridges
     spawns = ctx.get("spawns", [])
     # the figures of the description, from what this build made
     km2 = area.polygon().area / 1e6
     n_bridges = sum(1 for b in json.load(open(bridges.PONTI, encoding="utf-8"))["ponti"] if not b.get("skip"))
-    n_buildings = len(pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb")))
+    import buildings_mesh
+    n_buildings = len(buildings_mesh.load_buildings())
     n_trees = int(round(ctx.get("n_forest", 0) / 1000.0))
     n_villages = sum(1 for s in spawns if s[0] not in ("spawn_magliaso", "spawn_mid", "spawn_pura"))
     info = {
         "title": "Malcantone - Magliaso, Pura e dintorni",
         "description": ("Ricostruzione in scala 1:1 di circa %d km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
-                        "Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio e Sessa: ogni strada e "
-                        "sentiero guidabile, %d ponti, %d edifici, circa %d 000 alberi, traffico IA. La Strada "
+                        "Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio e Sessa: "
+                        "ogni strada e "
+                        "sentiero guidabile, %d ponti, %d edifici con facciate, balconi e vetrine, guardrail su tutta "
+                        "la rete, circa %d 000 alberi, traffico IA. La Strada "
                         "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
-                        "c'e' anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano. Dati ufficiali "
+                        "ci sono anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano, il passo sopra "
+                        "Gravesano fino ad Arosio, la cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
                         "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
                         "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
-                        "riordini fondiari, Cantone Ticino; Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
+                        "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "
+                        "contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
                         % (round(km2), n_bridges, n_buildings, n_trees)),
         "previews": [f"{LEVEL_NAME}_preview.jpg"],
         "size": [TER_SIZE, TER_SIZE],

@@ -57,11 +57,26 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 let scene = null;
 const T = {f4: Float32Array, u1: Uint8Array, u4: Uint32Array};
+const texCache = new Map();                         // textures of the level materials, loaded once
+async function getTex(name, info) {
+  if (texCache.has(name)) return texCache.get(name);
+  const buf = await (await fetch('http://r3d.local/tex/' + name)).arrayBuffer();
+  const t = new THREE.DataTexture(new Uint8Array(buf), info.w, info.h, THREE.RGBAFormat);
+  t.colorSpace = info.srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+  t.generateMipmaps = true; t.anisotropy = 8; t.needsUpdate = true;
+  texCache.set(name, t);
+  return t;
+}
 function dispose(s) {
   s.traverse(o => {
     if (o.isInstancedMesh) o.dispose();             // its instance buffers
     if (o.geometry) o.geometry.dispose();
-    if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    if (o.material) {
+      if (o.material.map && !o.material.userData.cached) o.material.map.dispose();
+      o.material.dispose();
+    }
   });
   renderer.renderLists.dispose();
 }
@@ -113,6 +128,22 @@ window.renderView = async function (url) {
     if (s.offset) { mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -2; }
     const m = new THREE.Mesh(g, mat);
     m.castShadow = s.cast; m.receiveShadow = true;
+    scene.add(m);
+  }
+  for (const s of (H.tsoups || [])) {                // meshes with the textures of their material
+    const g = geom(A, s.pos);
+    g.setAttribute('uv', new THREE.BufferAttribute(A(s.uv), 2));
+    g.setAttribute('color', new THREE.BufferAttribute(A(s.col), 3, true));
+    g.computeVertexNormals();
+    const opt = {map: await getTex(s.tex, s.texInfo), vertexColors: true, side: THREE.DoubleSide,
+                 roughness: s.rough, metalness: 0.0};
+    if (s.nrm) { opt.normalMap = await getTex(s.nrm, s.nrmInfo); opt.normalScale = new THREE.Vector2(1, 1); }
+    if (s.alpha) opt.alphaTest = 0.43;
+    const mat = new THREE.MeshStandardMaterial(opt);
+    mat.userData.cached = true;
+    if (s.offset) { mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -2; }
+    const m = new THREE.Mesh(g, mat);
+    m.castShadow = !s.alpha; m.receiveShadow = true;
     scene.add(m);
   }
   for (const inst of H.instances) {
@@ -212,6 +243,32 @@ class Camera(dict):
         return c[0] - near_r, c[1] - near_r, c[0] + near_r, c[1] + near_r
 
 
+def _read_dae_parts(path):
+    """[(material, triangles (k, 3, 3), uvs (k, 3, 2) or None, vertex colours (k, 3, 3) or None)] of a DAE."""
+    s = open(path, encoding="utf-8").read()
+
+    def arr(i):
+        m = re.search(r'<float_array id="%s" count="\d+">([^<]*)</float_array>' % i, s)
+        return np.array(m.group(1).split(), np.float64) if m else None
+    V = arr("g-pa")
+    if V is None:
+        return []
+    V = V.reshape(-1, 3)
+    TC = arr("g-ta")
+    TC = TC.reshape(-1, 2) if TC is not None else None
+    C = arr("g-ca")
+    C = C.reshape(-1, 4) if C is not None else None
+    out = []
+    for m in re.finditer(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', s, re.S):
+        nin = m.group(2).count("<input")
+        idx = np.array(m.group(3).split(), np.int64).reshape(-1, nin)
+        t = V[idx[:, 0]].reshape(-1, 3, 3)
+        uv = TC[idx[:, 2]].reshape(-1, 3, 2) if TC is not None and nin > 2 else None
+        col = C[idx[:, 3], :3].reshape(-1, 3, 3) if C is not None and nin > 3 else None
+        out.append((m.group(1), t.astype(np.float32), uv, col))
+    return out
+
+
 def _read_dae(path):
     """Triangles (k, 3, 3) float64 in the DAE frame and their sRGB vertex colours (k, 3, 3) (from the
     material or the vertex colours)."""
@@ -277,7 +334,20 @@ class Level:
                 self.water.append((-1e5, -1e5, 1e5, 1e5, o["position"][2]))
         self.forest = self._forest()
         self._dae = {}
+        self._parts = {}
         self._ortho = None
+        self.materials = {}                                   # name -> first stage + flags, of the level's materials
+        for dp, _, fs in os.walk(lv):
+            for fn in fs:
+                if fn.endswith(".materials.json"):
+                    try:
+                        for k, m in json.load(open(os.path.join(dp, fn), encoding="utf-8")).items():
+                            if isinstance(m, dict) and m.get("class") == "Material":
+                                st = dict((m.get("Stages") or [{}])[0])
+                                st["_alpha"] = bool(m.get("alphaTest"))
+                                self.materials[m.get("name", k)] = st
+                    except (ValueError, OSError):
+                        pass
 
     def _read(self, f):
         return [json.loads(l) for l in open(f, encoding="utf-8") if l.strip()]
@@ -326,6 +396,20 @@ class Level:
             self._ortho = fn
         return self._ortho
 
+    def parts(self, shape):
+        if shape not in self._parts:
+            path = os.path.join(self.lv, *shape.split("/")[3:])
+            self._parts[shape] = _read_dae_parts(path) if os.path.exists(path) else []
+        return self._parts[shape]
+
+    def local_file(self, ref):
+        """Path in the level folder of a texture the materials refer to (None for vanilla files)."""
+        pref = "/levels/" + os.path.basename(os.path.normpath(self.lv)) + "/"
+        if not isinstance(ref, str) or not ref.lower().startswith(pref.lower()):
+            return None
+        f = os.path.join(self.lv, *ref[len(pref):].split("/"))
+        return f if os.path.exists(f) else None
+
     def dae(self, shape):
         if shape not in self._dae:
             path = os.path.join(self.lv, *shape.split("/")[3:])
@@ -334,9 +418,13 @@ class Level:
 
 
 class Renderer:
-    def __init__(self, lv, W=1280, H=720, quality=0.88):
+    def __init__(self, lv, W=1280, H=720, quality=0.88, textured=False):
+        """textured: the meshes whose materials have textures in the level folder (the buildings of
+        v2.2) are drawn with them (colour, opacity, normal map), the rest in the colours of MAT_COLORS."""
         self.level = Level(lv)
         self.W, self.H, self.quality = W, H, quality
+        self.textured = textured
+        self._tex = {}
         if not os.path.exists(THREE):
             import requests
             open(THREE, "wb").write(requests.get(THREE_URL, timeout=60).content)
@@ -346,7 +434,14 @@ class Renderer:
     def _start(self):
         from playwright.sync_api import sync_playwright
         self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch(args=ARGS)
+        exe = os.environ.get("MAGLIASO_CHROMIUM") or ("/opt/pw-browsers/chromium" if os.path.exists("/opt/pw-browsers/chromium")
+                                                      else None)
+        try:
+            self._browser = self._pw.chromium.launch(args=ARGS)
+        except Exception:
+            if not exe:
+                raise
+            self._browser = self._pw.chromium.launch(args=ARGS, executable_path=exe)
         self.page = self._browser.new_page()
         three = open(THREE, "rb").read()
 
@@ -358,6 +453,8 @@ class Renderer:
                 route.fulfill(body=three, content_type="application/javascript")
             elif "/view" in u:
                 route.fulfill(body=self._blob, content_type="application/octet-stream")
+            elif "/tex/" in u:
+                route.fulfill(body=self._tex[u.rsplit("/", 1)[1]][0], content_type="application/octet-stream")
             else:
                 route.fulfill(status=404, body="")
         self.page.route("http://r3d.local/**", serve)
@@ -421,10 +518,34 @@ class Renderer:
             whole = np.allclose(pos, 0)
             if not whole and not (far_x0 < pos[0] < far_x1 and far_y0 < pos[1] < far_y1):
                 continue
+            if self.textured:
+                rest = []
+                for mat, tri, uv, vc in L.parts(shape):
+                    info = self.texture(mat) if uv is not None else None
+                    if info is None:
+                        rest.append(mat)
+                        continue
+                    tw = tri + pos
+                    c = tw.mean(1)
+                    m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
+                    if not m.any():
+                        continue
+                    col = vc[m] if vc is not None else np.ones((int(m.sum()), 3, 3), np.float32)
+                    out.setdefault("textured", []).append((mat, info, tw[m] - origin, uv[m], col))
+                if not rest:
+                    continue
             d = L.dae(shape)
             if d is None or not len(d[0]):
                 continue
             tri, col = d
+            if self.textured:                          # the untextured materials of the shape only
+                keep = np.zeros(len(tri), bool)
+                o = 0
+                for mat, t_, uv_, vc_ in L.parts(shape):
+                    if mat in rest:
+                        keep[o:o + len(t_)] = True
+                    o += len(t_)
+                tri, col = tri[keep], col[keep]
             tw = tri + pos
             c = tw.mean(1)
             m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
@@ -441,15 +562,71 @@ class Renderer:
             out[key][1].append(col[m])
         return out
 
+    def texture(self, mat):
+        """(name, info) of the colour texture (with the opacity map as alpha) and of the normal map of a
+        level material, loaded once; None where it has no texture in the level folder."""
+        st = self.level.materials.get(mat)
+        if not st:
+            return None
+        cf = self.level.local_file(st.get("baseColorMap"))
+        if cf is None:
+            return None
+        from PIL import Image
+        out = []
+        for key, f, srgb, limit in (("c", cf, True, 2048), ("n", self.level.local_file(st.get("normalMap")), False, 1024)):
+            if f is None:
+                out.append((None, None))
+                continue
+            name = f"{mat}_{key}"
+            if name not in self._tex:
+                im = Image.open(f).convert("RGBA")
+                if key == "c":
+                    of = self.level.local_file(st.get("opacityMap"))
+                    if of:
+                        im.putalpha(Image.open(of).convert("L").resize(im.size))
+                if max(im.size) > limit:
+                    k = limit / max(im.size)
+                    im = im.resize((max(1, int(im.size[0] * k)), max(1, int(im.size[1] * k))), Image.LANCZOS)
+                a = np.asarray(im)[::-1].copy()                            # row 0 = bottom (v = 0)
+                self._tex[name] = (a.tobytes(), {"w": im.size[0], "h": im.size[1], "srgb": srgb})
+            out.append((name, self._tex[name][1]))
+        rough = float(st.get("roughnessFactor", 0.85)) if "roughnessFactor" in st else 0.85
+        return {"tex": out[0][0], "texInfo": out[0][1], "nrm": out[1][0], "nrmInfo": out[1][1],
+                "alpha": bool(st.get("_alpha")), "rough": rough}
+
     def _backdrop(self, cx, cy, radius, origin):
         L = self.level
         for g, shape, pos, scale in L.statics:
             if g != "level_objects/backdrop":
                 continue
+            if self.textured:
+                rest = []
+                for mat, tri, uv, vc in L.parts(shape):
+                    info = self.texture(mat) if uv is not None else None
+                    if info is None:
+                        rest.append(mat)
+                        continue
+                    tw = tri + pos
+                    c = tw.mean(1)
+                    m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
+                    if not m.any():
+                        continue
+                    col = vc[m] if vc is not None else np.ones((int(m.sum()), 3, 3), np.float32)
+                    out.setdefault("textured", []).append((mat, info, tw[m] - origin, uv[m], col))
+                if not rest:
+                    continue
             d = L.dae(shape)
             if d is None or not len(d[0]):
                 continue
             tri, col = d
+            if self.textured:                          # the untextured materials of the shape only
+                keep = np.zeros(len(tri), bool)
+                o = 0
+                for mat, t_, uv_, vc_ in L.parts(shape):
+                    if mat in rest:
+                        keep[o:o + len(t_)] = True
+                    o += len(t_)
+                tri, col = tri[keep], col[keep]
             tw = tri + pos
             c = tw.mean(1)
             m = np.hypot(c[:, 0] - cx, c[:, 1] - cy) < radius
@@ -561,6 +738,17 @@ class Renderer:
                 arrays["bd_col"] = (srgb_to_lin(bd[1]).reshape(-1) * 255).astype(np.uint8)
                 soups.append({"pos": "bd_pos", "col": "bd_col", "cast": False, "offset": False})
         S = self._soups(x0 - pad, y0 - pad, x1 + pad, y1 + pad, origin)
+        tsoups = []
+        groups = {}
+        for mat, info, tw, uv, col in S.get("textured", []):
+            groups.setdefault(mat, (info, [], [], []))
+            groups[mat][1].append(tw); groups[mat][2].append(uv); groups[mat][3].append(col)
+        for j, (mat, (info, tws, uvs, cols)) in enumerate(groups.items()):
+            arrays[f"ts{j}_pos"] = np.concatenate(tws).reshape(-1).astype(np.float32)
+            arrays[f"ts{j}_uv"] = np.concatenate(uvs).reshape(-1).astype(np.float32)
+            arrays[f"ts{j}_col"] = (srgb_to_lin(np.clip(np.concatenate(cols), 0, 1)).reshape(-1) * 255).astype(np.uint8)
+            tsoups.append(dict(pos=f"ts{j}_pos", uv=f"ts{j}_uv", col=f"ts{j}_col", **info,
+                               offset="markings" in mat or "openings" in mat or "plinth" in mat))
         for key, off in (("mesh", False), ("paint", True)):
             tris, cols = S[key]
             if tris:
@@ -602,7 +790,8 @@ class Renderer:
         header = {"W": int(W), "H": int(H), "quality": self.quality, "sky": list(SKY), "fog": fog,
                   "hemi": 1.25, "sun": 2.6, "sunPos": (focus + sd * 1500).tolist(), "sunTarget": focus.tolist(),
                   "shadowR": 0.75 * span, "shadowFar": 4000.0, "shadowMap": 4096,
-                  "terrains": terrains, "soups": soups, "instances": instances, "water": water, "camera": camd}
+                  "terrains": terrains, "soups": soups, "tsoups": tsoups, "instances": instances, "water": water,
+                  "camera": camd}
         return self._pack(header, arrays)
 
     def shot(self, cam, out, **kw):

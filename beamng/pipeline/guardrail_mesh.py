@@ -51,12 +51,12 @@ def rail(mb, P, side):
     V = np.concatenate(tris)
     mb.add("mp_guardrail", V, uvs=np.column_stack([V[:, 0] + V[:, 1], V[:, 2]]) / 2.0,
            normals=bng.flat_normals_soup(V))
-    # posts
+    # posts (down into the ground behind the rail, where a fifth column gives its height)
     for sp in np.arange(0.5, s[-1] - 0.2, POST_STEP):
         q = int(np.clip(np.searchsorted(s, sp), 0, n - 1))
         c = P[q, :2] - to_road[q] * 0.12                     # behind the rail (spacer)
         t = T[q]; nn = to_road[q]
-        z0, z1 = P[q, 2] - 0.3, top[q] - 0.02
+        z0, z1 = min(P[q, 2], P[q, 4] if P.shape[1] > 4 else P[q, 2]) - 0.3, top[q] - 0.02
         corners = [c + t * POST_W / 2 + nn * POST_D / 2, c - t * POST_W / 2 + nn * POST_D / 2,
                    c - t * POST_W / 2 - nn * POST_D / 2, c + t * POST_W / 2 - nn * POST_D / 2]
         box = []
@@ -84,7 +84,110 @@ def foot_fn():
     return fn
 
 
-def build(level_dir, level_name, scene):
+EDGE_IN, EDGE_SEARCH, EDGE_OUT = 1.5, 3.0, 0.3     # m: search the road's edge from inside to outside, rail beyond it
+GAP_CROSS = 1.0          # m beyond the half width of a line that crosses a rail: the rail is open there
+MIN_PIECE = 4.0          # m, shorter pieces of a rail cut at a crossing are dropped
+SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "guardrails_sv.json")
+
+
+def sv_runs(existing):
+    """Guard rails of the rest of the network seen in the Street View panoramas (sv_guardrails.py, v2.2):
+    [{pts: [[x, y, z of the road edge, top height]], side}], without the ones along the rails of the
+    original route (existing runs, within 1.5 m)."""
+    if not os.path.exists(SV_RUNS):
+        return []
+    import shapely
+    old = shapely.union_all([shapely.LineString(np.array(r["pts"])[:, :2]).buffer(1.5) for r in existing
+                             if len(r["pts"]) > 1]) if existing else None
+    out = []
+    for r in json.load(open(SV_RUNS)):
+        P = np.array(r["pts"], float)
+        if len(P) < 2:
+            continue
+        if old is not None:
+            keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1])
+            if keep.sum() < 3:
+                continue
+            P = P[keep]
+        out.append({"pts": P, "side": r["side"], "seg": r.get("seg", -1)})
+    return out
+
+
+def open_crossings(runs, gap=GAP_CROSS):
+    """The rails cut where another line of the network (a path or a driveway leaving the road, a road
+    meeting it) crosses or touches them: no rail point within its half width + gap m of a station of
+    another line that is not parallel to the rail (the next piece of the same road, a road alongside), nor
+    on a path running alongside. Pieces shorter than MIN_PIECE m are dropped."""
+    import network
+    from scipy.spatial import cKDTree
+    segs, st, _ = network.load()
+    xy = np.column_stack([st["x"], st["y"]])
+    tree = cKDTree(xy)
+    # the direction of every line at every station
+    nxt = np.minimum(np.arange(len(xy)) + 1, len(xy) - 1)
+    prv = np.maximum(np.arange(len(xy)) - 1, 0)
+    nxt = np.where(st["seg"][nxt] == st["seg"], nxt, np.arange(len(xy)))
+    prv = np.where(st["seg"][prv] == st["seg"], prv, np.arange(len(xy)))
+    D = xy[nxt] - xy[prv]
+    D /= np.maximum(np.linalg.norm(D, axis=1, keepdims=True), 1e-9)
+    out = []
+    for r in runs:
+        P = r["pts"]
+        T = np.gradient(P[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        near = tree.query_ball_point(P[:, :2], 6.0)
+        keep = np.ones(len(P), bool)
+        for k, lst in enumerate(near):
+            for j in lst:
+                if st["seg"][j] == r["seg"]:
+                    continue
+                parallel = abs(float(D[j] @ T[k])) > 0.87
+                if parallel and segs[st["seg"][j]]["kind"] != "path":
+                    continue                     # the next piece of the same road, a road alongside
+                # a path alongside the road: the rail may not stand on it
+                reach = 0.5 * st["width"][j] + (0.3 if parallel else gap)
+                if np.hypot(*(P[k, :2] - xy[j])) < reach:
+                    keep[k] = False
+                    break
+        # continuous pieces
+        idx = np.flatnonzero(keep)
+        if not len(idx):
+            continue
+        cuts = np.flatnonzero(np.diff(idx) > 1) + 1
+        for piece in np.split(idx, cuts):
+            Q = P[piece]
+            if len(Q) >= 2 and np.linalg.norm(np.diff(Q[:, :2], axis=0), axis=1).sum() >= MIN_PIECE:
+                out.append({**r, "pts": Q})
+    return out
+
+
+def to_edge(P, side, road_fn, ground):
+    """A rail seen in the panoramas moved onto the edge of the road as built: every point on the line
+    across the road through it goes to EDGE_OUT m outside the last road face (searching from EDGE_IN m
+    inside to EDGE_SEARCH m outside), its foot at the height of the road's edge; and the ground under it
+    for the posts. P: (n, 4) x, y, z, top -> (n, 5) x, y, z, top, ground."""
+    P = np.array(P, float)
+    T = np.gradient(P[:, :2], axis=0)
+    T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+    out = side * np.column_stack([-T[:, 1], T[:, 0]])          # away from the road
+    offs = np.arange(-EDGE_IN, EDGE_SEARCH + 1e-6, 0.1)
+    X = P[:, None, 0] + out[:, None, 0] * offs[None]
+    Y = P[:, None, 1] + out[:, None, 1] * offs[None]
+    Z = road_fn(X.ravel(), Y.ravel()).reshape(X.shape)
+    on = np.isfinite(Z)
+    has = on.any(1)
+    last = np.where(has, on.shape[1] - 1 - np.argmax(on[:, ::-1], axis=1), 0)
+    e = np.where(has, offs[last], 0.0)
+    ze = np.where(has, Z[np.arange(len(P)), last], P[:, 2])
+    Q = P.copy()
+    Q[:, :2] = P[:, :2] + out * (e + EDGE_OUT)[:, None]
+    from scipy.ndimage import median_filter
+    Q[:, 2] = median_filter(ze - 0.03, size=5, mode="nearest") if len(P) >= 5 else ze - 0.03
+    g = ground(Q[:, 0], Q[:, 1])
+    return np.column_stack([Q, g])
+
+
+def build(level_dir, level_name, scene, road_fn=None):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
     foot = foot_fn()
     # galvanised steel looks light grey under the overcast sky of the photos; a high metallic
@@ -102,6 +205,22 @@ def build(level_dir, level_name, scene):
         c = P[len(P) // 2, :2]
         key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
         rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
+    # the rest of the network: the rails seen in the panoramas, on the edge of the road as built
+    extra = sv_runs(runs)
+    if road_fn is not None and extra:
+        from geo import Grid
+        dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+        for r in extra:
+            r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
+    extra = open_crossings(extra)
+    for r in extra:
+        P = r["pts"]
+        c = P[len(P) // 2, :2]
+        key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
+        rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
+    if extra:
+        print("guard rails seen in the panoramas:", len(extra), "runs,",
+              round(sum(np.linalg.norm(np.diff(r["pts"][:, :2], axis=0), axis=1).sum() for r in extra) / 1000, 2), "km")
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/guardrails/gr_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CH, (ty + 0.5) * CH, 0.0])

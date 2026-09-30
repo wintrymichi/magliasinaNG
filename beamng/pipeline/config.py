@@ -31,11 +31,14 @@ K = 1.0001374973449562          # LV95 scale factor at the origin (pyproj get_fa
 # AREA_MARGIN m and joined with the Street View route (ROUTE_MARGIN m around it) and with the
 # cantonal road Magliaso - Agno - Bioggio - Manno - Gravesano (dati/cantonale_gravesano.json,
 # strade_extra.py: EXTRA_ROAD_MARGIN m around it and the strip between it and the side P1-P2 of the
-# boundary); see area.py
+# boundary); v2.2: with a corridor of EXTRA_CORRIDOR m around the roads of dati/strade_extra_v22.json (the
+# pass above Gravesano to Arosio, the cantonal road Ponte Tresa - Caslano - Magliaso, Caslano - Torrazza);
+# see area.py
 BOUNDARY = [(45.967056, 8.858833), (46.041250, 8.923417), (46.018500, 8.803833), (45.993111, 8.788028)]
 AREA_MARGIN = 150.0
 ROUTE_MARGIN = 60.0
 EXTRA_ROAD_MARGIN = 150.0
+EXTRA_CORRIDOR = 100.0
 # terrain block: TER_SIZE x TER_SIZE vertices TER_SQUARE m apart, vertex (0, 0) (south-west) at
 # (TER_X0, TER_Y0); it covers the area with ~0.6-2 km to spare
 TER_SIZE = 8192                 # terrain samples per side
@@ -74,7 +77,9 @@ for _d in (DATA, WORK):
     os.makedirs(_d, exist_ok=True)
 
 
-# MAGLIASO_NO_PHOTO_TEXTURES=1 builds a level without imagery taken from the Street View
-# panoramas (facade/wall photo textures, sign plates): for public distribution. Colours
-# measured in the photos (facade tone, terrain) are kept.
-NO_PHOTO = os.environ.get("MAGLIASO_NO_PHOTO_TEXTURES") == "1"
+# No imagery taken from the Street View panoramas goes into the level (facade/wall photo textures,
+# sign plates): the photos are a reference only, what they show is redrawn (bld_textures.py,
+# props_osm.py) and only numbers measured in them (facade tone, shutter colour, wall material,
+# guard rails) are used. v2.2: this is the default; MAGLIASO_NO_PHOTO_TEXTURES=0 brings back the
+# photo textures of the local v1.x builds, for private study only.
+NO_PHOTO = os.environ.get("MAGLIASO_NO_PHOTO_TEXTURES", "1") != "0"
