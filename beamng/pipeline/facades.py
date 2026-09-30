@@ -35,6 +35,8 @@ OFFSET = 0.03            # m, openings in front of the wall (no z-fighting, shut
 PLINTH_OFF = 0.015       # m, plinth band in front of the wall
 PLINTH_STEP = 2.0        # m between the vertices of the plinth band
 EAVE_GAP = 0.35          # m between the top of the upper windows' floor and the eaves
+EAVE_RUN = 4.0           # m (and a fifth of the wall), least level part of a wall's top giving its eaves
+EAVE_LEVEL = 0.15        # m of rise between the samples of the top (0.5 m apart) of a level part
 MIN_FACADE = 1.4         # m, narrower facades stay blank
 EDGE = 0.45              # m, openings keep this far from the corners
 BLOCK_OUT = 0.7          # m in front of an opening: another building there hides it (party wall)
@@ -546,7 +548,25 @@ def layout_building(b, walls, style, ctx, em):
         us_, top_ = f[5], f[7]
         mid = (us_ > us_[0] + 0.3) & (us_ < us_[-1] - 0.3) & np.isfinite(top_)
         vals = top_[mid] if mid.any() else top_[np.isfinite(top_)]
-        return float(np.percentile(vals, 10)) if len(vals) else np.nan
+        if not len(vals):
+            return np.nan
+        e = float(np.percentile(vals, 10))
+        # v2.2: a wall of parts of different heights (a lower wing flush with the house): the eaves of its
+        # highest level part at least EAVE_RUN m long, not those of the wing (a gable has no level part)
+        t = np.where(mid, top_, np.nan)
+        lvl = np.abs(np.diff(t)) < EAVE_LEVEL
+        best, j = e, 0
+        while j < len(lvl):
+            if lvl[j]:
+                j1 = j
+                while j1 + 1 < len(lvl) and lvl[j1 + 1]:
+                    j1 += 1
+                if us_[j1 + 1] - us_[j] >= max(EAVE_RUN, 0.2 * (us_[-1] - us_[0])):
+                    best = max(best, float(np.percentile(t[j:j1 + 2], 10)))
+                j = j1 + 1
+            else:
+                j += 1
+        return best
     eaves = [eave_of(f) for f in facs]
     widths = np.array([f[5][-1] - f[5][0] for f in facs])
     eaves = np.array(eaves, float)

@@ -6,7 +6,8 @@
   beside a narrow path that reaches over it counts, not only a vertex under a face;
 - the network drivable everywhere: at every station of the swissTLM3D network (network.py, every
   2 m along every road and path) a top face within PROFILE_TOL m of the profile of
-  network_surface.py (the face nearest to it where a bridge passes over a road); no bumps of the
+  network_surface.py (the face nearest to it where a bridge passes over a road; JUNCTION_TOL m within
+  JUNCTION_NEAR m of a junction, where the side road bends to the road it joins, v2.2); no bumps of the
   meshes along the stations (second difference over 2 m beyond the profile's above BUMP_TOL m); roads more than FLOAT_TOL m above the
   ground outside the bridges are listed for the review;
 - road faces under the ground: top faces more than UNDER_TOL m under the lowest bare ground
@@ -42,6 +43,8 @@ from config import LEVEL_DIR, LEVEL_NAME
 TERRAIN_TOL = 0.10
 SEAM_TOL = 0.02
 PROFILE_TOL = 0.25
+JUNCTION_TOL = 1.0       # v2.2: within JUNCTION_NEAR m of a node where lines meet the surface bends from the
+JUNCTION_NEAR = 8.0      # profile of a side road to the road it joins (network_mesh.relax_seams, up to 1 m)
 BUMP_TOL = 0.06
 FLOAT_TOL = 1.5          # m of a road above the ground under it (listed for the review, no limit)
 UNDER_TOL = 1.25         # m of a road face under the lowest bare ground within 1 m
@@ -360,9 +363,16 @@ def main(lv=None):
     try:
         import network
         import network_surface
-        segs, st, _ = network.load()
+        segs, st, node_pos = network.load()
         zs = network_surface.load()["z"]
         net = (segs, st, zs)
+        # the stations near a node where two or more lines meet (the junctions and the joints of the lines)
+        from scipy.spatial import cKDTree
+        deg = np.bincount(np.array([q["nodes"][0] for q in segs] + [q["nodes"][-1] for q in segs]),
+                          minlength=len(node_pos))
+        nd = np.asarray(node_pos, float)[deg >= 2]
+        near_node = cKDTree(nd).query(np.column_stack([st["x"], st["y"]]))[0] < JUNCTION_NEAR if len(nd) else \
+            np.zeros(len(st["x"]), bool)
     except Exception as e:                                # a level without the v2.0 network data
         print("no network data:", e)
     cen = tri[:, :, :2].mean(1)
@@ -432,7 +442,7 @@ def main(lv=None):
                         places.add("strada staccata dal terreno", st["x"][i][up], st["y"][i][up], zm[up],
                                    (zm - zt_s)[up])
                     dz = np.abs(zm - zs[i])
-                    off = np.isfinite(dz) & (dz > PROFILE_TOL)
+                    off = np.isfinite(dz) & (dz > np.where(near_node[i], JUNCTION_TOL, PROFILE_TOL))
                     counts["network_off_profile"] += int(off.sum())
                     if off.any():
                         worst["network_off_profile_max_m"] = max(worst["network_off_profile_max_m"], float(dz[off].max()))

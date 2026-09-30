@@ -18,11 +18,13 @@ Ricostruzione in scala 1:1 di circa 51 km² del Malcantone (Canton Ticino), tra 
 | Terreno 12,3 × 12,3 km, maglia 1,5 m | swissALTI3D 0,5 m e 2 m (LiDAR); Copernicus GLO-30 sul lato italiano | quota ±0,3 m nell'area |
 | Strade e sentieri (circa 212 km di strade, 331 km di sentieri) | swissTLM3D (assi, classi, pavimentazione, ponti), misurazione ufficiale TI (limiti delle carreggiate) | profilo liscio calcolato su tutta la rete insieme: le quote coincidono agli incroci, le pendenze sono quelle reali |
 | Ponti (161) | swissTLM3D, controllati uno per uno sul profilo e nelle viste | impalcato, parapetti e piloni; le strade sotto i ponti restano |
-| Edifici (11 220) | swissBUILDINGS3D 3.0 (LOD2, tetti compresi) | ±0,3–0,5 m; colore dei tetti dall'ortofoto; lungo la cantonale facciate viste dalla strada con la texture delle foto |
-| Muri | misurazione ufficiale (muri) + muri di sostegno della cantonale ricavati da DTM e foto | lungo la cantonale l'altezza visibile è misurata nelle foto; texture fotografiche a circa 3 cm/px |
+| Edifici (11 706) | swissBUILDINGS3D 3.0 (LOD2, tetti compresi), gli edifici della misurazione ufficiale costruiti dopo il rilievo 3D, Registro federale degli edifici (uso, epoca, piani), negozi di OpenStreetMap | ±0,3–0,5 m; facciate con finestre, persiane o tapparelle, porte, portoni, garage, vetrine, balconi, zoccoli e comignoli disegnati dalla pipeline (nessuna foto), casa per casa nei nuclei; tono dell'intonaco e colore delle persiane misurati nelle panoramiche Street View; coperture in coppi, tegole, piode, lamiera o piane |
+| Muri | misurazione ufficiale (muri) + muri di sostegno della cantonale ricavati da DTM e foto | lungo la cantonale l'altezza visibile è misurata nelle foto; texture originali di pietra, calcestruzzo e intonaco, il materiale visto nelle panoramiche dove è chiaro |
 | Guardrail, ringhiere e recinzioni della cantonale | voto multi-vista sulla segmentazione delle foto, LiDAR dove disponibile | posizione ±0,3 m |
+| Guardrail del resto della rete (v2.2) | panoramiche Street View di tutta l'area segmentate lungo i bordi di ogni strada | dove le panoramiche li mostrano, sul bordo della strada costruita |
+| Fermate dei bus (v2.2) | OpenStreetMap | palo, cartello, orario e, dove registrata, pensilina |
 | Segnaletica della cantonale | ortofoto 10 cm (tratteggi 3 m / 6 m, strisce, zebre gialle), verificata nelle foto | stato di ottobre 2022 (vedi sotto) |
-| Lampioni, pali e cartelli, delineatori, arredo urbano della cantonale | triangolati dalle foto con le pose calibrate | ±0,3–0,5 m; le targhe riportano l'immagine vista nella foto, nessun testo inventato |
+| Lampioni, pali e cartelli, delineatori, arredo urbano della cantonale | triangolati dalle foto con le pose calibrate | ±0,3–0,5 m; targhe nella forma e nel colore misurati nelle foto (senza l'immagine del cartello) |
 | Alberi, siepi e arbusti (circa 241 000) | modello di superficie swissSURFACE3D (posizione, altezza e chioma di ogni albero), ortofoto | tutti entro 150 m dalle strade e 20 m dai sentieri, più radi oltre; specie approssimate con modelli vanilla; nessun tronco sulla carreggiata né a meno di 1 m dal bordo delle strade (0,5 m dei sentieri), nessuna chioma nella sagoma libera (4,50 m sopra le carreggiate, 2,50 m sopra marciapiedi e sentieri), ogni pianta sul suolo |
 | Segnaletica orizzontale del resto della rete | ortofoto SWISSIMAGE 10 cm (2024): linee tracciate lungo ogni strada, segni vettorializzati | solo la vernice visibile nell'ortofoto; tratti coperti da alberi o ombra ricostruiti solo tra due parti viste (fino a 60 m) |
 | Sensi unici, cartelli STOP e precedenza, panchine e cestini del resto della rete | OpenStreetMap; rotonde e carreggiate separate da swissTLM3D | posizione di OSM, cartelli sul bordo della strada che li ha |
@@ -36,6 +38,16 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 - **Nessuna segnaletica** dove la strada era in rifacimento o non era segnata: s ≈ 1,23–1,27 km, 1,52–1,82 km e 3,64–3,72 km. Nel cantiere l'asfalto nuovo è più scuro.
 - **Bande rosse** ai due bordi nel tratto s ≈ 2,29–2,44 km.
 - **Incrocio di Magliaso:** l'incrocio era stato ricostruito, quindi le due isole pedonali e l'isola dipinta del rilievo sono state rimosse, e la mezzeria segue la posizione visibile nelle foto.
+
+## Versione 2.2
+
+- **Edifici con le facciate:** finestre con persiane, tapparelle o serramenti moderni, porte, portoni, garage, vetrine, balconi, zoccoli e comignoli su ogni edificio, distribuiti per piani e campate secondo uso, epoca e piani del Registro federale degli edifici. Nei nuclei ogni casa ha le sue facciate, i suoi piani, la sua porta e il suo tono; i piani partono dal fronte strada anche sui pendii. Coperture in coppi, tegole, piode, lamiera o tetto piano. Tutte le texture sono disegnate: nessuna foto.
+- **Colori dalle foto:** il tono dell'intonaco e il colore delle persiane vengono dalle panoramiche Street View dove l'edificio è visto (solo i valori, corretti per l'ombra).
+- **Edifici mancanti** (costruiti dopo il rilievo 3D) aggiunti dalla misurazione ufficiale; demoliti tolti.
+- **Guardrail su tutta la rete** dove le panoramiche li mostrano, sul bordo della strada.
+- **Muri** con texture originali di pietra, calcestruzzo e intonaco.
+- **Fermate dei bus** di OpenStreetMap.
+- **Strade più guidabili:** superfici continue tra carreggiata, marciapiedi e piazzali e agli incroci, verificate con una prova di guida virtuale su tutta la rete.
 
 ## Versione 2.1
 
@@ -76,6 +88,7 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
   - alberi vicino alla carreggiata;
   - continuità della rete IA.
 - Ci sono anche screenshot di tutta l'area, di ogni ponte, delle strade e dei paesi.
+- v2.2: una prova di guida virtuale percorre tutte le strade e i sentieri sulle superfici del livello e segnala gradini, ruote staccate, colpi e buchi; la mappa è stata confrontata con le panoramiche Street View strada per strada (copertura, edifici misurati, guardrail e muri visti, luoghi confrontati foto/mappa).
 - Le pose delle 366 panoramiche della cantonale sono state stimate sull'ortofoto 10 cm con precisione di circa 0,3 m. La verifica della cantonale confronta le foto con le schermate del gioco nella stessa posa. Le cifre sono nel file `VERIFICA.md` e si riferiscono alla geometria della v1.0.
 - Tra 1,28 e 1,36 km della cantonale non esistono panoramiche: lì il livello si basa solo sui dati swisstopo e sulla misurazione ufficiale.
 
@@ -84,14 +97,16 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 - Sul lato italiano ci sono solo il terreno e il paesaggio, senza strade, edifici e alberi.
 - Le gallerie non sono costruite.
 - I sensi unici vengono da OpenStreetMap: dove OSM non li registra, l'IA percorre la strada nei due sensi.
-- Segnaletica verticale (limiti, località, direzioni), guardrail e linea di contatto della ferrovia ci sono solo dove esiste una fonte (le foto della cantonale Magliaso–Pura, i cartelli di OpenStreetMap).
+- Segnaletica verticale (limiti, località, direzioni) e linea di contatto della ferrovia ci sono solo dove esiste una fonte (le foto della cantonale Magliaso–Pura, i cartelli di OpenStreetMap); i guardrail dove le panoramiche Street View li mostrano.
+- Le facciate sono ricostruite dai dati (uso, epoca, piani) e dai colori visti nelle foto: numero e posizione delle finestre, balconi e portici sono plausibili ma non copiati uno per uno.
 - Vedeggio, Magliasina e la Tresa a valle della traversa non hanno acqua.
 
 ## Fonti e licenze
 
 - © swisstopo: swissALTI3D, SWISSIMAGE, swissBUILDINGS3D, swissSURFACE3D, swissTLM3D, swissNAMES3D.
 - Misurazione ufficiale: Ufficio del catasto e dei riordini fondiari, Cantone Ticino.
-- © OpenStreetMap contributors (ODbL 1.0), estratto del 28.9.2026: sensi unici, cartelli STOP e precedenza, panchine e cestini (v2.1).
+- © OpenStreetMap contributors (ODbL 1.0), estratto del 28.9.2026: sensi unici, cartelli STOP e precedenza, panchine e cestini (v2.1); fermate dei bus, negozi ed esercizi (v2.2).
+- Registro federale degli edifici e delle abitazioni (Ufficio federale di statistica): uso, epoca e piani degli edifici (v2.2).
 - Copernicus DEM GLO-30: © DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, forniti nell'ambito di COPERNICUS da Unione Europea ed ESA.
-- Le texture fotografiche delle facciate e dei muri e le targhe dei cartelli derivano da immagini Google Street View e sono solo per uso personale. Per pubblicare la mod bisogna costruire la versione senza di esse (`MAGLIASO_NO_PHOTO_TEXTURES=1`).
+- Le panoramiche Google Street View sono servite solo come riferimento visivo (pose, misure, confronti): la mod non contiene immagini Street View.
 - Modelli 3D di alberi, lampioni e arredo: asset vanilla di BeamNG (East Coast USA, Italy), referenziati e non copiati.

@@ -772,18 +772,9 @@ def stage_spawns(scene, ctx):
     print("spawn points", [s[0] for s in ctx["spawns"]])
 
 
-PUBLIC_README = [
-    ("facciate viste dalla strada con la texture delle foto",
-     "intonaco neutro nel colore misurato nelle foto (versione pubblica: nessuna texture fotografica)"),
-    ("; texture fotografiche a circa 3 cm/px", "; texture di pietra vanilla"),
-    ("le targhe riportano l'immagine vista nella foto, nessun testo inventato",
-     "targhe nella forma e nel colore misurati nelle foto (versione pubblica: senza l'immagine del cartello)"),
-    ("- Le texture fotografiche delle facciate e dei muri e le targhe dei cartelli derivano da immagini Google "
-     "Street View e sono solo per uso personale. Per pubblicare la mod bisogna costruire la versione senza di esse "
-     "(`MAGLIASO_NO_PHOTO_TEXTURES=1`).",
-     "- Questa è la **versione pubblica**: non contiene immagini tratte da Google Street View. Le panoramiche sono "
-     "servite solo come riferimento per misure, posizioni e colori."),
-]
+# v2.2: the level's README describes the level as built by default (no imagery from the panoramas); the
+# replacements of the public variant of v2.x are not needed any more
+PUBLIC_README = []
 
 
 def write_info(ctx):
@@ -801,12 +792,14 @@ def write_info(ctx):
         "title": "Malcantone - Magliaso, Pura e dintorni",
         "description": ("Ricostruzione in scala 1:1 di circa %d km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
                         "Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio e Sessa: ogni strada e "
-                        "sentiero guidabile, %d ponti, %d edifici, circa %d 000 alberi, traffico IA. La Strada "
+                        "sentiero guidabile, %d ponti, %d edifici con facciate, balconi e vetrine, guardrail su tutta "
+                        "la rete, circa %d 000 alberi, traffico IA. La Strada "
                         "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
                         "c'e' anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano. Dati ufficiali "
                         "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
                         "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
-                        "riordini fondiari, Cantone Ticino; Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
+                        "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "
+                        "contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
                         % (round(km2), n_bridges, n_buildings, n_trees)),
         "previews": [f"{LEVEL_NAME}_preview.jpg"],
         "size": [TER_SIZE, TER_SIZE],

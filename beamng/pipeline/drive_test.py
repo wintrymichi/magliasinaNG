@@ -15,7 +15,7 @@ model is run with scipy (bilinear discretisation) and reports:
 - HOLE: a wheel inside the carriageway with no road face under it (it drops to the terrain);
 - TWIST: a sudden change of roll or pitch of the car (cross slope or grade breaking within 1 m).
 At a dead end the last DEAD_END m are not counted: the wheels ahead of the car are past the end of the
-road there.
+road there; nor are the last EDGE_MARGIN m before the edge of the map, where the lines end.
 Output: beamng/verifica/drive_test.json with the counts per road class, the worst places and the
 events per road; and a summary on the console.
     python drive_test.py [level folder]
@@ -43,6 +43,7 @@ SPEED = {"10m Strasse": 60, "8m Strasse": 60, "6m Strasse": 50, "Autostrasse": 8
 PATH_SPEED = 15
 PATCH = [(0.0, 0.0), (0.09, 0.0), (-0.09, 0.0), (0.0, 0.07), (0.0, -0.07)]   # (along, across) m
 DEAD_END = WHEELBASE / 2 + 0.3             # m at a dead end where the wheels may be past the end of the road
+EDGE_MARGIN = 4.0                          # m before the end of the lines at the edge of the map not counted
 
 
 def filters(v_kmh):
@@ -98,7 +99,7 @@ class Ground:
         return np.where(on, np.maximum(zr, zt), zt), on
 
 
-def drive(ground, Q, T, zhint, v, filt, inside, skip0=1.0, skip1=0.0):
+def drive(ground, Q, T, zhint, v, filt, inside, skip0=1.0, skip1=0.0, valid=None):
     """Events of one run: (index along the path, kind, value) per event. The first skip0 m (the start
     transient) and the last skip1 m are left out: at a dead end the wheels ahead of or behind the car
     run past the end of the road, onto the ground beyond it."""
@@ -122,19 +123,20 @@ def drive(ground, Q, T, zhint, v, filt, inside, skip0=1.0, skip1=0.0):
         tyre = signal.lfilter(filt[1][0], filt[1][1], zr)
         n0 = int(round(skip0 / DS))
         n1 = len(best) - int(round(skip1 / DS))
+        ok = np.ones(len(best), bool) if valid is None else valid
         stp = np.abs(np.diff(best))
         for i in np.flatnonzero(stp > STEP_M):
-            if n0 <= i < n1:
+            if n0 <= i < n1 and ok[i]:
                 ev.append((i, "STEP", float(stp[i])))
         for i in np.flatnonzero(tyre > STATIC):
-            if n0 <= i < n1:
+            if n0 <= i < n1 and ok[i]:
                 ev.append((i, "LIFT", float(tyre[i])))
         for i in np.flatnonzero(np.abs(acc) > HARD_G * 9.81):
-            if n0 <= i < n1:
+            if n0 <= i < n1 and ok[i]:
                 ev.append((i, "HARD", float(abs(acc[i]) / 9.81)))
         miss = inside & ~onroad
         for i in np.flatnonzero(miss):
-            if n0 <= i < n1:
+            if n0 <= i < n1 and ok[i]:
                 ev.append((i, "HOLE", 1.0))
     Z = np.array(Z)
     roll = np.degrees(np.arctan(((Z[0] + Z[2]) - (Z[1] + Z[3])) / 2 / TRACK))
@@ -146,7 +148,7 @@ def drive(ground, Q, T, zhint, v, filt, inside, skip0=1.0, skip1=0.0):
         if len(a) > m:
             ch = np.abs(a[m:] - a[:-m])
             for i in np.flatnonzero(ch > TWIST_DEG):
-                if n0 <= i + m < n1:
+                if n0 <= i + m < n1 and (valid is None or valid[i + m]):
                     ev.append((i + m, name, float(ch[i])))
     return ev
 
@@ -157,6 +159,12 @@ def main(lv=None):
     segs, st, _ = network.load()
     zs = network_surface.load()["z"]
     deg = np.bincount(np.array([q["nodes"][0] for q in segs] + [q["nodes"][-1] for q in segs]))
+    # the lines go on CLIP m past the playable area and their surfaces end there: the last metres before
+    # the edge of the map are not counted
+    import area
+    import shapely
+    region = area.polygon().buffer(network.CLIP - EDGE_MARGIN)
+    shapely.prepare(region)
     tri, is_path, chunk = road_tops(lv)
     surf = TriSurface(tri)
     ter = pr.Terrain(lv)
@@ -195,7 +203,8 @@ def main(lv=None):
             zh = np.interp(sq, d, zr_line)
             inside = np.full(len(Q), (w / 2 - abs(side) - TRACK / 2) > 0.25)
             km[cls] = km.get(cls, 0.0) + len(Q) * DS / 1000
-            for i, kind, val in drive(ground, Q, T, zh, v, filt[v], inside, sk0, sk1):
+            valid = shapely.contains_xy(region, Q[:, 0], Q[:, 1])
+            for i, kind, val in drive(ground, Q, T, zh, v, filt[v], inside, sk0, sk1, valid):
                 key = (kind, int(Q[i, 0] // 20), int(Q[i, 1] // 20))
                 nev[kind] = nev.get(kind, 0) + 1
                 counts.setdefault(cls, {}).setdefault(kind, 0)

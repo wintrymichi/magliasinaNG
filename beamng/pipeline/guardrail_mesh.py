@@ -85,6 +85,8 @@ def foot_fn():
 
 
 EDGE_IN, EDGE_SEARCH, EDGE_OUT = 1.5, 3.0, 0.3     # m: search the road's edge from inside to outside, rail beyond it
+GAP_CROSS = 1.0          # m beyond the half width of a line that crosses a rail: the rail is open there
+MIN_PIECE = 4.0          # m, shorter pieces of a rail cut at a crossing are dropped
 SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "guardrails_sv.json")
 
 
@@ -107,7 +109,55 @@ def sv_runs(existing):
             if keep.sum() < 3:
                 continue
             P = P[keep]
-        out.append({"pts": P, "side": r["side"]})
+        out.append({"pts": P, "side": r["side"], "seg": r.get("seg", -1)})
+    return out
+
+
+def open_crossings(runs, gap=GAP_CROSS):
+    """The rails cut where another line of the network (a path or a driveway leaving the road, a road
+    meeting it) crosses or touches them: no rail point within its half width + gap m of a station of
+    another line that is not parallel to the rail (the next piece of the same road, a road alongside), nor
+    on a path running alongside. Pieces shorter than MIN_PIECE m are dropped."""
+    import network
+    from scipy.spatial import cKDTree
+    segs, st, _ = network.load()
+    xy = np.column_stack([st["x"], st["y"]])
+    tree = cKDTree(xy)
+    # the direction of every line at every station
+    nxt = np.minimum(np.arange(len(xy)) + 1, len(xy) - 1)
+    prv = np.maximum(np.arange(len(xy)) - 1, 0)
+    nxt = np.where(st["seg"][nxt] == st["seg"], nxt, np.arange(len(xy)))
+    prv = np.where(st["seg"][prv] == st["seg"], prv, np.arange(len(xy)))
+    D = xy[nxt] - xy[prv]
+    D /= np.maximum(np.linalg.norm(D, axis=1, keepdims=True), 1e-9)
+    out = []
+    for r in runs:
+        P = r["pts"]
+        T = np.gradient(P[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        near = tree.query_ball_point(P[:, :2], 6.0)
+        keep = np.ones(len(P), bool)
+        for k, lst in enumerate(near):
+            for j in lst:
+                if st["seg"][j] == r["seg"]:
+                    continue
+                parallel = abs(float(D[j] @ T[k])) > 0.87
+                if parallel and segs[st["seg"][j]]["kind"] != "path":
+                    continue                     # the next piece of the same road, a road alongside
+                # a path alongside the road: the rail may not stand on it
+                reach = 0.5 * st["width"][j] + (0.3 if parallel else gap)
+                if np.hypot(*(P[k, :2] - xy[j])) < reach:
+                    keep[k] = False
+                    break
+        # continuous pieces
+        idx = np.flatnonzero(keep)
+        if not len(idx):
+            continue
+        cuts = np.flatnonzero(np.diff(idx) > 1) + 1
+        for piece in np.split(idx, cuts):
+            Q = P[piece]
+            if len(Q) >= 2 and np.linalg.norm(np.diff(Q[:, :2], axis=0), axis=1).sum() >= MIN_PIECE:
+                out.append({**r, "pts": Q})
     return out
 
 
@@ -162,6 +212,7 @@ def build(level_dir, level_name, scene, road_fn=None):
         dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
         for r in extra:
             r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
+    extra = open_crossings(extra)
     for r in extra:
         P = r["pts"]
         c = P[len(P) // 2, :2]
