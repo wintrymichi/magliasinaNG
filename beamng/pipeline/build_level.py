@@ -104,7 +104,7 @@ CHUNK = 128.0
 def road_materials():
     a = f"{TL}/concrete/italy_asphalt/t_asphalt"
     s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
-    st = f"{TL}/brick/stone_brick_regular/t_stone_brick_regular"
+    st = f"{L}/art/shapes/buildings/t_bld_stone"          # v2.2: the rubble stone of the walls (bld_textures.py)
     return [
         bng.material("mp_road_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", ground_type="ASPHALT"),
@@ -118,8 +118,8 @@ def road_materials():
         bng.material("mp_road_asphalt_fresh", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", base_color=[0.5, 0.5, 0.52, 1], ground_type="ASPHALT"),
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
-        bng.material("mp_road_wall", f"{st}_b.color.dds", f"{st}_nm.normal.dds", f"{st}_r.data.dds",
-                     f"{st}_ao.data.dds", ground_type="ROCK"),
+        bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
+                     f"{st}_ao.data.png", ground_type="ROCK"),
         # v2.0 network: unpaved roads and paths (textures made by road_textures), paved paths,
         # bridge parapets
         bng.material("mp_road_gravel", f"{L}/art/shapes/roads/t_gravel_b.png",
@@ -183,6 +183,8 @@ def stage_roads(scene, ctx):
     hfn = road_height_fn()
     ground = ground_fn()
     road_textures()
+    import bld_textures
+    bld_textures.stone_wall(level_path("art", "shapes", "buildings"))     # the stone faces (mp_road_wall)
     bng.write_materials(level_path("art", "shapes", "roads", "main.materials.json"), road_materials())
     builders = {}
     meshed = []
@@ -443,7 +445,7 @@ def stage_walls(scene, ctx):
 
 def stage_guardrails(scene, ctx):
     import guardrail_mesh
-    guardrail_mesh.build(LEVEL_DIR, LEVEL_NAME, scene)
+    guardrail_mesh.build(LEVEL_DIR, LEVEL_NAME, scene, road_fn=ctx.get("road_mesh_fn"))
 
 
 def stage_fences(scene, ctx):
@@ -785,7 +787,6 @@ PUBLIC_README = [
 
 
 def write_info(ctx):
-    import pickle
     import area
     import bridges
     spawns = ctx.get("spawns", [])

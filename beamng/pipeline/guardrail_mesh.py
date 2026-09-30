@@ -51,12 +51,12 @@ def rail(mb, P, side):
     V = np.concatenate(tris)
     mb.add("mp_guardrail", V, uvs=np.column_stack([V[:, 0] + V[:, 1], V[:, 2]]) / 2.0,
            normals=bng.flat_normals_soup(V))
-    # posts
+    # posts (down into the ground behind the rail, where a fifth column gives its height)
     for sp in np.arange(0.5, s[-1] - 0.2, POST_STEP):
         q = int(np.clip(np.searchsorted(s, sp), 0, n - 1))
         c = P[q, :2] - to_road[q] * 0.12                     # behind the rail (spacer)
         t = T[q]; nn = to_road[q]
-        z0, z1 = P[q, 2] - 0.3, top[q] - 0.02
+        z0, z1 = min(P[q, 2], P[q, 4] if P.shape[1] > 4 else P[q, 2]) - 0.3, top[q] - 0.02
         corners = [c + t * POST_W / 2 + nn * POST_D / 2, c - t * POST_W / 2 + nn * POST_D / 2,
                    c - t * POST_W / 2 - nn * POST_D / 2, c + t * POST_W / 2 - nn * POST_D / 2]
         box = []
@@ -84,6 +84,7 @@ def foot_fn():
     return fn
 
 
+EDGE_IN, EDGE_SEARCH, EDGE_OUT = 1.5, 3.0, 0.3     # m: search the road's edge from inside to outside, rail beyond it
 SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "guardrails_sv.json")
 
 
@@ -110,7 +111,33 @@ def sv_runs(existing):
     return out
 
 
-def build(level_dir, level_name, scene):
+def to_edge(P, side, road_fn, ground):
+    """A rail seen in the panoramas moved onto the edge of the road as built: every point on the line
+    across the road through it goes to EDGE_OUT m outside the last road face (searching from EDGE_IN m
+    inside to EDGE_SEARCH m outside), its foot at the height of the road's edge; and the ground under it
+    for the posts. P: (n, 4) x, y, z, top -> (n, 5) x, y, z, top, ground."""
+    P = np.array(P, float)
+    T = np.gradient(P[:, :2], axis=0)
+    T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+    out = side * np.column_stack([-T[:, 1], T[:, 0]])          # away from the road
+    offs = np.arange(-EDGE_IN, EDGE_SEARCH + 1e-6, 0.1)
+    X = P[:, None, 0] + out[:, None, 0] * offs[None]
+    Y = P[:, None, 1] + out[:, None, 1] * offs[None]
+    Z = road_fn(X.ravel(), Y.ravel()).reshape(X.shape)
+    on = np.isfinite(Z)
+    has = on.any(1)
+    last = np.where(has, on.shape[1] - 1 - np.argmax(on[:, ::-1], axis=1), 0)
+    e = np.where(has, offs[last], 0.0)
+    ze = np.where(has, Z[np.arange(len(P)), last], P[:, 2])
+    Q = P.copy()
+    Q[:, :2] = P[:, :2] + out * (e + EDGE_OUT)[:, None]
+    from scipy.ndimage import median_filter
+    Q[:, 2] = median_filter(ze - 0.03, size=5, mode="nearest") if len(P) >= 5 else ze - 0.03
+    g = ground(Q[:, 0], Q[:, 1])
+    return np.column_stack([Q, g])
+
+
+def build(level_dir, level_name, scene, road_fn=None):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
     foot = foot_fn()
     # galvanised steel looks light grey under the overcast sky of the photos; a high metallic
@@ -130,6 +157,11 @@ def build(level_dir, level_name, scene):
         rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
     # the rest of the network: the rails seen in the panoramas, on the edge of the road as built
     extra = sv_runs(runs)
+    if road_fn is not None and extra:
+        from geo import Grid
+        dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+        for r in extra:
+            r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
     for r in extra:
         P = r["pts"]
         c = P[len(P) // 2, :2]

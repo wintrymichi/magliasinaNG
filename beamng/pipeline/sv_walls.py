@@ -8,7 +8,9 @@ see them (sv_fetch.py; line of sight over the surface model). A sample counts wh
 (sv_segment.py) labels the pixel as wall. Per wall piece, from the photo pixels of the samples:
 - local contrast (the standard deviation of the luminance in a 7 x 7 window of the full panorama:
   the joints and the stones of a rubble wall) and colour (saturation, luminance);
-- stone: high local contrast; concrete: low contrast and grey; plaster: low contrast and a colour.
+- stone: high local contrast; concrete: low contrast and grey; plaster: low contrast and a colour;
+  unknown in between (a sample of the classes checked on the photos: a stone wall far away, blurred by
+  the motion of the car or covered in moss reads as smooth), which keeps the default stone.
 Only the class leaves this step: dati/wall_materials.json {walls: [[x, y, class, n], ...]} (the middle
 of the survey wall), read by walls.py.
     python sv_walls.py
@@ -28,6 +30,8 @@ MAXD = 25.0
 STEP = 1.0
 CAM_H = 2.2
 WALL = 6
+STONE_C = 0.075        # median local contrast of the wall's pixels: over this, stone
+SMOOTH_C = 0.03        # under this, a smooth face (concrete or plaster)
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "wall_materials.json")
 
 
@@ -145,12 +149,17 @@ def main():
         sat = np.median((mx - mn) / np.maximum(mx, 1e-6))
         lum = np.median(rgb @ np.array([0.2126, 0.7152, 0.0722]))
         c50 = float(np.median(con))
-        if c50 > 0.075:
+        # only what the photos tell clearly: rubble stone has the joints (high contrast); a smooth wall
+        # (low contrast) is concrete when grey, plaster when coloured. In between (a stone wall far away,
+        # blurred by the car's motion, covered in moss or plants) the class stays unknown: the default
+        if c50 > STONE_C:
             cls = "stone"
-        elif sat < 0.10:
+        elif c50 < SMOOTH_C and sat < 0.08:
             cls = "concrete"
-        else:
+        elif c50 < SMOOTH_C and sat >= 0.12:
             cls = "plaster"
+        else:
+            cls = "unknown"
         cnt[cls] += 1
         med = np.median(rgb[(rgb @ np.array([0.2126, 0.7152, 0.0722])) >= np.percentile(rgb @ np.array([0.2126, 0.7152, 0.0722]), 50)], 0)
         out.append([round(float(mids[wi][0]), 2), round(float(mids[wi][1]), 2), cls, int(len(F)),
