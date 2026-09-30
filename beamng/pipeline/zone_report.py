@@ -270,13 +270,24 @@ def v22_rows(checks):
         wc[w[2]] = wc.get(w[2], 0) + 1
     n = lambda v: len(v) if isinstance(v, list) else (v or 0)
 
-    def ev(d, cls, k):
-        return d.get("events", {}).get(cls, {}).get(k, 0)
+    def ev(d, cls, k, key="events"):
+        return d.get(key, {}).get(cls, {}).get(k, 0)
 
     def drop(cls, k):
-        a, b = ev(d0, cls, k), ev(d1, cls, k)
+        # v2.2 inside the area of v2.1: the roads of the corridors of v2.2 are new
+        a, b = ev(d0, cls, k), ev(d1, cls, k, "events_v21_area" if "events_v21_area" in d1 else "events")
         return "%d → %d (%+d %%)" % (a, b, round(100 * (b - a) / a)) if a else "%d → %d" % (a, b)
+    import area
+    old_area = area.polygon_v21()
+    corr = area.extra_corridors()
+    new_km = sum(road.difference(old_area).length for _, _, road in corr) / 1000
     rows = [
+        ("Passo sopra Gravesano, Caslano", "Rete stradale", "il passo sopra Gravesano verso Arosio (Stradón da Rós, la "
+         "«Penudria»), la cantonale Ponte Tresa - Caslano - Magliaso e Via Torrazza uscivano dalla mappa: oltre il bordo "
+         "solo il terreno, senza strada",
+         "strade vere per %s km in più (%s), in un corridoio di %d m con edifici, alberi e muri; revisione Street View "
+         "come nel resto della mappa" % (it(new_km), "; ".join(name for _, name, _ in corr), round(area.EXTRA_CORRIDOR)),
+         "Risolto"),
         ("Tutta la mappa", "Edifici", "blocchi di plastica senza aperture: ogni edificio un volume intonacato di un solo colore",
          "facciate con %d aperture (finestre con persiane, tapparelle o serramenti moderni, porte, portoni, garage, "
          "vetrine, finestre di chiese e stalle), zoccoli e %d comignoli, secondo uso, epoca e piani del Registro "

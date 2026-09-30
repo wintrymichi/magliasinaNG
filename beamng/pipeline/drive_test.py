@@ -17,7 +17,8 @@ model is run with scipy (bilinear discretisation) and reports:
 At a dead end the last DEAD_END m are not counted: the wheels ahead of the car are past the end of the
 road there; nor are the last EDGE_MARGIN m before the edge of the map, where the lines end.
 Output: beamng/verifica/drive_test.json with the counts per road class, the worst places and the
-events per road; and a summary on the console.
+events per road; the counts inside the area of v2.1 as well (events_v21_area: the corridors of v2.2
+are new roads, the comparison with v2.1 is made without them); and a summary on the console.
     python drive_test.py [level folder]
 """
 import json, os, sys, time
@@ -165,6 +166,10 @@ def main(lv=None):
     import shapely
     region = area.polygon().buffer(network.CLIP - EDGE_MARGIN)
     shapely.prepare(region)
+    # v2.2: the counts inside the area of v2.1 too (its region as then), for the comparison with the v2.1
+    # level: the roads of the corridors of v2.2 are new
+    region21 = area.polygon_v21().buffer(network.CLIP - EDGE_MARGIN)
+    shapely.prepare(region21)
     tri, is_path, chunk = road_tops(lv)
     surf = TriSurface(tri)
     ter = pr.Terrain(lv)
@@ -175,6 +180,7 @@ def main(lv=None):
     per_road = []
     counts = {}
     km = {}
+    counts21, km21 = {}, {}
     for k, s in enumerate(segs):
         a, n = s["first"], s["n"]
         if n < 3 or s.get("stairs"):                  # the steps of a flight of stairs are real
@@ -204,11 +210,16 @@ def main(lv=None):
             inside = np.full(len(Q), (w / 2 - abs(side) - TRACK / 2) > 0.25)
             km[cls] = km.get(cls, 0.0) + len(Q) * DS / 1000
             valid = shapely.contains_xy(region, Q[:, 0], Q[:, 1])
+            in21 = shapely.contains_xy(region21, Q[:, 0], Q[:, 1])
+            km21[cls] = km21.get(cls, 0.0) + float(in21.sum()) * DS / 1000
             for i, kind, val in drive(ground, Q, T, zh, v, filt[v], inside, sk0, sk1, valid):
                 key = (kind, int(Q[i, 0] // 20), int(Q[i, 1] // 20))
                 nev[kind] = nev.get(kind, 0) + 1
                 counts.setdefault(cls, {}).setdefault(kind, 0)
                 counts[cls][kind] += 1
+                if in21[i]:
+                    counts21.setdefault(cls, {}).setdefault(kind, 0)
+                    counts21[cls][kind] += 1
                 if key not in places or val > places[key]["value"]:
                     places[key] = {"what": kind, "x": round(float(Q[i, 0]), 1), "y": round(float(Q[i, 1]), 1),
                                    "z": round(float(zh[i]), 2), "value": round(val, 3), "seg": k, "class": s["class"],
@@ -222,7 +233,8 @@ def main(lv=None):
     res = {"km_driven": {k: round(v, 1) for k, v in km.items()}, "events": counts,
            "places_by_kind": {c: {k: sum(1 for p in pl if p["cls"] == c and p["what"] == k) for k in
                                   ("STEP", "LIFT", "HARD", "HOLE", "TWIST")} for c in ("main", "minor", "path")},
-           "per_road": per_road, "places": pl}
+           "per_road": per_road, "places": pl,
+           "km_driven_v21_area": {k: round(v, 1) for k, v in km21.items()}, "events_v21_area": counts21}
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(res, open(OUT, "w"), indent=1, ensure_ascii=False)
     print(json.dumps({k: res[k] for k in ("km_driven", "events", "places_by_kind")}, indent=1))

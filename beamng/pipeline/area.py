@@ -3,6 +3,10 @@ joined with the Street View route (ROUTE_MARGIN around it, so the whole original
 with the cantonal road from Magliaso along the lake to Agno and up the Vedeggio valley to Gravesano
 (dati/cantonale_gravesano.json, strade_extra.py): EXTRA_ROAD_MARGIN around it and the strip between
 it and the side P1-P2 of the boundary, so no bare slope is left between the map and the road.
+v2.2: joined with a corridor of EXTRA_CORRIDOR m around the roads of dati/strade_extra_v22.json
+(strade_extra.py): the pass above Gravesano to Arosio (Stradón da Rós, the "Penudria"), the cantonal
+road from Ponte Tresa through Caslano to Magliaso and the road from Caslano along the lake to the
+Torrazza (Via Torrazza). Up to v2.1 they left the map: only the terrain, no road.
 
 Everything that is generated only where it can be seen or driven (roads, buildings, trees, raster
 data at 0.5 m) uses this polygon; the terrain block (config.TER_*) is a square around it and the
@@ -11,7 +15,7 @@ distant backdrop starts at the edge of that square.
 import json, os
 import numpy as np
 import shapely
-from config import (AREA_MARGIN, BOUNDARY, EXTRA_ROAD_MARGIN, K, ROUTE_MARGIN, TER_SIZE, TER_SQUARE, TER_X0,
+from config import (AREA_MARGIN, BOUNDARY, EXTRA_CORRIDOR, EXTRA_ROAD_MARGIN, K, ROUTE_MARGIN, TER_SIZE, TER_SQUARE, TER_X0,
                     TER_X1, TER_Y0, TER_Y1, local_to_lv95, lv95_to_local, wgs_to_local)
 
 DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
@@ -48,18 +52,57 @@ def extra_roads():
     return _cache["extra"]
 
 
+CORRIDORS = "strade_extra_v22.json"
+
+
+def extra_corridors():
+    """v2.2: [(key, name, local MultiLineString)] of the roads of dati/strade_extra_v22.json (strade_extra.py)."""
+    if "corridors" not in _cache:
+        out = []
+        f = os.path.join(DATI, CORRIDORS)
+        if os.path.exists(f):
+            for r in json.load(open(f, encoding="utf-8"))["roads"]:
+                parts = []
+                for P in r["parts"]:
+                    E, N = np.array(P, np.float64).T
+                    parts.append(shapely.LineString(np.column_stack(lv95_to_local(E, N))))
+                out.append((r["key"], r["name"], shapely.MultiLineString(parts)))
+        _cache["corridors"] = out
+    return _cache["corridors"]
+
+
 def polygon():
     """The playable area (local coordinates)."""
     if "area" not in _cache:
-        parts = [boundary().buffer(AREA_MARGIN, join_style="mitre"), route().buffer(ROUTE_MARGIN)]
-        p1, p2 = np.asarray(boundary().exterior.coords)[:2]
-        for road in extra_roads():
-            # the strip between the road and the side P1-P2 (the road runs from its south end, near
-            # P1, to its north end, near P2), and the road with its margin
-            parts.append(shapely.Polygon(list(road.coords) + [tuple(p2), tuple(p1)]).buffer(0))
-            parts.append(road.buffer(EXTRA_ROAD_MARGIN))
-        _cache["area"] = shapely.union_all(parts)
+        _cache["area"] = _polygon(corridors=True)
     return _cache["area"]
+
+
+def polygon_v21():
+    """The area of v2.1, without the corridors of v2.2: the comparisons with the v2.1 level (drive_test.py)."""
+    if "area_v21" not in _cache:
+        _cache["area_v21"] = _polygon(corridors=False)
+    return _cache["area_v21"]
+
+
+def _polygon(corridors=True):
+    """The boundary with its margin, the route, the cantonal road to Gravesano and (corridors) the roads of
+    v2.2."""
+    parts = [boundary().buffer(AREA_MARGIN, join_style="mitre"), route().buffer(ROUTE_MARGIN)]
+    p1, p2 = np.asarray(boundary().exterior.coords)[:2]
+    for road in extra_roads():
+        # the strip between the road and the side P1-P2 (the road runs from its south end, near
+        # P1, to its north end, near P2), and the road with its margin
+        parts.append(shapely.Polygon(list(road.coords) + [tuple(p2), tuple(p1)]).buffer(0))
+        parts.append(road.buffer(EXTRA_ROAD_MARGIN))
+    for _, _, road in (extra_corridors() if corridors else []):
+        parts.append(road.buffer(EXTRA_CORRIDOR))
+    A = shapely.union_all(parts)
+    # v2.2: a pocket that a corridor closes against the rest of the area (between the cantonal road of
+    # Caslano and the boundary) is part of it
+    if A.geom_type == "Polygon" and len(A.interiors):
+        A = shapely.Polygon(A.exterior)
+    return A
 
 
 def bounds(margin=0.0):

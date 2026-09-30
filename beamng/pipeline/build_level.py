@@ -791,11 +791,13 @@ def write_info(ctx):
     info = {
         "title": "Malcantone - Magliaso, Pura e dintorni",
         "description": ("Ricostruzione in scala 1:1 di circa %d km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
-                        "Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio e Sessa: ogni strada e "
+                        "Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio e Sessa: "
+                        "ogni strada e "
                         "sentiero guidabile, %d ponti, %d edifici con facciate, balconi e vetrine, guardrail su tutta "
                         "la rete, circa %d 000 alberi, traffico IA. La Strada "
                         "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
-                        "c'e' anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano. Dati ufficiali "
+                        "ci sono anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano, il passo sopra "
+                        "Gravesano fino ad Arosio, la cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
                         "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
                         "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
                         "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "

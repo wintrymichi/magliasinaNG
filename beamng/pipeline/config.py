@@ -31,11 +31,14 @@ K = 1.0001374973449562          # LV95 scale factor at the origin (pyproj get_fa
 # AREA_MARGIN m and joined with the Street View route (ROUTE_MARGIN m around it) and with the
 # cantonal road Magliaso - Agno - Bioggio - Manno - Gravesano (dati/cantonale_gravesano.json,
 # strade_extra.py: EXTRA_ROAD_MARGIN m around it and the strip between it and the side P1-P2 of the
-# boundary); see area.py
+# boundary); v2.2: with a corridor of EXTRA_CORRIDOR m around the roads of dati/strade_extra_v22.json (the
+# pass above Gravesano to Arosio, the cantonal road Ponte Tresa - Caslano - Magliaso, Caslano - Torrazza);
+# see area.py
 BOUNDARY = [(45.967056, 8.858833), (46.041250, 8.923417), (46.018500, 8.803833), (45.993111, 8.788028)]
 AREA_MARGIN = 150.0
 ROUTE_MARGIN = 60.0
 EXTRA_ROAD_MARGIN = 150.0
+EXTRA_CORRIDOR = 100.0
 # terrain block: TER_SIZE x TER_SIZE vertices TER_SQUARE m apart, vertex (0, 0) (south-west) at
 # (TER_X0, TER_Y0); it covers the area with ~0.6-2 km to spare
 TER_SIZE = 8192                 # terrain samples per side

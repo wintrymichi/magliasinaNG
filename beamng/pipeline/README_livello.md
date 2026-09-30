@@ -1,6 +1,6 @@
 # Malcantone: Magliaso, Pura e dintorni (BeamNG.drive 0.39)
 
-Ricostruzione in scala 1:1 di circa 51 km² del Malcantone (Canton Ticino), tra Ponte Tresa, Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio, Astano e Sessa. Al centro ci sono i 3,7 km di Strada Cantonale tra Magliaso e Pura delle versioni 1.x, ricostruiti dalle 366 panoramiche Street View del percorso (quasi tutte di ottobre 2022). A est c'è la cantonale da Magliaso a Gravesano: lungo il lago fino ad Agno, poi ai piedi dei monti per Bioggio e Manno. Il resto dell'area viene dai dati ufficiali di swisstopo e del Cantone Ticino.
+Ricostruzione in scala 1:1 di circa 51 km² del Malcantone (Canton Ticino), tra Ponte Tresa, Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio, Astano e Sessa. Al centro ci sono i 3,7 km di Strada Cantonale tra Magliaso e Pura delle versioni 1.x, ricostruiti dalle 366 panoramiche Street View del percorso (quasi tutte di ottobre 2022). A est c'è la cantonale da Magliaso a Gravesano: lungo il lago fino ad Agno, poi ai piedi dei monti per Bioggio e Manno. Dalla v2.2 ci sono anche il passo sopra Gravesano fino ad Arosio (lo Stradón da Rós, la «Penudria», con i suoi tornanti), la cantonale da Ponte Tresa per Caslano a Magliaso e, a Caslano, il paese dalla stazione al lago e Via Torrazza lungo la riva fino alla Torrazza. Il resto dell'area viene dai dati ufficiali di swisstopo e del Cantone Ticino.
 
 ## Come si gioca
 
@@ -41,6 +41,7 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 
 ## Versione 2.2
 
+- **Nuove strade:** il passo sopra Gravesano fino ad Arosio (Stradón da Rós, la «Penudria»), la cantonale Ponte Tresa – Caslano – Magliaso e Via Torrazza a Caslano finivano sul bordo della mappa (oltre c'era solo il terreno). Ora sono strade vere, con superficie, segnaletica, guardrail e un corridoio di 100 m con edifici, alberi e muri, riviste su Street View come il resto della mappa.
 - **Edifici con le facciate:** finestre con persiane, tapparelle o serramenti moderni, porte, portoni, garage, vetrine, balconi, zoccoli e comignoli su ogni edificio, distribuiti per piani e campate secondo uso, epoca e piani del Registro federale degli edifici. Nei nuclei ogni casa ha le sue facciate, i suoi piani, la sua porta e il suo tono; i piani partono dal fronte strada anche sui pendii. Coperture in coppi, tegole, piode, lamiera o tetto piano. Tutte le texture sono disegnate: nessuna foto.
 - **Colori dalle foto:** il tono dell'intonaco e il colore delle persiane vengono dalle panoramiche Street View dove l'edificio è visto (solo i valori, corretti per l'ombra).
 - **Edifici mancanti** (costruiti dopo il rilievo 3D) aggiunti dalla misurazione ufficiale; demoliti tolti.

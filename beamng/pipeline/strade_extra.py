@@ -8,7 +8,15 @@ OTHER times it, from the node nearest the start of the route to the node nearest
 Gravesano (swissNAMES3D).
 Output: dati/cantonale_gravesano.json, the line in LV95 (E, N). area.py reads it, so the area (and
 the downloads made from it) does not need swissTLM3D.
-    python strade_extra.py
+
+v2.2: the roads the user found missing, each a chain of shortest ways (as above) between waypoints:
+- the pass above Gravesano, the "Penudria" (Stradón da Rós through Penodra), from Gravesano to Arosio;
+- the cantonal road from Ponte Tresa along the lake through Caslano to Magliaso;
+- from the station of Caslano through the village to the road along the lake to the Torrazza
+  (Via Torrazza), opposite Ponte Tresa.
+Output: dati/strade_extra_v22.json (the lines in LV95); area.py joins a corridor of EXTRA_CORRIDOR m
+around them to the area.
+    python strade_extra.py            (both files)
 """
 import collections, heapq, json, os
 import numpy as np
@@ -20,6 +28,14 @@ import network
 import places
 
 OUT = os.path.join(area.DATI, "cantonale_gravesano.json")
+OUT_V22 = os.path.join(area.DATI, area.CORRIDORS)
+# v2.2: (key, name, waypoints): settlements of swissNAMES3D or LV95 points (E, N)
+CORRIDORS = [
+    ("passo_arosio", "Passo sopra Gravesano (Penudria, Stradón da Rós): Gravesano - Arosio", ["Gravesano", "Arosio"]),
+    ("cantonale_caslano", "Strada cantonale Ponte Tresa - Caslano - Magliaso", ["Ponte Tresa", "Magliaso"]),
+    ("caslano_torrazza", "Caslano: dalla stazione alla Torrazza (Via Torrazza)",
+     [(2711420.0, 1092813.0), "Caslano", (2711080.0, 1090964.0)]),       # station, village, Torrazza
+]
 MOTORWAY = {"Autobahn", "Autostrasse", "Ausfahrt", "Einfahrt", "Raststaette"}
 OTHER = 4.0              # weight of a road the canton does not own, per metre
 
@@ -112,5 +128,39 @@ def main():
     print("->", OUT)
 
 
+def waypoint(w):
+    if isinstance(w, str):
+        return np.asarray(places.place(w), np.float64)
+    return np.asarray(lv95_to_local(*w), np.float64).ravel()
+
+
+def corridors():
+    """v2.2: the lines of CORRIDORS -> dati/strade_extra_v22.json."""
+    lines = road_lines()
+    roads = []
+    for key, name, wps in CORRIDORS:
+        pts = [waypoint(w) for w in wps]
+        way = []
+        for a, b in zip(pts[:-1], pts[1:]):
+            way += [i for i in shortest(lines, a, b) if i not in way]
+        merged = shapely.line_merge(shapely.union_all([shapely.LineString(lines[i][0]) for i in way]))
+        parts = list(shapely.get_parts(merged))
+        names = collections.Counter()
+        for i in way:
+            L, p = lines[i]
+            names[p.get("STRNAME") or "-"] += float(np.sum(np.linalg.norm(np.diff(L, axis=0), axis=1)))
+        length = sum(g.length for g in parts)
+        roads.append({"key": key, "name": name, "length_m": round(length, 1),
+                      "streets": {k: round(v) for k, v in names.most_common()},
+                      "parts": [[[round(float(e), 2), round(float(n_), 2)] for e, n_ in
+                                 zip(*local_to_lv95(*np.asarray(g.coords)[:, :2].T))] for g in parts]})
+        print("%s: %d pieces, %.0f m, %d parts; streets (m): %s" % (key, len(way), length, len(parts),
+                                                                  {k: round(v) for k, v in names.most_common(6)}))
+    with open(OUT_V22, "w", encoding="utf-8") as f:
+        json.dump({"source": "swissTLM3D, strade_extra.py (v2.2)", "roads": roads}, f, ensure_ascii=False)
+    print("->", OUT_V22)
+
+
 if __name__ == "__main__":
     main()
+    corridors()
