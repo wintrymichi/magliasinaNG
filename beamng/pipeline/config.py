@@ -74,7 +74,9 @@ for _d in (DATA, WORK):
     os.makedirs(_d, exist_ok=True)
 
 
-# MAGLIASO_NO_PHOTO_TEXTURES=1 builds a level without imagery taken from the Street View
-# panoramas (facade/wall photo textures, sign plates): for public distribution. Colours
-# measured in the photos (facade tone, terrain) are kept.
-NO_PHOTO = os.environ.get("MAGLIASO_NO_PHOTO_TEXTURES") == "1"
+# No imagery taken from the Street View panoramas goes into the level (facade/wall photo textures,
+# sign plates): the photos are a reference only, what they show is redrawn (bld_textures.py,
+# props_osm.py) and only numbers measured in them (facade tone, shutter colour, wall material,
+# guard rails) are used. v2.2: this is the default; MAGLIASO_NO_PHOTO_TEXTURES=0 brings back the
+# photo textures of the local v1.x builds, for private study only.
+NO_PHOTO = os.environ.get("MAGLIASO_NO_PHOTO_TEXTURES", "1") != "0"

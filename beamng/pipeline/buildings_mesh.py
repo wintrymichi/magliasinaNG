@@ -23,6 +23,7 @@ from config import NO_PHOTO, WORK
 
 TILE = 256.0
 V1_DEFAULT = np.array([0.84, 0.80, 0.72])        # plaster tone of v1.x buildings without photos
+SHOP_NEAR = 3.0        # m, a shop of OSM this close to a building is in it (the point is often on the street side)
 
 
 def wall_uvs(tris):
@@ -288,6 +289,88 @@ def passages(b, walls, roofs, ways, tree):
     return walls, roofs, passage_shell(shapely.union_all(cs), fp, min(zbs), max(zts), top)
 
 
+def split_u(tris, a, cuts):
+    """Triangles (k, 3, 3) of a vertical facade cut by the vertical planes u = c (u = p . a) for every c
+    of cuts: (m, 3, 3)."""
+    out = []
+    for t in tris:
+        polys = [t]
+        for c in cuts:
+            nxt = []
+            for P in polys:
+                u = P @ a - c
+                if (u >= -1e-6).all() or (u <= 1e-6).all():
+                    nxt.append(P)
+                    continue
+                lo, hi = [], []
+                for i in range(len(P)):
+                    A, B, ua, ub = P[i], P[(i + 1) % len(P)], u[i], u[(i + 1) % len(P)]
+                    if ua <= 0:
+                        lo.append(A)
+                    if ua >= 0:
+                        hi.append(A)
+                    if (ua < 0 < ub) or (ub < 0 < ua):
+                        X = A + (B - A) * (ua / (ua - ub))
+                        lo.append(X)
+                        hi.append(X)
+                nxt += [np.array(Q) for Q in (lo, hi) if len(Q) >= 3]
+            polys = nxt
+        for P in polys:
+            for i in range(1, len(P) - 1):
+                out.append([P[0], P[i], P[i + 1]])
+    out = np.array(out, float).reshape(-1, 3, 3)
+    area = 0.5 * np.linalg.norm(np.cross(out[:, 1] - out[:, 0], out[:, 2] - out[:, 0]), axis=1)
+    return out[area > 1e-6]
+
+
+def houses(b, rest, style, rec, height, roof_rgb, wall_col, sv, pp, by_egid, shop_pts):
+    """(walls, [(mask of the wall triangles, style)]) of a building: one group, or one per house of the
+    survey (pp: facades.mu_parts): the facades are cut where one house ends and the next begins (seen 0.3 m
+    inside the wall), every piece goes to its house, which has its own record of the register (by EGID),
+    style, shop front and a tone a little different from its neighbours'."""
+    import facades
+    import texturing
+    if not pp or not len(rest):
+        return rest, [(np.ones(len(rest), bool), style)]
+    polys = [poly for poly, _ in pp]
+
+    def owner(xy):
+        P = shapely.points(xy)
+        return np.argmin(np.column_stack([shapely.distance(poly, P) for poly in polys]), axis=1)
+    pieces, owners = [], []
+    for idx, n, d0 in texturing.facade_groups(rest):
+        tris = rest[idx]
+        a = np.array([-n[1], n[0], 0.0])
+        o = np.array([n[0] * d0, n[1] * d0])
+        u = tris.reshape(-1, 3) @ a
+        us = np.arange(u.min(), u.max() + 0.25, 0.25)
+        ow = owner(o[None] + us[:, None] * a[None, :2] - np.asarray(n)[None, :2] * 0.3)
+        cuts = [0.5 * (us[i] + us[i + 1]) for i in range(len(us) - 1) if ow[i] != ow[i + 1]]
+        if cuts:
+            tris = split_u(tris, a, cuts)
+        cu = tris.mean(1) @ a
+        pieces.append(tris)
+        owners.append(owner(o[None] + cu[:, None] * a[None, :2] - np.asarray(n)[None, :2] * 0.3))
+    rest = np.concatenate(pieces)
+    own = np.concatenate(owners)
+    out = []
+    for k, (poly, egid) in enumerate(pp):
+        sel = own == k
+        if not sel.any():
+            continue
+        prec = by_egid.get(egid, {}) if egid else {}
+        ptone = None
+        if wall_col is not None:                           # the block's tone, a little different per house
+            prng = facades.rng_of(b["uuid"] + str(k))
+            ptone = np.clip(np.asarray(wall_col) * (1 + prng.normal(0, 0.045)) + prng.normal(0, 0.02, 3), 0, 1)
+        shop = bool(shapely.intersects(poly.buffer(SHOP_NEAR), shop_pts)) if shop_pts is not None else False
+        pst = facades.style_of(b, prec or rec, poly.area, height, roof_rgb, measured=ptone,
+                               shutter=(sv["shutter"], sv.get("shutter_frac", 0.0)) if sv.get("shutter") else None,
+                               shop=shop, key=b["uuid"] + "/" + (egid or str(k)))
+        out.append((sel, pst))
+    return rest, out
+
+
 def load_buildings():
     """The buildings of the level: swissBUILDINGS3D (buildings.pkl) without the ones gone from the ground
     and with the ones of the cadastral survey it does not model (missing_buildings.py, v2.2)."""
@@ -342,6 +425,18 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
         measured = json.load(open(facades.FACADE_COLORS))
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     ctx = facades.Context(blds, fps, lambda x, y: dtm.sample(x, y), street_index(net))
+    # the buildings with a shop, bar, office ... of OSM (within SHOP_NEAR m of the footprint): shop fronts
+    import osm
+    pts = [(x, y) for x, y, k in osm.pois() if facades.shop_front(k)]
+    with_shop = set()
+    shop_pts = shapely.multipoints(pts) if pts else None
+    if pts:
+        hit_p, hit_b = shapely.STRtree(fps).query(shapely.points(pts), predicate="dwithin", distance=SHOP_NEAR)
+        with_shop = {blds[i]["uuid"] for i in hit_b}
+    # the houses of the survey inside the blocks of swissBUILDINGS3D, and the register by EGID
+    parts = facades.mu_parts(blds, fps)
+    by_egid = facades.gwr_by_egid()
+    print("blocks of several houses", len(parts), "houses", sum(len(v) for v in parts.values()), flush=True)
     em = facades.Emitter(index)
     atlas = texturing.Atlas(4096)
     tiles = {}
@@ -398,27 +493,44 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             fp = fps[pos[b["uuid"]]]
             height = float(b["bbox"][1][2] - b["bbox"][0][2])
             style = facades.style_of(b, rec, fp.area, height, rcol.get(b["uuid"]), measured=wall_col,
-                                     shutter=sv.get("shutter") if sv.get("shutter_frac", 0) >= 0.05 else None)
+                                     shutter=(sv["shutter"], sv.get("shutter_frac", 0.0)) if sv.get("shutter") else None,
+                                     shop=b["uuid"] in with_shop)
             stats["gwr"] += bool(rec)
             stats["measured"] += wall_col is not None
             stats["use"][style["use"]] = stats["use"].get(style["use"], 0) + 1
             rest = walls[~assigned]
-            # windows, doors and plinth on the walls of the building (not in its passages)
-            if len(rest) and style["use"] != "none":
-                stats["openings"] += facades.layout_building(b, rest, style, ctx, em)
+            # the passages of the ways under the building first: the openings and the plinth go on the walls
+            # that are left (none hangs in a passage over a road)
             rest, roofs, shell = passages(b, rest, roofs, ways, wtree)
+            # the houses of the survey in a block of swissBUILDINGS3D: every one with the walls nearest to it,
+            # its own record of the register, style, floors, door and tone (a row of houses of a village core)
+            rest, groups = houses(b, rest, style, rec, height, rcol.get(b["uuid"]), wall_col, sv, parts.get(b["uuid"]),
+                                  by_egid, shop_pts)
+            if len(groups) > 1:
+                stats["parts"] = stats.get("parts", 0) + len(groups)
+            # windows, doors and plinth on the walls of the building (of every house of a block)
+            if len(rest) and style["use"] != "none":
+                for sel, pst in groups:
+                    if pst["use"] != "none":
+                        stats["openings"] += facades.layout_building(b, rest[sel], pst, ctx, em)
+                    stats["shops"] = stats.get("shops", 0) + int(pst["shop"])
             if len(shell):
                 rest = np.concatenate([rest, shell])
+                groups = [(np.r_[sel, np.zeros(len(shell), bool)], pst) for sel, pst in groups]
+                groups[0][0][-len(shell):] = True               # the passage's ceiling and sides: the first house
                 n_pass += 1
-            if len(rest):
-                V = rest.reshape(-1, 3)
-                if style["stone"]:
+            for sel, pst in groups:
+                if not sel.any():
+                    continue
+                part = rest[sel]
+                V = part.reshape(-1, 3)
+                if pst["stone"]:
                     stats["stone"] += 1
-                    mb.add("bld_stone", V, uvs=wall_uvs(rest) / 3.0, normals=bng.flat_normals_soup(V),
-                           colors=np.r_[np.clip(0.97 + 0.03 * (style["tone"] - style["tone"].mean()), 0, 1), 1.0])
+                    mb.add("bld_stone", V, uvs=wall_uvs(part) / 3.0, normals=bng.flat_normals_soup(V),
+                           colors=np.r_[np.clip(0.97 + 0.03 * (pst["tone"] - pst["tone"].mean()), 0, 1), 1.0])
                 else:
-                    tone = np.clip(style["tone"] / mean("t_bld_plaster"), 0, 1)
-                    mb.add("bld_plaster", V, uvs=wall_uvs(rest) / 5.0, normals=bng.flat_normals_soup(V),
+                    tone = np.clip(pst["tone"] / mean("t_bld_plaster"), 0, 1)
+                    mb.add("bld_plaster", V, uvs=wall_uvs(part) / 5.0, normals=bng.flat_normals_soup(V),
                            colors=np.r_[tone, 1.0])
             # chimneys: plastered stacks with a concrete cap
             stack, cap = facades.chimneys(b, roofs, style)

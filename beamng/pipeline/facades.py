@@ -23,7 +23,7 @@ Until v2.1 every building was a block of plaster in one tone without a window. N
 The openings are quads 3 cm in front of the wall with the atlas of bld_textures.py (alpha clip); the
 wall keeps its own triangles.
 """
-import hashlib, json, math, os
+import hashlib, json, os
 import numpy as np
 import shapely
 from config import WORK
@@ -35,6 +35,9 @@ EAVE_GAP = 0.35          # m between the top of the upper windows' floor and the
 MIN_FACADE = 1.4         # m, narrower facades stay blank
 EDGE = 0.45              # m, openings keep this far from the corners
 BLOCK_OUT = 0.7          # m in front of an opening: another building there hides it (party wall)
+DARK_ROOF = 0.2          # luminance of a roof in the orthophoto under which its colour is the shade, not the roof
+PART_MIN = 12.0          # m2, least house of the survey inside a block of swissBUILDINGS3D that gets its own facades
+FLOOR_MIN = 2.6          # m, lowest floor height the register's number of floors may give (it counts attics too)
 FACADE_COLORS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "facade_colors.json")
 
 # plaster tones (sRGB) by age, from what is seen along the streets of the Malcantone
@@ -132,6 +135,40 @@ def gwr_join(blds, fps):
     return out
 
 
+def mu_parts(blds, fps):
+    """The houses of the cadastral survey inside every building of swissBUILDINGS3D that holds several (a row of
+    houses of a village core is one block there): {uuid: [(footprint of the house, its EGID or None), ...]},
+    for the buildings with two or more; a house counts when the block covers half of it and PART_MIN m2."""
+    avf = os.path.join(WORK, "av_local.pkl")
+    if not os.path.exists(avf):
+        return {}
+    import pickle
+    mu = [(g, p.get("REA_EGID")) for g, p in pickle.load(open(avf, "rb"))["LCSF"].get("edificio", [])]
+    mtree = shapely.STRtree([g for g, _ in mu])
+    out = {}
+    for bi, fp in enumerate(fps):
+        if fp.is_empty or fp.area < 2 * PART_MIN:
+            continue
+        parts = []
+        for j in mtree.query(fp, predicate="intersects"):
+            g, egid = mu[j]
+            a = shapely.intersection(fp, g).area
+            if a >= PART_MIN and a >= 0.5 * g.area:
+                parts.append((shapely.intersection(fp, g), str(egid) if egid else None))
+        if len(parts) >= 2:
+            out[blds[bi]["uuid"]] = parts
+    return out
+
+
+def gwr_by_egid():
+    """{EGID: record} of the register (download_gwr.py)."""
+    f = os.path.join(WORK, "gwr.json")
+    if not os.path.exists(f):
+        return {}
+    return {str(r["egid"]): r for r in json.load(open(f))["buildings"]
+            if "egid" in r and r.get("gstat", 1004) in (1004, 1003, 1005)}
+
+
 def year_of(rec):
     if rec.get("gbauj"):
         return int(rec["gbauj"])
@@ -153,20 +190,36 @@ def age_class(year):
 
 
 SV_SAT = 1.25          # the tones measured in the panoramas come out greyer than the facades (haze, shade)
+SV_LIFT = 0.70         # ... and darker: the luminance L becomes 1 - (1 - L) SV_LIFT (a facade in the shade, the
+                       # exposure of the camera against the sky), the hue and saturation stay
 SV_SHUTTERS = ("verde", "verde_scuro", "bordeaux", "grigio")   # shutter colours the measurement tells apart
+SV_BROWN = ("marrone", "legno")                                 # brown: also dark glass and shade, so more is needed
+SHOP_FRONT = ("shop=", "craft=", "office=", "amenity=restaurant", "amenity=cafe", "amenity=bar", "amenity=pub",
+              "amenity=bank", "amenity=pharmacy", "amenity=post_office", "amenity=fast_food", "amenity=ice_cream",
+              "tourism=hotel", "tourism=guest_house")
 
 
 def sv_tone(rgb):
-    """A tone measured in the panoramas, its saturation brought back (SV_SAT around its luminance)."""
+    """A tone measured in the panoramas: its saturation brought back (SV_SAT around its luminance) and its
+    luminance lifted (SV_LIFT)."""
     c = np.asarray(rgb, float)
     y = float(c @ np.array([0.2126, 0.7152, 0.0722]))
-    return np.clip(y + (c - y) * SV_SAT, 0, 1)
+    c = y + (c - y) * SV_SAT
+    y2 = 1.0 - (1.0 - y) * SV_LIFT
+    return np.clip(c * (y2 / max(y, 1e-3)), 0, 1)
 
 
-def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None):
+def shop_front(kind):
+    """Whether a point of interest of OSM (osm.pois kind) has a shop front on the street."""
+    return any(kind.startswith(k) for k in SHOP_FRONT)
+
+
+def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=False, key=None):
     """What a building looks like: kind, age class, material, tone, window family, shutter colour.
-    measured: the plaster tone seen in the photos; shutter: the shutter colour seen there."""
-    rng = rng_of(b["uuid"])
+    measured: the plaster tone seen in the photos; shutter: (colour, share of the facade) seen there;
+    shop: a shop, bar, office ... of OSM in the building (a shop front on the ground floor); key: of the
+    random choices (default the building's id; a house of a block has its own)."""
+    rng = rng_of(key or b["uuid"])
     klass, cat = rec.get("gklas"), rec.get("gkat")
     kind = b["kind"]
     year = year_of(rec)
@@ -177,6 +230,10 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None):
         use = "tower"
     elif kind in ("Lagertank", "Treibhaus", "Flugdach", "Mauer gross"):
         use = "none"
+    elif (klass in (1251, 1252) or (cat == 1060 and klass is None)) and area < 60:
+        # a small storage building or workshop: in the villages the old ones are rustici and sheds, not
+        # workshops with ribbon windows
+        use = "rural" if age in ("old", "interwar", "mid", None) and area >= 15 else "shed"
     elif klass in (1251, 1252) or (cat == 1060 and area > 400 and klass not in (1271, 1276, 1277, 1278)):
         use = "work"
     elif klass in (1220, 1230, 1231, 1241, 1261, 1262, 1263, 1264, 1265, 1211, 1212, 1130, 1275, 1273, 1274) and area > 60:
@@ -187,6 +244,8 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None):
         use = "rural"
     elif cat in (1020, 1030, 1040) or klass in (1110, 1121, 1122):
         use = "house"
+    elif not rec and height < 4.5 and 15 <= area < 250:   # no register entry, one low storey: garages
+        use = "garage"
     elif not rec:                                      # no register entry: small sheds and rustici
         use = "shed" if area < 25 else ("rural" if area < 90 and height < 7.5 else "house")
     else:
@@ -206,28 +265,42 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None):
     fam = pick(rng, FAMILY_MIX[age if age != "interwar" else "interwar"])
     sh = pick(rng, SHUTTER_MIX["old" if age == "old" else ("interwar" if age == "interwar" else
                                                            ("mid" if age == "mid" else "late"))])
-    if shutter in SV_SHUTTERS:                         # the shutters seen in the panoramas
-        sh = shutter
-        if fam in ("roller", "modern"):
+    older = age in ("old", "interwar", "mid")
+    col, frac = shutter if shutter else (None, 0.0)
+    if col in SV_SHUTTERS and frac >= 0.05:            # the shutters seen in the panoramas
+        sh = col
+        if fam in ("roller", "modern") and older:
             fam = "shutters"
+    elif col in SV_BROWN and frac >= 0.10 and fam in ("shutters", "granite"):
+        sh = col
     return {"use": use, "age": age, "year": year, "stone": stone, "tone": np.clip(tone, 0, 1), "family": fam,
             "shutter": sh, "closed": float(rng.uniform(0.0, 0.25)), "floors": rec.get("gastw"),
             "french": float(rng.uniform(0.1, 0.35)) if use == "house" and age in ("interwar", "mid", "late") else 0.0,
             "plinth": use in ("house", "public", "church") and not stone,
             "plinth_h": float(rng.uniform(0.45, 0.8)) if age in ("old", "interwar") else float(rng.uniform(0.3, 0.6)),
+            # shop fronts on the ground floor: a shop of OSM in the building, or a building of the register
+            # used in part for trade or offices (mixed use) on a main street
+            "shop": bool(shop), "mixed": cat in (1030, 1040) or klass in (1220, 1230),
             "seed": int(rng.integers(1 << 30))}
 
 
 # ------------------------------------------------------------------ roofs
 def roof_kind(style, slope_deg, rgb):
-    """Covering of a roof face: flat, coppi, tegole, piode or metal."""
+    """Covering of a roof face: flat, coppi, tegole, piode or metal. A roof darker than DARK_ROOF in the
+    orthophoto (a small roof in the shade of its neighbours) tells nothing: its covering follows the age."""
     if slope_deg < 8.0:
         return "flat"
     r, g, b = rgb
     mx, mn = max(rgb), min(rgb)
     sat = (mx - mn) / max(mx, 1e-6)
-    warm = r > b + 0.04 and sat > 0.12
     use, age = style["use"], style["age"]
+    if 0.2126 * r + 0.7152 * g + 0.0722 * b < DARK_ROOF:
+        if use in ("work", "garage") and slope_deg < 25:
+            return "metal"
+        if use in ("rural", "shed") and age in ("old", "interwar"):
+            return "piode" if style["seed"] % 3 == 0 else "coppi"
+        return "coppi" if age in ("old", "interwar") else "tegole"
+    warm = r > b + 0.04 and sat > 0.12
     if use in ("work", "garage", "shed") and not warm and slope_deg < 25:
         return "metal"
     if not warm:
@@ -408,6 +481,7 @@ def layout_building(b, walls, style, ctx, em):
     if not len(gs):
         return 0
     g_hi = float(np.percentile(gs, 80))
+
     def eave_of(f):
         us_, top_ = f[5], f[7]
         mid = (us_ > us_[0] + 0.3) & (us_ < us_[-1] - 0.3) & np.isfinite(top_)
@@ -420,15 +494,6 @@ def layout_building(b, walls, style, ctx, em):
     if not good.any():
         return 0
     wide = good & (widths >= 3.0)
-    z_e = float(np.median(eaves[wide])) if wide.any() else float(np.median(eaves[good]))
-    H = z_e - g_hi - EAVE_GAP
-    if not np.isfinite(H) or H < 1.9:
-        return 0
-    n_f = style["floors"]
-    if not n_f or not (2.35 <= H / n_f <= 3.9):
-        n_f = max(1, int(round(H / 3.0)))
-    h_f = float(np.clip(H / n_f, 2.4, 3.9))
-    fb0 = z_e - EAVE_GAP - n_f * h_f                   # bottom of the ground floor (uphill ground)
     use = style["use"]
     count = 0
     # the front: the facade facing the nearest street
@@ -436,6 +501,41 @@ def layout_building(b, walls, style, ctx, em):
     if sdir is not None:
         score = [float(f[1][:2] @ sdir) * (f[5][-1] - f[5][0]) ** 0.3 for f in facs]
         front = int(np.argmax(score)) if max(score) > 0.2 else -1
+    # the eaves of the floors: those of the front (the facade seen from the street: an annex or a lower wing
+    # at the back must not lower the floors of the house), else the median of the wide facades
+    if front >= 0 and good[front]:
+        z_e = float(eaves[front])
+    else:
+        z_e = float(np.median(eaves[wide])) if wide.any() else float(np.median(eaves[good]))
+    # v2.2: the floors start at the ground in front of the front (the street side), or of the lowest wide
+    # facade where no street is near: on a slope every floor is seen there, from the ground floor up, and
+    # uphill the lower floors are under the ground (their openings do not fit). The number of floors of
+    # the register holds when it gives floors of a plausible height, counted from the front or from the
+    # uphill side (a house on a slope: the register counts the floors above the uphill ground)
+    med_g = np.array([float(np.nanmedian(f[6])) if np.isfinite(f[6]).any() else np.nan for f in facs])
+    if front >= 0 and np.isfinite(med_g[front]):
+        g0 = float(med_g[front])
+    else:
+        cand = np.where(wide & np.isfinite(med_g), med_g, np.nan)
+        g0 = float(np.nanmin(cand)) if np.isfinite(cand).any() else float(np.nanmin(med_g))
+    g0 = min(g0, g_hi)
+    H = z_e - EAVE_GAP - g0
+    if not np.isfinite(H) or H < 1.9:
+        return 0
+    n_reg = style["floors"]
+    h_f = None
+    for Hc in (H, z_e - EAVE_GAP - g_hi):
+        if n_reg and Hc >= 1.9 and FLOOR_MIN <= Hc / n_reg <= 3.9:
+            h_f = Hc / n_reg
+            break
+    if h_f is None:
+        h_f = 3.0 if style["age"] in ("mid", "late", "new") else 3.2
+    n_f = max(1, int(round(H / h_f)))
+    h_f = float(np.clip(H / n_f, 2.4, 3.9))
+    fb0 = z_e - EAVE_GAP - n_f * h_f                   # bottom of the ground floor (at the front)
+    # shop fronts on the ground floor of the front: a shop of OSM in the building, a mixed-use building of
+    # the register on a main street, a public building (offices, trade) on a main street
+    shops = style.get("shop") or (main and sdist < 15.0 and (use == "public" or (use == "house" and style.get("mixed"))))
     door_done = False
     for fi, (tris, n, a, o, F, us, g, top) in enumerate(facs):
         W = us[-1] - us[0]
@@ -478,10 +578,26 @@ def layout_building(b, walls, style, ctx, em):
         keep = rng.random(len(ucs)) > (0.35 if side and use == "house" else 0.1)
         if use in ("garage", "shed"):
             keep[:] = False
-        # lower floors where the ground falls away along this facade
+            if use == "garage" and not side:            # a row of garage doors on the street side
+                gname = ["garage_grey", "garage_white", "garage_brown"][int(style["seed"] % 3)]
+                m = em.index[gname]
+                pitch = m["w"] + 0.35
+                ng = int(max(0, np.floor((W - 2 * 0.3 + 0.35) / pitch)))
+                for j in range(ng):
+                    uc = us[0] + 0.3 + (W - 2 * 0.3 - ng * pitch + 0.35) / 2 + j * pitch + m["w"] / 2
+                    if fits(uc, m["w"], gl(uc) - 0.03, m["h"], ground_gap=-0.4):
+                        em.opening(gname, o, a, n, uc, gl(uc) - 0.03)
+                        count += 1
+        # lower floors where the ground falls away along this facade; upper floors where this part of the
+        # building rises over the eaves of the rest
         glo = np.nanmin(g) if np.isfinite(g).any() else fb0
         k_min = -int(max(0, np.floor((fb0 - glo - 0.4) / h_f)))
-        for k in range(k_min, n_f):
+        e_f = eave_of((tris, n, a, o, F, us, g, top))
+        k_max = n_f
+        if np.isfinite(e_f) and use not in ("church", "tower"):
+            k_max = max(n_f, int(np.floor((e_f - EAVE_GAP - fb0) / h_f + 0.25)))
+        n_shop = 0
+        for k in range(k_min, k_max):
             fb = fb0 + k * h_f
             for j, uc in enumerate(ucs):
                 if not keep[j] and not (k == 0 and fi == front and not door_done):
@@ -499,15 +615,18 @@ def layout_building(b, walls, style, ctx, em):
                         door_done = True
                         count += 1
                         continue
-                if k <= 0 and ground_floor and fi == front and use == "public" and main:
+                if k <= 0 and ground_floor and fi == front and shops and use in ("house", "public") and \
+                        (n_shop == 0 or rng.random() < 0.75):
                     nm = "shop" if rng.random() < 0.6 else "shop_light"
                     m = em.index[nm]
                     zg = gl(uc)
-                    if fits(uc, m["w"], zg - 0.03, m["h"], ground_gap=-0.4):
+                    if h_f >= 2.9 and fits(uc, m["w"], zg - 0.03, m["h"], ground_gap=-0.4):
                         em.opening(nm, o, a, n, uc, zg - 0.03)
                         count += 1
+                        n_shop += 1
                         continue
-                if k <= 0 and ground_floor and fi == front and use == "house" and nb >= 3 and rng.random() < 0.25:
+                if k <= 0 and ground_floor and fi == front and use == "house" and nb >= 3 and not shops and \
+                        rng.random() < 0.25:
                     nm = ["garage_white", "garage_grey", "garage_brown", "garage_wood"][
                         int(rng.integers(4)) if style["age"] not in ("old", "interwar") else 3]
                     m = em.index[nm]
@@ -535,7 +654,8 @@ def layout_building(b, walls, style, ctx, em):
                     name, zb = ("small" if k <= 0 else "barn"), fb + (1.0 if k <= 0 else 0.6)
                     if rng.random() < 0.4:
                         continue
-                elif k < 0:
+                elif k < 0 and fb < gl(uc) - 0.3:
+                    # a floor partly under the ground here: a basement window
                     name, zb = "small_grille", fb + 1.0
                 else:
                     name = window_name(style, rng, k)
@@ -558,11 +678,12 @@ def layout_building(b, walls, style, ctx, em):
                     if fits(uc, m["w"], zb, m["h"]):
                         em.opening(alt, o, a, n, uc, zb)
                         count += 1
-        # attic window in a tall gable
-        if use == "house" and np.isfinite(top).any() and np.nanmax(top) - z_e > 2.2:
+        # attic window in a tall gable (over the eaves of this part of the building)
+        z_a = e_f if np.isfinite(e_f) else z_e
+        if use == "house" and np.isfinite(top).any() and np.nanmax(top) - z_a > 2.2:
             uc = us[int(np.nanargmax(top))]
             m = em.index["vent"]
-            zb = z_e + 0.6
+            zb = z_a + 0.6
             if fits(uc, m["w"], zb, m["h"]):
                 em.opening("vent", o, a, n, uc, zb)
         # plinth along the foot of the wall (every PLINTH_STEP m: the ground varies slowly)
