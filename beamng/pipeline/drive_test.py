@@ -14,14 +14,15 @@ model is run with scipy (bilinear discretisation) and reports:
 - HARD: a vertical acceleration of the body above HARD_G;
 - HOLE: a wheel inside the carriageway with no road face under it (it drops to the terrain);
 - TWIST: a sudden change of roll or pitch of the car (cross slope or grade breaking within 1 m).
+At a dead end the last DEAD_END m are not counted: the wheels ahead of the car are past the end of the
+road there.
 Output: beamng/verifica/drive_test.json with the counts per road class, the worst places and the
 events per road; and a summary on the console.
     python drive_test.py [level folder]
 """
-import json, math, os, sys, time
+import json, os, sys, time
 import numpy as np
 from scipy import signal
-from scipy.ndimage import map_coordinates
 import patch_release as pr
 from road_mesh import TriSurface
 from config import LEVEL_DIR
@@ -41,6 +42,7 @@ SPEED = {"10m Strasse": 60, "8m Strasse": 60, "6m Strasse": 50, "Autostrasse": 8
          "4m Strasse": 40, "3m Strasse": 30}
 PATH_SPEED = 15
 PATCH = [(0.0, 0.0), (0.09, 0.0), (-0.09, 0.0), (0.0, 0.07), (0.0, -0.07)]   # (along, across) m
+DEAD_END = WHEELBASE / 2 + 0.3             # m at a dead end where the wheels may be past the end of the road
 
 
 def filters(v_kmh):
@@ -96,8 +98,10 @@ class Ground:
         return np.where(on, np.maximum(zr, zt), zt), on
 
 
-def drive(ground, Q, T, zhint, v, filt, inside):
-    """Events of one run: (index along the path, kind, value) per event, plus the per-wheel profiles."""
+def drive(ground, Q, T, zhint, v, filt, inside, skip0=1.0, skip1=0.0):
+    """Events of one run: (index along the path, kind, value) per event. The first skip0 m (the start
+    transient) and the last skip1 m are left out: at a dead end the wheels ahead of or behind the car
+    run past the end of the road, onto the ground beyond it."""
     L = np.column_stack([-T[:, 1], T[:, 0]])       # left
     wheels = [(WHEELBASE / 2, TRACK / 2), (WHEELBASE / 2, -TRACK / 2), (-WHEELBASE / 2, TRACK / 2),
               (-WHEELBASE / 2, -TRACK / 2)]
@@ -116,29 +120,34 @@ def drive(ground, Q, T, zhint, v, filt, inside):
         zr = best - best[0]
         acc = signal.lfilter(filt[0][0], filt[0][1], zr)
         tyre = signal.lfilter(filt[1][0], filt[1][1], zr)
-        n0 = int(1.0 / DS)                         # the first metre: the start transient
+        n0 = int(round(skip0 / DS))
+        n1 = len(best) - int(round(skip1 / DS))
         stp = np.abs(np.diff(best))
         for i in np.flatnonzero(stp > STEP_M):
-            if i >= n0:
+            if n0 <= i < n1:
                 ev.append((i, "STEP", float(stp[i])))
         for i in np.flatnonzero(tyre > STATIC):
-            if i >= n0:
+            if n0 <= i < n1:
                 ev.append((i, "LIFT", float(tyre[i])))
         for i in np.flatnonzero(np.abs(acc) > HARD_G * 9.81):
-            if i >= n0:
+            if n0 <= i < n1:
                 ev.append((i, "HARD", float(abs(acc[i]) / 9.81)))
         miss = inside & ~onroad
         for i in np.flatnonzero(miss):
-            ev.append((i, "HOLE", 1.0))
+            if n0 <= i < n1:
+                ev.append((i, "HOLE", 1.0))
     Z = np.array(Z)
     roll = np.degrees(np.arctan(((Z[0] + Z[2]) - (Z[1] + Z[3])) / 2 / TRACK))
     pitch = np.degrees(np.arctan(((Z[0] + Z[1]) - (Z[2] + Z[3])) / 2 / WHEELBASE))
     m = int(round(1.0 / DS))
+    n0 = int(round(skip0 / DS))
+    n1 = len(Q) - int(round(skip1 / DS))
     for a, name in ((roll, "TWIST"), (pitch, "TWIST")):
         if len(a) > m:
             ch = np.abs(a[m:] - a[:-m])
             for i in np.flatnonzero(ch > TWIST_DEG):
-                ev.append((i + m, name, float(ch[i])))
+                if n0 <= i + m < n1:
+                    ev.append((i + m, name, float(ch[i])))
     return ev
 
 
@@ -147,6 +156,7 @@ def main(lv=None):
     t0 = time.time()
     segs, st, _ = network.load()
     zs = network_surface.load()["z"]
+    deg = np.bincount(np.array([q["nodes"][0] for q in segs] + [q["nodes"][-1] for q in segs]))
     tri, is_path, chunk = road_tops(lv)
     surf = TriSurface(tri)
     ter = pr.Terrain(lv)
@@ -168,12 +178,15 @@ def main(lv=None):
         v = PATH_SPEED if path else SPEED.get(s["class"], 25)
         if v not in filt:
             filt[v] = filters(v)
-        runs = [(P, zline, 0.25 * w)] if (not path and w >= 5.0) else [(P, zline, 0.0)]
+        # past a dead end the wheels leave the road: DEAD_END m more left out there
+        dead0, dead1 = deg[s["nodes"][0]] == 1, deg[s["nodes"][-1]] == 1
+        e0, e1 = (1.0 + DEAD_END) if dead0 else 1.0, DEAD_END if dead1 else 0.0
+        runs = [(P, zline, 0.25 * w, e0, e1)] if (not path and w >= 5.0) else [(P, zline, 0.0, e0, e1)]
         if not path and w >= 5.0:
-            runs.append((P[::-1], zline[::-1], 0.25 * w))
+            runs.append((P[::-1], zline[::-1], 0.25 * w, (1.0 + DEAD_END) if dead1 else 1.0, DEAD_END if dead0 else 0.0))
         cls = "path" if path else ("main" if s["class"] in ("10m Strasse", "8m Strasse", "6m Strasse") else "minor")
         nev = {}
-        for Pr, zr_line, side in runs:
+        for Pr, zr_line, side, sk0, sk1 in runs:
             Q, T = lane_path(Pr, w, side)
             if Q is None:
                 continue
@@ -182,7 +195,7 @@ def main(lv=None):
             zh = np.interp(sq, d, zr_line)
             inside = np.full(len(Q), (w / 2 - abs(side) - TRACK / 2) > 0.25)
             km[cls] = km.get(cls, 0.0) + len(Q) * DS / 1000
-            for i, kind, val in drive(ground, Q, T, zh, v, filt[v], inside):
+            for i, kind, val in drive(ground, Q, T, zh, v, filt[v], inside, sk0, sk1):
                 key = (kind, int(Q[i, 0] // 20), int(Q[i, 1] // 20))
                 nev[kind] = nev.get(kind, 0) + 1
                 counts.setdefault(cls, {}).setdefault(kind, 0)
