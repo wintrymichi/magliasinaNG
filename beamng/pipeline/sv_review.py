@@ -205,10 +205,11 @@ if __name__ == "__main__":
         print(p)
 
 
-def village_places(n_per=2, maxd=30.0):
+def village_places(n_per=2, maxd=30.0, mind=0.0, spread=0.0):
     """Review places in every village of the area (places.py): around its centre, the panoramas nearest to
     it and, for each, the facade of the building nearest to the camera it sees (a point 4 m above the
-    ground on the facade's middle)."""
+    ground on the facade's middle), at least mind m from the camera (the whole facade in the view); the
+    panoramas of one village at least spread m apart."""
     import places
     import buildings_mesh
     from geo import Grid
@@ -224,19 +225,25 @@ def village_places(n_per=2, maxd=30.0):
     ptree = cKDTree(xy)
     out = []
     for name, vx, vy, _ in places.villages():
-        d, idx = ptree.query([vx, vy], k=12)
+        d, idx = ptree.query([vx, vy], k=40)
         got = 0
+        used = []
         for dd, i in zip(d, idx):
             if dd > 300 or got >= n_per:
                 break
             p = P[i]
-            bd, bj = btree.query([p["x"], p["y"]], k=6)
+            if any(np.hypot(p["x"] - ux, p["y"] - uy) < spread for ux, uy in used):
+                continue
+            bd, bj = btree.query([p["x"], p["y"]], k=12)
             for bdd, j in zip(bd, bj):
                 if bdd > maxd:
                     break
                 f = fps[j]
                 # the point of the footprint's outline nearest to the camera, 4 m up
                 q = shapely.ops.nearest_points(f.exterior if f.geom_type == "Polygon" else f, shapely.Point(p["x"], p["y"]))[0]
+                if np.hypot(q.x - p["x"], q.y - p["y"]) < mind:
+                    continue
+                used.append((p["x"], p["y"]))
                 z = float(dtm.sample(np.array([q.x]), np.array([q.y]))[0]) + 4.0
                 out.append({"x": q.x, "y": q.y, "z": z, "label": f"{name} {got + 1}", "village": name, "pano": p["id"],
                             "building": blds[j]["uuid"], "skip": 1.5})
