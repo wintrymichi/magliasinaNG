@@ -23,6 +23,7 @@ WOODPOLE = "/art/shapes/common/power_lines_procedural/electric_pole_wood_old_01.
 F = 800.0   # focal length (px) of the dataset views
 LAMP_RADIUS = 14.0          # m lit by the light of a street lamp (v2.4)
 LAMP_BRIGHTNESS = 1.2
+LAMP_LUMEN = 6000.0         # a street light of a village road
 
 
 def tube(c, z0, z1, r=0.045, n=10):
@@ -103,7 +104,8 @@ def build(level_dir, level_name, scene, hfn):
             # v2.4: the light of the lamp, under its head: warm, no shadows (cheap); seen at night
             scene.add(g + "/street_lights", {"class": "PointLight", "persistentId": bng.pid(),
                                               "position": [float(hx), float(hy), float(hz) - 0.35],
-                                              "radius": LAMP_RADIUS, "brightness": LAMP_BRIGHTNESS,
+                                              "radius": LAMP_RADIUS, "intensity": LAMP_LUMEN, "intensityUnit": "lm",
+                                              "brightness": LAMP_BRIGHTNESS,        # the older field, as a fallback
                                               "color": [1.0, 0.82, 0.58, 1.0], "castShadows": False,
                                               "isEnabled": True})
             counts["lamp_light"] = counts.get("lamp_light", 0) + 1

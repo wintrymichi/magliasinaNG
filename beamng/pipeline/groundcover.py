@@ -4,7 +4,9 @@ camera, on the terrain layers of the meadows and the gardens (terrain.py).
 Nothing here comes from a photograph: the blades and the flowers are drawn with numpy (blades
 tapering and bending, darker at the base, some dry ones; daisies, buttercups, meadow sage and clover,
 the flowers of the hay meadows of the area), their mean colour is the grass colour measured on the
-orthophoto (terrain_colors.json), and the clumps are three crossed quads (6 triangles).
+orthophoto (terrain_colors.json). The clumps are billboards (2 triangles, the cheapest kind of ground
+cover) cut from one atlas: grass on the left half, grass with flowers on the right half. The object
+is written like the GroundCover objects of the game's own levels ("Types": one entry per type).
 
 The density, the radius around the camera and the share of flowers are guesses, kept low for the
 frame rate and set by the constants below; no grass within a terrain square of the roads and paths
@@ -22,17 +24,15 @@ DISSOLVE = 35.0             # m, the clumps fade out from here to RADIUS
 MAX_ELEMENTS = 40000        # clumps around the camera (all types)
 GRID = 7                    # cells of the cover per side
 SEED = 41
-# type: (shape, terrain layer, probability, size min, size max, clumps min, max, clump radius m)
+# type: (atlas half: 0 grass, 1 grass and flowers, terrain layer, probability, size min, size max (m, the
+# billboard's height), clumps min, max, clump radius m)
 TYPES = [
-    ("gc_grass_a", "Grass", 1.0, 0.75, 1.25, 1, 3, 0.45),
-    ("gc_grass_b", "Grass", 0.35, 0.8, 1.3, 1, 2, 0.6),
-    ("gc_flowers", "Grass", 0.12, 0.8, 1.15, 1, 3, 0.5),
-    ("gc_grass_short", "GardenGrass", 0.6, 0.6, 1.0, 1, 2, 0.4),
+    (0, "Grass", 1.0, 0.35, 0.6, 1, 3, 0.4),
+    (0, "Grass", 0.35, 0.5, 0.75, 1, 2, 0.5),
+    (1, "Grass", 0.15, 0.35, 0.55, 1, 3, 0.4),
+    (0, "GardenGrass", 0.6, 0.2, 0.35, 1, 2, 0.3),
 ]
-SHAPES = {                   # width, height (m) of the clump at size 1; texture
-    "gc_grass_a": (0.55, 0.42, "gc_grass"), "gc_grass_b": (0.7, 0.65, "gc_grass"),
-    "gc_grass_short": (0.45, 0.22, "gc_grass"), "gc_flowers": (0.5, 0.48, "gc_flowers"),
-}
+UVS = ([0.0, 0.0, 0.5, 1.0], [0.5, 0.0, 0.5, 1.0])     # x, y, width, height in the atlas
 
 
 def _blades(img, rng, n_blades, color, dry_share=0.06, size=512):
@@ -96,13 +96,13 @@ def _fit_opaque(img, target):
 
 
 def textures(dst, grass_rgb):
-    """gc_grass (blades) and gc_flowers (blades with flowers): RGBA, alpha cut-out."""
+    """The atlas gc_atlas (1024 x 512, RGBA, alpha cut-out): blades on the left, blades with flowers on
+    the right."""
     rng = np.random.default_rng(SEED)
     n = 512
     g = np.zeros((n, n, 4), np.float32)
     _blades(g, rng, 260, (0.42, 0.55, 0.22))
     _fit_opaque(g, grass_rgb)
-    save(os.path.join(dst, "gc_grass_b.color.png"), to8(g))
     f = np.zeros((n, n, 4), np.float32)
     _blades(f, rng, 160, (0.42, 0.55, 0.22))
     _fit_opaque(f, grass_rgb)
@@ -110,62 +110,37 @@ def textures(dst, grass_rgb):
     for _ in range(26):
         kind = kinds[rng.choice(len(kinds), p=[0.32, 0.26, 0.2, 0.12, 0.1])]
         cx, cy = rng.uniform(0.1, 0.9) * n, rng.uniform(0.08, 0.5) * n
-        # the stem down to the bottom
-        x = int(cx)
+        x = int(cx)                                       # the stem down to the bottom
         f[int(cy):, max(x - 1, 0):x + 1, :3] = [0.25, 0.36, 0.14]
         f[int(cy):, max(x - 1, 0):x + 1, 3] = 1
         _flower(f, rng, cx, cy, kind)
-    save(os.path.join(dst, "gc_flowers_b.color.png"), to8(f))
-
-
-def clump(width, height):
-    """Three crossed vertical quads (6 triangles) standing on (0, 0, 0); normals up, so the clumps
-    take the light of the ground."""
-    V, UV = [], []
-    for a in (0.0, np.pi / 3, 2 * np.pi / 3):
-        dx, dy = 0.5 * width * np.cos(a), 0.5 * width * np.sin(a)
-        p = [(-dx, -dy, 0), (dx, dy, 0), (dx, dy, height), (-dx, -dy, height)]
-        uv = [(0, 0), (1, 0), (1, 1), (0, 1)]
-        for i in (0, 1, 2, 0, 2, 3):
-            V.append(p[i])
-            UV.append(uv[i])
-    V = np.array(V, np.float64)
-    return V, np.array(UV, np.float64), np.repeat([[0.0, 0.0, 1.0]], len(V), 0)
+    save(os.path.join(dst, "gc_atlas_b.color.png"), to8(np.concatenate([g, f], axis=1)))
 
 
 def build(level_dir, level_name, scene, group="MissionGroup/level_objects/vegetation"):
-    """Textures, shapes, materials and the GroundCover object; returns the counts for the log."""
+    """Atlas, material and the GroundCover object; returns the counts for the log."""
     from config import WORK
     colors = json.load(open(os.path.join(WORK, "terrain_colors.json")))
     d = os.path.join(level_dir, "art", "shapes", "groundcover")
     os.makedirs(d, exist_ok=True)
     textures(d, colors.get("Grass", [104, 126, 85]))
     L = f"/levels/{level_name}/art/shapes/groundcover"
-    mats = [bng.material(m, f"{L}/{m}_b.color.png", alpha_test=90, double_sided=True, roughness=0.95)
-            for m in ("gc_grass", "gc_flowers")]
-    bng.write_materials(os.path.join(d, "main.materials.json"), mats)
-    for name, (w, h, tex) in SHAPES.items():
-        mb = bng.MeshBuilder()
-        V, UV, N = clump(w, h)
-        mb.add(tex, V, uvs=UV, normals=N)
-        mb.write_dae(os.path.join(d, f"{name}.dae"), name=name)
+    bng.write_materials(os.path.join(d, "main.materials.json"), [
+        bng.material("gc_atlas", f"{L}/gc_atlas_b.color.png", alpha_test=90, double_sided=True, roughness=0.95)])
     types = []
-    for shape, layer, prob, smin, smax, cmin, cmax, crad in TYPES:
-        types.append({"layer": layer, "invertLayer": False, "probability": prob,
-                      "shapeFilename": f"{L}/{shape}.dae", "billboardUVs": [0, 0, 1, 1],
-                      "sizeMin": smin, "sizeMax": smax, "sizeExponent": 1, "windScale": 0.6,
-                      "maxSlope": 40, "minElevation": -1000, "maxElevation": 5000,
+    for half, layer, prob, smin, smax, cmin, cmax, crad in TYPES:
+        types.append({"layer": layer, "invertLayer": False, "probability": prob, "shapeFilename": "",
+                      "billboardUVs": UVS[half], "sizeMin": smin, "sizeMax": smax, "sizeExponent": 1,
+                      "windScale": 0.6, "maxSlope": 40, "minElevation": -1000, "maxElevation": 5000,
                       "minClumpCount": cmin, "maxClumpCount": cmax, "clumpExponent": 1, "clumpRadius": crad})
     scene.add(group, {"name": "grass_cover", "class": "GroundCover", "persistentId": bng.pid(),
-                      "position": [0, 0, 0], "material": "gc_grass", "radius": RADIUS,
+                      "position": [0, 0, 0], "material": "gc_atlas", "radius": RADIUS,
                       "dissolveRadius": DISSOLVE, "reflectScale": 0.25, "gridSize": GRID, "zOffset": 0,
-                      "seed": SEED, "maxElements": MAX_ELEMENTS, "maxBillboardTiltAngle": 90,
+                      "seed": SEED, "maxElements": MAX_ELEMENTS, "maxBillboardTiltAngle": 45,
                       "shapeCullRadius": RADIUS, "shapesCastShadows": False, "Types": types})
-    return {"types": len(types), "max_elements": MAX_ELEMENTS, "radius_m": RADIUS,
-            "triangles_per_clump": 6}
+    return {"types": len(types), "max_elements": MAX_ELEMENTS, "radius_m": RADIUS, "triangles_per_clump": 2}
 
 
 if __name__ == "__main__":
     import sys
-    out = sys.argv[1] if len(sys.argv) > 1 else "."
-    textures(out, (104, 126, 85))
+    textures(sys.argv[1] if len(sys.argv) > 1 else ".", (104, 126, 85))

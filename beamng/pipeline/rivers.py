@@ -47,8 +47,9 @@ TILE_M = 4.0
 
 def material(level_name):
     t = f"/levels/{level_name}/art/shapes/water"
+    # opacity both in the alpha of the base colour and as opacityFactor (materials v1.5)
     return bng.material("mp_river_water", f"{t}/t_river_b.color.png", f"{t}/t_river_nm.normal.png",
-                        base_color=[1.0, 1.0, 1.0, 0.62], roughness=0.06,
+                        base_color=[1.0, 1.0, 1.0, 0.62], roughness=0.06, detail={"opacityFactor": 0.62},
                         extra={"translucent": True, "translucentBlendOp": "LerpAlpha", "translucentZWrite": False,
                                "castShadows": False})
 

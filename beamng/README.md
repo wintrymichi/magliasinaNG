@@ -13,7 +13,7 @@ Questa pipeline ricostruisce in scala 1:1 il Malcantone (Ticino) come livello Be
 | `verifica/` | `VERIFICA.md` (confronto con tutte le 1464 viste), il grafico della concordanza lungo il percorso, le metriche per vista (`metrics_final.json`, e `metrics_full1.json` prima dell'ultimo ciclo di correzione) |
 | `dati/` | risultati di calcolo leggeri, per ricostruire il livello senza rifare i passi lunghi: pose calibrate delle panoramiche (`poses.json`), asse stradale, segnaletica e suo stato 2022, guardrail, muri di sostegno e altezze dei muri, recinzioni, lampioni, pali e cartelli, arredo, alberi e arbusti; per la v2.0 i ponti con le correzioni manuali (`ponti.json`) e la cantonale Magliaso–Gravesano (`cantonale_gravesano.json`); per la v2.2 le strade dei nuovi corridoi (`strade_extra_v22.json`) |
 
-La **mod pronta** è nella [release v2.3](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.3), che il workflow `.github/workflows/release_v2.3.yml` costruisce da zero su un server GitHub: scarica i dati, costruisce il livello, lo controlla con `check_level.py` e `drive_test.py` e lo pubblica. È costruita con `MAGLIASO_NO_PHOTO_TEXTURES=1`, quindi non contiene immagini Street View: facciate, tetti e muri hanno texture originali disegnate dalla pipeline nei colori misurati e le targhe sono a tinta unita. Gli oggetti della cantonale ricavati dalle foto (segnaletica, lampioni, pali, cartelli, arredo) vengono presi dalla release v1.1 e appoggiati sulle nuove superfici (`carryover.py`).
+La **mod pronta** è nella [release v2.4](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.4), che il workflow `.github/workflows/release_v2.4.yml` costruisce da zero su un server GitHub: scarica i dati, costruisce il livello, lo controlla con `check_level.py` e `drive_test.py` e lo pubblica. È costruita con `MAGLIASO_NO_PHOTO_TEXTURES=1`, quindi non contiene immagini Street View: facciate, tetti e muri hanno texture originali disegnate dalla pipeline nei colori misurati e le targhe sono a tinta unita. Gli oggetti della cantonale ricavati dalle foto (segnaletica, lampioni, pali, cartelli, arredo) vengono presi dalla release v1.1 e appoggiati sulle nuove superfici (`carryover.py`).
 
 Le versioni precedenti restano disponibili:
 - **v1.0**: solo il corridoio della cantonale.
@@ -86,9 +86,10 @@ Revisione del livello v2.0 confrontato con fonti reali: l'ortofoto SWISSIMAGE 10
   Le aree OSM con una superficie (parcheggi, piazze) la danno ai piazzali sotto di loro. Materiali per
   carreggiata, piazzale e sentiero con i tipi di fondo GRAVEL, DIRT e COBBLESTONE; texture procedurali
   (`surface_textures.py`) con la tinta mediana dell'ortofoto 10 cm lungo le vie OSM di quella superficie.
-- **Erba e fiori** (`groundcover.py`): oggetto GroundCover con ciuffi di tre quad incrociati (6 triangoli) su
-  `Grass` e `GardenGrass`, 40 000 elementi entro 50 m; i prati entro un quadrato di terreno dalle strade
-  hanno un livello di terreno gemello senza erba (`terrain.VERGE`), così i ciuffi non attraversano le strade.
+- **Erba e fiori** (`groundcover.py`): oggetto GroundCover (scritto come nei livelli del gioco, un elemento di
+  `Types` per tipo) con ciuffi a billboard (2 triangoli) da un atlante disegnato, su `Grass` e `GardenGrass`,
+  40 000 elementi entro 50 m; i prati entro un quadrato di terreno dalle strade hanno un livello di terreno
+  gemello senza erba (`terrain.VERGE`), così i ciuffi non attraversano le strade.
 - **Palme** (`palms.py`): modello disegnato di Trachycarpus; un quarto degli alberi misurati alti 3-9 m con
   chioma fino a 6 m nei giardini entro 400 m dal lago e sotto 320 m diventano palme (stima: la specie non si
   misura).
