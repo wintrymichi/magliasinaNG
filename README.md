@@ -5,7 +5,7 @@
 **Il Malcantone (Canton Ticino) ricostruito in scala 1:1 per BeamNG.drive: 52 km² di paesi, strade, sentieri, boschi e lago tra Ponte Tresa, Caslano, Agno, Bioggio, Gravesano e Arosio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
-![Versione](https://img.shields.io/badge/versione-2.2-blue)
+![Versione](https://img.shields.io/badge/versione-2.3-blue)
 ![Scala](https://img.shields.io/badge/scala-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
 ![Dati](https://img.shields.io/badge/dati-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
@@ -23,8 +23,8 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 | **Area** | circa 52 km², terreno di 12,3 × 12,3 km a 1,5 m (LiDAR swissALTI3D) |
 | **Strade e sentieri** | 228 km di strade e 337 km di sentieri, mulattiere e scalinate, tutti guidabili; 167 ponti; dalla v2.2 anche il passo sopra Gravesano fino ad Arosio, la cantonale Ponte Tresa–Caslano e Via Torrazza |
 | **Edifici** | 12 792 edifici (swissBUILDINGS3D e misurazione ufficiale) con facciate, finestre, persiane, porte, vetrine, zoccoli e comignoli |
-| **Guardrail** | quelli della cantonale Magliaso–Pura e, dalla v2.2, 10,5 km su tutta la rete, dove le panoramiche li mostrano |
-| **Vegetazione** | circa 240 000 alberi e arbusti dal modello di superficie, fuori dalla sagoma libera delle strade |
+| **Guardrail** | 2,0 km sulla cantonale Magliaso–Pura e, dalla v2.2, altri 9,7 km sul resto della rete, dove le panoramiche li mostrano |
+| **Vegetazione** | circa 161 000 alberi e arbusti dal modello di superficie: tutti quelli entro 30 m dalle strade, più radi lontano; fuori dalla sagoma libera delle strade |
 | **Segnaletica** | linee, strisce pedonali e segni rilevati nell'ortofoto 10 cm, cartelli STOP e precedenza, fermate dei bus |
 | **Traffico IA** | rete completa con sensi unici, rotonde e carreggiate separate |
 | **Punti di partenza** | 30, uno in ogni paese |
@@ -43,6 +43,11 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 | ![La cantonale verso Pura](beamng/verifica/screenshots/12_pura_cantonale.jpg)<br>*La cantonale verso Pura* | ![Agno, una via del nucleo](beamng/verifica/screenshots/13_agno_via.jpg)<br>*Agno, una via del nucleo* |
 | ![Il passo sopra Gravesano verso Arosio](beamng/verifica/screenshots/14_passo_tornante.jpg)<br>*Il passo sopra Gravesano verso Arosio* |  |
 
+## Novità della v2.3
+
+- **Magliaso, la cantonale verso Pura all'incrocio con Via Piscicoltura.** Per circa 60 m, subito dopo l'incrocio, la carreggiata si piegava verso il muro che la separa da Via Piscicoltura, più in basso: sul bordo era fino a 2,2 m sotto il terreno reale, con un avvallamento come se l'asfalto fosse crollato. Il calcolo delle superfici prendeva quel muro per un dosso e univa le due strade in una superficie sola. Ora il muro è riconosciuto e ogni strada sta alla sua quota: sull'asse della cantonale lo scarto massimo dal terreno reale passa da 1,70 m a 0,09 m, su Via Piscicoltura da 0,53 m a 0,24 m. La prova di guida virtuale non trova più lì né torsioni né ruote staccate (nella v2.2: torsione 9,6, ruote staccate di 21 cm). La stessa correzione migliora un altro tratto della cantonale verso Pura (a circa 1,3 km da Magliaso); lungo tutti i 3,7 km i punti a più di 35 cm dal terreno reale passano da 110 a 72.
+- **Boschi più leggeri da disegnare.** Fino alla v2.2 ogni albero misurato entro 150 m da una strada era nella mappa: i versanti attraversati da tornanti, come il passo sopra Gravesano visto dal paese, erano fitti come il bosco vero e il gioco rallentava guardandoli. Ora restano tutti gli alberi entro 30 m dalle strade e 5 m dai sentieri; più lontano il bosco è diradato tenendo i più alti (fino a 100 m dalla strada il più alto in ogni quadrato di 11–17 m di lato, oltre in ogni quadrato di 32 m). In tutto 160 748 alberi e arbusti invece di 239 753 (−33 %); sul versante del passo sopra Gravesano il 40 % in meno (da 6 165 a 3 722 alberi nei 700 m attorno). Lungo le strade, nei primi 30 m, il bosco è quello di prima.
+
 ## Novità della v2.2
 
 - **Strade nuove.** Il passo sopra Gravesano fino ad Arosio (Stradón da Rós, la «Penudria», con i suoi tornanti), la cantonale Ponte Tresa – Caslano – Magliaso e Via Torrazza a Caslano finivano sul bordo della mappa: oltre c'era solo il terreno. Ora sono strade vere (7,2 km in più) con un corridoio di 100 m di edifici, alberi e muri, riviste su Street View come il resto.
@@ -51,7 +56,7 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 - **Colori misurati nelle foto.** Il tono dell'intonaco di 3 637 edifici e il colore delle persiane dove è chiaro vengono dalle panoramiche Street View (solo i valori numerici).
 - **Vetrine** dove OpenStreetMap registra un negozio, un bar o un ufficio (173 edifici), **garage** con le porte, **rustici** in pietra.
 - **Edifici mancanti:** 538 edifici della misurazione ufficiale costruiti dopo il rilievo 3D sono stati aggiunti; 14 demoliti tolti.
-- **Guardrail su tutta la rete.** 326 tratti (10,5 km) di guardrail visti nelle panoramiche Street View, costruiti sul bordo della strada. Fino alla v2.1 c'erano solo quelli della cantonale Magliaso–Pura.
+- **Guardrail su tutta la rete.** 326 tratti di guardrail visti nelle panoramiche Street View; 9,7 km costruiti sul bordo della strada oltre ai 2,0 km della cantonale Magliaso–Pura, che fino alla v2.1 erano gli unici.
 - **Muri** con texture originali di pietra, calcestruzzo e intonaco; il materiale viene dalle foto dove si vede bene.
 - **Fermate dei bus** di OpenStreetMap con palo, cartello, orario e pensilina.
 - **Strade più guidabili.** Le superfici sono continue tra carreggiata, marciapiedi e piazzali e agli incroci: il salto tra due strade che si incontrano viene distribuito su qualche metro, le carreggiate principali restano come sono. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 62 % di gradini in meno sulle strade secondarie (1695 → 646) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 56 % sulle secondarie e del 58 % sulle principali, i colpi forti del 24 % e le torsioni brusche del 58 % sulle secondarie.
@@ -59,7 +64,7 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 
 ## Installazione
 
-1. Scaricare `magliaso_pura_v2.2.zip` dalla pagina delle [release](https://github.com/wintrymichi/magliasinaNG/releases).
+1. Scaricare `magliaso_pura_v2.3.zip` dalla pagina delle [release](https://github.com/wintrymichi/magliasinaNG/releases).
 2. Copiarlo in `Documents/BeamNG.drive/current/mods/` (o installarlo dal gestore delle mod), togliendo le versioni precedenti: il livello si chiama sempre `magliaso_pura`.
 3. Nel gioco: *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*.
 
@@ -85,12 +90,12 @@ flowchart LR
     L --> Q[check_level.py<br/>drive_test.py]
 ```
 
-Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2.2.yml` (su un server GitHub, in circa un'ora): scarica i dati ufficiali, costruisce il livello, lo controlla e pubblica la release. I dettagli di ogni passo sono in [`beamng/README.md`](beamng/README.md).
+Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2.3.yml` (su un server GitHub, in circa un'ora): scarica i dati ufficiali, costruisce il livello, lo controlla e pubblica la release. I dettagli di ogni passo sono in [`beamng/README.md`](beamng/README.md).
 
 ## Qualità e verifica
 
 - **Controlli automatici su tutta la mappa** (`check_level.py`, [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terreno sopra le strade, buchi, gradini, giunzioni tra blocchi, ostacoli sulla carreggiata cercati lungo ogni strada e sentiero, alberi nella sagoma libera, rete dell'IA, file mancanti.
-- **Prova di guida virtuale** (`drive_test.py`): un'auto (modello quarter-car sulle quattro ruote) percorre tutte le strade nei due sensi e tutti i sentieri, 670 km, sulle superfici del livello come sono scritte. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 62 % di gradini in meno sulle strade secondarie (1695 → 646) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 56 % sulle secondarie e del 58 % sulle principali, i colpi forti del 24 % e le torsioni brusche del 58 % sulle secondarie.
+- **Prova di guida virtuale** (`drive_test.py`): un'auto (modello quarter-car sulle quattro ruote) percorre tutte le strade nei due sensi e tutti i sentieri, 670 km, sulle superfici del livello come sono scritte. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 66 % di gradini in meno sulle strade secondarie (1695 → 576) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 58 % sulle secondarie e del 58 % sulle principali, i colpi forti del 25 % e le torsioni brusche del 61 % sulle secondarie.
 - **Revisione su Street View** ([`beamng/verifica/REVISIONE.md`](beamng/verifica/REVISIONE.md)): per ogni strada la copertura delle panoramiche, gli edifici misurati, i guardrail e i muri visti, gli eventi della prova di guida prima e dopo, e i luoghi confrontati foto/mappa dalla stessa camera con i problemi trovati e le correzioni.
 
 ## Struttura del repository
@@ -100,7 +105,7 @@ Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2
 | [`beamng/pipeline/`](beamng/pipeline) | la pipeline: download dei dati, rete stradale, superfici, edifici, facciate, vegetazione, livello, controlli |
 | [`beamng/dati/`](beamng/dati) | risultati leggeri fissati per la release (pose, segnaletica, guardrail, colori, estratti di GWR e OSM) |
 | [`beamng/verifica/`](beamng/verifica) | controlli, prova di guida, revisione strada per strada, screenshot |
-| [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md) | note della release |
+| [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md) | note della release (quelle della v2.2 in [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
 | `panoramas.*`, `cameras.json`, `sv_capture.py`, … | il dataset originale della cantonale Magliaso–Pura (metadati delle panoramiche, vedi sotto) |
 
 ## Il dataset delle panoramiche

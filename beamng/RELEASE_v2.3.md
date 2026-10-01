@@ -1,0 +1,20 @@
+Mappa BeamNG.drive (0.39) del **Malcantone**, versione 2.3: la [v2.2](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.2) con due correzioni dopo le prime prove nel gioco. Stessa area (circa 52 km² tra Ponte Tresa, Caslano, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio, Astano e Sessa, scala 1:1) e stessi contenuti: facciate, guardrail, strade nuove e tutto il resto della v2.2.
+
+**Installazione:** copiare `magliaso_pura_v2.3.zip` in `Documents/BeamNG.drive/current/mods/` (o installarlo dal gestore delle mod) e togliere le versioni precedenti: il livello si chiama sempre `magliaso_pura`.
+
+## Novità della v2.3
+
+- **Magliaso, la cantonale verso Pura all'incrocio con Via Piscicoltura.** Per circa 60 m, subito dopo l'incrocio, la carreggiata si piegava verso il muro che la separa da Via Piscicoltura, più in basso: sul bordo era fino a 2,2 m sotto il terreno reale, con un avvallamento come se l'asfalto fosse crollato. Il calcolo delle superfici prendeva quel muro per un dosso e univa le due strade in una superficie sola. Ora il muro è riconosciuto e ogni strada sta alla sua quota: sull'asse della cantonale lo scarto massimo dal terreno reale passa da 1,70 m a 0,09 m, su Via Piscicoltura da 0,53 m a 0,24 m. La prova di guida virtuale non trova più lì né torsioni né ruote staccate (nella v2.2: torsione 9,6, ruote staccate di 21 cm). La stessa correzione migliora un altro tratto della cantonale verso Pura (a circa 1,3 km da Magliaso); lungo tutti i 3,7 km i punti a più di 35 cm dal terreno reale passano da 110 a 72.
+- **Boschi più leggeri da disegnare.** Fino alla v2.2 ogni albero misurato entro 150 m da una strada era nella mappa: i versanti attraversati da tornanti, come il passo sopra Gravesano visto dal paese, erano fitti come il bosco vero e il gioco rallentava guardandoli. Ora restano tutti gli alberi entro 30 m dalle strade e 5 m dai sentieri; più lontano il bosco è diradato tenendo i più alti (fino a 100 m dalla strada il più alto in ogni quadrato di 11–17 m di lato, oltre in ogni quadrato di 32 m). In tutto 160 748 alberi e arbusti invece di 239 753 (−33 %); sul versante del passo sopra Gravesano il 40 % in meno (da 6 165 a 3 722 alberi nei 700 m attorno). Lungo le strade, nei primi 30 m, il bosco è quello di prima.
+
+## Verifica
+
+- Controlli automatici su tutta la mappa (`check_level.py`): tutti entro i limiti; nessun file mancante, 13 ostacoli sulle strade e 125 sui sentieri, 104 gradini tra blocchi di strada (massimo 0,97 m), nessun buco nel terreno, livello di 3 123 MB. Rispetto alla v2.2 gli ostacoli sulle strade scendono da 17 a 13; c'è un gradino nuovo di 0,47 m tra due blocchi di un piazzale accanto alla cantonale (a 1,2 km da Magliaso), fuori dalla carreggiata.
+- Prova di guida virtuale su 670 km di strade e sentieri (`drive_test.py`), confrontata con la v2.2: sulle strade secondarie gradini 656 → 586, ruote staccate 6619 → 6363, torsioni 3026 → 2876, quasi tutto sulla cantonale verso Pura, soprattutto a Magliaso; strade principali e sentieri come prima.
+
+## Limiti noti
+
+- La fluidità non è misurata dentro BeamNG.drive: dipende dalla scheda grafica e dalle impostazioni. Se un versante con molti alberi resta pesante, di solito aiuta abbassare la qualità delle ombre.
+- Restano gli altri limiti della v2.2 (vedi le sue note): facciate plausibili ma non copiate una per una, toni sbagliati in ombra, piazzali su due livelli resi come rampe, guardrail e materiali dei muri solo dove le panoramiche li vedono, i punti segnalati dalla prova di guida (Castelrotto, Via Giuseppe Soldati, i ponti di Via Mondonico e Via Roncaccio, Via Grumo).
+
+Fonti: © swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D, swissNAMES3D); misurazione ufficiale del Cantone Ticino (geodienste.ch); Registro federale degli edifici e delle abitazioni (UST); © OpenStreetMap contributors (ODbL); Copernicus DEM GLO-30 (© DLR e.V. / Airbus, fornito nell'ambito di COPERNICUS da UE ed ESA). Le panoramiche Google Street View sono servite solo come riferimento visivo: la mod non contiene immagini Street View.
