@@ -26,7 +26,9 @@ SKY = (0.70, 0.79, 0.88)
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
-GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway")
+GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
+          # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
+          "level_objects/Water", "level_objects/vegetation/vineyards")
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [

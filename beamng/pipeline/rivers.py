@@ -6,7 +6,9 @@ at least MIN_WIDTH m wide gets a thin, partly transparent water mesh (no collisi
 into the bed as before):
 - height: the lowest bare ground (swissALTI3D) within LOW_R m, smoothed, plus OVER m: on the larger
   rivers the laser model is the water surface itself (flat from bank to bank), on the stony torrents
-  the water lies in the lowest channel and the stones and banks above it stay dry;
+  the water lies in the lowest channel;
+- the terrain (a 1.5 m grid, smoother than the bed) is lowered DEPTH m under the water inside the river
+  surfaces (carve_terrain), else it would stand over most of it;
 - not over the roads and paths that cross at the level of the water (fords), not over the lake (its
   water blocks, water.py); under the bridges it goes on;
 - a material of its own: a dark green tint with LerpAlpha transparency, smooth (the sky reflects
@@ -25,6 +27,7 @@ LOW_R = 3.0             # m, radius of the lowest ground under the water
 OVER = 0.12             # m of water over that ground
 CELL = 3.0              # m, mesh cell
 FORD = 1.5              # m, a road surface less than this above the water crosses it at its level
+DEPTH = 0.35            # m of terrain under the water
 CHUNK = 128.0
 
 
@@ -128,9 +131,31 @@ def water_z(x, y):
     return out
 
 
+def carve_terrain(H, xs, ys, polys):
+    """The terrain heights H (rows ys, columns xs: the vertex grid) lowered to DEPTH m under the water
+    at the vertices inside the river surfaces."""
+    n = 0
+    for p in polys:
+        x0, y0, x1, y1 = p.bounds
+        c0, c1 = np.searchsorted(xs, x0), np.searchsorted(xs, x1)
+        r0, r1 = np.searchsorted(ys, y0), np.searchsorted(ys, y1)
+        if c1 <= c0 or r1 <= r0:
+            continue
+        X, Y = np.meshgrid(xs[c0:c1], ys[r0:r1])
+        ins = shapely.contains_xy(p, X, Y)
+        if not ins.any():
+            continue
+        rr, cc = np.nonzero(ins)
+        z = water_z(X[ins], Y[ins]) - DEPTH
+        H[r0 + rr, c0 + cc] = np.minimum(H[r0 + rr, c0 + cc], z)
+        n += len(rr)
+    print("rivers: terrain lowered under the water at %d vertices" % n, flush=True)
+    return H
+
+
 def build(level_dir, level_name, scene, av, lake_boxes, at_grade, crossings, road_z,
           group="MissionGroup/level_objects/Water"):
-    """Meshes of the river water per CHUNK m chunk, textures and material; returns statistics."""
+    """Meshes of the river water per CHUNK m chunk, textures and material; returns (statistics, polygons)."""
     import road_mesh
     polys, stats = surfaces(av, lake_boxes, at_grade, crossings, road_z)
     d = os.path.join(level_dir, "art", "shapes", "water")
@@ -161,4 +186,4 @@ def build(level_dir, level_name, scene, av, lake_boxes, at_grade, crossings, roa
         ntri += mb.triangle_count()
         scene.add(group, bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=False))
     stats.update(chunks=len(builders), triangles=ntri)
-    return stats
+    return stats, polys

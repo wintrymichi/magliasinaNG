@@ -39,6 +39,13 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 - **Bande rosse** ai due bordi nel tratto s ≈ 2,29–2,44 km.
 - **Incrocio di Magliaso:** l'incrocio era stato ricostruito, quindi le due isole pedonali e l'isola dipinta del rilievo sono state rimosse, e la mezzeria segue la posizione visibile nelle foto.
 
+## Versione 2.4
+
+- **Case visibili da ogni lato:** le pareti che guardavano verso l'interno (edifici a L, a U, a corte, file di case) e che da fuori mancavano ora guardano fuori; dove il verso non si può decidere la parete ha due facce; sotto le gronde c'è il sottotetto.
+- **Rotonda di Magliaso, salita verso Pura:** tolto il blocco che sporgeva di 16 cm dall'asfalto all'incrocio (la cima di un muro di sostegno coperto dalla strada) e il pezzo di marciapiede rimasto in mezzo alla carreggiata dall'isola pedonale tolta nel 2022.
+- **Sterrati, ghiaia e selciati** dove OpenStreetMap li indica (altrimenti secondo swissTLM3D), con texture disegnate e il fondo giusto per l'aderenza: ghiaia, terra, cubetti, ciottoli.
+- **Erba e fiori** sui prati e nei giardini attorno alla telecamera; **palme** nei giardini vicino al lago; **filari** nei vigneti; **acqua** nei fiumi; ombre ambientali nei materiali degli edifici; luce dei lampioni di notte; un po' più di foschia sul lago.
+
 ## Versione 2.3
 
 - **Cantonale a Magliaso:** all'incrocio con Via Piscicoltura la carreggiata verso Pura non scende più verso la strada più bassa al di là del muro (prima, per circa 60 m, era fino a 2,2 m sotto il terreno reale sul bordo).

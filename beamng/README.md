@@ -60,6 +60,48 @@ Revisione del livello v2.0 confrontato con fonti reali: l'ortofoto SWISSIMAGE 10
 - **La Tresa a Ponte Tresa** (`water.py`): la diga del modello del lago è alla traversa, 420 m a valle, e non più alla foce. Il tratto al livello del lago, sotto il ponte di confine, ha l'acqua.
 - **Zone, strade e registro** (`zone_report.py`): `verifica/ZONE.md` (stato per comune), `verifica/STRADE.md` (ogni strada della rete con lo stato di ogni aspetto) e `verifica/REGISTRO.md` (differenze trovate, azione, stato).
 
+## Versione 2.4: case da ogni lato, rotonda di Magliaso, superfici OSM e più realismo
+
+- **Verso delle pareti** (`buildings_mesh.py`: `orient`, `undecided_walls`, `soffits`): il gioco disegna una
+  faccia sola. Il verso di ogni parete si decide con due raggi quasi orizzontali che partono appena davanti
+  alla parete: se attraversano le superfici dell'edificio un numero dispari di volte la parete è girata
+  verso l'interno e viene invertita (prima si guardava il centro dell'edificio, sbagliato negli edifici a L,
+  a U, a corte e nelle file di case). Dove i raggi non decidono (gusci aperti del rilievo 3D) la parete ha
+  due facce. Sotto ogni falda del tetto che sporge dalla pianta c'è il sottotetto, 3 cm sotto la falda.
+  `bng.MeshBuilder.orient_closed` gira verso fuori i solidi di muri, recinzioni, guardrail, pali e binari.
+  `render3d.py` disegna una faccia sola come il gioco (doppia solo per i materiali `doubleSided`).
+  Nuovo controllo `building_walls_inward_share` in `check_level.py`: un punto 0,3 m davanti alla parete
+  dentro una pianta e quello dietro fuori = parete girata verso l'interno.
+- **Muri che le panoramiche vedono come pavimentazione** (`markings_state.py --walls`, `walls.py`): i muri della
+  misurazione su strade, marciapiedi e isole dove la segmentazione delle panoramiche (voto multi-vista,
+  `band_votes`) vede strada o marciapiede per almeno il 70 % di almeno 30 voti sono portati a filo della
+  pavimentazione, o tolti se attorno il terreno è in piano. È il blocco che sporgeva all'incrocio della rotonda
+  di Magliaso. I piccoli pezzi di marciapiede sulle isole tolte nel 2022 sono carreggiata
+  (`removed_sidewalks`).
+- **Superfici da OpenStreetMap** (`osm_surface.py`, `network_mesh.Network.assign_surfaces`): ogni linea di
+  swissTLM3D prende la categoria (asfalto, ghiaia, terra, cubetti, ciottoli) delle vie OSM che le corrono
+  accanto, dove sono etichettate (`surface`, per le carrareccie `tracktype`), altrimenti la sua (`BELAGSART`).
+  I poligoni delle strade della misurazione sono divisi tra le linee e le vie che contengono, su una griglia
+  di 1 m (vince la via più vicina in rapporto alla sua mezza larghezza; pezzi sotto 25 m² uniti al resto).
+  Le aree OSM con una superficie (parcheggi, piazze) la danno ai piazzali sotto di loro. Materiali per
+  carreggiata, piazzale e sentiero con i tipi di fondo GRAVEL, DIRT e COBBLESTONE; texture procedurali
+  (`surface_textures.py`) con la tinta mediana dell'ortofoto 10 cm lungo le vie OSM di quella superficie.
+- **Erba e fiori** (`groundcover.py`): oggetto GroundCover con ciuffi di tre quad incrociati (6 triangoli) su
+  `Grass` e `GardenGrass`, 40 000 elementi entro 50 m; i prati entro un quadrato di terreno dalle strade
+  hanno un livello di terreno gemello senza erba (`terrain.VERGE`), così i ciuffi non attraversano le strade.
+- **Palme** (`palms.py`): modello disegnato di Trachycarpus; un quarto degli alberi misurati alti 3-9 m con
+  chioma fino a 6 m nei giardini entro 400 m dal lago e sotto 320 m diventano palme (stima: la specie non si
+  misura).
+- **Vigneti** (`vineyards.py`): filari ogni 2,2 m nei vigneti della misurazione entro 150 m dalla rete, nella
+  direzione delle righe dell'ortofoto (tensore di struttura, misurata una volta: `dati/vineyard_rows.json`) o
+  lungo le curve di livello; mesh a pezzi di 128 m con un livello di dettaglio che le toglie oltre circa un
+  chilometro.
+- **Fiumi** (`rivers.py`): superficie d'acqua semitrasparente sulle superfici `corso_acqua` larghe almeno 2,5 m,
+  all'altezza del fondo più basso entro 3 m + 12 cm, anche sotto i ponti, non sui guadi né sul lago.
+- **Materiali**: mappe di ambient occlusion per intonaco, zoccolo e tetti (`bld_textures.py`), pareti più scure
+  verso terra nei colori dei vertici (`buildings_mesh.GROUND_AO`); luce dei 68 lampioni triangolati
+  (`props.py`, senza ombre); foschia 1,3e-4 fino a 1000 m (prima 1,1e-4 fino a 1200 m).
+
 ## Versione 2.3: correzioni dopo le prime prove nel gioco
 
 - **Muri tra due strade a quote diverse** (`surface_fit.py`, `cross_bands`): una fascia ripida del DTM fra due
@@ -155,6 +197,7 @@ Le quote sono ortometriche (LN02). Il terreno BeamNG misura 12,3 × 12,3 km: 819
 | Street View (v2.2) | `sv_coverage.py`, `sv_fetch.py`, `sv_segment.py`, `sv_facades.py`, `sv_guardrails.py`, `sv_walls.py` | copertura (metadati), panoramiche di revisione in locale, segmentazione della fascia del bordo strada; misure: tono delle facciate, persiane, guardrail, materiale dei muri |
 | Edifici (v2.2) | `download_gwr.py`, `missing_buildings.py`, `bld_textures.py`, `facades.py` | registro degli edifici, edifici mancanti e demoliti, texture originali, facciate per casa |
 | Revisione (v2.2) | `sv_review.py`, `qa_log.py`, `review_report.py`, `drive_test.py`, `drive_context.py`, `screenshots.py` | confronto foto/mappa dalla stessa camera, registro dei luoghi rivisti, `verifica/REVISIONE.md`, prova di guida virtuale, screenshot |
+| Grafica (v2.4) | `osm_surface.py`, `surface_textures.py`, `groundcover.py`, `palms.py`, `vineyards.py`, `rivers.py` | superfici di strade e sentieri da OSM con le loro texture, erba e fiori, palme, filari dei vigneti, acqua nei fiumi |
 | Pacchetto | `package.py` | zip della mod in `<MAGLIASO_ROOT>/dist` |
 | Correzione di una release | `patch_release.py` | applica le correzioni della v1.1 (strade, terreno, segnaletica, IA, oggetti, vegetazione) a uno zip già costruito, usando solo lo zip e `dati/` |
 

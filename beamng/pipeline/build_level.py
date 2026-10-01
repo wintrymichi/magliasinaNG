@@ -66,6 +66,9 @@ def stage_terrain(scene, ctx):
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
+    if ctx.get("river_polys"):                           # v2.4: the beds of the rivers under their water
+        import rivers
+        posts.append(lambda H, xs, ys: rivers.carve_terrain(H, xs, ys, ctx["river_polys"]))
     if "railway" in ctx.get("stages", STAGES):
         import railway                                   # the ground under the tracks at their height
         keep = override[1] if override else None         # not the ground of the roads
@@ -669,7 +672,8 @@ def stage_water(scene, ctx):
         crossings = [f for _, f in getattr(net, "deck_feet", [])] + [g for g, _, _ in roadheight.paved_polygons()]
         fn = ctx.get("road_mesh_fn")
         road_z = (lambda x, y: fn(x, y)) if fn is not None else (lambda x, y: np.full(len(x), np.nan))
-        ctx["rivers"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade, crossings, road_z)
+        ctx["rivers"], ctx["river_polys"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade,
+                                                         crossings, road_z)
         print("rivers:", ctx["rivers"], flush=True)
 
 
@@ -718,6 +722,13 @@ def stage_vegetation(scene, ctx):
                   np.array([net.segs[k]["kind"] == "path" for k in net.seg], bool))
     counts = vegetation.build(LEVEL_DIR, LEVEL_NAME, scene, drivable=drv, net_xy=net_xy)
     ctx["n_forest"] = sum(counts.values())
+    # v2.4: rows of vines in the vineyards near the roads (vineyards.py)
+    if net is not None:
+        import pickle
+        import vineyards
+        av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+        ctx["vineyards"] = vineyards.build(LEVEL_DIR, LEVEL_NAME, scene, av, net_xy[0], roads + paths)
+        print("vineyards:", ctx["vineyards"], flush=True)
 
 
 def stage_backfill(scene, ctx, H, base_tex):
@@ -912,7 +923,7 @@ def main():
     write_info(ctx)
     # what the v2.1 steps did, for the reports (zone_report.py)
     stats = {k: ctx[k] for k in ("canopy", "railway", "osm_props", "network_paint", "surfaces", "groundcover",
-                                 "rivers") if k in ctx}
+                                 "rivers", "vineyards") if k in ctx}
     if stats:
         json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
     print("level written to", LEVEL_DIR)
