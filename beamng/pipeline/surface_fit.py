@@ -350,11 +350,11 @@ def cross_bands(owner, D, cliff, LR, LD, CR, CD, comp, Zr, res, grad, verbose=Fa
     """Decide every band of cliff cells (module doc, step 3). A band whose data slopes one way
     along it (grad: data gradient per row/col) is a real steep surface (a stair, a steep path)
     and keeps its data, joined to all the surfaces around it. Otherwise the paved cells around the
-    band are 'upper' or 'lower' against the band next to them (median of the band data within
-    3 m): only upper cells around it -> a dip (the ground under a bridge, a hole), only lower -> a
-    bump, both -> a wall, whose two sides are never joined. Sides of different surfaces are joined
-    when their planes meet across the band. Returns the updated links and the cells carried by a
-    surface without their data."""
+    band are 'upper' or 'lower' against the band next to them (middle between the highest and the
+    lowest band data within 3 m): only upper cells around it -> a dip (the ground under a bridge, a
+    hole), only lower -> a bump, both -> a wall, whose two sides are never joined. Sides of different
+    surfaces are joined when their planes meet across the band. Returns the updated links and the
+    cells carried by a surface without their data."""
     H, W = owner.shape
     paved = owner >= 0
     pocket = pockets(comp, cliff, paved, res)
@@ -407,11 +407,15 @@ def cross_bands(owner, D, cliff, LR, LD, CR, CD, comp, Zr, res, grad, verbose=Fa
             steep[rs, cs] |= band
             stats["slope"] += 1
             continue
-        # upper / lower cells around the band
+        # upper / lower cells around the band, against the middle of the band next to them (v2.3: the
+        # median put it on the cell's own side of a wide smeared wall, so the road below the wall at
+        # Magliaso read as level with the band, the wall as a bump, and the Strada Cantonale above it
+        # sagged down to Via Piscicoltura by up to 2 m)
         btree = cKDTree(np.column_stack([br, bc]))
         rr, rc = np.nonzero(ring)
         nbh = btree.query_ball_point(np.column_stack([rr, rc]), near)
-        ref = np.array([np.median(Dw[br[i], bc[i]]) if len(i) else np.nan for i in map(np.array, nbh)])
+        ref = np.array([0.5 * (Dw[br[i], bc[i]].max() + Dw[br[i], bc[i]].min()) if len(i) else np.nan
+                        for i in map(np.array, nbh)])
         diff = np.nan_to_num(Dw[rr, rc] - ref)
         up = diff >= 0
         n_up, n_lo = int((diff > STEP_BAND / 2).sum()), int((diff < -STEP_BAND / 2).sum())

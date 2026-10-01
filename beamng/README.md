@@ -13,13 +13,16 @@ Questa pipeline ricostruisce in scala 1:1 il Malcantone (Ticino) come livello Be
 | `verifica/` | `VERIFICA.md` (confronto con tutte le 1464 viste), il grafico della concordanza lungo il percorso, le metriche per vista (`metrics_final.json`, e `metrics_full1.json` prima dell'ultimo ciclo di correzione) |
 | `dati/` | risultati di calcolo leggeri, per ricostruire il livello senza rifare i passi lunghi: pose calibrate delle panoramiche (`poses.json`), asse stradale, segnaletica e suo stato 2022, guardrail, muri di sostegno e altezze dei muri, recinzioni, lampioni, pali e cartelli, arredo, alberi e arbusti; per la v2.0 i ponti con le correzioni manuali (`ponti.json`) e la cantonale Magliaso–Gravesano (`cantonale_gravesano.json`); per la v2.2 le strade dei nuovi corridoi (`strade_extra_v22.json`) |
 
-La **mod pronta** è nella [release v2.0](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.0), che il workflow `.github/workflows/release_v2.0.yml` costruisce da zero su un server GitHub: scarica i dati, costruisce il livello, lo controlla con `check_level.py` e lo pubblica. È costruita con `MAGLIASO_NO_PHOTO_TEXTURES=1`, quindi non contiene immagini Street View: facciate e muri hanno texture neutre nei colori misurati e le targhe sono a tinta unita. Gli oggetti della cantonale ricavati dalle foto (segnaletica, lampioni, pali, cartelli, arredo) vengono presi dalla release v1.1 e appoggiati sulle nuove superfici (`carryover.py`).
+La **mod pronta** è nella [release v2.3](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.3), che il workflow `.github/workflows/release_v2.3.yml` costruisce da zero su un server GitHub: scarica i dati, costruisce il livello, lo controlla con `check_level.py` e `drive_test.py` e lo pubblica. È costruita con `MAGLIASO_NO_PHOTO_TEXTURES=1`, quindi non contiene immagini Street View: facciate, tetti e muri hanno texture originali disegnate dalla pipeline nei colori misurati e le targhe sono a tinta unita. Gli oggetti della cantonale ricavati dalle foto (segnaletica, lampioni, pali, cartelli, arredo) vengono presi dalla release v1.1 e appoggiati sulle nuove superfici (`carryover.py`).
 
 Le versioni precedenti restano disponibili:
 - **v1.0**: solo il corridoio della cantonale.
 - **v1.1**: la cantonale con le strade lisce e la carreggiata sgombra (`patch_release.py`, `.github/workflows/release_v1.1.yml`).
+- **v2.0**: l'area di 51 km² con tutta la rete stradale, i ponti e la cantonale fino a Gravesano (`release_v2.0.yml`).
+- **v2.1**: segnaletica su tutta la rete, alberi fuori dalla sagoma libera, traffico IA, ferrovia (`release_v2.1.yml`).
+- **v2.2**: revisione su Street View, facciate, guardrail di tutta la rete, strade nuove verso Arosio e Caslano (`release_v2.2.yml`).
 
-Le metriche di `verifica/VERIFICA.md` riguardano la cantonale nella versione locale con le texture fotografiche e la geometria della v1.0. La verifica della v2.0 è in `verifica/check_level.json` (controlli automatici su tutta la mappa) e in `verifica/ponti/` (profili dei ponti).
+Le metriche di `verifica/VERIFICA.md` riguardano la cantonale nella versione locale con le texture fotografiche e la geometria della v1.0. La verifica dell'ultima versione è in `verifica/check_level.json` (controlli automatici su tutta la mappa), `verifica/drive_test.json` (prova di guida virtuale) e `verifica/REVISIONE.md` (revisione su Street View); i profili dei ponti in `verifica/ponti/`.
 
 ## Versione 2.0: area, rete stradale, ponti
 
@@ -56,6 +59,22 @@ Revisione del livello v2.0 confrontato con fonti reali: l'ortofoto SWISSIMAGE 10
 - **Ferrovia** (`railway.py`): i binari della FLP (scartamento metrico) e delle FFS di swissTLM3D, con traversine, rotaie, massicciata, passaggi a livello a filo della strada e ponti. I binari stanno alla quota reale di swissTLM3D: dove il terreno del livello è più alto viene scavata una trincea (lungo il lago ad Agno, sotto la scarpata della cantonale), dove è più basso il binario sta su un terrapieno di massicciata; quelli sotto il parcheggio della stazione di Ponte Tresa non sono costruiti, come le gallerie. La linea di contatto non è costruita.
 - **La Tresa a Ponte Tresa** (`water.py`): la diga del modello del lago è alla traversa, 420 m a valle, e non più alla foce. Il tratto al livello del lago, sotto il ponte di confine, ha l'acqua.
 - **Zone, strade e registro** (`zone_report.py`): `verifica/ZONE.md` (stato per comune), `verifica/STRADE.md` (ogni strada della rete con lo stato di ogni aspetto) e `verifica/REGISTRO.md` (differenze trovate, azione, stato).
+
+## Versione 2.3: correzioni dopo le prime prove nel gioco
+
+- **Muri tra due strade a quote diverse** (`surface_fit.py`, `cross_bands`): una fascia ripida del DTM fra due
+  superfici è un muro quando attorno ha celle sia più alte sia più basse di lei; il confronto ora si fa con
+  il punto medio tra il dato più alto e il più basso della fascia vicina e non con la mediana, che per un
+  muro largo e sfumato cade dalla parte della cella stessa. A Magliaso il muro tra la Strada Cantonale e Via
+  Piscicoltura, più in basso, era preso per un dosso: le due strade diventavano una superficie sola e la
+  cantonale scendeva fino a 2,2 m sotto il terreno sul bordo per circa 60 m. Ora ogni strada ha la sua
+  superficie (scarto massimo sull'asse della cantonale da 1,70 m a 0,09 m). Lungo il corridoio della
+  cantonale cambiano solo 6 fasce, tutte verso il terreno reale.
+- **Diradamento del bosco** (`vegetation.py`, `thin`): tutti gli alberi misurati restano entro 30 m dalle
+  strade e 5 m dai sentieri (prima 150 m dalle strade); fino a 60 m e 100 m dalla strada il più alto di ogni
+  cella di 11 m e 17 m, oltre il più alto di ogni cella di una griglia larga quanto basta per stare sotto
+  `CAP`. I versanti attraversati da tornanti, come il passo sopra Gravesano visto dal paese, non sono più
+  fitti come il bosco intero e il gioco li disegna più in fretta.
 
 ## Versione 2.2: revisione su Street View, facciate, guardrail e guidabilità
 

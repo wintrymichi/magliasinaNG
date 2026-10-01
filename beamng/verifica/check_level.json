@@ -1,10 +1,10 @@
 {
- "forest_items": 239753,
+ "forest_items": 160748,
  "forest_floating": 0,
  "forest_buried": 0,
- "crowns_in_profile": 4,
+ "crowns_in_profile": 3,
  "crowns_in_profile_by_class": {
-  "carreggiata": 3,
+  "carreggiata": 2,
   "marciapiede o piazzale": 0,
   "sentiero": 1
  },
@@ -16,8 +16,8 @@
  "trunks_near_roads": 0,
  "shrubs_on_surface": 0,
  "network_holes": 2,
- "network_off_profile": 236,
- "network_bumps": 6562,
+ "network_off_profile": 224,
+ "network_bumps": 6557,
  "network_stations": 288068,
  "network_above_ground": 30,
  "terrain_over_road_max_m": 1.4,
@@ -28,20 +28,19 @@
  "terrain_pit_max_m": 0.0,
  "terrain_carve_cliffs": 1,
  "terrain_carve_cliff_max_m": 21.07,
- "road_obstacles": 17,
+ "road_obstacles": 13,
  "path_obstacles": 125,
  "obstacles_by_kind": {
   "strade: ponte o gradino": 6,
-  "strade: muro": 4,
   "strade: edificio": 1,
   "strade: oggetto": 6,
   "sentieri: ponte o gradino": 100,
   "sentieri: muro": 15,
   "sentieri: edificio": 10
  },
- "road_faces_under_ground": 332,
+ "road_faces_under_ground": 327,
  "road_faces_under_ground_max_m": 2.17,
- "road_seams": 103,
+ "road_seams": 104,
  "road_seams_max_m": 0.972,
  "ai_roads": 2831,
  "ai_components": 35,
@@ -337,7 +336,7 @@
   "/levels/jungle_rock_island/art/shapes/buildings/Ind_metal_trim_nm.normal.png",
   "/levels/jungle_rock_island/art/shapes/buildings/ind_metal_trim_s.color.png"
  ],
- "level_size_mb": 3137.9,
+ "level_size_mb": 3122.9,
  "failed": [],
  "places": [
   {
@@ -510,24 +509,6 @@
    "score": 2.0,
    "cosa": "ponte o gradino",
    "az": 340.2
-  },
-  {
-   "what": "ostacolo sulla strada",
-   "x": 20.0,
-   "y": -671.4,
-   "z": 386.34,
-   "score": 2.0,
-   "cosa": "muro",
-   "az": 330.5
-  },
-  {
-   "what": "ostacolo sulla strada",
-   "x": 25.3,
-   "y": -684.6,
-   "z": 386.62,
-   "score": 2.0,
-   "cosa": "muro",
-   "az": 340.4
   },
   {
    "what": "ostacolo sulla strada",
@@ -980,13 +961,6 @@
   },
   {
    "what": "strada sotto il terreno",
-   "x": 678.7,
-   "y": -1015.7,
-   "z": 305.35,
-   "score": 1.492
-  },
-  {
-   "what": "strada sotto il terreno",
    "x": 3567.3,
    "y": 4010.7,
    "z": 337.64,
@@ -1376,6 +1350,13 @@
    "y": 3022.7,
    "z": 366.25,
    "score": 1.323
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3282.7,
+   "y": 2785.3,
+   "z": 291.03,
+   "score": 1.321
   },
   {
    "what": "strada fuori profilo",
@@ -2298,13 +2279,6 @@
    "score": 0.822
   },
   {
-   "what": "strada fuori profilo",
-   "x": 677.2,
-   "y": -1016.3,
-   "z": 306.14,
-   "score": 0.814
-  },
-  {
    "what": "gradino o dosso",
    "x": 705.2,
    "y": 1528.4,
@@ -3041,6 +3015,13 @@
   },
   {
    "what": "giunzione tra pezzi",
+   "x": 64.5,
+   "y": -768.0,
+   "z": 379.48,
+   "score": 0.474
+  },
+  {
+   "what": "giunzione tra pezzi",
    "x": -3840.0,
    "y": 867.5,
    "z": 399.14,
@@ -3101,13 +3082,6 @@
    "y": 3584.0,
    "z": 706.09,
    "score": 0.439
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 685.7,
-   "y": -1024.0,
-   "z": 302.92,
-   "score": 0.438
   },
   {
    "what": "strada fuori profilo",
@@ -3311,6 +3285,27 @@
    "y": 1441.4,
    "z": 675.98,
    "score": 0.336
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 3767.7,
+   "y": 4950.7,
+   "z": 344.87,
+   "score": 0.33
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 2977.0,
+   "y": 3808.7,
+   "z": 514.67,
+   "score": 0.327
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -1270.5,
+   "y": -2151.8,
+   "z": 282.27,
+   "score": 0.318
   }
  ]
 }
