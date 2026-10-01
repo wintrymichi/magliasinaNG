@@ -175,6 +175,33 @@ class Network:
             area_by[p["cls"]] = area_by.get(p["cls"], 0) + p["geom"].area / 1e4
         print("drivable polygons %d, ha %s" % (len(self.polys), {k: round(v, 1) for k, v in area_by.items()}), flush=True)
 
+    def assign_surfaces(self):
+        """v2.4: the surface of every polygon (osm_surface.py): the lines' strips that of their line,
+        the survey roads that of the lines and OSM ways in them (in parts where they differ), the
+        yards and squares that of the OSM areas over them; sidewalks and islands stay paved.
+        p["surface"] is the main one, p["zones"] the parts [(surface, geometry)] where there are several."""
+        import osm_surface
+        self.line_cat, st = osm_surface.line_categories(self)
+        area_by = {}
+        for p in self.polys:
+            zones = None
+            if p["cls"].startswith("strip"):
+                p["surface"] = self.line_cat[p["own"]]
+            elif p["cls"] == "road":
+                zones = osm_surface.polygon_zones(self, p, self.line_cat)
+            elif p["cls"] == "hard":
+                zones = osm_surface.area_zones(p)
+            if zones is not None:
+                p["surface"] = zones[-1][0]
+                if len(zones) > 1:
+                    p["zones"] = zones
+            for c, g in p.get("zones") or [(p["surface"], p["geom"])]:
+                area_by[(p["cls"], c)] = area_by.get((p["cls"], c), 0.0) + g.area / 1e4
+        st["ha"] = {f"{k[0]}:{k[1]}": round(v, 2) for k, v in sorted(area_by.items())}
+        st["polygons_in_parts"] = sum(1 for p in self.polys if "zones" in p)
+        print("surfaces (OSM, swissTLM3D):", st, flush=True)
+        return st
+
     # ------------------------------------------------------------------ heights
     def heights(self, X, Y, P, with_seg=False, own=None, with_u=False):
         """Heights at points (X, Y) inside polygons P (index into self.polys); NaN where no line
@@ -525,14 +552,24 @@ def harmonic_fill(Z, m, D):
 
 
 # ---------------------------------------------------------------------- meshes and carve
-# (class, surface) -> (material, mesh cell m, uv tile m)
-MATERIAL = {
-    ("road", "hard"): ("mp_road_asphalt", 3.0, 1.25), ("road", "natural"): ("mp_road_asphalt", 3.0, 1.25),
-    ("sidewalk", "hard"): ("mp_sidewalk", 2.0, 1.25), ("island", "hard"): ("mp_island", 2.0, 2.5),
-    ("hard", "hard"): ("mp_hard_asphalt", 2.0, 1.25),      # yards on steep ground: 2 m follows them
-    ("strip_road", "hard"): ("mp_road_asphalt", 3.0, 1.25), ("strip_road", "natural"): ("mp_road_gravel", 3.0, 2.0),
-    ("strip_path", "hard"): ("mp_path_paved", 2.0, 1.25), ("strip_path", "natural"): ("mp_path_dirt", 2.0, 2.0),
-}
+# class -> (material group of osm_surface.MATS, mesh cell m, uv tile m of the asphalt); the unpaved and
+# stone surfaces (v2.4) tile over surface_textures.TILE_M m
+CLASS_MESH = {"road": ("road", 3.0, 1.25), "strip_road": ("road", 3.0, 1.25), "hard": ("hard", 2.0, 1.25),
+              "strip_path": ("path", 2.0, 1.25)}
+FIXED = {"sidewalk": ("mp_sidewalk", 2.0, 1.25), "island": ("mp_island", 2.0, 2.5)}
+
+
+def material(cls, surface):
+    """(material, mesh cell m, uv tile m) of a polygon class with a surface of osm_surface."""
+    if cls in FIXED:
+        return FIXED[cls]
+    import osm_surface
+    import surface_textures
+    group, cell, uvt = CLASS_MESH[cls]
+    if surface == "natural":                         # swissTLM3D's own, before assign_surfaces
+        surface = "gravel" if group == "road" else "dirt"
+    surface = surface if surface in osm_surface.MATS[group] else "hard"
+    return osm_surface.MATS[group][surface], cell, (uvt if surface == "hard" else surface_textures.TILE_M)
 
 
 def tiles():
@@ -575,24 +612,31 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
                 piece = road_mesh.polygonal(p["geom"].intersection(cbox))
                 if piece.is_empty or piece.area < 0.05:
                     continue
-                mat, cell, uvt = MATERIAL[(p["cls"], p["surface"])]
-                if p["cls"].startswith("strip"):             # on its line, no raster
-                    V, T = road_mesh.mesh_polygon(piece, net.strip_height(int(pid)), cell=cell)
-                    if len(T) and np.isfinite(V[:, 2]).all():
-                        emit(cx, cy, mat, uvt, V, T)
-                        n_tri += len(T)
-                    continue
-                # the vertices too: no deeper than SUNK under the bare ground (an edge extrapolated
-                # from far cells of its surface)
-                zf = (lambda pid_: (lambda x, y, comp: np.maximum(S.height(x, y, pid=pid_, comp=int(comp)),
-                                                                  lo.sample(x, y))))(int(pid))
-                kf_all = (lambda pid_: (lambda x, y: S.surfaces_at_polygon(x, y, pid_)))(int(pid))
-                for part, comp in road_mesh.split_by_surface(piece, S, int(pid)):
-                    kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
-                    for comp_, V, T in road_mesh.mesh_polygon_surfaces(part, zf, kf, cell=cell):
+                # v2.4: the parts of the polygon with another surface (osm_surface.py) are meshed apart,
+                # on the same heights
+                zones = p.get("zones") or [(p["surface"], None)]
+                for surf, zg in zones:
+                    sub = piece if zg is None else road_mesh.polygonal(piece.intersection(zg))
+                    if sub.is_empty or sub.area < 0.05:
+                        continue
+                    mat, cell, uvt = material(p["cls"], surf)
+                    if p["cls"].startswith("strip"):             # on its line, no raster
+                        V, T = road_mesh.mesh_polygon(sub, net.strip_height(int(pid)), cell=cell)
                         if len(T) and np.isfinite(V[:, 2]).all():
                             emit(cx, cy, mat, uvt, V, T)
                             n_tri += len(T)
+                        continue
+                    # the vertices too: no deeper than SUNK under the bare ground (an edge extrapolated
+                    # from far cells of its surface)
+                    zf = (lambda pid_: (lambda x, y, comp: np.maximum(S.height(x, y, pid=pid_, comp=int(comp)),
+                                                                      lo.sample(x, y))))(int(pid))
+                    kf_all = (lambda pid_: (lambda x, y: S.surfaces_at_polygon(x, y, pid_)))(int(pid))
+                    for part, comp in road_mesh.split_by_surface(sub, S, int(pid)):
+                        kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
+                        for comp_, V, T in road_mesh.mesh_polygon_surfaces(part, zf, kf, cell=cell):
+                            if len(T) and np.isfinite(V[:, 2]).all():
+                                emit(cx, cy, mat, uvt, V, T)
+                                n_tri += len(T)
     return n_tri
 
 

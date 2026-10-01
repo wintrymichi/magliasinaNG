@@ -207,10 +207,111 @@ class MeshBuilder:
     def triangle_count(self):
         return sum(sum(len(t) for t in p[3]) for p in self.parts.values())
 
-    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2):
+    def orient_closed(self):
+        """Every solid piece (posts, boxes, wall prisms, sleepers, rails: no edge shared by more than two
+        triangles, open at most where it stands on the ground) with its faces turned the same way and
+        out of the piece (v2.4: the game draws a face from its front only, and boxes built in a
+        left-handed frame had their faces turned in). The side comes from the volume swept from the
+        piece's centre; flat pieces (a mesh fence, a guard rail sheet) are left as they are. Returns
+        the number of triangles turned."""
+        tri_part, tri_idx, corners = [], [], []
+        for mat, p in self.parts.items():
+            V = np.concatenate(p[0])
+            T = np.concatenate(p[3])
+            tri_part += [mat] * len(T)
+            tri_idx.append(np.arange(len(T)))
+            corners.append(V[T])
+        if not corners:
+            return 0
+        C = np.concatenate(corners)                              # (k, 3, 3)
+        tri_idx = np.concatenate(tri_idx)
+        tri_part = np.array(tri_part)
+        key = np.round(C.reshape(-1, 3) * 1000).astype(np.int64)
+        _, vid = np.unique(key, axis=0, return_inverse=True)
+        vid = vid.reshape(-1, 3)
+        k = len(vid)
+        # directed edges -> undirected edge ids, and the triangles of every edge
+        a = vid[:, [0, 1, 2]].ravel()
+        b = vid[:, [1, 2, 0]].ravel()
+        lo, hi = np.minimum(a, b), np.maximum(a, b)
+        eid_key = lo.astype(np.int64) * (vid.max() + 1) + hi
+        ue, eid, cnt = np.unique(eid_key, return_inverse=True, return_counts=True)
+        etri = np.repeat(np.arange(k), 3)
+        fwd = a < b                                                 # direction of the edge in its triangle
+        # components through shared edges
+        from scipy.sparse import coo_matrix
+        from scipy.sparse.csgraph import connected_components
+        order = np.argsort(eid, kind="stable")
+        e_s, t_s, f_s = eid[order], etri[order], fwd[order]
+        same = e_s[1:] == e_s[:-1]
+        A = coo_matrix((np.ones(int(same.sum())), (t_s[:-1][same], t_s[1:][same])), shape=(k, k))
+        ncomp, comp = connected_components(A, directed=False)
+        closed = np.ones(ncomp, bool)                              # manifold: no edge of 3+ triangles
+        np.logical_and.at(closed, comp[etri], (cnt[eid] <= 2))
+        flip = np.zeros(k, bool)
+        # consistent orientation by breadth-first search over the shared edges (a closed piece only)
+        nbr = {}
+        for i in np.flatnonzero(same):
+            t1, t2 = t_s[i], t_s[i + 1]
+            if closed[comp[t1]] and cnt[e_s[i]] == 2:
+                opp = f_s[i] != f_s[i + 1]                          # consistent when the edge runs both ways
+                nbr.setdefault(t1, []).append((t2, opp))
+                nbr.setdefault(t2, []).append((t1, opp))
+        seen = np.zeros(k, bool)
+        for s in np.flatnonzero(closed[comp]):
+            if seen[s]:
+                continue
+            seen[s] = True
+            stack = [s]
+            members = [s]
+            while stack:
+                t = stack.pop()
+                for u, opp in nbr.get(t, []):
+                    if not seen[u]:
+                        seen[u] = True
+                        flip[u] = flip[t] ^ (not opp)
+                        stack.append(u)
+                        members.append(u)
+            m = np.array(members)
+            P = C[m].copy()
+            P[flip[m]] = P[flip[m]][:, ::-1]
+            ctr = P.reshape(-1, 3).mean(0)
+            Q = P - ctr
+            vol = np.einsum("ij,ij->i", Q[:, 0], np.cross(Q[:, 1], Q[:, 2])).sum() / 6.0
+            box = np.prod(np.maximum(P.reshape(-1, 3).max(0) - P.reshape(-1, 3).min(0), 1e-6))
+            if abs(vol) < 0.05 * box:                               # flat: no inside to turn away from
+                flip[m] = False
+            elif vol < 0:
+                flip[m] = ~flip[m]
+        if not flip.any():
+            return 0
+        # write the turns back: reversed corners and opposite normals of the turned triangles
+        base = 0
+        for mat, p in self.parts.items():
+            T = np.concatenate(p[3])
+            n_t = len(T)
+            f = flip[base:base + n_t]
+            base += n_t
+            if not f.any():
+                continue
+            N = np.concatenate(p[1])
+            used = np.zeros(len(N), np.int32)
+            np.add.at(used, T[~f].ravel(), 1)
+            T[f] = T[f][:, [0, 2, 1]]
+            own = np.unique(T[f].ravel())
+            own = own[used[own] == 0]                           # vertices of turned triangles only
+            N[own] = -N[own]
+            V = np.concatenate(p[0]); U = np.concatenate(p[2]); Cc = np.concatenate(p[5])
+            p[0], p[1], p[2], p[3], p[5] = [V], [N], [U], [T], [Cc]
+        return int(flip.sum())
+
+    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False):
         """One geometry with one <triangles> list per material, in a single node named
         '<name>_a<detail>' under base00/start01. Torque reads the trailing number of a mesh
-        node as its LOD pixel size, so node names must not end with other digits."""
+        node as its LOD pixel size, so node names must not end with other digits.
+        orient: the solid pieces turned out first (orient_closed, v2.4)."""
+        if orient:
+            self.orient_closed()
         o = np.asarray(origin, np.float64)
         Vs, Ns, Ts, Cs, prims, mats, effects, binds = [], [], [], [], [], [], [], []
         off = 0

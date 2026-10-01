@@ -15,6 +15,8 @@ Within 1 m of a paved surface (roadheight.py) a wall reaches from 0.4 m below it
 than the DTM the wall was measured on. v2.0: no wall stands more than FREE_OVER m above the way of a car
 (drive_free: the surveyed roads of the network and a band around every line; the survey and the
 swissTLM3D lines do not always agree, and a wall drawn across a street would close it).
+v2.4: the walls the panoramas see as flat paving, with level ground around (markings_state.py
+removed_walls: taken away when the street was rebuilt) are left out.
 Output meshes: prism sides + triangulated top, per 128 m chunk.
 Also returns the footprints for the terrain: carve_terrain lowers every terrain vertex whose
 triangles touch a wall to the wall base, so no terrain triangle spans a wall and pokes out of its
@@ -61,6 +63,18 @@ def wall_material(x, y, default):
     if r[2] == "plaster":
         return "mp_wall_plaster", np.clip(np.asarray(r[7] if len(r) > 7 else (0.85, 0.82, 0.75), float) / 0.9, 0, 1)
     return {"stone": "mp_wall_stone", "concrete": "mp_wall_concrete"}.get(r[2], default), None
+
+
+def removed():
+    """Points of the survey walls the panoramas see as flat paving (markings_state.removed_walls, v2.4):
+    {"remove": [points], "flush": [points]}: left out, or kept with their top at the paving."""
+    import json
+    f = os.path.join(WORK, "markings_state.json")
+    rw = json.load(open(f)).get("removed_walls", []) if os.path.exists(f) else []
+    out = {"remove": [], "flush": []}
+    for w in rw:
+        out[w.get("action", "remove")].append(shapely.Point(w["x"], w["y"]))
+    return out
 
 
 def wall_footprints(av, skip_polys):
@@ -216,9 +230,15 @@ def wall_geometry(ctx=None):
     # the walls beyond the 0.5 m DTM (outside the area) have no ground to be measured on
     gx0, gy0, gx1, gy1 = dtm.bounds()
     on_dtm = shapely.box(gx0, gy0, gx1, gy1).buffer(-(R_SEARCH + 1.0), join_style="mitre")
+    seen = removed()
+    gone_tree = shapely.STRtree(seen["remove"]) if seen["remove"] else None
+    flush_tree = shapely.STRtree(seen["flush"]) if seen["flush"] else None
     for wi, (g, kind, props) in enumerate(wall_footprints(ctx["av"], ctx["mauer"])):
         if not on_dtm.contains(g):
             continue
+        if gone_tree is not None and len(gone_tree.query(g, predicate="dwithin", distance=0.05)):
+            continue                                      # no longer there (markings_state.removed_walls)
+        flush = flush_tree is not None and len(flush_tree.query(g, predicate="dwithin", distance=0.05)) > 0
         if ctx.get("near") is not None:
             c = g.representative_point()
             dist = {}
@@ -273,12 +293,20 @@ def wall_geometry(ctx=None):
             zbot = zlo - 0.4
             # next to a paved surface the wall meets the (idealised) road surface
             S = ctx.get("surface")
+            zr_all = None
             if S is not None:
                 near = S.distance(allv[:, 0], allv[:, 1]) < 1.25
                 if near.any():
                     zr = S.height(allv[near, 0], allv[near, 1])
                     zbot[near] = np.minimum(zbot[near], zr - 0.4)
                     ztop[near] = np.maximum(ztop[near], zr + 0.15)
+                    zr_all = np.where(near, 0.0, np.nan)
+                    zr_all[near] = zr
+            # v2.4: the panoramas see the paving over it (a retaining wall under the edge of a street):
+            # the top flush with the paving (the road surface, else the ground), not above it
+            if flush:
+                zp = np.where(np.isfinite(zr_all), zr_all, zhi) if zr_all is not None else zhi
+                ztop = np.maximum(np.minimum(ztop, zp - 0.02), zbot + 0.05)
             return dict(key=key, poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
                         zbot=zbot, samp=samp, dmax=dmax)
 
@@ -399,7 +427,7 @@ def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/walls/walls_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CHUNK, (ty + 0.5) * CHUNK, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name="walls", origin=origin)
+        mb.write_dae(os.path.join(level_dir, rel), name="walls", origin=origin, orient=True)
         ntri += mb.triangle_count()
         scene.add("MissionGroup/walls", bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=True,
                                                      decal=False))
@@ -673,7 +701,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/walls/rwalls_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CH, (ty + 0.5) * CH, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name="rwall", origin=origin)
+        mb.write_dae(os.path.join(level_dir, rel), name="rwall", origin=origin, orient=True)
         scene.add("MissionGroup/walls", bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=True, decal=False))
     print("roadside walls", len(runs), "chunks", len(builders), "atlas pages", len(atlas.pages) if atlas else 0)
     return np.array(samples)

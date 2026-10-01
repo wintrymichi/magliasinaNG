@@ -171,7 +171,7 @@ def build(level_dir, level_name, scene):
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/fences/fence_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CHK, (ty + 0.5) * CHK, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name="fence", origin=origin)
+        mb.write_dae(os.path.join(level_dir, rel), name="fence", origin=origin, orient=True)
         scene.add("MissionGroup/roads/fences", bng.tsstatic(f"/levels/{level_name}/{rel}", origin,
                                                              collision=True, decal=False))
     print("fences", len(items), "in", len(builders), "chunks")

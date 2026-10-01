@@ -11,6 +11,7 @@ import json, os
 import numpy as np
 import shapely
 import bng
+import osm_surface
 from config import WORK, LEVEL_NAME
 from road_mesh import TriSurface
 
@@ -65,7 +66,7 @@ def strip_tris(P, z, width):
     return t
 
 
-ROAD_MATS = ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_hard_asphalt", "mp_sidewalk", "mp_island", "mp_road_gravel")
+ROAD_MATS = osm_surface.ROAD_MATS + osm_surface.HARD_MATS + ("mp_road_asphalt_fresh", "mp_sidewalk", "mp_island")
 CHUNK = 128.0
 
 

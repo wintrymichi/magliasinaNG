@@ -37,6 +37,7 @@ exceeded.
 import glob, json, os, sys
 import numpy as np
 import shapely
+import osm_surface
 import patch_release as pr
 from road_mesh import TriSurface as Surface
 from config import LEVEL_DIR, LEVEL_NAME
@@ -79,7 +80,7 @@ LIMITS = {"terrain_over_road": 50, "terrain_over_road_max_m": 1.5, "road_seams":
           "crowns_in_profile": 10, "trunks_in_solids": 10, "forest_floating": 0, "forest_buried": 10,
           "missing_files": 0}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
-PATH_MATS = ("mp_path_dirt", "mp_path_paved")
+PATH_MATS = osm_surface.PATH_MATS                  # v2.4: paved, gravel, earth, setts, cobbles
 SKIP_MATS = ("mp_road_wall", "mp_bridge_parapet")
 
 

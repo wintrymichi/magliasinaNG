@@ -296,7 +296,7 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
     for (tx, ty), mb in sorted(tiles.items()):
         rel = f"art/shapes/railway/rail_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * TILE, (ty + 0.5) * TILE, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name=f"rail_{tx}_{ty}", origin=origin)
+        mb.write_dae(os.path.join(level_dir, rel), name=f"rail_{tx}_{ty}", origin=origin, orient=True)
         scene.add(g, bng.tsstatic(f"{L}/{rel}", origin, collision=True, decal=False))
     stats = {k: (round(v, 2) if isinstance(v, float) else v) for k, v in stats.items()}
     print("railway:", stats, "meshes", len(tiles))

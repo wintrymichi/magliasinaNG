@@ -64,6 +64,14 @@ def cached(paths):
     return d
 
 
+def register(path, mn, mx):
+    """Bounds of a shape drawn by the pipeline (v2.4: palms.py), into the cache."""
+    f = os.path.join(WORK, "asset_bounds.json")
+    d = json.load(open(f)) if os.path.exists(f) else {}
+    d[path] = [list(map(float, mn)), list(map(float, mx))]
+    json.dump(d, open(f, "w"), indent=1)
+
+
 def dae_material_names(path):
     """Material names referenced by a vanilla DAE (the names BeamNG maps to Material 'mapTo')."""
     z = zipfile.ZipFile(zip_for(path))

@@ -24,6 +24,8 @@ from config import NO_PHOTO, WORK
 TILE = 256.0
 V1_DEFAULT = np.array([0.84, 0.80, 0.72])        # plaster tone of v1.x buildings without photos
 SHOP_NEAR = 3.0        # m, a shop of OSM this close to a building is in it (the point is often on the street side)
+GROUND_AO = 0.14            # v2.4: darkening of the walls at the ground (vertex colour)
+GROUND_AO_H = 4.0           # m above the foot of the building where it ends
 
 
 def wall_uvs(tris):
@@ -51,22 +53,156 @@ def roof_uvs(tris, tile=1.6):
     return np.stack([u, v], -1).reshape(-1, 2) / tile
 
 
-def orient(b):
-    allp = np.concatenate([b["walls"].reshape(-1, 3), b["roofs"].reshape(-1, 3)])
-    ctr = allp.mean(0)
-    out = {}
-    for part in ("walls", "roofs"):
-        t = b[part].copy()
-        if len(t):
-            n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
-            if part == "walls":
-                o = t.mean(1) - ctr; o[:, 2] = 0
-                flip = (n * o).sum(1) < 0
-            else:
-                flip = n[:, 2] < 0
-            t[flip] = t[flip][:, ::-1]
-        out[part] = t
+def _crossings(O, D, T, chunk=4096):
+    """Number of triangles T (t, 3, 3) every ray O + s D (s > 0) of (m, 3) passes through
+    (Moller-Trumbore)."""
+    e1, e2 = T[:, 1] - T[:, 0], T[:, 2] - T[:, 0]
+    out = np.zeros(len(O), np.int32)
+    step = max(1, min(chunk, chunk * 64 // max(len(T), 1)))
+    for a in range(0, len(O), step):
+        o, d = O[a:a + step][:, None, :], D[a:a + step][:, None, :]
+        p = np.cross(d, e2[None])
+        det = (e1[None] * p).sum(-1)
+        ok = np.abs(det) > 1e-12
+        inv = np.where(ok, 1.0 / np.where(ok, det, 1.0), 0.0)
+        s = o - T[None, :, 0]
+        u = (s * p).sum(-1) * inv
+        q = np.cross(s, e1[None])
+        v = (d * q).sum(-1) * inv
+        t = (e2[None] * q).sum(-1) * inv
+        hit = ok & (u >= 0) & (v >= 0) & (u + v <= 1) & (t > 1e-6)
+        out[a:a + step] = hit.sum(1)
     return out
+
+
+def _surface(b):
+    """The building's own surface: walls, roofs and floors (k, 3, 3)."""
+    fl = b.get("floors")
+    return np.concatenate([x for x in (b["walls"], b["roofs"], fl if fl is not None else np.zeros((0, 3, 3)))
+                           if len(x)])
+
+
+def _votes(walls, surf):
+    """+2 where two slightly turned horizontal rays from just in front of every wall triangle both cross
+    the surface an odd number of times (the front is inside the building), -2 where both cross it an
+    even number of times, 0 where they disagree (an open shell, a ray along an edge)."""
+    n = np.cross(walls[:, 1] - walls[:, 0], walls[:, 2] - walls[:, 0])
+    h = n.copy()
+    h[:, 2] = 0.0
+    ln = np.linalg.norm(h, axis=1)
+    ok = ln > 1e-9
+    h[ok] /= ln[ok, None]
+    c = walls.mean(1)
+    votes = np.zeros(len(walls), np.int32)
+    for ang, dz in ((0.13, 0.011), (-0.17, -0.007)):        # off the edges of the mesh
+        ca, sa = np.cos(ang), np.sin(ang)
+        d = np.column_stack([ca * h[:, 0] - sa * h[:, 1], sa * h[:, 0] + ca * h[:, 1], np.zeros(len(h))])
+        odd = _crossings(c + 0.01 * h + np.array([0.0, 0.0, dz]), d, surf) % 2 == 1
+        votes += np.where(odd, 1, -1)
+    votes[~ok] = 0
+    return votes
+
+
+def orient(b):
+    """Walls facing out of the building, roofs facing up (the game draws a face from its front only).
+    v2.4: a wall faces in when a horizontal ray from just in front of it crosses the building's own
+    surface an odd number of times (it starts inside); two slightly turned rays must agree, otherwise
+    the old test decides (away from the building's centre) and the wall is drawn from both sides
+    (undecided_walls). That test alone turned the walls of L- and U-shaped buildings, courtyards and
+    rows of houses inwards (9 % of the wall area), and from those sides the houses were see-through."""
+    walls, roofs = b["walls"].copy(), b["roofs"].copy()
+    if len(roofs):
+        n = np.cross(roofs[:, 1] - roofs[:, 0], roofs[:, 2] - roofs[:, 0])
+        flip = n[:, 2] < 0
+        roofs[flip] = roofs[flip][:, ::-1]
+    if len(walls):
+        votes = _votes(walls, _surface(b))
+        n = np.cross(walls[:, 1] - walls[:, 0], walls[:, 2] - walls[:, 0])
+        ctr = np.concatenate([walls.reshape(-1, 3), roofs.reshape(-1, 3)]).mean(0)
+        o = walls.mean(1) - ctr
+        o[:, 2] = 0
+        flip = np.where(votes != 0, votes > 0, (n * o).sum(1) < 0)
+        walls[flip] = walls[flip][:, ::-1]
+    return {"walls": walls, "roofs": roofs}
+
+
+def roof_height(roofs, P):
+    """Height of the roof triangles (k, 3, 3) over the points P (n, 2): the highest triangle covering
+    each point, the plane of the nearest triangle where none does (a point on the eave line)."""
+    A, B, C = roofs[:, 0], roofs[:, 1], roofs[:, 2]
+    n = np.cross(B - A, C - A)
+    nz = np.where(np.abs(n[:, 2]) > 1e-9, n[:, 2], 1e-9)
+    za = A[:, 2][None] - (n[:, 0][None] * (P[:, 0][:, None] - A[:, 0][None]) +
+                          n[:, 1][None] * (P[:, 1][:, None] - A[:, 1][None])) / nz[None]
+    v0, v1 = (B - A)[:, :2], (C - A)[:, :2]
+    v2 = P[:, None, :] - A[None, :, :2]
+    den = v0[:, 0] * v1[:, 1] - v1[:, 0] * v0[:, 1]
+    den = np.where(np.abs(den) > 1e-12, den, 1e-12)
+    u = (v2[..., 0] * v1[None, :, 1] - v1[None, :, 0] * v2[..., 1]) / den[None]
+    w = (v0[None, :, 0] * v2[..., 1] - v2[..., 0] * v0[None, :, 1]) / den[None]
+    out = 1.0 - u - w
+    dist = np.maximum(np.maximum(-u, -w), -out)            # how far outside the triangle (0 inside)
+    z = np.where(dist <= 1e-6, za, -np.inf).max(1)
+    near = np.argmin(dist, axis=1)
+    return np.where(np.isfinite(z), z, za[np.arange(len(P)), near])
+
+
+def soffits(b, roofs, drop=0.03):
+    """The undersides of the eaves (v2.4): the roof plan outside the building's ground plan, a few cm
+    under the roof and facing down, one piece per roof plane. The game draws a face from its front only,
+    so from the street the eaves of the survey (14 % of the roof plan) were see-through."""
+    if not len(roofs):
+        return np.zeros((0, 3, 3))
+    fp = footprint(b)
+    if fp.is_empty:
+        return np.zeros((0, 3, 3))
+    fp = fp.buffer(0.02)
+    n = np.cross(roofs[:, 1] - roofs[:, 0], roofs[:, 2] - roofs[:, 0])
+    ln = np.linalg.norm(n, axis=1)
+    ok = (ln > 1e-9) & (np.abs(n[:, 2]) > 1e-6 * np.maximum(ln, 1e-9))
+    n[ok] /= ln[ok, None]
+    d = (n * roofs[:, 0]).sum(1)
+    key = np.column_stack([np.round(n[:, 0] / 0.02), np.round(n[:, 1] / 0.02), np.round(d / 0.05)]).astype(np.int64)
+    out = []
+    for k in np.unique(key[ok], axis=0):
+        sel = ok & (key == k).all(1)
+        plan = shapely.union_all([q for q in (shapely.Polygon(t[:, :2]) for t in roofs[sel]) if q.is_valid and q.area > 1e-6])
+        o = shapely.make_valid(plan.difference(fp).simplify(0.05))
+        if o.is_empty or o.area < 0.02:
+            continue
+        nn, dd = n[sel][0], d[sel][0]                     # n . p = d on the plane
+        lift = lambda P, nn=nn, dd=dd: np.column_stack([P, (dd - nn[0] * P[:, 0] - nn[1] * P[:, 1]) / nn[2] - drop])
+        out.append(_triangulate(o, lift))
+    if not out:
+        return np.zeros((0, 3, 3))
+    tris = np.concatenate(out)
+    up = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])[:, 2] > 0
+    tris[up] = tris[up][:, ::-1]
+    return tris
+
+
+def open_shell(surf):
+    """Whether the building's surface has edges used by one triangle only (holes, gaps of the survey)."""
+    E = np.round(np.concatenate([surf[:, [0, 1]], surf[:, [1, 2]], surf[:, [2, 0]]]), 2)
+    E = np.sort(E, axis=1).reshape(len(E), 6)
+    _, cnt = np.unique(E, axis=0, return_counts=True)
+    return bool((cnt == 1).any())
+
+
+def undecided_walls(tris, b):
+    """The wall triangles drawn from both sides: those whose side the rays cannot tell, and on an open
+    shell (most of the survey's buildings) those where the rays and the old test disagree."""
+    if not len(tris):
+        return np.zeros(0, bool)
+    surf = _surface(b)
+    both = _votes(tris, surf) == 0
+    if open_shell(surf):
+        n = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])
+        ctr = np.concatenate([b["walls"].reshape(-1, 3), b["roofs"].reshape(-1, 3)]).mean(0)
+        o = tris.mean(1) - ctr
+        o[:, 2] = 0
+        both |= (n * o).sum(1) < 0
+    return both
 
 
 def roof_colors(blds):
@@ -519,19 +655,31 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 groups = [(np.r_[sel, np.zeros(len(shell), bool)], pst) for sel, pst in groups]
                 groups[0][0][-len(shell):] = True               # the passage's ceiling and sides: the first house
                 n_pass += 1
+            # v2.4: the walls whose side the rays cannot tell (open shells of the survey) get a back face
+            both = np.zeros(len(rest), bool)
+            n_own = len(rest) - len(shell)
+            if n_own > 0:
+                both[:n_own] = undecided_walls(rest[:n_own], b)
+            stats["two_sided"] = stats.get("two_sided", 0) + int(both.sum())
+            z_foot = float(rest[:, :, 2].min()) if len(rest) else 0.0
             for sel, pst in groups:
                 if not sel.any():
                     continue
                 part = rest[sel]
+                part = np.concatenate([part, part[both[sel]][:, ::-1]])
                 V = part.reshape(-1, 3)
+                # v2.4: darker towards the foot of the wall (ambient occlusion and splashes), in the colour of
+                # the vertices: GROUND_AO at the ground, none from GROUND_AO_H m up
+                ao = 1.0 - GROUND_AO * np.clip(1.0 - (V[:, 2] - z_foot) / GROUND_AO_H, 0.0, 1.0)
                 if pst["stone"]:
                     stats["stone"] += 1
+                    tone = np.clip(0.97 + 0.03 * (pst["tone"] - pst["tone"].mean()), 0, 1)
                     mb.add("bld_stone", V, uvs=wall_uvs(part) / 3.0, normals=bng.flat_normals_soup(V),
-                           colors=np.r_[np.clip(0.97 + 0.03 * (pst["tone"] - pst["tone"].mean()), 0, 1), 1.0])
+                           colors=np.column_stack([tone[None, :] * ao[:, None], np.ones(len(V))]))
                 else:
                     tone = np.clip(pst["tone"] / mean("t_bld_plaster"), 0, 1)
                     mb.add("bld_plaster", V, uvs=wall_uvs(part) / 5.0, normals=bng.flat_normals_soup(V),
-                           colors=np.r_[tone, 1.0])
+                           colors=np.column_stack([tone[None, :] * ao[:, None], np.ones(len(V))]))
             # chimneys: plastered stacks with a concrete cap
             stack, cap = facades.chimneys(b, roofs, style)
             if len(stack):
@@ -542,6 +690,13 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 mb.add("bld_roof_flat", V, uvs=V[:, :2] / 4.0, normals=bng.flat_normals_soup(V),
                        colors=np.r_[np.clip(np.array([0.62, 0.62, 0.60]) / mean("t_roof_flat"), 0, 1), 1.0])
                 stats["chimneys"] = stats.get("chimneys", 0) + len(stack) // 8
+            sof = soffits(b, roofs)
+            if len(sof):
+                V = sof.reshape(-1, 3)
+                mb.add("bld_plaster", V, uvs=V[:, :2] / 5.0, normals=bng.flat_normals_soup(V),
+                       colors=np.r_[np.clip(0.8 * style["tone"] / mean("t_bld_plaster"), 0, 1), 1.0])
+                stats["soffit_m2"] = stats.get("soffit_m2", 0.0) + float(
+                    0.5 * np.linalg.norm(np.cross(sof[:, 1] - sof[:, 0], sof[:, 2] - sof[:, 0]), axis=1).sum())
             if len(roofs):
                 col = rcol.get(b["uuid"], np.array([0.55, 0.42, 0.36]))
                 nrm = np.cross(roofs[:, 1] - roofs[:, 0], roofs[:, 2] - roofs[:, 0])
@@ -578,18 +733,19 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
         out.append((f"/levels/{level_name}/{rel}", origin, mb.triangle_count()))
     T = lambda n, k: f"{L}/{n}_{k}"
     mats = [bng.material("bld_plaster", T("t_bld_plaster", "b.color.png"), T("t_bld_plaster", "nm.normal.png"),
-                         T("t_bld_plaster", "r.data.png"), vert_color=True),
+                         T("t_bld_plaster", "r.data.png"), T("t_bld_plaster", "ao.data.png"), vert_color=True),
             bng.material("bld_stone", T("t_bld_stone", "b.color.png"), T("t_bld_stone", "nm.normal.png"),
                          T("t_bld_stone", "r.data.png"), T("t_bld_stone", "ao.data.png"), vert_color=True),
             bng.material("bld_plinth", T("t_bld_plinth", "b.color.png"), T("t_bld_plinth", "nm.normal.png"),
-                         T("t_bld_plinth", "r.data.png"), vert_color=True),
+                         T("t_bld_plinth", "r.data.png"), T("t_bld_plinth", "ao.data.png"), vert_color=True),
             bng.material("bld_openings", T("t_bld_openings", "b.color.png"), T("t_bld_openings", "nm.normal.png"),
                          T("t_bld_openings", "r.data.png"), T("t_bld_openings", "ao.data.png"), alpha_test=110,
                          detail={"opacityMap": T("t_bld_openings", "o.data.png")})]
     for kind in bld_textures.ROOF_TILE:
         n = f"t_roof_{kind}"
+        ao = T(n, "ao.data.png") if kind != "flat" else None              # v2.4
         mats.append(bng.material(f"bld_roof_{kind}", T(n, "b.color.png"), T(n, "nm.normal.png"), T(n, "r.data.png"),
-                                 vert_color=True, metallic=0.3 if kind == "metal" else None))
+                                 ao, vert_color=True, metallic=0.3 if kind == "metal" else None))
     for i, page in enumerate(atlas.pages if n_photo else []):     # no empty page without photo facades
         rel = f"art/shapes/buildings/bld_photo_{i}.jpg"
         cv2.imwrite(os.path.join(level_dir, rel), cv2.cvtColor(page, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 90])
