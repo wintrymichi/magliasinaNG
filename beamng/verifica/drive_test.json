@@ -6,10 +6,10 @@
  },
  "events": {
   "minor": {
-   "LIFT": 6619,
-   "HARD": 140205,
-   "STEP": 656,
-   "TWIST": 3026,
+   "LIFT": 6363,
+   "HARD": 139051,
+   "STEP": 586,
+   "TWIST": 2876,
    "HOLE": 46
   },
   "main": {
@@ -19,10 +19,10 @@
    "TWIST": 142
   },
   "path": {
-   "STEP": 120122,
-   "LIFT": 227983,
-   "HARD": 989820,
-   "TWIST": 406452
+   "STEP": 120121,
+   "LIFT": 227982,
+   "HARD": 989811,
+   "TWIST": 406449
   }
  },
  "places_by_kind": {
@@ -34,11 +34,11 @@
    "TWIST": 7
   },
   "minor": {
-   "STEP": 145,
-   "LIFT": 486,
-   "HARD": 2401,
+   "STEP": 143,
+   "LIFT": 481,
+   "HARD": 2394,
    "HOLE": 6,
-   "TWIST": 97
+   "TWIST": 94
   },
   "path": {
    "STEP": 6393,
@@ -4333,7 +4333,7 @@
    "class": "4m Strasse",
    "length": 46.5,
    "events": {
-    "HARD": 49
+    "HARD": 48
    }
   },
   {
@@ -5684,9 +5684,9 @@
    "class": "4m Strasse",
    "length": 569.9,
    "events": {
-    "HARD": 378,
-    "LIFT": 53,
-    "TWIST": 20
+    "HARD": 377,
+    "LIFT": 52,
+    "TWIST": 26
    }
   },
   {
@@ -5908,7 +5908,7 @@
    "class": "3m Strasse",
    "length": 62.6,
    "events": {
-    "HARD": 8
+    "HARD": 9
    }
   },
   {
@@ -5998,7 +5998,7 @@
    "class": "4m Strasse",
    "length": 91.4,
    "events": {
-    "HARD": 32
+    "HARD": 31
    }
   },
   {
@@ -6028,8 +6028,8 @@
    "class": "4m Strasse",
    "length": 365.0,
    "events": {
-    "HARD": 153,
-    "LIFT": 9
+    "HARD": 152,
+    "LIFT": 8
    }
   },
   {
@@ -6079,8 +6079,7 @@
    "class": "3m Strasse",
    "length": 348.0,
    "events": {
-    "HARD": 68,
-    "LIFT": 2
+    "HARD": 4
    }
   },
   {
@@ -6102,21 +6101,12 @@
    }
   },
   {
-   "seg": 963,
-   "name": "Strada Cantonale",
-   "class": "4m Strasse",
-   "length": 57.1,
-   "events": {
-    "HARD": 13
-   }
-  },
-  {
    "seg": 964,
    "name": "Strada Cantonale",
    "class": "4m Strasse",
    "length": 177.0,
    "events": {
-    "HARD": 77
+    "HARD": 79
    }
   },
   {
@@ -18424,7 +18414,7 @@
    "class": "3m Strasse",
    "length": 31.4,
    "events": {
-    "HARD": 61,
+    "HARD": 59,
     "LIFT": 10
    }
   },
@@ -22159,7 +22149,7 @@
    "class": "4m Strasse",
    "length": 28.6,
    "events": {
-    "HARD": 6
+    "HARD": 8
    }
   },
   {
@@ -26264,7 +26254,7 @@
    "class": "4m Strasse",
    "length": 7.9,
    "events": {
-    "HARD": 38
+    "HARD": 34
    }
   },
   {
@@ -26273,7 +26263,7 @@
    "class": "2m Weg",
    "length": 6.4,
    "events": {
-    "HARD": 21,
+    "HARD": 20,
     "TWIST": 17
    }
   },
@@ -26351,18 +26341,6 @@
    "events": {
     "HARD": 169,
     "LIFT": 16
-   }
-  },
-  {
-   "seg": 3904,
-   "name": "Strada Cantonale",
-   "class": "4m Strasse",
-   "length": 161.1,
-   "events": {
-    "HARD": 1066,
-    "LIFT": 252,
-    "STEP": 70,
-    "TWIST": 156
    }
   },
   {
@@ -30417,8 +30395,8 @@
    "events": {
     "STEP": 56,
     "LIFT": 91,
-    "HARD": 468,
-    "TWIST": 197
+    "HARD": 470,
+    "TWIST": 195
    }
   },
   {
@@ -30966,10 +30944,10 @@
    "class": "1m Weg",
    "length": 120.2,
    "events": {
-    "STEP": 403,
-    "LIFT": 278,
-    "HARD": 1086,
-    "TWIST": 538
+    "STEP": 402,
+    "LIFT": 277,
+    "HARD": 1076,
+    "TWIST": 537
    }
   },
   {
@@ -33741,7 +33719,7 @@
    "class": "4m Strasse",
    "length": 53.5,
    "events": {
-    "HARD": 21
+    "HARD": 15
    }
   },
   {
@@ -39781,28 +39759,6 @@
   },
   {
    "what": "STEP",
-   "x": 679.5,
-   "y": -1018.2,
-   "z": 305.15,
-   "value": 0.082,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "STEP",
-   "x": 680.0,
-   "y": -1020.7,
-   "z": 305.02,
-   "value": 0.082,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "STEP",
    "x": -1660.7,
    "y": 1954.5,
    "z": 612.97,
@@ -40716,28 +40672,6 @@
   },
   {
    "what": "HARD",
-   "x": 679.4,
-   "y": -1017.9,
-   "z": 305.17,
-   "value": 10.273,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": 680.0,
-   "y": -1020.3,
-   "z": 305.04,
-   "value": 10.267,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 1981.2,
    "y": 3337.9,
    "z": 739.53,
@@ -40767,17 +40701,6 @@
    "seg": 1419,
    "class": "3m Strasse",
    "name": "Via Mött",
-   "cls": "minor"
-  },
-  {
-   "what": "TWIST",
-   "x": 675.5,
-   "y": -1007.2,
-   "z": 306.54,
-   "value": 9.609,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -40998,17 +40921,6 @@
    "seg": 4160,
    "class": "3m Strasse",
    "name": "",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": 680.0,
-   "y": -1020.5,
-   "z": 305.03,
-   "value": 7.634,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -41552,17 +41464,6 @@
   },
   {
    "what": "TWIST",
-   "x": 679.9,
-   "y": -1020.0,
-   "z": 305.05,
-   "value": 5.043,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "TWIST",
    "x": 1949.6,
    "y": 818.2,
    "z": 369.97,
@@ -41691,6 +41592,17 @@
    "seg": 1103,
    "class": "4m Strasse",
    "name": "Via Monteggio",
+   "cls": "minor"
+  },
+  {
+   "what": "TWIST",
+   "x": -284.2,
+   "y": 2.8,
+   "z": 451.09,
+   "value": 4.69,
+   "seg": 879,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -41834,17 +41746,6 @@
    "seg": 2422,
    "class": "3m Strasse",
    "name": "",
-   "cls": "minor"
-  },
-  {
-   "what": "TWIST",
-   "x": -284.2,
-   "y": 2.8,
-   "z": 451.09,
-   "value": 4.336,
-   "seg": 879,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -42124,6 +42025,17 @@
   },
   {
    "what": "HARD",
+   "x": -287.9,
+   "y": 5.3,
+   "z": 451.47,
+   "value": 3.758,
+   "seg": 879,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
    "x": 1800.8,
    "y": 1524.3,
    "z": 540.76,
@@ -42142,17 +42054,6 @@
    "seg": 3026,
    "class": "3m Strasse",
    "name": "",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": -287.9,
-   "y": 5.3,
-   "z": 451.47,
-   "value": 3.728,
-   "seg": 879,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -42230,17 +42131,6 @@
    "seg": 921,
    "class": "4m Strasse",
    "name": "Via San Giorgio",
-   "cls": "minor"
-  },
-  {
-   "what": "TWIST",
-   "x": 680.5,
-   "y": -1023.5,
-   "z": 304.91,
-   "value": 3.643,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -42629,17 +42519,6 @@
    "cls": "minor"
   },
   {
-   "what": "TWIST",
-   "x": -148.2,
-   "y": -159.6,
-   "z": 434.19,
-   "value": 3.215,
-   "seg": 879,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
    "what": "HARD",
    "x": 2148.2,
    "y": 3447.5,
@@ -42659,6 +42538,17 @@
    "seg": 433,
    "class": "4m Strasse",
    "name": "Via Belsito",
+   "cls": "minor"
+  },
+  {
+   "what": "TWIST",
+   "x": -148.2,
+   "y": -159.6,
+   "z": 434.19,
+   "value": 3.195,
+   "seg": 879,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -42787,7 +42677,7 @@
    "x": -148.2,
    "y": -160.0,
    "z": 434.17,
-   "value": 3.078,
+   "value": 3.083,
    "seg": 879,
    "class": "4m Strasse",
    "name": "Strada Cantonale",
@@ -42982,17 +42872,6 @@
   },
   {
    "what": "HARD",
-   "x": -148.3,
-   "y": -159.2,
-   "z": 434.22,
-   "value": 2.846,
-   "seg": 879,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 3166.8,
    "y": 5616.6,
    "z": 562.13,
@@ -43000,6 +42879,17 @@
    "seg": 355,
    "class": "4m Strasse",
    "name": "Stradón da Rós",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
+   "x": -148.3,
+   "y": -159.2,
+   "z": 434.22,
+   "value": 2.83,
+   "seg": 879,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -43150,7 +43040,7 @@
    "x": -148.1,
    "y": -161.7,
    "z": 434.05,
-   "value": 2.604,
+   "value": 2.585,
    "seg": 879,
    "class": "4m Strasse",
    "name": "Strada Cantonale",
@@ -46799,6 +46689,17 @@
   },
   {
    "what": "HARD",
+   "x": 604.8,
+   "y": -975.2,
+   "z": 338.49,
+   "value": 1.223,
+   "seg": 1431,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
    "x": -2358.8,
    "y": -416.4,
    "z": 290.41,
@@ -46936,17 +46837,6 @@
    "z": 348.74,
    "value": 1.207,
    "seg": 3903,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": 604.8,
-   "y": -975.2,
-   "z": 338.49,
-   "value": 1.207,
-   "seg": 1431,
    "class": "4m Strasse",
    "name": "Strada Cantonale",
    "cls": "minor"
@@ -48515,17 +48405,6 @@
   },
   {
    "what": "HARD",
-   "x": 681.1,
-   "y": -1008.6,
-   "z": 303.6,
-   "value": 1.066,
-   "seg": 959,
-   "class": "3m Strasse",
-   "name": "Via Piscicoltura",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 3637.2,
    "y": 5844.9,
    "z": 366.62,
@@ -48977,17 +48856,6 @@
   },
   {
    "what": "HARD",
-   "x": 46.0,
-   "y": -644.1,
-   "z": 387.06,
-   "value": 1.022,
-   "seg": 912,
-   "class": "3m Strasse",
-   "name": "Contrada vecchia cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 2803.1,
    "y": 5751.7,
    "z": 725.96,
@@ -48995,6 +48863,17 @@
    "seg": 355,
    "class": "4m Strasse",
    "name": "Stradón da Rós",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
+   "x": 46.0,
+   "y": -644.1,
+   "z": 387.06,
+   "value": 1.021,
+   "seg": 912,
+   "class": "3m Strasse",
+   "name": "Contrada vecchia cantonale",
    "cls": "minor"
   },
   {
@@ -50407,6 +50286,17 @@
   },
   {
    "what": "HARD",
+   "x": -169.4,
+   "y": -128.1,
+   "z": 437.29,
+   "value": 0.949,
+   "seg": 879,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
    "x": -652.1,
    "y": -2281.6,
    "z": 331.04,
@@ -50447,17 +50337,6 @@
    "seg": 3833,
    "class": "4m Strasse",
    "name": "Via Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": -169.4,
-   "y": -128.1,
-   "z": 437.29,
-   "value": 0.948,
-   "seg": 879,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -54818,6 +54697,17 @@
   },
   {
    "what": "HARD",
+   "x": 627.5,
+   "y": -939.0,
+   "z": 315.77,
+   "value": 0.767,
+   "seg": 964,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
    "x": -1505.9,
    "y": -1227.7,
    "z": 366.77,
@@ -55639,17 +55529,6 @@
    "seg": 2422,
    "class": "3m Strasse",
    "name": "",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": 627.5,
-   "y": -939.0,
-   "z": 315.77,
-   "value": 0.738,
-   "seg": 964,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -57260,6 +57139,17 @@
   },
   {
    "what": "HARD",
+   "x": -306.5,
+   "y": 26.4,
+   "z": 454.12,
+   "value": 0.689,
+   "seg": 847,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
    "x": -823.6,
    "y": 1627.0,
    "z": 601.86,
@@ -57850,17 +57740,6 @@
    "seg": 398,
    "class": "4m Strasse",
    "name": "Stradón da Brén",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": -308.5,
-   "y": 22.4,
-   "z": 453.85,
-   "value": 0.673,
-   "seg": 879,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -60373,6 +60252,17 @@
   },
   {
    "what": "HARD",
+   "x": 138.5,
+   "y": -855.2,
+   "z": 376.0,
+   "value": 0.61,
+   "seg": 3900,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
    "x": 2083.5,
    "y": 427.2,
    "z": 320.54,
@@ -60637,17 +60527,6 @@
   },
   {
    "what": "HARD",
-   "x": 138.5,
-   "y": -855.2,
-   "z": 376.0,
-   "value": 0.605,
-   "seg": 3900,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 3787.0,
    "y": 4780.1,
    "z": 335.14,
@@ -60655,17 +60534,6 @@
    "seg": 2842,
    "class": "3m Strasse",
    "name": "Strada Bassa",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": 671.7,
-   "y": -999.1,
-   "z": 308.01,
-   "value": 0.605,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -62441,17 +62309,6 @@
   },
   {
    "what": "HARD",
-   "x": 84.7,
-   "y": -790.5,
-   "z": 377.71,
-   "value": 0.569,
-   "seg": 926,
-   "class": "4m Strasse",
-   "name": "Contrada vecchia cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": -1800.9,
    "y": 2364.8,
    "z": 729.19,
@@ -62987,6 +62844,17 @@
    "seg": 864,
    "class": "4m Strasse",
    "name": "Via Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
+   "x": 84.7,
+   "y": -790.5,
+   "z": 377.7,
+   "value": 0.557,
+   "seg": 926,
+   "class": "4m Strasse",
+   "name": "Contrada vecchia cantonale",
    "cls": "minor"
   },
   {
@@ -66786,17 +66654,6 @@
   },
   {
    "what": "HARD",
-   "x": 699.6,
-   "y": -1060.4,
-   "z": 303.28,
-   "value": 0.492,
-   "seg": 963,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 3000.1,
    "y": 2978.6,
    "z": 353.7,
@@ -66881,6 +66738,17 @@
    "seg": 543,
    "class": "3m Strasse",
    "name": "Via Lücc",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
+   "x": 628.1,
+   "y": -941.4,
+   "z": 315.9,
+   "value": 0.49,
+   "seg": 964,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -67413,17 +67281,6 @@
   },
   {
    "what": "HARD",
-   "x": 628.1,
-   "y": -941.4,
-   "z": 315.9,
-   "value": 0.482,
-   "seg": 964,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": 782.0,
    "y": -1140.6,
    "z": 298.78,
@@ -67475,17 +67332,6 @@
    "seg": 530,
    "class": "3m Strasse",
    "name": "Via dei Ronchi",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": 59.6,
-   "y": -744.3,
-   "z": 380.82,
-   "value": 0.481,
-   "seg": 927,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -67552,6 +67398,17 @@
    "seg": 455,
    "class": "4m Strasse",
    "name": "Via Cademario",
+   "cls": "minor"
+  },
+  {
+   "what": "HARD",
+   "x": 59.6,
+   "y": -744.3,
+   "z": 380.82,
+   "value": 0.479,
+   "seg": 927,
+   "class": "4m Strasse",
+   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -69030,17 +68887,6 @@
   },
   {
    "what": "HARD",
-   "x": 24.2,
-   "y": -663.5,
-   "z": 386.3,
-   "value": 0.46,
-   "seg": 927,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
    "x": -4777.4,
    "y": 320.3,
    "z": 425.8,
@@ -69998,28 +69844,6 @@
   },
   {
    "what": "LIFT",
-   "x": 679.4,
-   "y": -1018.0,
-   "z": 305.16,
-   "value": 0.209,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "LIFT",
-   "x": 680.0,
-   "y": -1020.4,
-   "z": 305.04,
-   "value": 0.209,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "LIFT",
    "x": 1439.0,
    "y": 119.6,
    "z": 474.16,
@@ -70060,17 +69884,6 @@
    "seg": 1419,
    "class": "3m Strasse",
    "name": "Via Mött",
-   "cls": "minor"
-  },
-  {
-   "what": "LIFT",
-   "x": 680.0,
-   "y": -1020.5,
-   "z": 305.03,
-   "value": 0.196,
-   "seg": 3904,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
    "cls": "minor"
   },
   {
@@ -74904,28 +74717,6 @@
   },
   {
    "what": "LIFT",
-   "x": 311.0,
-   "y": -892.5,
-   "z": 361.56,
-   "value": 0.02,
-   "seg": 945,
-   "class": "4m Strasse",
-   "name": "Strada Cantonale",
-   "cls": "minor"
-  },
-  {
-   "what": "LIFT",
-   "x": 681.1,
-   "y": -1008.7,
-   "z": 303.61,
-   "value": 0.02,
-   "seg": 959,
-   "class": "3m Strasse",
-   "name": "Via Piscicoltura",
-   "cls": "minor"
-  },
-  {
-   "what": "LIFT",
    "x": -4955.7,
    "y": 231.7,
    "z": 404.63,
@@ -76730,6 +76521,17 @@
   },
   {
    "what": "STEP",
+   "x": -228.7,
+   "y": 116.8,
+   "z": 453.37,
+   "value": 1.487,
+   "seg": 4514,
+   "class": "2m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "STEP",
    "x": 3508.0,
    "y": 5735.0,
    "z": 389.51,
@@ -76857,17 +76659,6 @@
    "value": 1.467,
    "seg": 5672,
    "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "STEP",
-   "x": -228.7,
-   "y": 116.6,
-   "z": 453.36,
-   "value": 1.465,
-   "seg": 4514,
-   "class": "2m Weg",
    "name": "",
    "cls": "path"
   },
@@ -150485,6 +150276,17 @@
   },
   {
    "what": "HARD",
+   "x": -229.1,
+   "y": 119.1,
+   "z": 454.6,
+   "value": 35.507,
+   "seg": 4514,
+   "class": "2m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
    "x": 226.6,
    "y": 2657.0,
    "z": 717.89,
@@ -150788,17 +150590,6 @@
    "value": 34.975,
    "seg": 1922,
    "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "HARD",
-   "x": -229.1,
-   "y": 118.9,
-   "z": 454.48,
-   "value": 34.964,
-   "seg": 4514,
-   "class": "2m Weg",
    "name": "",
    "cls": "path"
   },
@@ -165357,17 +165148,6 @@
   },
   {
    "what": "TWIST",
-   "x": -228.5,
-   "y": 116.0,
-   "z": 453.32,
-   "value": 22.227,
-   "seg": 4514,
-   "class": "2m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
    "x": -78.4,
    "y": 4332.2,
    "z": 727.86,
@@ -165385,6 +165165,17 @@
    "value": 22.214,
    "seg": 1922,
    "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
+   "x": -228.5,
+   "y": 116.0,
+   "z": 453.32,
+   "value": 22.214,
+   "seg": 4514,
+   "class": "2m Weg",
    "name": "",
    "cls": "path"
   },
@@ -254215,6 +254006,17 @@
   },
   {
    "what": "TWIST",
+   "x": 612.9,
+   "y": -924.2,
+   "z": 316.96,
+   "value": 6.377,
+   "seg": 4590,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
    "x": -383.9,
    "y": -670.2,
    "z": 493.62,
@@ -254264,17 +254066,6 @@
    "z": 581.42,
    "value": 6.367,
    "seg": 1831,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": 612.9,
-   "y": -924.2,
-   "z": 316.96,
-   "value": 6.362,
-   "seg": 4590,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -255183,6 +254974,17 @@
   },
   {
    "what": "TWIST",
+   "x": 586.4,
+   "y": -921.7,
+   "z": 321.78,
+   "value": 6.231,
+   "seg": 4590,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
    "x": -3177.1,
    "y": 2538.9,
    "z": 688.8,
@@ -255364,17 +255166,6 @@
    "z": 401.26,
    "value": 6.203,
    "seg": 3223,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": 586.4,
-   "y": -921.7,
-   "z": 321.78,
-   "value": 6.198,
-   "seg": 4590,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -257240,6 +257031,17 @@
   },
   {
    "what": "TWIST",
+   "x": -229.3,
+   "y": 120.0,
+   "z": 454.75,
+   "value": 5.904,
+   "seg": 4514,
+   "class": "2m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
    "x": -274.8,
    "y": -1279.3,
    "z": 463.33,
@@ -257290,17 +257092,6 @@
    "value": 5.894,
    "seg": 2345,
    "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": -229.3,
-   "y": 120.0,
-   "z": 454.75,
-   "value": 5.893,
-   "seg": 4514,
-   "class": "2m Weg",
    "name": "",
    "cls": "path"
   },
@@ -258406,17 +258197,6 @@
   },
   {
    "what": "TWIST",
-   "x": 20.1,
-   "y": -651.1,
-   "z": 387.4,
-   "value": 5.728,
-   "seg": 3892,
-   "class": "2m Weg",
-   "name": "Scalinata San Martino",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
    "x": 632.4,
    "y": -740.1,
    "z": 308.82,
@@ -258457,6 +258237,17 @@
    "seg": 1721,
    "class": "1m Weg",
    "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
+   "x": 20.1,
+   "y": -651.1,
+   "z": 387.4,
+   "value": 5.72,
+   "seg": 3892,
+   "class": "2m Weg",
+   "name": "Scalinata San Martino",
    "cls": "path"
   },
   {
@@ -258501,6 +258292,17 @@
    "seg": 4577,
    "class": "1m Weg",
    "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
+   "x": 19.9,
+   "y": -651.0,
+   "z": 387.47,
+   "value": 5.715,
+   "seg": 3892,
+   "class": "2m Weg",
+   "name": "Scalinata San Martino",
    "cls": "path"
   },
   {
@@ -258556,17 +258358,6 @@
    "seg": 1859,
    "class": "2m Weg",
    "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": 19.9,
-   "y": -651.0,
-   "z": 387.47,
-   "value": 5.709,
-   "seg": 3892,
-   "class": "2m Weg",
-   "name": "Scalinata San Martino",
    "cls": "path"
   },
   {
@@ -278865,6 +278656,17 @@
    "cls": "path"
   },
   {
+   "what": "TWIST",
+   "x": 70.7,
+   "y": -804.8,
+   "z": 377.96,
+   "value": 3.162,
+   "seg": 929,
+   "class": "2m Weg",
+   "name": "Contrada Pozzöö",
+   "cls": "path"
+  },
+  {
    "what": "HARD",
    "x": -1831.1,
    "y": 3504.3,
@@ -278950,17 +278752,6 @@
    "seg": 5630,
    "class": "1m Weg",
    "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": 70.7,
-   "y": -804.8,
-   "z": 377.96,
-   "value": 3.155,
-   "seg": 929,
-   "class": "2m Weg",
-   "name": "Contrada Pozzöö",
    "cls": "path"
   },
   {
@@ -282158,7 +281949,7 @@
    "x": 585.3,
    "y": -922.6,
    "z": 322.03,
-   "value": 2.569,
+   "value": 2.571,
    "seg": 4590,
    "class": "1m Weg",
    "name": "",
@@ -285806,17 +285597,6 @@
    "cls": "path"
   },
   {
-   "what": "HARD",
-   "x": -229.4,
-   "y": 120.7,
-   "z": 454.86,
-   "value": 1.805,
-   "seg": 4514,
-   "class": "2m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
    "what": "LIFT",
    "x": 3371.2,
    "y": 2993.3,
@@ -285857,6 +285637,17 @@
    "value": 1.798,
    "seg": 1873,
    "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
+   "x": -229.4,
+   "y": 120.7,
+   "z": 454.86,
+   "value": 1.797,
+   "seg": 4514,
+   "class": "2m Weg",
    "name": "",
    "cls": "path"
   },
@@ -293342,6 +293133,17 @@
   },
   {
    "what": "HARD",
+   "x": 21.1,
+   "y": -651.7,
+   "z": 387.15,
+   "value": 1.194,
+   "seg": 3892,
+   "class": "2m Weg",
+   "name": "Scalinata San Martino",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
    "x": -1183.9,
    "y": 2658.8,
    "z": 701.82,
@@ -293437,17 +293239,6 @@
    "seg": 5513,
    "class": "1m Weg",
    "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "HARD",
-   "x": 21.1,
-   "y": -651.7,
-   "z": 387.16,
-   "value": 1.19,
-   "seg": 3892,
-   "class": "2m Weg",
-   "name": "Scalinata San Martino",
    "cls": "path"
   },
   {
@@ -295805,6 +295596,17 @@
    "cls": "path"
   },
   {
+   "what": "LIFT",
+   "x": -228.7,
+   "y": 116.7,
+   "z": 453.36,
+   "value": 1.073,
+   "seg": 4514,
+   "class": "2m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
    "what": "HARD",
    "x": 1879.5,
    "y": 4580.2,
@@ -296197,17 +295999,6 @@
    "value": 1.057,
    "seg": 1924,
    "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "LIFT",
-   "x": -228.6,
-   "y": 116.5,
-   "z": 453.35,
-   "value": 1.057,
-   "seg": 4514,
-   "class": "2m Weg",
    "name": "",
    "cls": "path"
   },
@@ -393690,10 +393481,10 @@
  },
  "events_v21_area": {
   "minor": {
-   "LIFT": 6161,
-   "HARD": 131740,
-   "STEP": 646,
-   "TWIST": 2892,
+   "LIFT": 5905,
+   "HARD": 130586,
+   "STEP": 576,
+   "TWIST": 2742,
    "HOLE": 46
   },
   "main": {
@@ -393703,10 +393494,10 @@
    "TWIST": 142
   },
   "path": {
-   "STEP": 118921,
-   "LIFT": 225157,
-   "HARD": 978493,
-   "TWIST": 400917
+   "STEP": 118920,
+   "LIFT": 225156,
+   "HARD": 978484,
+   "TWIST": 400914
   }
  }
 }

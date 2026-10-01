@@ -454,11 +454,11 @@ Le misure prese nelle foto sono state controllate a campione guardando le foto s
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | (senza nome: strada 3 m) | 1.28 | 33 % (2013-2022) | 19 | 46 | concrete 2, plaster 1, stone 12, unknown 12 | - | 14 % | HARD 599, LIFT 26, STEP 8, TWIST 16 | HARD 346, LIFT 24 | 3 | casa bianca con tetto in coppi; tono un po' più grigio; capannone: swissBUILDINGS3D ha i muri solo sotto metà del tetto (24 m di tetto su 12 m di muri); toni misurati schiariti (SV_LIFT); limite dei dati (13 edifici su 11 700 hanno il tetto oltre i muri dove la misurazione ufficiale ha l'edificio) | [~] |
 | (senza nome: strada 4 m) | 0.06 | 50 % (2014-2022) | 3 | 5 | stone 1, unknown 1 | - | 25 % | HARD 373, LIFT 46, STEP 6, TWIST 4 | HARD 280, LIFT 13 | 0 | - | [x] |
-| Contrada Cozóra | 0.25 | 99 % (2022) | 9 | 15 | stone 10, unknown 3 | - | 31 % | HARD 84, LIFT 12 | HARD 130, LIFT 14, STEP 4 | 0 | - | [x] |
-| Contrada vecchia cantonale | 0.13 | 0 %  | 0 | 8 | stone 3 | - | 6 % | HARD 15 | HARD 15 | 0 | - | [!] |
+| Contrada Cozóra | 0.25 | 99 % (2022) | 9 | 15 | stone 10, unknown 3 | - | 31 % | HARD 84, LIFT 12 | HARD 128, LIFT 14, STEP 4 | 0 | - | [x] |
+| Contrada vecchia cantonale | 0.13 | 0 %  | 0 | 8 | stone 3 | - | 6 % | HARD 15 | HARD 16 | 0 | - | [!] |
 | Piazzale Gesòra | 0.06 | 37 % (2022) | 1 | 3 | stone 2 | - | 17 % | 0 | LIFT 1 | 0 | - | [~] |
 | Piazzale Latéria | 0.06 | 71 % (2022) | 2 | 6 | stone 1 | - | 50 % | 0 | 0 | 0 | - | [x] |
-| Strada Cantonale | 2.38 | 92 % (2013-2022) | 74 | 63 | plaster 3, stone 25, unknown 16 | 536 m | 44 % | HARD 3622, LIFT 380, STEP 70, TWIST 198 | HARD 3622, LIFT 380, STEP 70, TWIST 198 | 1 | guardrail di 26 m visto nelle panoramiche (voti 13/14); guardrail costruito sul bordo della strada; controllato sulla foto: c'è ed è allineato | [x] |
+| Strada Cantonale | 2.38 | 92 % (2013-2022) | 74 | 63 | plaster 3, stone 25, unknown 16 | 536 m | 44 % | HARD 3622, LIFT 380, STEP 70, TWIST 198 | HARD 2533, LIFT 126, TWIST 48 | 1 | guardrail di 26 m visto nelle panoramiche (voti 13/14); guardrail costruito sul bordo della strada; controllato sulla foto: c'è ed è allineato | [x] |
 | Strada Regina | 0.01 | 100 % (2022) | 1 | 2 | - | - | 10 % | 0 | HARD 4, LIFT 2 | 0 | - | [x] |
 | Strada ara Morèla | 0.26 | 12 % (2013-2022) | 1 | 9 | stone 3, unknown 1 | - | 6 % | HARD 486, LIFT 20, STEP 8, TWIST 36 | HARD 478, LIFT 21, STEP 8, TWIST 36 | 0 | - | [~] |
 | Via Biée | 0.35 | 100 % (2013-2022) | 15 | 21 | concrete 2, stone 1, unknown 8 | - | 48 % | HARD 248, LIFT 7, STEP 4, TWIST 26 | HARD 149, LIFT 7, STEP 2, TWIST 19 | 0 | - | [x] |
@@ -471,7 +471,7 @@ Le misure prese nelle foto sono state controllate a campione guardando le foto s
 | Via Mistorni | 1.45 | 100 % (2013-2022) | 55 | 25 | stone 4, unknown 1 | 72 m | 40 % | HARD 73, LIFT 3 | HARD 53 | 0 | - | [x] |
 | Via Mött | 0.44 | 85 % (2014) | 16 | 8 | concrete 1, stone 6 | - | 41 % | HARD 415, LIFT 92, STEP 7, TWIST 89 | HARD 323, LIFT 43, STEP 8, TWIST 52 | 0 | - | [x] |
 | Via Paladina | 0.64 | 100 % (2013-2022) | 26 | 24 | stone 3, unknown 6 | - | 45 % | HARD 46 | 0 | 0 | - | [x] |
-| Via Piscicoltura | 0.35 | 100 % (2013-2022) | 13 | 4 | stone 1, unknown 3 | 14 m | 43 % | HARD 68, LIFT 2 | HARD 68, LIFT 2 | 0 | - | [x] |
+| Via Piscicoltura | 0.35 | 100 % (2013-2022) | 13 | 4 | stone 1, unknown 3 | 14 m | 43 % | HARD 68, LIFT 2 | HARD 4 | 0 | - | [x] |
 | Via Piánca | 0.21 | 28 % (2022) | 2 | 1 | plaster 1, unknown 3 | - | 12 % | HARD 92, LIFT 6, STEP 2 | HARD 91, LIFT 6, STEP 2 | 0 | - | [~] |
 | Via Posgésa | 0.20 | 28 % (2013-2022) | 3 | 11 | plaster 1 | - | 16 % | HARD 150, STEP 2 | HARD 64, STEP 2 | 0 | - | [~] |
 | Via Prelòngh | 1.04 | 94 % (2013-2022) | 33 | 20 | stone 6, unknown 9 | - | 33 % | HARD 65, LIFT 8, STEP 2 | HARD 24 | 0 | - | [x] |
