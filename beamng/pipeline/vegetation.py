@@ -88,40 +88,52 @@ def classify(h, d, sharp, rgb, lc_garden):
     return cls
 
 
-NEAR = 150.0          # m from a road: every tree measured is kept
-NEAR_PATH = (60.0, 40.0, 30.0, 20.0, 10.0, 0.0)   # m from a path: the widest that fits the cap
-CAP = 250_000         # forest items at most: farther trees are thinned to stay under it
+# v2.3: every tree within 150 m of the roads made the forested slopes crossed by hairpins (the pass
+# above Gravesano seen from the village) as dense as the forest itself, and the game slowed down
+# looking at them; now the forest is full only along the roads and thins out away from them
+NEAR = 30.0           # m from a road: every tree measured is kept
+BANDS = ((60.0, 11.0), (100.0, 17.0))   # (m from a road, m): up to there the tallest tree of every cell of this size
+NEAR_PATH = 5.0       # m from a path: every tree measured is kept
+CAP = 170_000         # forest items at most: the trees beyond the bands are thinned to stay under it
 SHRUBS = 12_000       # of them left for the shrubs and hedges (about 10 000 in v2.0)
 
 
+def tallest_per_cell(x, y, h, idx, cell):
+    """The tallest of the trees `idx` in every cell of a `cell` m grid."""
+    order = idx[np.argsort(-h[idx])]
+    key = np.floor(x[order] / cell).astype(np.int64) * 1_000_003 + np.floor(y[order] / cell).astype(np.int64)
+    _, first = np.unique(key, return_index=True)
+    return order[np.sort(first)]
+
+
 def thin(x, y, h, dist, cap, dist_path=None):
-    """Indices of the trees kept: all within NEAR m of the roads and the widest band of NEAR_PATH
-    along the paths that fits, farther the tallest of every cell of a grid coarse enough to stay
-    within `cap` items in all."""
+    """Indices of the trees kept: all within NEAR m of the roads and NEAR_PATH m of the paths, the
+    tallest of every cell of BANDS farther out, beyond the last band the tallest of every cell of a
+    grid coarse enough to stay within `cap` items in all."""
     near = dist <= NEAR
     if dist_path is not None:
-        for band in NEAR_PATH:
-            both = near | (dist_path <= band)
-            if both.sum() <= 0.92 * cap:
-                break
-        near = both
-        print("trees: every tree within %.0f m of the roads and %.0f m of the paths" % (NEAR, band))
-    far = np.flatnonzero(~near)
-    budget = cap - int(near.sum())
+        near |= dist_path <= NEAR_PATH
+    keep = [np.flatnonzero(near)]
+    lo = NEAR
+    for hi, cell in BANDS:
+        keep.append(tallest_per_cell(x, y, h, np.flatnonzero(~near & (dist > lo) & (dist <= hi)), cell))
+        lo = hi
+    far = np.flatnonzero(~near & (dist > lo))
+    budget = cap - sum(len(k) for k in keep)
+    cell = 0.0
     if len(far) <= budget:
-        return np.arange(len(x))
-    if budget <= 0:
-        return np.flatnonzero(near)
-    order = far[np.argsort(-h[far])]
-    for cell in np.arange(5.0, 60.0, 1.0):
-        key = np.floor(x[order] / cell).astype(np.int64) * 1_000_003 + np.floor(y[order] / cell).astype(np.int64)
-        _, first = np.unique(key, return_index=True)
-        if len(first) <= budget:
-            break
-    keep_far = order[np.sort(first)]
-    print("trees: %d within %.0f m of the network, %d of %d farther (tallest per %.0f m cell)" %
-          (int(near.sum()), NEAR, len(keep_far), len(far), cell))
-    return np.sort(np.concatenate([np.flatnonzero(near), keep_far]))
+        keep.append(far)
+    elif budget > 0:
+        for cell in np.arange(5.0, 60.0, 1.0):
+            keep_far = tallest_per_cell(x, y, h, far, cell)
+            if len(keep_far) <= budget:
+                break
+        keep.append(keep_far)
+    print("trees: %d within %.0f m of the roads and %.0f m of the paths, %s up to %.0f m, %d of %d farther "
+          "(tallest per %.0f m cell)" % (len(keep[0]), NEAR, NEAR_PATH,
+                                         ", ".join("%d" % len(k) for k in keep[1:1 + len(BANDS)]), lo,
+                                         len(keep[-1]) if len(keep) > 1 + len(BANDS) else 0, len(far), cell))
+    return np.sort(np.concatenate(keep))
 
 
 def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
