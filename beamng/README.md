@@ -86,6 +86,10 @@ Revisione del livello v2.0 confrontato con fonti reali: l'ortofoto SWISSIMAGE 10
   Le aree OSM con una superficie (parcheggi, piazze) la danno ai piazzali sotto di loro. Materiali per
   carreggiata, piazzale e sentiero con i tipi di fondo GRAVEL, DIRT e COBBLESTONE; texture procedurali
   (`surface_textures.py`) con la tinta mediana dell'ortofoto 10 cm lungo le vie OSM di quella superficie.
+  Le faccette di un poligono (`road_mesh.split_by_surface`) si calcolano sul suo pezzo intero e poi si
+  tagliano nelle zone di superficie, così asfalto e ghiaia dello stesso poligono stanno sulle stesse quote; un
+  pezzetto di faccetta sotto 3 m² chiuso dentro un'altra passa a quella (`MIN_PIECE`), non uno sul bordo del
+  blocco di 128 m, che nel blocco accanto continua alla sua quota.
 - **Erba e fiori** (`groundcover.py`): oggetto GroundCover (scritto come nei livelli del gioco, un elemento di
   `Types` per tipo) con ciuffi a billboard (2 triangoli) da un atlante disegnato, su `Grass` e `GardenGrass`,
   40 000 elementi entro 50 m; i prati entro un quadrato di terreno dalle strade hanno un livello di terreno
@@ -98,7 +102,11 @@ Revisione del livello v2.0 confrontato con fonti reali: l'ortofoto SWISSIMAGE 10
   lungo le curve di livello; mesh a pezzi di 128 m con un livello di dettaglio che le toglie oltre circa un
   chilometro.
 - **Fiumi** (`rivers.py`): superficie d'acqua semitrasparente sulle superfici `corso_acqua` larghe almeno 2,5 m,
-  all'altezza del fondo più basso entro 3 m + 12 cm, anche sotto i ponti, non sui guadi né sul lago.
+  all'altezza del fondo più basso entro 3 m + 12 cm, anche sotto i ponti, non sui guadi né sul lago. Il
+  terreno (griglia di 1,5 m, più liscia del letto) scende 35 cm sotto l'acqua dentro quelle superfici, tranne
+  dove sta più di 1,5 m sopra l'acqua (le sponde ripide delle gole che la superficie rilevata comprende) e
+  entro 2,5 m dalle strade e dai sentieri a livello del terreno: a un guado le ruote di un'auto su un sentiero
+  largo 1 m stanno sul terreno accanto, che resta com'era.
 - **Materiali**: mappe di ambient occlusion per intonaco, zoccolo e tetti (`bld_textures.py`), pareti più scure
   verso terra nei colori dei vertici (`buildings_mesh.GROUND_AO`); luce dei 68 lampioni triangolati
   (`props.py`, senza ombre); foschia 1,3e-4 fino a 1000 m (prima 1,1e-4 fino a 1200 m).

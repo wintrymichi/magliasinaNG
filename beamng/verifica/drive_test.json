@@ -6,10 +6,10 @@
  },
  "events": {
   "minor": {
-   "LIFT": 6340,
-   "HARD": 139042,
+   "LIFT": 6329,
+   "HARD": 138979,
    "STEP": 576,
-   "TWIST": 2773,
+   "TWIST": 2775,
    "HOLE": 46
   },
   "main": {
@@ -19,10 +19,10 @@
    "TWIST": 142
   },
   "path": {
-   "STEP": 120021,
-   "LIFT": 227886,
-   "HARD": 989562,
-   "TWIST": 406242
+   "STEP": 120057,
+   "LIFT": 227970,
+   "HARD": 989784,
+   "TWIST": 406466
   }
  },
  "places_by_kind": {
@@ -35,17 +35,17 @@
   },
   "minor": {
    "STEP": 145,
-   "LIFT": 482,
-   "HARD": 2397,
+   "LIFT": 481,
+   "HARD": 2396,
    "HOLE": 6,
    "TWIST": 93
   },
   "path": {
-   "STEP": 6391,
-   "LIFT": 7011,
+   "STEP": 6393,
+   "LIFT": 7013,
    "HARD": 9048,
    "HOLE": 0,
-   "TWIST": 6483
+   "TWIST": 6485
   }
  },
  "per_road": [
@@ -5771,9 +5771,7 @@
    "class": "3m Strasse",
    "length": 205.4,
    "events": {
-    "LIFT": 10,
-    "HARD": 100,
-    "TWIST": 3
+    "HARD": 38
    }
   },
   {
@@ -8841,10 +8839,10 @@
    "class": "3m Strasse",
    "length": 27.8,
    "events": {
-    "HARD": 307,
+    "HARD": 306,
     "STEP": 8,
-    "LIFT": 43,
-    "TWIST": 52
+    "LIFT": 42,
+    "TWIST": 57
    }
   },
   {
@@ -10335,10 +10333,10 @@
    "class": "1m Weg",
    "length": 110.6,
    "events": {
-    "STEP": 18,
-    "LIFT": 48,
-    "HARD": 465,
-    "TWIST": 124
+    "STEP": 48,
+    "LIFT": 116,
+    "HARD": 675,
+    "TWIST": 317
    }
   },
   {
@@ -11082,10 +11080,10 @@
    "class": "1m Weg",
    "length": 32.8,
    "events": {
-    "STEP": 10,
-    "LIFT": 29,
-    "HARD": 110,
-    "TWIST": 68
+    "STEP": 21,
+    "LIFT": 38,
+    "HARD": 126,
+    "TWIST": 90
    }
   },
   {
@@ -13598,10 +13596,10 @@
    "class": "1m Weg",
    "length": 67.8,
    "events": {
-    "STEP": 83,
+    "STEP": 70,
     "LIFT": 95,
-    "HARD": 324,
-    "TWIST": 207
+    "HARD": 313,
+    "TWIST": 215
    }
   },
   {
@@ -16599,10 +16597,10 @@
    "class": "1m Weg",
    "length": 947.1,
    "events": {
-    "STEP": 1574,
-    "LIFT": 1171,
-    "HARD": 4021,
-    "TWIST": 2056
+    "STEP": 1582,
+    "LIFT": 1178,
+    "HARD": 4028,
+    "TWIST": 2057
    }
   },
   {
@@ -42239,17 +42237,6 @@
    "seg": 3011,
    "class": "4m Strasse",
    "name": "",
-   "cls": "minor"
-  },
-  {
-   "what": "HARD",
-   "x": -129.3,
-   "y": -401.7,
-   "z": 415.18,
-   "value": 3.411,
-   "seg": 890,
-   "class": "3m Strasse",
-   "name": "Via ai Romani",
    "cls": "minor"
   },
   {
@@ -71525,17 +71512,6 @@
   },
   {
    "what": "LIFT",
-   "x": -129.3,
-   "y": -400.6,
-   "z": 415.06,
-   "value": 0.038,
-   "seg": 890,
-   "class": "3m Strasse",
-   "name": "Via ai Romani",
-   "cls": "minor"
-  },
-  {
-   "what": "LIFT",
    "x": -702.4,
    "y": -2376.9,
    "z": 306.48,
@@ -76997,6 +76973,17 @@
    "z": 648.41,
    "value": 1.358,
    "seg": 2345,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "STEP",
+   "x": -131.4,
+   "y": 3614.7,
+   "z": 583.65,
+   "value": 1.353,
+   "seg": 1751,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -88646,17 +88633,6 @@
    "z": 735.35,
    "value": 0.689,
    "seg": 5746,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "STEP",
-   "x": -131.0,
-   "y": 3617.6,
-   "z": 583.76,
-   "value": 0.688,
-   "seg": 1750,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -140132,6 +140108,17 @@
   },
   {
    "what": "STEP",
+   "x": 787.1,
+   "y": 4715.5,
+   "z": 639.67,
+   "value": 0.075,
+   "seg": 1674,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "STEP",
    "x": 1469.0,
    "y": 3501.9,
    "z": 841.74,
@@ -142108,6 +142095,17 @@
    "seg": 853,
    "class": "2m Weg",
    "name": "Via alla Valle",
+   "cls": "path"
+  },
+  {
+   "what": "STEP",
+   "x": 785.4,
+   "y": 4721.5,
+   "z": 639.89,
+   "value": 0.061,
+   "seg": 1674,
+   "class": "1m Weg",
+   "name": "",
    "cls": "path"
   },
   {
@@ -148352,7 +148350,7 @@
    "x": -1450.4,
    "y": -2103.6,
    "z": 272.48,
-   "value": 41.355,
+   "value": 41.354,
    "seg": 2370,
    "class": "1m Weg",
    "name": "",
@@ -152573,6 +152571,17 @@
   },
   {
    "what": "HARD",
+   "x": -131.5,
+   "y": 3614.5,
+   "z": 583.64,
+   "value": 31.332,
+   "seg": 1751,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
    "x": 983.1,
    "y": -170.3,
    "z": 463.46,
@@ -152760,6 +152769,17 @@
   },
   {
    "what": "TWIST",
+   "x": -1437.9,
+   "y": -2117.3,
+   "z": 271.22,
+   "value": 30.853,
+   "seg": 2370,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
    "x": -5088.1,
    "y": 1564.6,
    "z": 478.55,
@@ -152864,17 +152884,6 @@
    "z": 529.29,
    "value": 30.729,
    "seg": 1930,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": -1437.9,
-   "y": -2117.3,
-   "z": 271.22,
-   "value": 30.722,
-   "seg": 2370,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -153584,17 +153593,6 @@
    "cls": "path"
   },
   {
-   "what": "TWIST",
-   "x": -57.6,
-   "y": -798.9,
-   "z": 404.24,
-   "value": 29.783,
-   "seg": 2000,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
    "what": "HARD",
    "x": -223.1,
    "y": -1578.9,
@@ -153634,6 +153632,17 @@
    "z": 534.53,
    "value": 29.769,
    "seg": 1848,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
+   "x": -57.6,
+   "y": -798.9,
+   "z": 404.24,
+   "value": 29.761,
+   "seg": 2000,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -154822,6 +154831,17 @@
    "z": 483.72,
    "value": 28.377,
    "seg": 1916,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
+   "x": -131.5,
+   "y": 3614.6,
+   "z": 583.65,
+   "value": 28.374,
+   "seg": 1751,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -158820,6 +158840,17 @@
    "cls": "path"
   },
   {
+   "what": "TWIST",
+   "x": 3576.3,
+   "y": 5363.5,
+   "z": 393.46,
+   "value": 25.522,
+   "seg": 1651,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
    "what": "HARD",
    "x": -4687.2,
    "y": 2386.4,
@@ -159145,17 +159176,6 @@
    "z": 341.29,
    "value": 25.28,
    "seg": 1964,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": 3576.4,
-   "y": 5363.6,
-   "z": 393.46,
-   "value": 25.275,
-   "seg": 1651,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -182713,17 +182733,6 @@
   },
   {
    "what": "HARD",
-   "x": -130.9,
-   "y": 3617.4,
-   "z": 583.76,
-   "value": 16.685,
-   "seg": 1750,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "HARD",
    "x": -3474.5,
    "y": 2464.6,
    "z": 762.93,
@@ -188878,17 +188887,6 @@
    "z": 914.33,
    "value": 15.313,
    "seg": 1803,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "TWIST",
-   "x": -131.5,
-   "y": 3614.6,
-   "z": 583.65,
-   "value": 15.308,
-   "seg": 1751,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -213557,6 +213555,17 @@
   },
   {
    "what": "TWIST",
+   "x": 788.1,
+   "y": 4712.1,
+   "z": 639.61,
+   "value": 11.301,
+   "seg": 1674,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
    "x": 1740.0,
    "y": -327.4,
    "z": 370.02,
@@ -235281,23 +235290,23 @@
    "cls": "path"
   },
   {
-   "what": "HARD",
-   "x": -56.1,
-   "y": -796.8,
-   "z": 403.77,
-   "value": 8.671,
-   "seg": 2000,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
    "what": "TWIST",
    "x": 2873.2,
    "y": 4998.8,
    "z": 712.44,
    "value": 8.669,
    "seg": 2353,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
+   "x": -56.1,
+   "y": -796.8,
+   "z": 403.77,
+   "value": 8.668,
+   "seg": 2000,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -237003,6 +237012,17 @@
    "z": 813.86,
    "value": 8.47,
    "seg": 2356,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "TWIST",
+   "x": 784.2,
+   "y": 4725.0,
+   "z": 640.23,
+   "value": 8.469,
+   "seg": 1674,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -266114,6 +266134,17 @@
    "cls": "path"
   },
   {
+   "what": "HARD",
+   "x": 787.8,
+   "y": 4712.9,
+   "z": 639.63,
+   "value": 4.613,
+   "seg": 1674,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
    "what": "TWIST",
    "x": -4581.8,
    "y": 219.7,
@@ -267583,6 +267614,17 @@
    "z": 465.27,
    "value": 4.406,
    "seg": 2227,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
+   "x": 785.4,
+   "y": 4721.3,
+   "z": 639.88,
+   "value": 4.404,
+   "seg": 1674,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -287862,17 +287904,6 @@
   },
   {
    "what": "HARD",
-   "x": 1238.4,
-   "y": 68.6,
-   "z": 514.27,
-   "value": 1.552,
-   "seg": 853,
-   "class": "2m Weg",
-   "name": "Via alla Valle",
-   "cls": "path"
-  },
-  {
-   "what": "HARD",
    "x": 3402.8,
    "y": 4556.8,
    "z": 494.27,
@@ -287891,6 +287922,17 @@
    "seg": 602,
    "class": "2m Weg",
    "name": "Via Mondadiscio",
+   "cls": "path"
+  },
+  {
+   "what": "HARD",
+   "x": 1238.4,
+   "y": 68.6,
+   "z": 514.27,
+   "value": 1.551,
+   "seg": 853,
+   "class": "2m Weg",
+   "name": "Via alla Valle",
    "cls": "path"
   },
   {
@@ -289097,7 +289139,7 @@
    "x": 1240.3,
    "y": 70.3,
    "z": 514.76,
-   "value": 1.466,
+   "value": 1.465,
    "seg": 853,
    "class": "2m Weg",
    "name": "Via alla Valle",
@@ -297503,6 +297545,17 @@
    "z": 538.93,
    "value": 0.985,
    "seg": 4955,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "LIFT",
+   "x": -131.5,
+   "y": 3614.6,
+   "z": 583.65,
+   "value": 0.984,
+   "seg": 1751,
    "class": "1m Weg",
    "name": "",
    "cls": "path"
@@ -305931,17 +305984,6 @@
    "seg": 737,
    "class": "2m Weg",
    "name": "Ai Pianei",
-   "cls": "path"
-  },
-  {
-   "what": "HARD",
-   "x": 781.2,
-   "y": 4732.2,
-   "z": 641.48,
-   "value": 0.738,
-   "seg": 1674,
-   "class": "1m Weg",
-   "name": "",
    "cls": "path"
   },
   {
@@ -323832,17 +323874,6 @@
   },
   {
    "what": "LIFT",
-   "x": -131.0,
-   "y": 3617.5,
-   "z": 583.76,
-   "value": 0.501,
-   "seg": 1750,
-   "class": "1m Weg",
-   "name": "",
-   "cls": "path"
-  },
-  {
-   "what": "LIFT",
    "x": -2943.3,
    "y": 3694.7,
    "z": 1039.51,
@@ -324576,17 +324607,6 @@
    "seg": 980,
    "class": "1m Weg",
    "name": "Strada Regina",
-   "cls": "path"
-  },
-  {
-   "what": "HARD",
-   "x": 792.0,
-   "y": 4702.3,
-   "z": 639.09,
-   "value": 0.495,
-   "seg": 1674,
-   "class": "1m Weg",
-   "name": "",
    "cls": "path"
   },
   {
@@ -378964,6 +378984,17 @@
   },
   {
    "what": "LIFT",
+   "x": 787.3,
+   "y": 4714.6,
+   "z": 639.65,
+   "value": 0.052,
+   "seg": 1674,
+   "class": "1m Weg",
+   "name": "",
+   "cls": "path"
+  },
+  {
+   "what": "LIFT",
    "x": 3459.9,
    "y": 3840.1,
    "z": 381.91,
@@ -382722,6 +382753,17 @@
    "seg": 1321,
    "class": "2m Weg",
    "name": "ai Sceré",
+   "cls": "path"
+  },
+  {
+   "what": "LIFT",
+   "x": 785.1,
+   "y": 4722.3,
+   "z": 639.94,
+   "value": 0.035,
+   "seg": 1674,
+   "class": "1m Weg",
+   "name": "",
    "cls": "path"
   },
   {
@@ -393391,10 +393433,10 @@
  },
  "events_v21_area": {
   "minor": {
-   "LIFT": 5936,
-   "HARD": 130663,
+   "LIFT": 5925,
+   "HARD": 130600,
    "STEP": 570,
-   "TWIST": 2732,
+   "TWIST": 2734,
    "HOLE": 46
   },
   "main": {
@@ -393404,10 +393446,10 @@
    "TWIST": 142
   },
   "path": {
-   "STEP": 118820,
-   "LIFT": 225061,
-   "HARD": 978236,
-   "TWIST": 400708
+   "STEP": 118856,
+   "LIFT": 225145,
+   "HARD": 978458,
+   "TWIST": 400932
   }
  }
 }
