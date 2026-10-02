@@ -174,6 +174,39 @@ _TRIM_ZEROS = re.compile(r"(\.\d*?)0+\b")     # 2.500 -> 2.5, 3.000 -> 3.
 _TRIM_DOT = re.compile(r"\.(?= |$)")            # 3. -> 3
 
 
+NORMAL_STEP = 0.25     # corners whose normals round to the same 0.25 steps are welded (about 10 degrees)
+
+
+def weld_corners(V, N, UV, T, C=None, step=NORMAL_STEP):
+    """Indexed mesh with shared vertices (v2.5): corners at the same position (mm), texture
+    coordinate (1e-4) and colour and with about the same normal become one vertex with the mean
+    normal; degenerate triangles are dropped. Positions, triangles and texture coordinates do not
+    change, a crease keeps its two vertices. The meshes were written as triangle soups (three own
+    vertices per triangle), twice the vertices the game has to store, draw and collide with.
+    Returns (V, N, UV, T, C)."""
+    T = np.asarray(T, np.int64)
+    used, inv_used = np.unique(T, return_inverse=True)
+    cols = [np.round(V[used] * 1000), np.round(UV[used] * 1e4), np.round(N[used] / step)]
+    if C is not None:
+        cols.append(np.round(C[used] * 1000))
+    u, inv = np.unique(np.column_stack(cols).astype(np.int64), axis=0, return_inverse=True)
+    inv = inv.ravel()
+    m = len(u)
+    cnt = np.bincount(inv, minlength=m)[:, None]
+
+    def mean(A):
+        W = np.zeros((m, A.shape[1]))
+        np.add.at(W, inv, A[used])
+        return W / cnt
+    V2, UV2 = mean(V), mean(UV)
+    N2 = mean(N)
+    N2 /= np.maximum(np.linalg.norm(N2, axis=1, keepdims=True), 1e-9)
+    C2 = mean(C) if C is not None else None
+    T2 = inv[inv_used.ravel()].reshape(-1, 3)
+    good = (T2[:, 0] != T2[:, 1]) & (T2[:, 1] != T2[:, 2]) & (T2[:, 0] != T2[:, 2])
+    return V2, N2, UV2, T2[good], C2
+
+
 class MeshBuilder:
     """Triangle soup grouped by material; writes Z-up COLLADA 1.4.1."""
 
@@ -305,13 +338,19 @@ class MeshBuilder:
             p[0], p[1], p[2], p[3], p[5] = [V], [N], [U], [T], [Cc]
         return int(flip.sum())
 
-    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False):
+    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False, weld=True):
         """One geometry with one <triangles> list per material, in a single node named
         '<name>_a<detail>' under base00/start01. Torque reads the trailing number of a mesh
         node as its LOD pixel size, so node names must not end with other digits.
-        orient: the solid pieces turned out first (orient_closed, v2.4)."""
+        orient: the solid pieces turned out first (orient_closed, v2.4).
+        weld: shared vertices (weld_corners, v2.5)."""
         if orient:
             self.orient_closed()
+        if weld:
+            for mat, p in self.parts.items():
+                V2, N2, U2, T2, C2 = weld_corners(np.concatenate(p[0]), np.concatenate(p[1]),
+                                                  np.concatenate(p[2]), np.concatenate(p[3]), np.concatenate(p[5]))
+                self.parts[mat] = [[V2], [N2], [U2], [T2], len(V2), [C2]]
         o = np.asarray(origin, np.float64)
         Vs, Ns, Ts, Cs, prims, mats, effects, binds = [], [], [], [], [], [], [], []
         off = 0

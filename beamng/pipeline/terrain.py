@@ -52,6 +52,12 @@ LC_TO_MAT = {
 }
 
 
+# pixel size of the base textures (the TerrainMaterialTextureSet baseTexSize). 1024 since v2.5:
+# 13 materials x 5 maps at 2048 took about 1 GB of the game's memory, for smooth colour noise
+# that is only seen from afar (the detail textures cover it near the camera)
+BASE_TEX = 1024
+
+
 def terrain_materials(level, base_tex):
     """TerrainMaterial dicts. base_tex: {material: path of its base colour texture (level art)}."""
     mats = {}
@@ -81,7 +87,7 @@ def terrain_materials(level, base_tex):
         }
         mats[f"{name}-{m['persistentId']}"] = m
     mats["TextureSet"] = {"name": f"{level}TerrainMaterialTextureSet", "class": "TerrainMaterialTextureSet",
-                          "baseTexSize": [2048, 2048], "detailTexSize": [1024, 1024], "macroTexSize": [1024, 1024]}
+                          "baseTexSize": [BASE_TEX, BASE_TEX], "detailTexSize": [1024, 1024], "macroTexSize": [1024, 1024]}
     return mats
 
 

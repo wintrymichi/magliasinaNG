@@ -44,6 +44,20 @@ The map is built by a Python pipeline from swisstopo open data, the official cad
 | ![The cantonal road towards Pura](beamng/verifica/screenshots/12_pura_cantonale.jpg)<br>*The cantonal road towards Pura* | ![Agno, a street in the old town](beamng/verifica/screenshots/13_agno_via.jpg)<br>*Agno, a street in the old town* |
 | ![The pass above Gravesano towards Arosio](beamng/verifica/screenshots/14_passo_tornante.jpg)<br>*The pass above Gravesano towards Arosio* |  |
 
+## What's new in v2.5
+
+The first version measured inside BeamNG.drive (0.39.4, on a PC with 16 GB of RAM, RTX 4070). The v2.4 level loaded in 215 s
+(371 s through BeamMP) and then wanted more memory than the PC had: minutes on the loading screen and the whole PC lagging.
+v2.5 has the same geometry, built so that the game needs much less:
+
+- **7916 → 2188 objects:** the 128 m blocks of buildings, walls, road surfaces, guardrails, water and vineyards are merged 3 × 3.
+- **38.2 → 19.7 million vertices:** the meshes were written with three own vertices per triangle; now the triangles share them (positions and texture coordinates unchanged, checked).
+- **Road edges:** the skirts and kerb faces along straight stretches with fewer triangles, within 4 mm (15.9 → 15.3 million triangles).
+- **Detail by distance:** guardrails are no longer drawn beyond about 600 m, fences 400 m, painted markings 500 m, walls 1.2 km, vineyards 1 km, buildings and roads 3 km (before: up to 12 km). Sun shadows up to 800 m instead of 1600.
+- **Result in the game:** 60 s to load once the game has converted the shapes (about 145 s the first time), 82–128 fps at the spawn points.
+
+The game still needs about 12 GB of memory at its peak: on a 16 GB PC close other programs (browser, Discord, ...) before playing.
+
 ## What's new in v2.4
 
 - **Houses visible from every side.** The game draws only one side of each wall. Up to v2.3, 8.6 % of the wall area faced inwards (L- and U-shaped buildings, courtyard buildings, rows of houses): from some angles the houses were transparent, with floating roofs. Now the facing of each wall is decided with a ray test and inverted walls drop to 0.06 %; where the facing can't be decided the wall is double-sided, and there are soffits under the eaves.
@@ -73,7 +87,7 @@ The map is built by a Python pipeline from swisstopo open data, the official cad
 
 ## Installation
 
-1. Download `magliaso_pura_v2.4.zip` from the [releases](https://github.com/wintrymichi/magliasinaNG/releases) page.
+1. Download `magliaso_pura_v2.5.zip` from the [releases](https://github.com/wintrymichi/magliasinaNG/releases) page.
 2. Copy it to `Documents/BeamNG.drive/current/mods/` (or install it from the mod manager), removing previous versions: the level is always called `magliaso_pura`.
 3. In the game: *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*.
 
@@ -99,7 +113,7 @@ flowchart LR
     L --> Q[check_level.py<br/>drive_test.py]
 ```
 
-The level is rebuilt from scratch by the `.github/workflows/release_v2.4.yml` workflow (on a GitHub server, in about an hour): it downloads the official data, builds the level, checks it and publishes the release. The details of each step are in [`beamng/README.md`](beamng/README.md).
+The level is rebuilt from scratch by the `.github/workflows/release_v2.4.yml` workflow (on a GitHub server, in about an hour): it downloads the official data, builds the level, checks it and publishes the release. Since v2.5 the mod zip then goes through `optimize_level.py` (merged blocks, shared vertices, detail by distance); the v2.5 release is the v2.4 release zip passed through it. The details of each step are in [`beamng/README.md`](beamng/README.md).
 
 ## Quality and verification
 
@@ -114,7 +128,7 @@ The level is rebuilt from scratch by the `.github/workflows/release_v2.4.yml` wo
 | [`beamng/pipeline/`](beamng/pipeline) | the pipeline: data download, road network, surfaces, buildings, façades, vegetation, level, checks |
 | [`beamng/dati/`](beamng/dati) | lightweight results pinned for the release (poses, markings, guardrails, colours, GWR and OSM extracts) |
 | [`beamng/verifica/`](beamng/verifica) | checks, drive test, road-by-road review, screenshots |
-| [`beamng/RELEASE_v2.4.md`](beamng/RELEASE_v2.4.md) | release notes (earlier ones in [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md), [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
+| [`beamng/RELEASE_v2.5.md`](beamng/RELEASE_v2.5.md) | release notes (earlier ones in [`beamng/RELEASE_v2.4.md`](beamng/RELEASE_v2.4.md), [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md), [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
 | `panoramas.*`, `cameras.json`, `sv_capture.py`, … | the original dataset of the Magliaso–Pura cantonal road (panorama metadata, see below) |
 
 ## The panorama dataset
@@ -148,7 +162,8 @@ The views are named `NNNN_<panoId>_<direction>_p<pitch>.jpg`: the direction is r
 
 ## Known limitations
 
-- The map was not tested inside BeamNG.drive during this review: the checks are automatic (`check_level.py`, `drive_test.py`) and on renders of the level compared with the panoramas. For v2.4, the look and cost of the grass (GroundCover), the transparency of the river water, the ground type of the paving and the street lamp lights have not been tested in the game.
+- Memory: the game needs about 12 GB at its peak (terrain and forest about 7 GB, the meshes the rest). On a 16 GB PC with other programs open it can still stall after loading; close them before playing.
+- In the game (v2.5) only loading, memory and frame rate were measured, at the spawn points. The geometry checks are automatic (`check_level.py`, `drive_test.py`) and on renders of the level compared with the panoramas; the look of the grass (GroundCover), of the river water, of the paving and of the street lamp lights has not been reviewed in the game.
 - The palms are an estimate (aerial photos can't tell a palm from a small tree); grass density and vineyard row spacing are not measured. Where OpenStreetMap gives no surface, swissTLM3D applies.
 - With the walls turned the right way, the plinth of a few houses has also moved to the outside: the obstacle test counts 12 trail points blocked by buildings instead of 10. The one checked, below Pura, is a 1 m wide trail that enters an alley between terraced houses, now crossed low down by the plinth (about 60 cm).
 - Façades: the number and position of windows, balconies and doors are plausible (use, period and floors from the register) but not copied one by one. The colour comes from the photos for 3,637 buildings; in shadow some colours come out wrong (a cream façade rendered pink). Exposed stone, arcades and storey-high plinths are not modelled.
