@@ -13,7 +13,7 @@ This pipeline rebuilds the Malcantone (Ticino) at 1:1 scale as a BeamNG.drive le
 | `verifica/` | `VERIFICA.md` (comparison with all 1464 views), the agreement chart along the route, per-view metrics (`metrics_final.json`, and `metrics_full1.json` before the last correction round) |
 | `dati/` | lightweight computed results, to rebuild the level without redoing the long steps: calibrated panorama poses (`poses.json`), road axis, road markings and their 2022 state, guardrails, retaining walls and wall heights, fences, street lamps, poles and signs, street furniture, trees and shrubs; for v2.0 the bridges with the manual corrections (`ponti.json`) and the Magliaso–Gravesano cantonal road (`cantonale_gravesano.json`); for v2.2 the roads of the new corridors (`strade_extra_v22.json`) |
 
-The **ready-made mod** is in the [v2.5 release](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.5): the [v2.4](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.4) zip passed through `optimize_level.py` (same geometry, lighter for the game). The v2.4 zip is what the `.github/workflows/release_v2.4.yml` workflow builds from scratch on a GitHub server: it downloads the data, builds the level, checks it with `check_level.py` and `drive_test.py` and publishes it. It is built with `MAGLIASO_NO_PHOTO_TEXTURES=1`, so it contains no Street View images: façades, roofs and walls have original textures drawn by the pipeline in the measured colours, and sign plates are plain-coloured. The cantonal road's objects derived from the photos (road markings, street lamps, poles, signs, street furniture) are taken from the v1.1 release and placed on the new surfaces (`carryover.py`).
+The **ready-made mod** is in the [v2.6 release](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.6): the [v2.4](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.4) zip passed through `optimize_level.py` (v2.5: same geometry, lighter for the game) and `patch_groundcover.py` (v2.6: the new grass). The v2.4 zip is what the `.github/workflows/release_v2.4.yml` workflow builds from scratch on a GitHub server: it downloads the data, builds the level, checks it with `check_level.py` and `drive_test.py` and publishes it. It is built with `MAGLIASO_NO_PHOTO_TEXTURES=1`, so it contains no Street View images: façades, roofs and walls have original textures drawn by the pipeline in the measured colours, and sign plates are plain-coloured. The cantonal road's objects derived from the photos (road markings, street lamps, poles, signs, street furniture) are taken from the v1.1 release and placed on the new surfaces (`carryover.py`).
 
 Earlier versions remain available:
 - **v1.0**: only the cantonal road corridor.
@@ -61,6 +61,22 @@ A review of the v2.0 level compared with real sources: the 2024 SWISSIMAGE 10 cm
 - **Railway** (`railway.py`): the FLP (metre gauge) and SBB tracks from swissTLM3D, with sleepers, rails, ballast, level crossings flush with the road and bridges. The tracks sit at the real swissTLM3D height: where the level's terrain is higher a cutting is dug (along the lake in Agno, under the embankment of the cantonal road), where it is lower the track sits on a ballast embankment; those under the car park of Ponte Tresa station are not built, like the tunnels. The overhead line is not built.
 - **The Tresa at Ponte Tresa** (`water.py`): the lake model's dam is at the weir, 420 m downstream, and no longer at the outlet. The stretch at lake level, under the border bridge, has water.
 - **Zones, roads and log** (`zone_report.py`): `verifica/ZONE.md` (status by municipality), `verifica/STRADE.md` (every road of the network with the status of each aspect) and `verifica/REGISTRO.md` (differences found, action, status).
+
+## Version 2.6: grass
+
+`groundcover.py` no longer draws its own grass atlas (in the game it showed as dark opaque cards: the material had no
+opacity map). The meadows (`Grass` layer) and gardens (`GardenGrass`) use the game's own textures in
+`/assets/materials/foliage` (referenced, not copied), under materials of this level (`mp_gc_grass_short`,
+`mp_gc_grass_long`, `mp_gc_flowers`), with the billboard rectangles and sizes of the game's Italy level:
+
+| GroundCover | Texture | Radius (fade from) | Clumps at most |
+|---|---|---|---|
+| `grass_close` | short grass | 50 m (30 m) | 160,000 |
+| `grass_mid` | short grass | 120 m (80 m) | 150,000 |
+| `grass_far` | long grass | 120 m (80 m) | 150,000 |
+| `flowers` | meadow flowers, meadows only | 50 m (30 m) | 30,000 |
+
+`patch_groundcover.py <in.zip> <out.zip>` puts it into a built level. In the game: 72–111 fps at the test points.
 
 ## Version 2.5: performance (measured in the game)
 
@@ -240,6 +256,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Review (v2.2) | `sv_review.py`, `qa_log.py`, `review_report.py`, `drive_test.py`, `drive_context.py`, `screenshots.py` | photo/map comparison from the same camera, log of the reviewed places, `verifica/REVISIONE.md`, virtual drive test, screenshots |
 | Graphics (v2.4) | `osm_surface.py`, `surface_textures.py`, `groundcover.py`, `palms.py`, `vineyards.py`, `rivers.py` | road and trail surfaces from OSM with their textures, grass and flowers, palms, vineyard rows, water in the rivers |
 | Package | `package.py` | mod zip in `<MAGLIASO_ROOT>/dist` |
+| Grass (v2.6) | `groundcover.py`, `patch_groundcover.py` | grass and flowers with the game's textures; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 

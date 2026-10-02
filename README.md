@@ -44,6 +44,11 @@ The map is built by a Python pipeline from swisstopo open data, the official cad
 | ![The cantonal road towards Pura](beamng/verifica/screenshots/12_pura_cantonale.jpg)<br>*The cantonal road towards Pura* | ![Agno, a street in the old town](beamng/verifica/screenshots/13_agno_via.jpg)<br>*Agno, a street in the old town* |
 | ![The pass above Gravesano towards Arosio](beamng/verifica/screenshots/14_passo_tornante.jpg)<br>*The pass above Gravesano towards Arosio* |  |
 
+## What's new in v2.6
+
+- **New grass.** Up to v2.5 the grass was drawn by the pipeline in one texture without transparency maps: in the game it showed as dark opaque cards, and only up to 50 m. Now the meadows and gardens use the game's own grass and flower textures (colour, opacity, normal, roughness and ambient occlusion maps, light through the blades), laid out like the game's Italy level: short grass up to 50 m around the camera, short and long grass up to 120 m, meadow flowers (daisies, buttercups, geraniums, poppies), mown lawns in the gardens.
+- Measured in the game: 72–111 fps at the test points on meadows, gardens and the cantonal road (v2.5: 82–128 at the spawn points).
+
 ## What's new in v2.5
 
 The first version measured inside BeamNG.drive (0.39.4, on a PC with 16 GB of RAM, RTX 4070). The v2.4 level loaded in 215 s
@@ -87,7 +92,7 @@ The game still needs about 12 GB of memory at its peak: on a 16 GB PC close othe
 
 ## Installation
 
-1. Download `magliaso_pura_v2.5.zip` from the [releases](https://github.com/wintrymichi/magliasinaNG/releases) page.
+1. Download `magliaso_pura_v2.6.zip` from the [releases](https://github.com/wintrymichi/magliasinaNG/releases) page.
 2. Copy it to `Documents/BeamNG.drive/current/mods/` (or install it from the mod manager), removing previous versions: the level is always called `magliaso_pura`.
 3. In the game: *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*.
 
@@ -113,7 +118,7 @@ flowchart LR
     L --> Q[check_level.py<br/>drive_test.py]
 ```
 
-The level is rebuilt from scratch by the `.github/workflows/release_v2.4.yml` workflow (on a GitHub server, in about an hour): it downloads the official data, builds the level, checks it and publishes the release. Since v2.5 the mod zip then goes through `optimize_level.py` (merged blocks, shared vertices, detail by distance); the v2.5 release is the v2.4 release zip passed through it. The details of each step are in [`beamng/README.md`](beamng/README.md).
+The level is rebuilt from scratch by the `.github/workflows/release_v2.4.yml` workflow (on a GitHub server, in about an hour): it downloads the official data, builds the level, checks it and publishes the release. Since v2.5 the mod zip then goes through `optimize_level.py` (merged blocks, shared vertices, detail by distance); the v2.5 release is the v2.4 release zip passed through it, and v2.6 is v2.5 with the new grass (`patch_groundcover.py`). The details of each step are in [`beamng/README.md`](beamng/README.md).
 
 ## Quality and verification
 
@@ -128,7 +133,7 @@ The level is rebuilt from scratch by the `.github/workflows/release_v2.4.yml` wo
 | [`beamng/pipeline/`](beamng/pipeline) | the pipeline: data download, road network, surfaces, buildings, façades, vegetation, level, checks |
 | [`beamng/dati/`](beamng/dati) | lightweight results pinned for the release (poses, markings, guardrails, colours, GWR and OSM extracts) |
 | [`beamng/verifica/`](beamng/verifica) | checks, drive test, road-by-road review, screenshots |
-| [`beamng/RELEASE_v2.5.md`](beamng/RELEASE_v2.5.md) | release notes (earlier ones in [`beamng/RELEASE_v2.4.md`](beamng/RELEASE_v2.4.md), [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md), [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
+| [`beamng/RELEASE_v2.6.md`](beamng/RELEASE_v2.6.md) | release notes (earlier ones in [`beamng/RELEASE_v2.5.md`](beamng/RELEASE_v2.5.md), [`beamng/RELEASE_v2.4.md`](beamng/RELEASE_v2.4.md), [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md), [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
 | `panoramas.*`, `cameras.json`, `sv_capture.py`, … | the original dataset of the Magliaso–Pura cantonal road (panorama metadata, see below) |
 
 ## The panorama dataset
@@ -163,7 +168,7 @@ The views are named `NNNN_<panoId>_<direction>_p<pitch>.jpg`: the direction is r
 ## Known limitations
 
 - Memory: the game needs about 12 GB at its peak (terrain and forest about 7 GB, the meshes the rest). On a 16 GB PC with other programs open it can still stall after loading; close them before playing.
-- In the game (v2.5) only loading, memory and frame rate were measured, at the spawn points. The geometry checks are automatic (`check_level.py`, `drive_test.py`) and on renders of the level compared with the panoramas; the look of the grass (GroundCover), of the river water, of the paving and of the street lamp lights has not been reviewed in the game.
+- In the game (v2.5) only loading, memory and frame rate were measured, at the spawn points. The geometry checks are automatic (`check_level.py`, `drive_test.py`) and on renders of the level compared with the panoramas; the look of the river water, of the paving and of the street lamp lights has not been reviewed in the game.
 - The palms are an estimate (aerial photos can't tell a palm from a small tree); grass density and vineyard row spacing are not measured. Where OpenStreetMap gives no surface, swissTLM3D applies.
 - With the walls turned the right way, the plinth of a few houses has also moved to the outside: the obstacle test counts 12 trail points blocked by buildings instead of 10. The one checked, below Pura, is a 1 m wide trail that enters an alley between terraced houses, now crossed low down by the plinth (about 60 cm).
 - Façades: the number and position of windows, balconies and doors are plausible (use, period and floors from the register) but not copied one by one. The colour comes from the photos for 3,637 buildings; in shadow some colours come out wrong (a cream façade rendered pink). Exposed stone, arcades and storey-high plinths are not modelled.

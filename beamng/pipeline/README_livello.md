@@ -30,7 +30,7 @@ A 1:1 scale reconstruction of about 52 km² of the Malcantone (Canton Ticino, Sw
 | One-way streets, STOP and give-way signs, benches and bins on the rest of the network | OpenStreetMap; roundabouts and dual carriageways from swissTLM3D | OSM position, signs on the edge of the road they belong to |
 | Railway (FLP and SBB) | swissTLM3D (axes, heights, gauge, bridges) | real-gauge tracks at the swissTLM3D height, never below the terrain, flush with the road at level crossings; no overhead line, no tracks under the car park of Ponte Tresa station |
 | Road and trail surface (v2.4) | OpenStreetMap (`surface`, `tracktype`), otherwise swissTLM3D | asphalt, gravel, dirt, setts, cobblestones; where OSM is silent swissTLM3D applies; transitions from one surface to another follow the OSM ways to within a few metres |
-| Grass and flowers (v2.4) | meadow and garden layers of the terrain (official survey) | tufts drawn around the camera (50 m); density estimated, not measured |
+| Grass and flowers (v2.6) | meadow and garden layers of the terrain (official survey) | the game's own grass and meadow-flower textures around the camera: short grass up to 50 m, short and long grass up to 120 m, flowers on the meadows; density estimated, not measured |
 | Vineyards (v2.4) | official survey (vineyards), 10 cm orthophoto (row direction) | rows every 2.2 m (typical spacing, not measured) in vineyards within 150 m of roads and trails |
 | Rivers (v2.4) | official survey (watercourses at least 2.5 m wide), swissALTI3D | water at the height of the lowest bed within 3 m; under bridges too, not on fords |
 | Lake Lugano, distant landscape | swissALTI3D, Copernicus GLO-30 | — |
@@ -42,6 +42,10 @@ The October 2022 photos are more recent than the orthophoto and the official sur
 - **No road markings** where the road was being resurfaced or was unmarked: s ≈ 1.23–1.27 km, 1.52–1.82 km and 3.64–3.72 km. In the roadworks the new asphalt is darker.
 - **Red bands** on both edges in the stretch s ≈ 2.29–2.44 km.
 - **Magliaso junction:** the junction had been rebuilt, so the two pedestrian islands and the painted island from the survey have been removed, and the centre line follows the position visible in the photos.
+
+## Version 2.6
+
+- **New grass:** the game's own grass and flower textures (with normal, roughness and ambient occlusion maps) instead of the tufts drawn by the pipeline, which in the game showed up as dark opaque cards. Short grass up to 50 m around the camera, short and long grass up to 120 m (before: 50 m), daisies, buttercups, geraniums and poppies on the meadows, mown lawns in the gardens.
 
 ## Version 2.5
 
