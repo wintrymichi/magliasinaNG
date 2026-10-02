@@ -145,7 +145,7 @@ def ends_to_ground(P, N, z, s, degree, ground, max_ext=60.0):
                     reached = True
                     break
             if not reached:
-                notes.append("sospeso")
+                notes.append("suspended")
                 continue
             A = np.array(add)
             ze = np.linspace(z[i], min(z[i], gq + 0.05), len(A) + 1)[1:]    # easing onto the ground
@@ -155,12 +155,12 @@ def ends_to_ground(P, N, z, s, degree, ground, max_ext=60.0):
             else:
                 P = np.vstack([P, A]); N = np.vstack([N, np.repeat(N[-1:], len(A), 0)])
                 z = np.r_[z, ze]
-            notes.append("prolungato %d m" % round(2.0 * len(A)))
+            notes.append("extended %d m" % round(2.0 * len(A)))
         elif z[i] - g < -0.5:
             ss = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
             w = ss / max(ss[-1], 1e-9) if end == 1 else 1.0 - ss / max(ss[-1], 1e-9)
             z = z + (g - z[i]) * w
-            notes.append("raccordato al terreno")
+            notes.append("joined to terrain")
     return P, N, z, notes
 
 
@@ -251,9 +251,9 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         if np.isfinite(dtlm) and dtlm > 1.0:
             flags.append("tlm")
         if np.abs(grade).max() > (0.15 if s["kind"] == "road" else 0.3):
-            flags.append("ripido")
+            flags.append("steep")
         if clear.min() < -0.5 and typ == "open":
-            flags.append("terreno")
+            flags.append("terrain")
         flags += notes
         records.append({"tlm": s["tlm"], "seg": s["id"], "class": s["class"], "name": s["name"],
                         "dz_tlm_m": round(dtlm, 2) if np.isfinite(dtlm) else None,
