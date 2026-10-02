@@ -391,8 +391,8 @@ def main(src, dst):
         key = row.split("|")[1]
         lines = [row if l.startswith("|" + key + "|") else l for l in lines]
     txt = "\n".join(lines)
-    txt = txt.replace("## Precisione e verifica", section + "\n## Precisione e verifica", 1) \
-        if "## Precisione e verifica" in txt else txt.rstrip() + "\n\n" + section
+    head = next((h for h in ("## Accuracy and verification", "## Precisione e verifica") if h in txt), None)
+    txt = txt.replace(head, section + "\n" + head, 1) if head else txt.rstrip() + "\n\n" + section
     open(readme, "w", encoding="utf-8").write(txt.rstrip() + "\n")
     info_f = os.path.join(lv, "info.json")
     inf = json.load(open(info_f, encoding="utf-8"))
@@ -482,9 +482,9 @@ def veg(lv, pieces, ter):
 
 
 def notes():
-    """The 'Versione 1.1' section of README_livello.md and the table rows it updates."""
+    """The 'Version 1.1' section of README_livello.md and the table rows it updates."""
     src = open(os.path.join(HERE, "README_livello.md"), encoding="utf-8").read()
-    a = src.index("## Versione 1.1")
+    a = src.index("## Version 1.1")
     b = src.index("\n## ", a + 5)
     rows = [l for l in src.splitlines() if l.startswith("| Strade e marciapiedi") or l.startswith("| Alberi (")]
     return src[a:b].strip() + "\n", rows

@@ -206,11 +206,11 @@ def main(lv=None, only=None):
                         f"{','.join(b.get('flags', []))} | {b.get('note', '')} |")
             if i % 10 == 0:
                 print("bridge sheets", i, flush=True)
-    md = ["# Ponti della rete v2.0", "",
-          "Un elemento per ponte di `beamng/dati/ponti.json`. Le schede (profilo e tre viste del livello) si "
-          "rigenerano con `python bridge_report.py`; i profili di tutti i ponti sono in `profili_NN.jpg`. "
-          "Le correzioni manuali (`z0`, `z1`, `profile`, `type`, `skip`, `note`) stanno in `ponti.json`.", "",
-          "| # | Classe | Nome | x, y (m) | Lunghezza m | Altezza max m | Tipo | Segnalazioni | Nota |",
+    md = ["# Bridges of the v2.0 network", "",
+          "One entry per bridge in `beamng/dati/ponti.json`. The sheets (profile and three views of the level) are "
+          "regenerated with `python bridge_report.py`; the profiles of all the bridges are in `profili_NN.jpg`. "
+          "The manual corrections (`z0`, `z1`, `profile`, `type`, `skip`, `note`) are in `ponti.json`.", "",
+          "| # | Class | Name | x, y (m) | Length m | Max height m | Type | Flags | Note |",
           "|---|---|---|---|---|---|---|---|---|"] + rows
     open(os.path.join(OUT, "README.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
     print(len(rows), "bridges ->", OUT, SHEETS)

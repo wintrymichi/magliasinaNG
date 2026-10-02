@@ -1,129 +1,129 @@
-# Malcantone: Magliaso, Pura e dintorni (BeamNG.drive 0.39)
+# Malcantone: Magliaso, Pura and surroundings (BeamNG.drive 0.39)
 
-Ricostruzione in scala 1:1 di circa 52 km² del Malcantone (Canton Ticino), tra Ponte Tresa, Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio, Astano e Sessa. Al centro ci sono i 3,7 km di Strada Cantonale tra Magliaso e Pura delle versioni 1.x, ricostruiti dalle 366 panoramiche Street View del percorso (quasi tutte di ottobre 2022). A est c'è la cantonale da Magliaso a Gravesano: lungo il lago fino ad Agno, poi ai piedi dei monti per Bioggio e Manno. Dalla v2.2 ci sono anche il passo sopra Gravesano fino ad Arosio (lo Stradón da Rós, la «Penudria», con i suoi tornanti), la cantonale da Ponte Tresa per Caslano a Magliaso e, a Caslano, il paese dalla stazione al lago e Via Torrazza lungo la riva fino alla Torrazza. Il resto dell'area viene dai dati ufficiali di swisstopo e del Cantone Ticino.
+A 1:1 scale reconstruction of about 52 km² of the Malcantone (Canton Ticino, Switzerland), between Ponte Tresa, Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio, Astano and Sessa. At its centre are the 3.7 km of Strada Cantonale between Magliaso and Pura from the 1.x versions, rebuilt from the 366 Street View panoramas of the route (almost all from October 2022). To the east is the cantonal road from Magliaso to Gravesano: along the lake to Agno, then along the foot of the mountains through Bioggio and Manno. Since v2.2 there are also the pass above Gravesano to Arosio (the Stradón da Rós, the «Penudria», with its hairpins), the cantonal road from Ponte Tresa through Caslano to Magliaso and, in Caslano, the village from the station to the lake and Via Torrazza along the shore up to the Torrazza. The rest of the area comes from the official data of swisstopo and Canton Ticino.
 
-## Come si gioca
+## How to play
 
-- **Livello:** `magliaso_pura`.
-- **Punti di partenza:**
-  - `spawn_magliaso` (predefinito, all'incrocio di Magliaso), `spawn_mid` (a metà salita) e `spawn_pura` (in cima alla cantonale). Qui le auto partono nella corsia di marcia, rivolte verso Pura.
-  - Un punto in ogni paese dell'area: `spawn_agno`, `spawn_caslano`, `spawn_bioggio`, `spawn_gravesano`, `spawn_magliaso_paese`, `spawn_manno`, `spawn_pura_paese`, `spawn_aranno`, `spawn_arosio`, `spawn_astano`, `spawn_banco`, `spawn_bedigliora`, `spawn_bosco_luganese`, `spawn_breno`, `spawn_cademario`, `spawn_cassina_d_agno`, `spawn_castelrotto`, `spawn_cimo`, `spawn_miglieglia`, `spawn_molinazzo_di_monteggio`, `spawn_monteggio`, `spawn_neggio`, `spawn_novaggio`, `spawn_ponte_tresa`, `spawn_purasca`, `spawn_sessa` e `spawn_vernate`. Per Curio c'è `spawn_pura`, a 160 m dal paese.
-- **Tutto è guidabile:** ogni strada e ogni sentiero dell'area ha una superficie solida, compresi mulattiere, scalinate e sentieri nel bosco.
-- **Traffico IA:** la rete stradale per l'IA copre tutte le strade carrozzabili, con i sensi unici, le rotonde e le carreggiate separate; le strade chiuse al traffico sono evitate.
+- **Level:** `magliaso_pura`.
+- **Spawn points:**
+  - `spawn_magliaso` (default, at the Magliaso junction), `spawn_mid` (halfway up the climb) and `spawn_pura` (at the top of the cantonal road). Here the cars start in the driving lane, facing towards Pura.
+  - One point in every village of the area: `spawn_agno`, `spawn_caslano`, `spawn_bioggio`, `spawn_gravesano`, `spawn_magliaso_paese`, `spawn_manno`, `spawn_pura_paese`, `spawn_aranno`, `spawn_arosio`, `spawn_astano`, `spawn_banco`, `spawn_bedigliora`, `spawn_bosco_luganese`, `spawn_breno`, `spawn_cademario`, `spawn_cassina_d_agno`, `spawn_castelrotto`, `spawn_cimo`, `spawn_miglieglia`, `spawn_molinazzo_di_monteggio`, `spawn_monteggio`, `spawn_neggio`, `spawn_novaggio`, `spawn_ponte_tresa`, `spawn_purasca`, `spawn_sessa` and `spawn_vernate`. For Curio there is `spawn_pura`, 160 m from the village.
+- **Everything is drivable:** every road and every trail in the area has a solid surface, including mule tracks, stairways and forest trails.
+- **AI traffic:** the AI road network covers all roads open to vehicles, with one-way streets, roundabouts and dual carriageways; roads closed to traffic are avoided.
 
-## Cosa c'è e da dove viene
+## What's there and where it comes from
 
-| Elemento | Fonte | Precisione |
+| Element | Source | Accuracy |
 |---|---|---|
-| Terreno 12,3 × 12,3 km, maglia 1,5 m | swissALTI3D 0,5 m e 2 m (LiDAR); Copernicus GLO-30 sul lato italiano | quota ±0,3 m nell'area |
-| Strade e sentieri (circa 228 km di strade, 337 km di sentieri) | swissTLM3D (assi, classi, pavimentazione, ponti), misurazione ufficiale TI (limiti delle carreggiate) | profilo liscio calcolato su tutta la rete insieme: le quote coincidono agli incroci, le pendenze sono quelle reali |
-| Ponti (167) | swissTLM3D, controllati uno per uno sul profilo e nelle viste | impalcato, parapetti e piloni; le strade sotto i ponti restano |
-| Edifici (12 792) | swissBUILDINGS3D 3.0 (LOD2, tetti compresi), gli edifici della misurazione ufficiale costruiti dopo il rilievo 3D, Registro federale degli edifici (uso, epoca, piani), negozi di OpenStreetMap | ±0,3–0,5 m; facciate con finestre, persiane o tapparelle, porte, portoni, garage, vetrine, balconi, zoccoli e comignoli disegnati dalla pipeline (nessuna foto), casa per casa nei nuclei; tono dell'intonaco e colore delle persiane misurati nelle panoramiche Street View; coperture in coppi, tegole, piode, lamiera o piane |
-| Muri | misurazione ufficiale (muri) + muri di sostegno della cantonale ricavati da DTM e foto | lungo la cantonale l'altezza visibile è misurata nelle foto; texture originali di pietra, calcestruzzo e intonaco, il materiale visto nelle panoramiche dove è chiaro |
-| Guardrail, ringhiere e recinzioni della cantonale | voto multi-vista sulla segmentazione delle foto, LiDAR dove disponibile | posizione ±0,3 m |
-| Guardrail del resto della rete (v2.2) | panoramiche Street View di tutta l'area segmentate lungo i bordi di ogni strada | dove le panoramiche li mostrano, sul bordo della strada costruita |
-| Fermate dei bus (v2.2) | OpenStreetMap | palo, cartello, orario e, dove registrata, pensilina |
-| Segnaletica della cantonale | ortofoto 10 cm (tratteggi 3 m / 6 m, strisce, zebre gialle), verificata nelle foto | stato di ottobre 2022 (vedi sotto) |
-| Lampioni, pali e cartelli, delineatori, arredo urbano della cantonale | triangolati dalle foto con le pose calibrate | ±0,3–0,5 m; targhe nella forma e nel colore misurati nelle foto (senza l'immagine del cartello) |
-| Alberi, siepi e arbusti (circa 161 000) | modello di superficie swissSURFACE3D (posizione, altezza e chioma di ogni albero), ortofoto | tutti entro 30 m dalle strade e 5 m dai sentieri, più radi oltre (v2.3: prima 150 m); specie approssimate con modelli vanilla, palme disegnate nei giardini vicino al lago (v2.4, una stima); nessun tronco sulla carreggiata né a meno di 1 m dal bordo delle strade (0,5 m dei sentieri), nessuna chioma nella sagoma libera (4,50 m sopra le carreggiate, 2,50 m sopra marciapiedi e sentieri), ogni pianta sul suolo |
-| Segnaletica orizzontale del resto della rete | ortofoto SWISSIMAGE 10 cm (2024): linee tracciate lungo ogni strada, segni vettorializzati | solo la vernice visibile nell'ortofoto; tratti coperti da alberi o ombra ricostruiti solo tra due parti viste (fino a 60 m) |
-| Sensi unici, cartelli STOP e precedenza, panchine e cestini del resto della rete | OpenStreetMap; rotonde e carreggiate separate da swissTLM3D | posizione di OSM, cartelli sul bordo della strada che li ha |
-| Ferrovia (FLP e FFS) | swissTLM3D (assi, quote, scartamento, ponti) | binari a scartamento reale alla quota di swissTLM3D, mai sotto il terreno, a filo della strada nei passaggi a livello; niente linea di contatto, niente binari sotto il parcheggio della stazione di Ponte Tresa |
-| Superficie di strade e sentieri (v2.4) | OpenStreetMap (`surface`, `tracktype`), altrimenti swissTLM3D | asfalto, ghiaia, terra, cubetti, ciottoli; dove OSM tace vale swissTLM3D; i passaggi da una superficie all'altra seguono le vie OSM con qualche metro di approssimazione |
-| Erba e fiori (v2.4) | livelli di prato e giardino del terreno (misurazione ufficiale) | ciuffi disegnati attorno alla telecamera (50 m); densità stimata, non misurata |
-| Vigneti (v2.4) | misurazione ufficiale (vigne), ortofoto 10 cm (direzione dei filari) | filari ogni 2,2 m (distanza tipica, non misurata) nei vigneti entro 150 m da strade e sentieri |
-| Fiumi (v2.4) | misurazione ufficiale (corsi d'acqua larghi almeno 2,5 m), swissALTI3D | acqua all'altezza del fondo più basso entro 3 m; anche sotto i ponti, non sui guadi |
-| Lago di Lugano, paesaggio lontano | swissALTI3D, Copernicus GLO-30 | — |
+| Terrain 12.3 × 12.3 km, 1.5 m grid | swissALTI3D 0.5 m and 2 m (LiDAR); Copernicus GLO-30 on the Italian side | height ±0.3 m within the area |
+| Roads and trails (about 228 km of roads, 337 km of trails) | swissTLM3D (axes, classes, paving, bridges), Ticino official survey (carriageway boundaries) | smooth profile computed over the whole network at once: heights match at junctions, the gradients are the real ones |
+| Bridges (167) | swissTLM3D, checked one by one on the profile and in the views | deck, parapets and piers; the roads under the bridges remain |
+| Buildings (12,792) | swissBUILDINGS3D 3.0 (LOD2, roofs included), the official survey's buildings built after the 3D survey, Federal Register of Buildings (use, period, floors), shops from OpenStreetMap | ±0.3–0.5 m; façades with windows, shutters or roller blinds, doors, gates, garages, shop windows, balconies, plinths and chimneys drawn by the pipeline (no photos), house by house in the old towns; render colour and shutter colour measured in the Street View panoramas; roofs in curved tiles, flat tiles, stone slabs, sheet metal or flat |
+| Walls | official survey (walls) + retaining walls of the cantonal road derived from the DTM and photos | along the cantonal road the visible height is measured in the photos; original stone, concrete and render textures, the material seen in the panoramas where it's clear |
+| Guardrails, railings and fences of the cantonal road | multi-view vote on the photo segmentation, LiDAR where available | position ±0.3 m |
+| Guardrails on the rest of the network (v2.2) | Street View panoramas of the whole area segmented along the edges of every road | where the panoramas show them, on the edge of the built road |
+| Bus stops (v2.2) | OpenStreetMap | pole, sign, timetable and, where recorded, shelter |
+| Road markings of the cantonal road | 10 cm orthophoto (3 m / 6 m dashes, lines, yellow zebra crossings), verified in the photos | state of October 2022 (see below) |
+| Street lamps, poles and signs, delineators, street furniture of the cantonal road | triangulated from the photos with the calibrated poses | ±0.3–0.5 m; plates with the shape and colour measured in the photos (without the image of the sign) |
+| Trees, hedges and shrubs (about 161,000) | swissSURFACE3D surface model (position, height and crown of every tree), orthophoto | all within 30 m of roads and 5 m of trails, sparser beyond (v2.3: previously 150 m); species approximated with vanilla models, drawn palms in gardens near the lake (v2.4, an estimate); no trunks on the carriageway or less than 1 m from the road edge (0.5 m on trails), no crowns in the clearance envelope (4.50 m above carriageways, 2.50 m above pavements and trails), every plant on the ground |
+| Road markings on the rest of the network | SWISSIMAGE 10 cm orthophoto (2024): lines traced along every road, vectorised markings | only the paint visible in the orthophoto; stretches hidden by trees or shadow rebuilt only between two visible parts (up to 60 m) |
+| One-way streets, STOP and give-way signs, benches and bins on the rest of the network | OpenStreetMap; roundabouts and dual carriageways from swissTLM3D | OSM position, signs on the edge of the road they belong to |
+| Railway (FLP and SBB) | swissTLM3D (axes, heights, gauge, bridges) | real-gauge tracks at the swissTLM3D height, never below the terrain, flush with the road at level crossings; no overhead line, no tracks under the car park of Ponte Tresa station |
+| Road and trail surface (v2.4) | OpenStreetMap (`surface`, `tracktype`), otherwise swissTLM3D | asphalt, gravel, dirt, setts, cobblestones; where OSM is silent swissTLM3D applies; transitions from one surface to another follow the OSM ways to within a few metres |
+| Grass and flowers (v2.4) | meadow and garden layers of the terrain (official survey) | tufts drawn around the camera (50 m); density estimated, not measured |
+| Vineyards (v2.4) | official survey (vineyards), 10 cm orthophoto (row direction) | rows every 2.2 m (typical spacing, not measured) in vineyards within 150 m of roads and trails |
+| Rivers (v2.4) | official survey (watercourses at least 2.5 m wide), swissALTI3D | water at the height of the lowest bed within 3 m; under bridges too, not on fords |
+| Lake Lugano, distant landscape | swissALTI3D, Copernicus GLO-30 | — |
 
-## Stato del 2022 riprodotto sulla cantonale
+## 2022 state reproduced on the cantonal road
 
-Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione ufficiale. Dove le fonti non concordano, il livello segue le foto:
+The October 2022 photos are more recent than the orthophoto and the official survey. Where the sources disagree, the level follows the photos:
 
-- **Nessuna segnaletica** dove la strada era in rifacimento o non era segnata: s ≈ 1,23–1,27 km, 1,52–1,82 km e 3,64–3,72 km. Nel cantiere l'asfalto nuovo è più scuro.
-- **Bande rosse** ai due bordi nel tratto s ≈ 2,29–2,44 km.
-- **Incrocio di Magliaso:** l'incrocio era stato ricostruito, quindi le due isole pedonali e l'isola dipinta del rilievo sono state rimosse, e la mezzeria segue la posizione visibile nelle foto.
+- **No road markings** where the road was being resurfaced or was unmarked: s ≈ 1.23–1.27 km, 1.52–1.82 km and 3.64–3.72 km. In the roadworks the new asphalt is darker.
+- **Red bands** on both edges in the stretch s ≈ 2.29–2.44 km.
+- **Magliaso junction:** the junction had been rebuilt, so the two pedestrian islands and the painted island from the survey have been removed, and the centre line follows the position visible in the photos.
 
-## Versione 2.4
+## Version 2.4
 
-- **Case visibili da ogni lato:** le pareti che guardavano verso l'interno (edifici a L, a U, a corte, file di case) e che da fuori mancavano ora guardano fuori; dove il verso non si può decidere la parete ha due facce; sotto le gronde c'è il sottotetto.
-- **Rotonda di Magliaso, salita verso Pura:** tolto il blocco che sporgeva di 16 cm dall'asfalto all'incrocio (la cima di un muro di sostegno coperto dalla strada) e il pezzo di marciapiede rimasto in mezzo alla carreggiata dall'isola pedonale tolta nel 2022.
-- **Sterrati, ghiaia e selciati** dove OpenStreetMap li indica (altrimenti secondo swissTLM3D), con texture disegnate e il fondo giusto per l'aderenza: ghiaia, terra, cubetti, ciottoli.
-- **Erba e fiori** sui prati e nei giardini attorno alla telecamera; **palme** nei giardini vicino al lago; **filari** nei vigneti; **acqua** nei fiumi; ombre ambientali nei materiali degli edifici; luce dei lampioni di notte; un po' più di foschia sul lago.
+- **Houses visible from every side:** the walls that faced inwards (L- and U-shaped buildings, courtyard buildings, rows of houses) and were missing from outside now face outwards; where the facing can't be decided the wall is double-sided; there are soffits under the eaves.
+- **Magliaso roundabout, the climb towards Pura:** removed the block that stuck out 16 cm from the asphalt at the junction (the top of a retaining wall covered by the road) and the piece of kerb left in the middle of the carriageway from the traffic island removed in 2022.
+- **Dirt, gravel and paving** where OpenStreetMap indicates them (otherwise according to swissTLM3D), with drawn textures and the right ground type for grip: gravel, dirt, setts, cobblestones.
+- **Grass and flowers** on the meadows and in the gardens around the camera; **palms** in the gardens near the lake; **rows** in the vineyards; **water** in the rivers; ambient occlusion in the building materials; street lamp light at night; a little more haze over the lake.
 
-## Versione 2.3
+## Version 2.3
 
-- **Cantonale a Magliaso:** all'incrocio con Via Piscicoltura la carreggiata verso Pura non scende più verso la strada più bassa al di là del muro (prima, per circa 60 m, era fino a 2,2 m sotto il terreno reale sul bordo).
-- **Boschi più leggeri:** tutti gli alberi restano entro 30 m dalle strade e 5 m dai sentieri, più lontano il bosco è diradato; i versanti con molti tornanti, come il passo sopra Gravesano, pesano meno sul gioco.
+- **Cantonal road in Magliaso:** at the junction with Via Piscicoltura the carriageway towards Pura no longer drops towards the lower road beyond the wall (previously, for about 60 m, it was up to 2.2 m below the real ground at the edge).
+- **Lighter woods:** all trees remain within 30 m of roads and 5 m of trails, further away the forest is thinned; slopes with many hairpins, like the pass above Gravesano, weigh less on the game.
 
-## Versione 2.2
+## Version 2.2
 
-- **Nuove strade:** il passo sopra Gravesano fino ad Arosio (Stradón da Rós, la «Penudria»), la cantonale Ponte Tresa – Caslano – Magliaso e Via Torrazza a Caslano finivano sul bordo della mappa (oltre c'era solo il terreno). Ora sono strade vere, con superficie, segnaletica, guardrail e un corridoio di 100 m con edifici, alberi e muri, riviste su Street View come il resto della mappa.
-- **Edifici con le facciate:** finestre con persiane, tapparelle o serramenti moderni, porte, portoni, garage, vetrine, balconi, zoccoli e comignoli su ogni edificio, distribuiti per piani e campate secondo uso, epoca e piani del Registro federale degli edifici. Nei nuclei ogni casa ha le sue facciate, i suoi piani, la sua porta e il suo tono; i piani partono dal fronte strada anche sui pendii. Coperture in coppi, tegole, piode, lamiera o tetto piano. Tutte le texture sono disegnate: nessuna foto.
-- **Colori dalle foto:** il tono dell'intonaco e il colore delle persiane vengono dalle panoramiche Street View dove l'edificio è visto (solo i valori, corretti per l'ombra).
-- **Edifici mancanti** (costruiti dopo il rilievo 3D) aggiunti dalla misurazione ufficiale; demoliti tolti.
-- **Guardrail su tutta la rete** dove le panoramiche li mostrano, sul bordo della strada.
-- **Muri** con texture originali di pietra, calcestruzzo e intonaco.
-- **Fermate dei bus** di OpenStreetMap.
-- **Strade più guidabili:** superfici continue tra carreggiata, marciapiedi e piazzali e agli incroci, verificate con una prova di guida virtuale su tutta la rete.
+- **New roads:** the pass above Gravesano to Arosio (Stradón da Rós, the «Penudria»), the Ponte Tresa – Caslano – Magliaso cantonal road and Via Torrazza in Caslano ended at the edge of the map (beyond, there was only terrain). Now they are real roads, with surface, road markings, guardrails and a 100 m corridor with buildings, trees and walls, reviewed on Street View like the rest of the map.
+- **Buildings with façades:** windows with shutters, roller blinds or modern frames, doors, gates, garages, shop windows, balconies, plinths and chimneys on every building, laid out by floor and bay according to the use, period and floors in the Federal Register of Buildings. In the old towns every house has its own façades, floors, door and colour; floors start from the street front, on slopes too. Roofs in curved tiles, flat tiles, stone slabs, sheet metal or flat roofs. All textures are drawn: no photos.
+- **Colours from the photos:** the render colour and the shutter colour come from the Street View panoramas where the building is seen (values only, corrected for shadow).
+- **Missing buildings** (built after the 3D survey) added from the official survey; demolished ones removed.
+- **Guardrails on the whole network** where the panoramas show them, on the edge of the road.
+- **Walls** with original stone, concrete and render textures.
+- **Bus stops** from OpenStreetMap.
+- **More drivable roads:** continuous surfaces between carriageway, pavements and yards and at junctions, verified with a virtual drive test over the whole network.
 
-## Versione 2.1
+## Version 2.1
 
-- **Segnaletica orizzontale su tutta la rete**, rilevata nell'ortofoto SWISSIMAGE 10 cm del 2024: linee di mezzeria, di corsia e di bordo (tratteggiate o continue, nella posizione e con il ritmo misurati), strisce pedonali gialle, linee d'arresto, frecce e zebrature. Si dipinge solo ciò che l'ortofoto mostra; una linea nascosta da alberi od ombra continua solo se si vede ai due lati (fino a 60 m).
-- **Alberi fuori dalla sagoma libera delle strade:** nessuna chioma sotto 4,50 m sopra le carreggiate né sotto 2,50 m sopra marciapiedi, piazzali e sentieri (0,3 m di tolleranza sul bordo). Gli alberi sono stati spostati di al massimo 3 m o hanno un modello più stretto della stessa specie; pochissimi sono stati tolti. Ogni pianta poggia sul suolo e nessun tronco sta dentro muri o edifici.
-- **Traffico IA:** sensi unici (OpenStreetMap), rotonde in senso antiorario e carreggiate separate (swissTLM3D); le strade con divieto generale di circolazione sono evitate.
-- **Cartelli STOP e precedenza** di OpenStreetMap (pannelli svizzeri disegnati, non fotografati), **panchine e cestini**.
-- **Ferrovia:** binari della FLP Lugano–Ponte Tresa e delle FFS, con passaggi a livello e ponti.
-- **La Tresa a Ponte Tresa** ha l'acqua sotto il ponte di confine, fino alla traversa.
+- **Road markings on the whole network**, detected in the 2024 SWISSIMAGE 10 cm orthophoto: centre, lane and edge lines (dashed or solid, in the measured position and rhythm), yellow pedestrian crossings, stop lines, arrows and hatched areas. Only what the orthophoto shows is painted; a line hidden by trees or shadow continues only if it can be seen on both sides (up to 60 m).
+- **Trees out of the roads' clearance envelope:** no crown below 4.50 m above carriageways or below 2.50 m above pavements, yards and trails (0.3 m tolerance at the edge). Trees have been moved by at most 3 m or have a narrower model of the same species; very few have been removed. Every plant rests on the ground and no trunk stands inside walls or buildings.
+- **AI traffic:** one-way streets (OpenStreetMap), anticlockwise roundabouts and dual carriageways (swissTLM3D); roads with a general traffic ban are avoided.
+- **STOP and give-way signs** from OpenStreetMap (drawn Swiss panels, not photographed), **benches and bins**.
+- **Railway:** tracks of the FLP Lugano–Ponte Tresa and of the SBB, with level crossings and bridges.
+- **The Tresa at Ponte Tresa** has water under the border bridge, up to the weir.
 
-## Versione 2.0
+## Version 2.0
 
-- **Area ampliata** dal corridoio della cantonale (4 × 4 km) a tutto il Malcantone tra i quattro punti di confine indicati, con il terreno allargato a 12,3 km.
-- **Cantonale Magliaso–Gravesano** (8,8 km): dall'incrocio di Magliaso lungo il lago (Strada Regina) fino ad Agno, poi con Via Cantonale e Contrada San Marco per Bioggio e Manno fino a Gravesano. L'area comprende 150 m di territorio oltre la strada e tutto il pendio tra la strada e il resto della mappa.
-- **Rete completa e liscia.** Tutte le linee di swissTLM3D (strade, strade forestali, sentieri, mulattiere, scalinate) hanno una superficie. La quota viene da un unico calcolo su tutta la rete: segue il terreno con le pendenze reali, senza il rumore del rilievo, ed è continua agli incroci e tra un tratto e l'altro. I ponti sono impalcati veri; dove swissTLM3D segna un ponte su un tombino, la strada resta sul terreno.
-- **Il terreno non sporge mai sopra strade e sentieri**, neanche tra un vertice e l'altro della sua griglia di 1,5 m: ogni vertice i cui triangoli toccano una superficie guidabile sta 10 cm sotto la faccia più bassa lì intorno. Nessuna superficie guidabile sta sotto il terreno nudo.
-- **Muri:** il terreno non sporge più a dente di sega davanti ai muri. Dietro i muri di sostegno il suolo resta al suo livello naturale.
-- **Nessun ostacolo sulla carreggiata.** Dove il rilievo mette un muro in mezzo a una strada o a un sentiero, il muro è tagliato. Sotto gli edifici che stanno sulla strada (portici, la tettoia della dogana di Ponte Tresa, un vicolo sotto un campanile) c'è il passaggio. La passerella pedonale di Agno scavalca la cantonale a circa 4 m d'altezza, e nessun pilone sta su una strada.
-- **Vegetazione sgombra** su tutta la rete, non solo sulla cantonale.
-- **La cantonale** tiene la superficie e tutti gli oggetti verificati della v1.1.
+- **Enlarged area** from the cantonal road corridor (4 × 4 km) to the whole Malcantone between the four given boundary points, with the terrain widened to 12.3 km.
+- **Magliaso–Gravesano cantonal road** (8.8 km): from the Magliaso junction along the lake (Strada Regina) to Agno, then along Via Cantonale and Contrada San Marco through Bioggio and Manno to Gravesano. The area includes 150 m of land beyond the road and the whole slope between the road and the rest of the map.
+- **Complete, smooth network.** All swissTLM3D lines (roads, forest roads, trails, mule tracks, stairways) have a surface. The height comes from a single computation over the whole network: it follows the terrain with the real gradients, without the survey noise, and is continuous at junctions and from one stretch to the next. Bridges are real decks; where swissTLM3D marks a bridge over a culvert, the road stays on the ground.
+- **The terrain never sticks out above roads and trails**, not even between one vertex and the next of its 1.5 m grid: every vertex whose triangles touch a drivable surface sits 10 cm below the lowest face around it. No drivable surface lies below the bare ground.
+- **Walls:** the terrain no longer sticks out in a sawtooth pattern in front of walls. Behind retaining walls the ground stays at its natural level.
+- **No obstacles on the carriageway.** Where the survey puts a wall in the middle of a road or trail, the wall is cut. Under the buildings that stand over the road (arcades, the canopy of the Ponte Tresa customs post, an alley under a bell tower) there is a passage. The Agno footbridge spans the cantonal road at a height of about 4 m, and no pier stands on a road.
+- **Clear vegetation** on the whole network, not just on the cantonal road.
+- **The cantonal road** keeps the surface and all the verified objects of v1.1.
 
-## Versione 1.1
+## Version 1.1
 
-- **Strade lisce** sulla cantonale: la superficie non ricalca più il modello del terreno punto per punto, la sezione della carreggiata è piana.
-- **Ponte a 3,05 km e tratto a sbalzo a 3,27 km** alla quota della strada, con i fianchi in pietra.
-- **Muri tra superfici a quote diverse** come gradini con una faccia in pietra invece di rampe.
-- **Carreggiata sgombra** da alberi e arbusti.
+- **Smooth roads** on the cantonal road: the surface no longer follows the terrain model point by point, the carriageway cross-section is flat.
+- **Bridge at 3.05 km and cantilevered stretch at 3.27 km** at road height, with stone sides.
+- **Walls between surfaces at different heights** as steps with a stone face instead of ramps.
+- **Carriageway clear** of trees and shrubs.
 
-## Precisione e verifica
+## Accuracy and verification
 
-- La v2.0 è controllata automaticamente su tutta la mappa. Il controllo cerca:
-  - buchi e gradini lungo ogni strada e sentiero;
-  - terreno sopra strade e sentieri, misurato sulle facce e non solo sui vertici;
-  - buchi nel terreno;
-  - superfici guidabili sotto il terreno nudo;
-  - giunzioni tra i pezzi;
-  - ostacoli sulla carreggiata (muri, edifici, ponti, gradini), cercati lungo ogni strada e sentiero all'altezza di un'auto;
-  - alberi vicino alla carreggiata;
-  - continuità della rete IA.
-- Ci sono anche screenshot di tutta l'area, di ogni ponte, delle strade e dei paesi.
-- v2.2: una prova di guida virtuale percorre tutte le strade e i sentieri sulle superfici del livello e segnala gradini, ruote staccate, colpi e buchi; la mappa è stata confrontata con le panoramiche Street View strada per strada (copertura, edifici misurati, guardrail e muri visti, luoghi confrontati foto/mappa).
-- Le pose delle 366 panoramiche della cantonale sono state stimate sull'ortofoto 10 cm con precisione di circa 0,3 m. La verifica della cantonale confronta le foto con le schermate del gioco nella stessa posa. Le cifre sono nel file `VERIFICA.md` e si riferiscono alla geometria della v1.0.
-- Tra 1,28 e 1,36 km della cantonale non esistono panoramiche: lì il livello si basa solo sui dati swisstopo e sulla misurazione ufficiale.
+- v2.0 is checked automatically over the whole map. The check looks for:
+  - holes and steps along every road and trail;
+  - terrain above roads and trails, measured on the faces and not just on the vertices;
+  - holes in the terrain;
+  - drivable surfaces below the bare ground;
+  - seams between the pieces;
+  - obstacles on the carriageway (walls, buildings, bridges, steps), searched along every road and trail at the height of a car;
+  - trees near the carriageway;
+  - continuity of the AI network.
+- There are also screenshots of the whole area, of every bridge, of the roads and of the villages.
+- v2.2: a virtual drive test runs over all roads and trails on the level's surfaces and reports steps, lifted wheels, hits and holes; the map has been compared with the Street View panoramas road by road (coverage, measured buildings, guardrails and walls seen, places compared photo/map).
+- The poses of the 366 panoramas of the cantonal road were estimated on the 10 cm orthophoto to about 0.3 m. The verification of the cantonal road compares the photos with in-game screenshots from the same pose. The figures are in the `VERIFICA.md` file and refer to the v1.0 geometry.
+- Between 1.28 and 1.36 km of the cantonal road there are no panoramas: there the level is based only on swisstopo data and the official survey.
 
-## Limiti noti
+## Known limitations
 
-- Sul lato italiano ci sono solo il terreno e il paesaggio, senza strade, edifici e alberi.
-- Le gallerie non sono costruite.
-- I sensi unici vengono da OpenStreetMap: dove OSM non li registra, l'IA percorre la strada nei due sensi.
-- Segnaletica verticale (limiti, località, direzioni) e linea di contatto della ferrovia ci sono solo dove esiste una fonte (le foto della cantonale Magliaso–Pura, i cartelli di OpenStreetMap); i guardrail dove le panoramiche Street View li mostrano.
-- Le facciate sono ricostruite dai dati (uso, epoca, piani) e dai colori visti nelle foto: numero e posizione delle finestre, balconi e portici sono plausibili ma non copiati uno per uno.
-- Vedeggio, Magliasina e la Tresa a valle della traversa non hanno acqua.
+- On the Italian side there is only terrain and landscape, without roads, buildings and trees.
+- Tunnels are not built.
+- One-way streets come from OpenStreetMap: where OSM doesn't record them, the AI drives the road in both directions.
+- Vertical signs (speed limits, place names, directions) and the railway's overhead line are present only where a source exists (the photos of the Magliaso–Pura cantonal road, the OpenStreetMap signs); guardrails where the Street View panoramas show them.
+- The façades are rebuilt from data (use, period, floors) and from the colours seen in the photos: the number and position of windows, balconies and arcades are plausible but not copied one by one.
+- The Vedeggio, the Magliasina and the Tresa downstream of the weir have no water.
 
-## Fonti e licenze
+## Sources and licences
 
 - © swisstopo: swissALTI3D, SWISSIMAGE, swissBUILDINGS3D, swissSURFACE3D, swissTLM3D, swissNAMES3D.
-- Misurazione ufficiale: Ufficio del catasto e dei riordini fondiari, Cantone Ticino.
-- © OpenStreetMap contributors (ODbL 1.0), estratto del 28.9.2026 (completato il 30.9.2026 nei corridoi della v2.2): sensi unici, cartelli STOP e precedenza, panchine e cestini (v2.1); fermate dei bus, negozi ed esercizi (v2.2).
-- Registro federale degli edifici e delle abitazioni (Ufficio federale di statistica): uso, epoca e piani degli edifici (v2.2).
-- Copernicus DEM GLO-30: © DLR e.V. 2010-2014 e © Airbus Defence and Space GmbH 2014-2018, forniti nell'ambito di COPERNICUS da Unione Europea ed ESA.
-- Le panoramiche Google Street View sono servite solo come riferimento visivo (pose, misure, confronti): la mod non contiene immagini Street View.
-- Modelli 3D di alberi, lampioni e arredo: asset vanilla di BeamNG (East Coast USA, Italy), referenziati e non copiati.
+- Official survey: Ufficio del catasto e dei riordini fondiari (Cadastre and Land Consolidation Office), Canton Ticino.
+- © OpenStreetMap contributors (ODbL 1.0), extract of 28.9.2026 (completed on 30.9.2026 in the v2.2 corridors): one-way streets, STOP and give-way signs, benches and bins (v2.1); bus stops, shops and businesses (v2.2).
+- Federal Register of Buildings and Dwellings (Federal Statistical Office): use, period and floors of the buildings (v2.2).
+- Copernicus DEM GLO-30: © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA.
+- The Google Street View panoramas were used only as a visual reference (poses, measurements, comparisons): the mod contains no Street View images.
+- 3D models of trees, street lamps and street furniture: BeamNG vanilla assets (East Coast USA, Italy), referenced and not copied.

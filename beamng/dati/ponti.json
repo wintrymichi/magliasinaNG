@@ -20,7 +20,7 @@
    "max_height_m": 3.5,
    "auto_type": "open",
    "profile": "straight",
-   "note": "Passerella a lago tra Magliaso e Agno (315 m): impalcato diritto tra le due spalle, circa 3,5 m sopra l'acqua come la linea di swissTLM3D (la curva tra gli accessi scendeva di 1,7 m).",
+   "note": "Lakeside footbridge between Magliaso and Agno (315 m): straight deck between the two abutments, about 3.5 m above the water like the swissTLM3D line (the curve between the approaches dropped by 1.7 m).",
    "checked": true
   },
   {
@@ -44,7 +44,7 @@
    "max_height_m": 0.3,
    "auto_type": "culvert",
    "type": "culvert",
-   "note": "Rampa di Manno che swissTLM3D porta fino al tetto di un edificio (303,5 m, 11 m sopra il terreno): nel gioco finirebbe nel vuoto contro il muro, quindi la strada resta a terra e finisce all'edificio.",
+   "note": "Ramp in Manno that swissTLM3D carries up to the roof of a building (303.5 m, 11 m above the ground): in the game it would end in mid-air against the wall, so the road stays on the ground and ends at the building.",
    "checked": true
   },
   {
@@ -55,8 +55,8 @@
    "dz_tlm_m": 0.34,
    "max_grade": 0.018,
    "flags": [
-    "terreno",
-    "prolungato 40 m"
+    "terrain",
+    "extended 40 m"
    ],
    "x": 4289.9,
    "y": 5812.8,
@@ -68,7 +68,7 @@
    ],
    "max_height_m": 12.7,
    "auto_type": "open",
-   "note": "Via Grumo: la linea swissTLM3D finisce al bordo dell'area a 7 m dal suolo; l'impalcato continua per 40 m fino a terra, fuori dall'area.",
+   "note": "Via Grumo: the swissTLM3D line ends at the edge of the area 7 m above the ground; the deck continues for 40 m down to the ground, outside the area.",
    "checked": true
   },
   {
@@ -89,7 +89,7 @@
    ],
    "max_height_m": 0.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -100,7 +100,7 @@
    "dz_tlm_m": 0.35,
    "max_grade": 0.061,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2119.6,
    "y": -208.4,
@@ -112,7 +112,7 @@
    ],
    "max_height_m": 27.0,
    "auto_type": "open",
-   "note": "Lüsc: ponte alto 27 m sulla gola, con piloni; impalcato alla quota di swissTLM3D.",
+   "note": "Lüsc: bridge 27 m high over the gorge, with piers; deck at the swissTLM3D height.",
    "checked": true
   },
   {
@@ -123,7 +123,7 @@
    "dz_tlm_m": 0.25,
    "max_grade": 0.002,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -739.7,
    "y": -2767.6,
@@ -135,7 +135,7 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Ponte sulla Tresa a Ponte Tresa (confine): impalcato alla quota di swissTLM3D (272,8 m), 2,3 m sopra l'acqua; sul lato italiano finisce sul terreno Copernicus.",
+   "note": "Bridge over the Tresa at Ponte Tresa (border): deck at the swissTLM3D height (272.8 m), 2.3 m above the water; on the Italian side it ends on the Copernicus terrain.",
    "checked": true
   },
   {
@@ -146,7 +146,7 @@
    "dz_tlm_m": 0.15,
    "max_grade": 0.01,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 727.5,
    "y": 4526.6,
@@ -158,7 +158,7 @@
    ],
    "max_height_m": 5.6,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -169,7 +169,7 @@
    "dz_tlm_m": 0.17,
    "max_grade": 0.031,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2715.7,
    "y": 1032.4,
@@ -181,7 +181,7 @@
    ],
    "max_height_m": 11.6,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -192,8 +192,8 @@
    "dz_tlm_m": 0.13,
    "max_grade": 0.484,
    "flags": [
-    "ripido",
-    "terreno"
+    "steep",
+    "terrain"
    ],
    "x": 2278.3,
    "y": 772.8,
@@ -207,7 +207,7 @@
    "auto_type": "open",
    "profile": "tlm",
    "type": "open",
-   "note": "Passerella pedonale di Agno sopra la cantonale per Bioggio, con le scale ai due capi: impalcato sulla linea 3D di swissTLM3D, circa 4 m sopra la strada (come tombino sbarrava la carreggiata).",
+   "note": "Agno footbridge over the cantonal road to Bioggio, with stairs at both ends: deck on the swissTLM3D 3D line, about 4 m above the road (as a culvert it blocked the carriageway).",
    "checked": true
   },
   {
@@ -218,7 +218,7 @@
    "dz_tlm_m": 0.06,
    "max_grade": 0.022,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 268.8,
    "y": 1478.7,
@@ -230,7 +230,7 @@
    ],
    "max_height_m": 6.4,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -241,7 +241,7 @@
    "dz_tlm_m": 0.23,
    "max_grade": 0.02,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -602.2,
    "y": -2309.2,
@@ -253,7 +253,7 @@
    ],
    "max_height_m": 5.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -264,7 +264,7 @@
    "dz_tlm_m": 0.0,
    "max_grade": 0.16,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 1478.4,
    "y": 2930.0,
@@ -276,7 +276,7 @@
    ],
    "max_height_m": 12.9,
    "auto_type": "open",
-   "note": "Frammento di sentiero isolato: quote di swissTLM3D (nessun altro dato), passerella su un avvallamento.",
+   "note": "Isolated trail fragment: swissTLM3D heights (no other data), footbridge over a hollow.",
    "checked": true
   },
   {
@@ -287,7 +287,7 @@
    "dz_tlm_m": 0.17,
    "max_grade": 0.016,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 778.5,
    "y": -1071.5,
@@ -299,7 +299,7 @@
    ],
    "max_height_m": 5.6,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -311,7 +311,7 @@
    "max_grade": 0.039,
    "flags": [
     "tlm",
-    "terreno"
+    "terrain"
    ],
    "x": 287.0,
    "y": 4103.5,
@@ -323,7 +323,7 @@
    ],
    "max_height_m": 2.5,
    "auto_type": "open",
-   "note": "La rete finisce qui: l'estremità dell'impalcato è raccordata al terreno.",
+   "note": "The network ends here: the end of the deck is joined to the terrain.",
    "checked": true
   },
   {
@@ -344,7 +344,7 @@
    ],
    "max_height_m": 16.1,
    "auto_type": "open",
-   "note": "Passerella alta 16 m sulla gola, con un pilone; impalcato alla quota di swissTLM3D.",
+   "note": "Footbridge 16 m high over the gorge, with one pier; deck at the swissTLM3D height.",
    "checked": true
   },
   {
@@ -355,7 +355,7 @@
    "dz_tlm_m": 0.14,
    "max_grade": 0.032,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -3725.8,
    "y": 1876.1,
@@ -367,7 +367,7 @@
    ],
    "max_height_m": 8.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -378,7 +378,7 @@
    "dz_tlm_m": 0.23,
    "max_grade": 0.042,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -3712.0,
    "y": 2128.0,
@@ -390,7 +390,7 @@
    ],
    "max_height_m": 9.0,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -401,7 +401,7 @@
    "dz_tlm_m": 0.13,
    "max_grade": 0.02,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -4748.0,
    "y": -202.6,
@@ -413,7 +413,7 @@
    ],
    "max_height_m": 7.1,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -424,7 +424,7 @@
    "dz_tlm_m": 0.26,
    "max_grade": 0.065,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2447.2,
    "y": 2926.6,
@@ -436,7 +436,7 @@
    ],
    "max_height_m": 4.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -447,7 +447,7 @@
    "dz_tlm_m": 0.83,
    "max_grade": 0.193,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2042.4,
    "y": 2897.4,
@@ -459,7 +459,7 @@
    ],
    "max_height_m": 7.9,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -470,7 +470,7 @@
    "dz_tlm_m": 0.4,
    "max_grade": 0.024,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2442.4,
    "y": 2351.5,
@@ -482,7 +482,7 @@
    ],
    "max_height_m": 9.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -493,8 +493,8 @@
    "dz_tlm_m": 0.08,
    "max_grade": 0.112,
    "flags": [
-    "terreno",
-    "sospeso"
+    "terrain",
+    "suspended"
    ],
    "x": 4173.0,
    "y": 5296.1,
@@ -506,7 +506,7 @@
    ],
    "max_height_m": 11.7,
    "auto_type": "open",
-   "note": "Passerella che dal pendio arriva al piano alto di un edificio: il capo sull'edificio resta sospeso, come nei dati.",
+   "note": "Footbridge from the slope to an upper floor of a building: the end at the building stays suspended, as in the data.",
    "checked": true
   },
   {
@@ -517,7 +517,7 @@
    "dz_tlm_m": 0.04,
    "max_grade": 0.063,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 1646.8,
    "y": 133.6,
@@ -539,7 +539,7 @@
    "dz_tlm_m": 0.21,
    "max_grade": 0.073,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 514.7,
    "y": 4396.7,
@@ -551,7 +551,7 @@
    ],
    "max_height_m": 8.0,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -562,7 +562,7 @@
    "dz_tlm_m": 0.38,
    "max_grade": 0.049,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 945.7,
    "y": 1931.5,
@@ -574,7 +574,7 @@
    ],
    "max_height_m": 4.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -605,8 +605,8 @@
    "max_grade": 0.213,
    "flags": [
     "tlm",
-    "terreno",
-    "sospeso"
+    "terrain",
+    "suspended"
    ],
    "x": 1671.7,
    "y": 3317.0,
@@ -618,7 +618,7 @@
    ],
    "max_height_m": 3.1,
    "auto_type": "open",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -629,8 +629,8 @@
    "dz_tlm_m": 0.24,
    "max_grade": 0.243,
    "flags": [
-    "terreno",
-    "raccordato al terreno"
+    "terrain",
+    "joined to terrain"
    ],
    "x": 279.4,
    "y": -165.3,
@@ -642,7 +642,7 @@
    ],
    "max_height_m": 3.3,
    "auto_type": "open",
-   "note": "Frammento di sentiero isolato: quote di swissTLM3D, estremità raccordata al terreno.",
+   "note": "Isolated trail fragment: swissTLM3D heights, end joined to the terrain.",
    "checked": true
   },
   {
@@ -653,7 +653,7 @@
    "dz_tlm_m": 0.14,
    "max_grade": 0.083,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -3331.6,
    "y": -496.4,
@@ -665,7 +665,7 @@
    ],
    "max_height_m": 2.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -686,7 +686,7 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Via Lugano a Ponte Tresa: impalcato alla quota di swissTLM3D sopra l'acqua (prima seguiva l'acqua perché il DTM è piatto sul fiume).",
+   "note": "Via Lugano in Ponte Tresa: deck at the swissTLM3D height above the water (previously it followed the water because the DTM is flat over the river).",
    "checked": true
   },
   {
@@ -707,7 +707,7 @@
    ],
    "max_height_m": 11.3,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -728,7 +728,7 @@
    ],
    "max_height_m": 0.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -749,7 +749,7 @@
    ],
    "max_height_m": 7.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -770,7 +770,7 @@
    ],
    "max_height_m": 6.4,
    "auto_type": "open",
-   "note": "Via Cantonale sul fiume Magliasina: profilo piano tra gli accessi a 300,5 m (prima una stazione vincolata alla strada sotto lo tirava giù di 20-35 m).",
+   "note": "Via Cantonale over the Magliasina river: flat profile between the approaches at 300.5 m (previously a station constrained to the road below pulled it down by 20-35 m).",
    "checked": true
   },
   {
@@ -781,7 +781,7 @@
    "dz_tlm_m": 0.12,
    "max_grade": 0.009,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 797.4,
    "y": -1080.8,
@@ -793,7 +793,7 @@
    ],
    "max_height_m": 6.3,
    "auto_type": "open",
-   "note": "Via Cantonale sul fiume Magliasina: profilo piano tra gli accessi a 300,5 m, come il tratto accanto.",
+   "note": "Via Cantonale over the Magliasina river: flat profile between the approaches at 300.5 m, like the adjacent stretch.",
    "checked": true
   },
   {
@@ -804,7 +804,7 @@
    "dz_tlm_m": 0.24,
    "max_grade": 0.082,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2982.4,
    "y": 3665.8,
@@ -816,7 +816,7 @@
    ],
    "max_height_m": 5.9,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -827,7 +827,7 @@
    "dz_tlm_m": 0.11,
    "max_grade": 0.028,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2541.6,
    "y": 1508.0,
@@ -839,7 +839,7 @@
    ],
    "max_height_m": 7.0,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -850,7 +850,7 @@
    "dz_tlm_m": 0.54,
    "max_grade": 0.188,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2879.3,
    "y": 1625.2,
@@ -862,7 +862,7 @@
    ],
    "max_height_m": 2.6,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -883,7 +883,7 @@
    ],
    "max_height_m": 1.7,
    "auto_type": "culvert",
-   "note": "Passerella ripida (19 %) che parte dal nodo quasi parallela al sentiero: resta un gradino di circa 2 m tra i due nei primi metri.",
+   "note": "Steep footbridge (19 %) leaving the node almost parallel to the trail: a step of about 2 m remains between the two in the first few metres.",
    "checked": true
   },
   {
@@ -904,7 +904,7 @@
    ],
    "max_height_m": 4.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -915,7 +915,7 @@
    "dz_tlm_m": 0.08,
    "max_grade": 0.105,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 3554.5,
    "y": 3148.3,
@@ -947,7 +947,7 @@
    ],
    "max_height_m": 1.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -959,7 +959,7 @@
    "max_grade": 0.108,
    "flags": [
     "tlm",
-    "terreno"
+    "terrain"
    ],
    "x": -1527.7,
    "y": 2030.7,
@@ -971,7 +971,7 @@
    ],
    "max_height_m": 2.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -992,7 +992,7 @@
    ],
    "max_height_m": 0.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1013,7 +1013,7 @@
    ],
    "max_height_m": 0.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1034,7 +1034,7 @@
    ],
    "max_height_m": 1.9,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1045,7 +1045,7 @@
    "dz_tlm_m": 0.05,
    "max_grade": 0.076,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -3263.3,
    "y": 1218.4,
@@ -1057,7 +1057,7 @@
    ],
    "max_height_m": 5.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1068,7 +1068,7 @@
    "dz_tlm_m": 0.4,
    "max_grade": 0.029,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2537.8,
    "y": 2641.5,
@@ -1080,7 +1080,7 @@
    ],
    "max_height_m": 4.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1091,7 +1091,7 @@
    "dz_tlm_m": 0.04,
    "max_grade": 0.029,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2703.5,
    "y": 2427.0,
@@ -1123,7 +1123,7 @@
    ],
    "max_height_m": 2.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1144,7 +1144,7 @@
    ],
    "max_height_m": 1.7,
    "auto_type": "culvert",
-   "note": "Tombino: la passerella resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the footbridge stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1165,7 +1165,7 @@
    ],
    "max_height_m": 6.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1176,7 +1176,7 @@
    "dz_tlm_m": 0.25,
    "max_grade": 0.132,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -542.6,
    "y": 2498.4,
@@ -1188,7 +1188,7 @@
    ],
    "max_height_m": 4.8,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1199,7 +1199,7 @@
    "dz_tlm_m": 0.07,
    "max_grade": 0.062,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2948.3,
    "y": 3557.7,
@@ -1211,7 +1211,7 @@
    ],
    "max_height_m": 4.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1222,7 +1222,7 @@
    "dz_tlm_m": 0.09,
    "max_grade": 0.004,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2478.4,
    "y": 440.8,
@@ -1244,7 +1244,7 @@
    "dz_tlm_m": 0.14,
    "max_grade": 0.052,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 475.0,
    "y": 3564.1,
@@ -1256,7 +1256,7 @@
    ],
    "max_height_m": 4.8,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1277,7 +1277,7 @@
    ],
    "max_height_m": 4.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1289,8 +1289,8 @@
    "max_grade": 0.677,
    "flags": [
     "tlm",
-    "ripido",
-    "terreno"
+    "steep",
+    "terrain"
    ],
    "x": 3735.1,
    "y": 4701.7,
@@ -1302,7 +1302,7 @@
    ],
    "max_height_m": 3.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1313,7 +1313,7 @@
    "dz_tlm_m": 0.07,
    "max_grade": 0.111,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -1826.9,
    "y": 3659.6,
@@ -1325,7 +1325,7 @@
    ],
    "max_height_m": 2.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1336,7 +1336,7 @@
    "dz_tlm_m": 0.13,
    "max_grade": 0.092,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -33.6,
    "y": 4009.1,
@@ -1348,7 +1348,7 @@
    ],
    "max_height_m": 2.6,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1369,7 +1369,7 @@
    ],
    "max_height_m": 0.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1381,8 +1381,8 @@
    "max_grade": 0.338,
    "flags": [
     "tlm",
-    "ripido",
-    "terreno"
+    "steep",
+    "terrain"
    ],
    "x": -2816.9,
    "y": 3237.4,
@@ -1394,7 +1394,7 @@
    ],
    "max_height_m": 4.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1405,7 +1405,7 @@
    "dz_tlm_m": 0.04,
    "max_grade": 0.013,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 1295.4,
    "y": 4894.8,
@@ -1417,7 +1417,7 @@
    ],
    "max_height_m": 2.9,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1428,7 +1428,7 @@
    "dz_tlm_m": 0.01,
    "max_grade": 0.021,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 3743.1,
    "y": 5344.2,
@@ -1440,7 +1440,7 @@
    ],
    "max_height_m": 2.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1451,7 +1451,7 @@
    "dz_tlm_m": 0.12,
    "max_grade": 0.026,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2574.5,
    "y": 6244.0,
@@ -1472,7 +1472,7 @@
    "dz_tlm_m": 0.03,
    "max_grade": 0.027,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 706.7,
    "y": 4279.7,
@@ -1484,7 +1484,7 @@
    ],
    "max_height_m": 7.1,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1495,7 +1495,7 @@
    "dz_tlm_m": 0.02,
    "max_grade": 0.064,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 1848.3,
    "y": 575.1,
@@ -1527,7 +1527,7 @@
    ],
    "max_height_m": 1.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1558,7 +1558,7 @@
    "dz_tlm_m": 0.18,
    "max_grade": 0.06,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -137.7,
    "y": 3905.2,
@@ -1570,7 +1570,7 @@
    ],
    "max_height_m": 3.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1591,7 +1591,7 @@
    ],
    "max_height_m": 5.6,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1602,7 +1602,7 @@
    "dz_tlm_m": 0.06,
    "max_grade": 0.073,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -3386.2,
    "y": 33.8,
@@ -1614,7 +1614,7 @@
    ],
    "max_height_m": 2.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1625,7 +1625,7 @@
    "dz_tlm_m": 0.19,
    "max_grade": 0.066,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2826.4,
    "y": 2794.3,
@@ -1657,7 +1657,7 @@
    ],
    "max_height_m": 1.5,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1668,7 +1668,7 @@
    "dz_tlm_m": 0.48,
    "max_grade": 0.13,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2803.8,
    "y": 1690.1,
@@ -1680,7 +1680,7 @@
    ],
    "max_height_m": 6.4,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1691,7 +1691,7 @@
    "dz_tlm_m": 0.04,
    "max_grade": 0.002,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -1241.9,
    "y": 2934.7,
@@ -1703,7 +1703,7 @@
    ],
    "max_height_m": 3.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1714,7 +1714,7 @@
    "dz_tlm_m": 0.22,
    "max_grade": 0.064,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -860.3,
    "y": 2814.1,
@@ -1726,7 +1726,7 @@
    ],
    "max_height_m": 4.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1747,7 +1747,7 @@
    ],
    "max_height_m": 1.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1768,7 +1768,7 @@
    ],
    "max_height_m": 1.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1789,7 +1789,7 @@
    ],
    "max_height_m": 1.7,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1800,7 +1800,7 @@
    "dz_tlm_m": 0.38,
    "max_grade": 0.152,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2457.8,
    "y": 2950.9,
@@ -1812,7 +1812,7 @@
    ],
    "max_height_m": 3.1,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1823,7 +1823,7 @@
    "dz_tlm_m": 0.11,
    "max_grade": 0.031,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -4098.8,
    "y": 426.8,
@@ -1835,7 +1835,7 @@
    ],
    "max_height_m": 2.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1846,7 +1846,7 @@
    "dz_tlm_m": 0.11,
    "max_grade": 0.09,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -315.6,
    "y": -227.1,
@@ -1858,7 +1858,7 @@
    ],
    "max_height_m": 3.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1879,7 +1879,7 @@
    ],
    "max_height_m": 1.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1900,7 +1900,7 @@
    ],
    "max_height_m": 1.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1921,7 +1921,7 @@
    ],
    "max_height_m": 1.9,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -1932,7 +1932,7 @@
    "dz_tlm_m": 0.28,
    "max_grade": 0.029,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2202.7,
    "y": 2036.4,
@@ -1944,7 +1944,7 @@
    ],
    "max_height_m": 2.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1955,7 +1955,7 @@
    "dz_tlm_m": 0.11,
    "max_grade": 0.003,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -4079.8,
    "y": -127.0,
@@ -1967,7 +1967,7 @@
    ],
    "max_height_m": 2.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -1988,7 +1988,7 @@
    ],
    "max_height_m": 2.1,
    "auto_type": "culvert",
-   "note": "Frammento di sentiero isolato: quote di swissTLM3D.",
+   "note": "Isolated trail fragment: swissTLM3D heights.",
    "checked": true
   },
   {
@@ -1999,7 +1999,7 @@
    "dz_tlm_m": 0.06,
    "max_grade": 0.05,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -887.9,
    "y": 1192.5,
@@ -2011,7 +2011,7 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2032,7 +2032,7 @@
    ],
    "max_height_m": 1.3,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2053,7 +2053,7 @@
    ],
    "max_height_m": 1.9,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2074,7 +2074,7 @@
    ],
    "max_height_m": 1.3,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2095,7 +2095,7 @@
    ],
    "max_height_m": 0.7,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2106,7 +2106,7 @@
    "dz_tlm_m": 0.1,
    "max_grade": 0.026,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2704.8,
    "y": 2432.6,
@@ -2128,7 +2128,7 @@
    "dz_tlm_m": 0.32,
    "max_grade": 0.128,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 3575.2,
    "y": 5358.9,
@@ -2140,7 +2140,7 @@
    ],
    "max_height_m": 2.1,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2161,7 +2161,7 @@
    ],
    "max_height_m": 1.9,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2182,7 +2182,7 @@
    ],
    "max_height_m": 2.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2203,7 +2203,7 @@
    ],
    "max_height_m": 2.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2224,7 +2224,7 @@
    ],
    "max_height_m": 4.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2235,7 +2235,7 @@
    "dz_tlm_m": 0.17,
    "max_grade": 0.004,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -1446.0,
    "y": 3410.8,
@@ -2247,7 +2247,7 @@
    ],
    "max_height_m": 11.3,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2268,7 +2268,7 @@
    ],
    "max_height_m": 1.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2289,7 +2289,7 @@
    ],
    "max_height_m": 1.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2310,7 +2310,7 @@
    ],
    "max_height_m": 1.7,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2331,7 +2331,7 @@
    ],
    "max_height_m": 4.4,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2342,7 +2342,7 @@
    "dz_tlm_m": 0.27,
    "max_grade": 0.079,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2647.5,
    "y": 2493.2,
@@ -2354,7 +2354,7 @@
    ],
    "max_height_m": 3.4,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2375,7 +2375,7 @@
    ],
    "max_height_m": 1.2,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2407,8 +2407,8 @@
    "max_grade": 0.325,
    "flags": [
     "tlm",
-    "ripido",
-    "raccordato al terreno"
+    "steep",
+    "joined to terrain"
    ],
    "x": 411.4,
    "y": 4403.9,
@@ -2420,7 +2420,7 @@
    ],
    "max_height_m": 1.7,
    "auto_type": "culvert",
-   "note": "La rete finisce qui: l'estremità dell'impalcato è raccordata al terreno.",
+   "note": "The network ends here: the end of the deck is joined to the terrain.",
    "checked": true
   },
   {
@@ -2450,7 +2450,7 @@
    "dz_tlm_m": 0.08,
    "max_grade": 0.246,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2356.8,
    "y": 3037.4,
@@ -2462,7 +2462,7 @@
    ],
    "max_height_m": 2.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2483,7 +2483,7 @@
    ],
    "max_height_m": 0.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2504,7 +2504,7 @@
    ],
    "max_height_m": 4.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2525,7 +2525,7 @@
    ],
    "max_height_m": 1.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2546,7 +2546,7 @@
    ],
    "max_height_m": 0.9,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2557,7 +2557,7 @@
    "dz_tlm_m": 0.41,
    "max_grade": 0.026,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -2568.8,
    "y": 2523.9,
@@ -2569,7 +2569,7 @@
    ],
    "max_height_m": 3.0,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2580,7 +2580,7 @@
    "dz_tlm_m": 0.2,
    "max_grade": 0.007,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -1250.7,
    "y": 1211.2,
@@ -2592,7 +2592,7 @@
    ],
    "max_height_m": 2.9,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2613,7 +2613,7 @@
    ],
    "max_height_m": 1.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2634,7 +2634,7 @@
    ],
    "max_height_m": 0.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2645,7 +2645,7 @@
    "dz_tlm_m": 0.14,
    "max_grade": 0.031,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 3938.7,
    "y": 5282.6,
@@ -2657,7 +2657,7 @@
    ],
    "max_height_m": 2.5,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2678,7 +2678,7 @@
    ],
    "max_height_m": 7.2,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2699,7 +2699,7 @@
    ],
    "max_height_m": 1.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2720,7 +2720,7 @@
    ],
    "max_height_m": 1.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2741,7 +2741,7 @@
    ],
    "max_height_m": 1.2,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2762,7 +2762,7 @@
    ],
    "max_height_m": 0.7,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2783,7 +2783,7 @@
    ],
    "max_height_m": 0.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2794,7 +2794,7 @@
    "dz_tlm_m": 0.34,
    "max_grade": 0.109,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 1809.6,
    "y": 3183.9,
@@ -2806,7 +2806,7 @@
    ],
    "max_height_m": 4.1,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2827,7 +2827,7 @@
    ],
    "max_height_m": 0.9,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2838,7 +2838,7 @@
    "dz_tlm_m": 0.1,
    "max_grade": 0.032,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 2698.3,
    "y": 2431.7,
@@ -2870,7 +2870,7 @@
    ],
    "max_height_m": 1.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2911,7 +2911,7 @@
    ],
    "max_height_m": 0.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2922,7 +2922,7 @@
    "dz_tlm_m": 0.2,
    "max_grade": 0.007,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -1256.5,
    "y": 1210.3,
@@ -2934,7 +2934,7 @@
    ],
    "max_height_m": 2.9,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -2966,7 +2966,7 @@
    "max_grade": 0.094,
    "flags": [
     "tlm",
-    "raccordato al terreno"
+    "joined to terrain"
    ],
    "x": -4982.5,
    "y": 2501.2,
@@ -2978,7 +2978,7 @@
    ],
    "max_height_m": 0.7,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -2999,7 +2999,7 @@
    ],
    "max_height_m": 0.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3010,8 +3010,8 @@
    "dz_tlm_m": 0.38,
    "max_grade": 0.043,
    "flags": [
-    "terreno",
-    "prolungato 10 m"
+    "terrain",
+    "extended 10 m"
    ],
    "x": 2533.7,
    "y": 6312.3,
@@ -3042,7 +3042,7 @@
    ],
    "max_height_m": 1.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3063,7 +3063,7 @@
    ],
    "max_height_m": 0.5,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3124,7 +3124,7 @@
    ],
    "max_height_m": 1.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3145,7 +3145,7 @@
    ],
    "max_height_m": 0.6,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3156,7 +3156,7 @@
    "dz_tlm_m": 0.03,
    "max_grade": 0.011,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": 582.9,
    "y": 921.7,
@@ -3168,7 +3168,7 @@
    ],
    "max_height_m": 3.1,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -3191,7 +3191,7 @@
    ],
    "max_height_m": 2.7,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -3212,7 +3212,7 @@
    ],
    "max_height_m": 1.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3223,7 +3223,7 @@
    "dz_tlm_m": 0.62,
    "max_grade": 0.179,
    "flags": [
-    "raccordato al terreno"
+    "joined to terrain"
    ],
    "x": 2790.0,
    "y": 3671.4,
@@ -3235,7 +3235,7 @@
    ],
    "max_height_m": 1.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3256,7 +3256,7 @@
    ],
    "max_height_m": 0.2,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3277,7 +3277,7 @@
    ],
    "max_height_m": 0.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3288,7 +3288,7 @@
    "dz_tlm_m": 0.62,
    "max_grade": 0.039,
    "flags": [
-    "raccordato al terreno"
+    "joined to terrain"
    ],
    "x": -4989.4,
    "y": 2530.4,
@@ -3300,7 +3300,7 @@
    ],
    "max_height_m": 0.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3311,7 +3311,7 @@
    "dz_tlm_m": 0.22,
    "max_grade": 0.014,
    "flags": [
-    "terreno"
+    "terrain"
    ],
    "x": -866.7,
    "y": 2812.2,
@@ -3323,7 +3323,7 @@
    ],
    "max_height_m": 3.9,
    "auto_type": "open",
-   "note": "Controllato: impalcato continuo con gli accessi.",
+   "note": "Checked: deck continuous with the approaches.",
    "checked": true
   },
   {
@@ -3344,7 +3344,7 @@
    ],
    "max_height_m": 0.7,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3365,7 +3365,7 @@
    ],
    "max_height_m": 0.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3386,7 +3386,7 @@
    ],
    "max_height_m": 0.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3427,7 +3427,7 @@
    ],
    "max_height_m": 0.3,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3448,7 +3448,7 @@
    ],
    "max_height_m": 1.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3460,7 +3460,7 @@
    "max_grade": 0.262,
    "flags": [
     "tlm",
-    "raccordato al terreno"
+    "joined to terrain"
    ],
    "x": 3508.6,
    "y": 5737.6,
@@ -3492,7 +3492,7 @@
    ],
    "max_height_m": 1.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3513,7 +3513,7 @@
    ],
    "max_height_m": 0.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3554,7 +3554,7 @@
    ],
    "max_height_m": 0.4,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3575,7 +3575,7 @@
    ],
    "max_height_m": 1.8,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3596,7 +3596,7 @@
    ],
    "max_height_m": 0.0,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   },
   {
@@ -3617,7 +3617,7 @@
    ],
    "max_height_m": 0.1,
    "auto_type": "culvert",
-   "note": "Tombino: la strada resta sul terreno, i fianchi scendono al suolo.",
+   "note": "Culvert: the road stays on the terrain, the sides drop to the ground.",
    "checked": true
   }
  ]
