@@ -43,6 +43,11 @@ The October 2022 photos are more recent than the orthophoto and the official sur
 - **Red bands** on both edges in the stretch s ≈ 2.29–2.44 km.
 - **Magliaso junction:** the junction had been rebuilt, so the two pedestrian islands and the painted island from the survey have been removed, and the centre line follows the position visible in the photos.
 
+## Version 2.5
+
+- **Lighter for the game, same geometry:** the 128 m blocks are merged 3 × 3 (7916 → 2188 objects), the triangles share their vertices (38.2 → 19.7 million vertices), road skirts and kerb faces along straight stretches have fewer triangles (within 4 mm), and small objects are no longer drawn far away (guardrails beyond about 600 m, walls 1.2 km, buildings and roads 3 km). Sun shadows up to 800 m.
+- Measured in BeamNG.drive 0.39.4 (16 GB of RAM, RTX 4070): 60 s to load once the game has converted the shapes (about 145 s the first time), 82–128 fps at the spawn points; the game needs about 12 GB of memory at its peak, so on a 16 GB PC close other programs before playing.
+
 ## Version 2.4
 
 - **Houses visible from every side:** the walls that faced inwards (L- and U-shaped buildings, courtyard buildings, rows of houses) and were missing from outside now face outwards; where the facing can't be decided the wall is double-sided; there are soffits under the eaves.
@@ -111,6 +116,7 @@ The October 2022 photos are more recent than the orthophoto and the official sur
 
 ## Known limitations
 
+- Memory: about 12 GB at the peak (v2.5). On a 16 GB PC with other programs open the game can stall after loading.
 - On the Italian side there is only terrain and landscape, without roads, buildings and trees.
 - Tunnels are not built.
 - One-way streets come from OpenStreetMap: where OSM doesn't record them, the AI drives the road in both directions.

@@ -13,7 +13,7 @@ This pipeline rebuilds the Malcantone (Ticino) at 1:1 scale as a BeamNG.drive le
 | `verifica/` | `VERIFICA.md` (comparison with all 1464 views), the agreement chart along the route, per-view metrics (`metrics_final.json`, and `metrics_full1.json` before the last correction round) |
 | `dati/` | lightweight computed results, to rebuild the level without redoing the long steps: calibrated panorama poses (`poses.json`), road axis, road markings and their 2022 state, guardrails, retaining walls and wall heights, fences, street lamps, poles and signs, street furniture, trees and shrubs; for v2.0 the bridges with the manual corrections (`ponti.json`) and the Magliaso–Gravesano cantonal road (`cantonale_gravesano.json`); for v2.2 the roads of the new corridors (`strade_extra_v22.json`) |
 
-The **ready-made mod** is in the [v2.4 release](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.4), which the `.github/workflows/release_v2.4.yml` workflow builds from scratch on a GitHub server: it downloads the data, builds the level, checks it with `check_level.py` and `drive_test.py` and publishes it. It is built with `MAGLIASO_NO_PHOTO_TEXTURES=1`, so it contains no Street View images: façades, roofs and walls have original textures drawn by the pipeline in the measured colours, and sign plates are plain-coloured. The cantonal road's objects derived from the photos (road markings, street lamps, poles, signs, street furniture) are taken from the v1.1 release and placed on the new surfaces (`carryover.py`).
+The **ready-made mod** is in the [v2.5 release](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.5): the [v2.4](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.4) zip passed through `optimize_level.py` (same geometry, lighter for the game). The v2.4 zip is what the `.github/workflows/release_v2.4.yml` workflow builds from scratch on a GitHub server: it downloads the data, builds the level, checks it with `check_level.py` and `drive_test.py` and publishes it. It is built with `MAGLIASO_NO_PHOTO_TEXTURES=1`, so it contains no Street View images: façades, roofs and walls have original textures drawn by the pipeline in the measured colours, and sign plates are plain-coloured. The cantonal road's objects derived from the photos (road markings, street lamps, poles, signs, street furniture) are taken from the v1.1 release and placed on the new surfaces (`carryover.py`).
 
 Earlier versions remain available:
 - **v1.0**: only the cantonal road corridor.
@@ -21,6 +21,8 @@ Earlier versions remain available:
 - **v2.0**: the 51 km² area with the whole road network, the bridges and the cantonal road to Gravesano (`release_v2.0.yml`).
 - **v2.1**: road markings on the whole network, trees out of the clearance envelope, AI traffic, railway (`release_v2.1.yml`).
 - **v2.2**: Street View review, façades, guardrails on the whole network, new roads towards Arosio and Caslano (`release_v2.2.yml`).
+- **v2.3**: fixes after the first in-game tests, lighter woods (`release_v2.3.yml`).
+- **v2.4**: houses from every side, OSM surfaces, grass, palms, vineyards, rivers (`release_v2.4.yml`).
 
 The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local version with photographic textures and the v1.0 geometry. The verification of the latest version is in `verifica/check_level.json` (automatic checks over the whole map), `verifica/drive_test.json` (virtual drive test) and `verifica/REVISIONE.md` (Street View review); the bridge profiles are in `verifica/ponti/`.
 
@@ -59,6 +61,36 @@ A review of the v2.0 level compared with real sources: the 2024 SWISSIMAGE 10 cm
 - **Railway** (`railway.py`): the FLP (metre gauge) and SBB tracks from swissTLM3D, with sleepers, rails, ballast, level crossings flush with the road and bridges. The tracks sit at the real swissTLM3D height: where the level's terrain is higher a cutting is dug (along the lake in Agno, under the embankment of the cantonal road), where it is lower the track sits on a ballast embankment; those under the car park of Ponte Tresa station are not built, like the tunnels. The overhead line is not built.
 - **The Tresa at Ponte Tresa** (`water.py`): the lake model's dam is at the weir, 420 m downstream, and no longer at the outlet. The stretch at lake level, under the border bridge, has water.
 - **Zones, roads and log** (`zone_report.py`): `verifica/ZONE.md` (status by municipality), `verifica/STRADE.md` (every road of the network with the status of each aspect) and `verifica/REGISTRO.md` (differences found, action, status).
+
+## Version 2.5: performance (measured in the game)
+
+The v2.4 level, tried in BeamNG.drive 0.39.4 on a PC with 16 GB of RAM (RTX 4070, Ryzen 7 7800X3D): 215 s to load
+(371 s through BeamMP), then the game wanted more memory than the PC had free (paging, more than 10 minutes on the
+loading screen, the whole PC lagging). Partial levels, loaded with an FPS and memory probe (game memory at the peak):
+
+| Level | Game memory | FPS (3 spawns) |
+|---|---|---|
+| terrain + forest only | 7.1 GB | 100–140 |
+| v2.5 without the road surfaces | 10.8 GB | 90–128 |
+| v2.5 without the forest | 11.0 GB | 112–125 |
+| v2.5 without the terrain | 10.6 GB | 100–125 |
+| v2.5 complete | ~12 GB | 82–109 |
+
+The meshes cost about 300 bytes of game memory per triangle, with or without collision; the forest about 0.7 GB, the
+8192 × 8192 terrain 1–1.5 GB; the size of the terrain texture arrays makes no measurable difference.
+
+`optimize_level.py` turns a built level (folder or zip) into a lighter one with the same geometry:
+- **tiles merged 3 × 3** (128 m → 384 m) per group, with the same collision and decal type: 7916 → 2188 objects;
+- **shared vertices** (`bng.weld_corners`, now done by every build in `MeshBuilder.write_dae`): the meshes were
+  triangle soups; 38.2 → 19.7 million vertices, positions and texture coordinates unchanged;
+- **road strips** (`mesh_strips.py`): skirts and kerb faces along straight runs in fewer quads, within 4 mm
+  (checked both ways for every piece): 15.9 → 15.3 million triangles;
+- **detail size by distance**: guard rails disappear beyond about 600 m, fences 400 m, markings 500 m, walls
+  1.2 km, vineyards 1 km, buildings and roads 3 km (they were drawn up to 12 km);
+- terrain base textures at 1024 px (`terrain.BASE_TEX`), sun shadows up to 800 m instead of 1600.
+
+Result: 60 s to load with the game's converted shapes in its cache (about 145 s the first time), 82–128 fps at the
+spawns. With other programs open (Discord, a browser, ...) the PC is still at its memory limit: the game peaks at about 12 GB.
 
 ## Version 2.4: houses from every side, Magliaso roundabout, OSM surfaces and more realism
 
@@ -208,6 +240,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Review (v2.2) | `sv_review.py`, `qa_log.py`, `review_report.py`, `drive_test.py`, `drive_context.py`, `screenshots.py` | photo/map comparison from the same camera, log of the reviewed places, `verifica/REVISIONE.md`, virtual drive test, screenshots |
 | Graphics (v2.4) | `osm_surface.py`, `surface_textures.py`, `groundcover.py`, `palms.py`, `vineyards.py`, `rivers.py` | road and trail surfaces from OSM with their textures, grass and flowers, palms, vineyard rows, water in the rivers |
 | Package | `package.py` | mod zip in `<MAGLIASO_ROOT>/dist` |
+| Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
 ## Rebuilding the level
@@ -227,6 +260,12 @@ python prepare_work.py && python download_swisstopo.py && python download_av.py 
 python build_rasters.py && python landcover.py && python extract_buildings.py && python trees.py
 python network.py && python network_surface.py && python build_level.py && python check_level.py
 python package.py magliaso_pura_v2.0
+```
+
+Since v2.5 the mod zip comes from `optimize_level.py` (merged tiles, detail by distance, lighter road strips):
+
+```bash
+python optimize_level.py "$MAGLIASO_BEAMNG_USER/levels/magliaso_pura" "$MAGLIASO_ROOT/dist/magliaso_pura_v2.5.zip"
 ```
 
 `build_level.py --reuse-roads` redoes all the stages except the road network, which is the longest (about 13 minutes). It reuses the road meshes of the previous build and `work/roads_state.npz`.

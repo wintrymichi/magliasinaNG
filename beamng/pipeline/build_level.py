@@ -29,8 +29,9 @@ def save_png(path, arr):
 
 def utility_textures():
     d = level_path("art", "terrains")
-    # every base texture of the TerrainMaterialTextureSet must match its baseTexSize (2048)
-    n = 2048
+    # every base texture of the TerrainMaterialTextureSet must match its baseTexSize (terrain.BASE_TEX)
+    import terrain
+    n = terrain.BASE_TEX
     save_png(os.path.join(d, "t_flat_nm.png"), np.full((n, n, 3), (128, 128, 255), np.uint8))
     save_png(os.path.join(d, "t_rough_r.png"), np.full((n, n), 210, np.uint8))
     save_png(os.path.join(d, "t_white_ao.png"), np.full((n, n), 255, np.uint8))
@@ -50,7 +51,7 @@ def stage_terrain(scene, ctx):
         c = np.array(colors[m] if m in colors else colors[terrain.VERGE_OF[m]], np.float32)
         noise = rng.normal(0, 1, (64, 64)).astype(np.float32)
         from scipy.ndimage import gaussian_filter, zoom
-        n = zoom(gaussian_filter(noise, 3, mode="wrap"), 32, order=1)
+        n = zoom(gaussian_filter(noise, 3, mode="wrap"), terrain.BASE_TEX // 64, order=1)
         n = n / (np.abs(n).max() + 1e-6)
         img = np.clip(c[None, None, :] * (1 + 0.08 * n[..., None]), 0, 255).astype(np.uint8)
         rel = f"art/terrains/t_base_{m.lower()}_b.png"
@@ -93,7 +94,7 @@ def stage_terrain(scene, ctx):
     scene.add("MissionGroup/level_objects/terrain", {
         "name": "theTerrain", "class": "TerrainBlock", "persistentId": bng.pid(),
         "position": [TER_X0, TER_Y0, z0], "maxHeight": maxh, "squareSize": TER_SQUARE,
-        "baseTexSize": 2048, "materialTextureSet": f"{LEVEL_NAME}TerrainMaterialTextureSet",
+        "baseTexSize": terrain.BASE_TEX, "materialTextureSet": f"{LEVEL_NAME}TerrainMaterialTextureSet",
         "terrainFile": f"{L}/theTerrain.ter"})
     ctx["z0"], ctx["H"] = z0, H
     print("terrain z0", z0, "maxHeight", maxh)
@@ -611,7 +612,7 @@ def stage_sky(scene, ctx):
                   "moonMat": "Moon_Glow_Mat", "nightCubemap": "nightCubemap",
                   "nightGradientFile": "art/sky_gradients/default/gradient_ambient.png",
                   "nightFogGradientFile": "art/sky_gradients/default/gradient_fog.png",
-                  "shadowDistance": 1600, "skyBrightness": 40,
+                  "shadowDistance": 800, "skyBrightness": 40,
                   "sunScale": [0.996, 0.831, 0.729, 1],
                   "sunScaleGradientFile": "art/sky_gradients/default/gradient_sunscale.png"})
     # Street View capture: October 2022, late morning
