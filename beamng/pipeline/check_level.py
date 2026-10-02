@@ -37,6 +37,7 @@ exceeded.
 import glob, json, os, sys
 import numpy as np
 import shapely
+import osm_surface
 import patch_release as pr
 from road_mesh import TriSurface as Surface
 from config import LEVEL_DIR, LEVEL_NAME
@@ -77,9 +78,11 @@ LIMITS = {"terrain_over_road": 50, "terrain_over_road_max_m": 1.5, "road_seams":
           "forest_items": 250_000, "ai_components_over_1km": 1,
           # v2.1 (canopy.py): what is left is at the tolerance of the rule (0.3 m of crown over an edge)
           "crowns_in_profile": 10, "trunks_in_solids": 10, "forest_floating": 0, "forest_buried": 10,
-          "missing_files": 0}
+          "missing_files": 0,
+          # v2.4: wall faces of the buildings turned into them (seen from outside the house is transparent)
+          "building_walls_inward_share": 0.02}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
-PATH_MATS = ("mp_path_dirt", "mp_path_paved")
+PATH_MATS = osm_surface.PATH_MATS                  # v2.4: paved, gravel, earth, setts, cobbles
 SKIP_MATS = ("mp_road_wall", "mp_bridge_parapet")
 
 
@@ -382,6 +385,71 @@ class Places:
         return out[:MAX_PLACES]
 
 
+WALL_MATS = ("bld_plaster", "bld_stone", "bld_plinth")
+WALL_PROBE = 0.3            # m in front of and behind a wall face
+
+
+def inward_walls(lv, places):
+    """v2.4: the wall faces of the buildings turned into them (the game draws one side of a face: from
+    outside such a wall is missing and the house looks transparent). For every vertical wall face
+    without a reversed twin (the walls built two-sided) the points WALL_PROBE m in front of it and
+    behind it, against the ground plans of the buildings (work/buildings.pkl): in front inside and
+    behind outside is a face turned in, the reverse a face turned out (both inside: a party wall or a
+    wall over a lower roof, not counted). Share of the wall area of the faces turned in."""
+    try:
+        import buildings_mesh as bm
+        fps = [bm.footprint(b) for b in bm.load_buildings()]
+    except Exception as e:                                  # a level checked without the work data
+        print("no building plans, inward walls not checked:", e)
+        return {}
+    plan = shapely.union_all([g for g in fps if g is not None and not g.is_empty])
+    shapely.prepare(plan)
+    origin = {}
+    for f in glob.glob(os.path.join(lv, "main", "**", "items.level.json"), recursive=True):
+        for o in pr.items(f):
+            sh = o.get("shapeName", "")
+            if "/art/shapes/buildings/bld_" in sh:
+                origin[os.path.basename(sh)] = np.array(o.get("position", [0, 0, 0]), np.float64)
+    tin = tout = 0.0
+    xs, ys, zs, aa = [], [], [], []
+    for f in sorted(glob.glob(os.path.join(lv, "art", "shapes", "buildings", "bld_*.dae"))):
+        if os.path.basename(f) not in origin:
+            continue
+        V, N, T, C, parts = pr.read_dae(f)
+        V = V + origin[os.path.basename(f)]
+        T3 = np.concatenate([V[idx[:, 0]].reshape(-1, 3, 3) for mat, idx in parts if mat in WALL_MATS] or
+                            [np.zeros((0, 3, 3))])
+        if not len(T3):
+            continue
+        n = np.cross(T3[:, 1] - T3[:, 0], T3[:, 2] - T3[:, 0])
+        area = 0.5 * np.linalg.norm(n, axis=1)
+        nn = n / np.maximum(2 * area, 1e-12)[:, None]
+        test = (np.abs(nn[:, 2]) < 0.3) & (area > 0.05)
+        # two-sided walls: the same three corners (1 mm) in both orders
+        key = np.sort(np.round(T3 / 0.001).astype(np.int64).reshape(len(T3), 3, 3).tolist(), axis=1).reshape(len(T3), 9)
+        _, inv, cnt = np.unique(key, axis=0, return_inverse=True, return_counts=True)
+        test &= cnt[inv.ravel()] == 1
+        k = np.flatnonzero(test)
+        if not len(k):
+            continue
+        c = T3[k].mean(1)
+        hd = nn[k, :2] / np.maximum(np.linalg.norm(nn[k, :2], axis=1, keepdims=True), 1e-9)
+        front = shapely.contains_xy(plan, c[:, 0] + WALL_PROBE * hd[:, 0], c[:, 1] + WALL_PROBE * hd[:, 1])
+        back = shapely.contains_xy(plan, c[:, 0] - WALL_PROBE * hd[:, 0], c[:, 1] - WALL_PROBE * hd[:, 1])
+        turned_in = front & ~back
+        tin += float(area[k][turned_in].sum())
+        tout += float(area[k][~front & back].sum())
+        if turned_in.any():
+            xs.append(c[turned_in, 0]); ys.append(c[turned_in, 1]); zs.append(c[turned_in, 2])
+            aa.append(area[k][turned_in])
+    if xs and places is not None:
+        X, Y, Z, A = (np.concatenate(v) for v in (xs, ys, zs, aa))
+        big = A > 2.0
+        places.add("parete girata verso l'interno", X[big], Y[big], Z[big], A[big])
+    return {"building_walls_inward_share": round(tin / max(tin + tout, 1e-9), 4),
+            "building_walls_inward_m2": round(tin, 0)}
+
+
 def main(lv=None):
     lv = lv or LEVEL_DIR
     res, places = {}, Places()
@@ -546,6 +614,8 @@ def main(lv=None):
         res.update(terrain_pits(ter, bare, places, np.load(f, mmap_mode="r") if os.path.exists(f) else None, tri, lv))
     if net is not None:
         res.update(obstacles(lv, net, places, zsurf))
+    res.update(inward_walls(lv, places))
+    print("inward walls:", res["building_walls_inward_share"], flush=True)
     # road faces under the bare ground, band by band of the DTM
     under = np.zeros(len(tri), bool)
     dz_under = np.zeros(len(tri))

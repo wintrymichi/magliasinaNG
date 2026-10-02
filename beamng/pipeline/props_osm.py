@@ -422,7 +422,7 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     import json
     json.dump(placed_list, open(os.path.join(WORK, "osm_props.json"), "w"))
     rel = "art/shapes/props/props_osm.dae"
-    mb.write_dae(os.path.join(level_dir, rel), name="props_osm", origin=(0, 0, 0))
+    mb.write_dae(os.path.join(level_dir, rel), name="props_osm", origin=(0, 0, 0), orient=True)
     scene.add(g, bng.tsstatic(f"{L}/{rel}", (0, 0, 0), collision=True))
     print("OSM signs and furniture:", counts)
     return counts

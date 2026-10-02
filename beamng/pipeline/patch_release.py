@@ -78,7 +78,7 @@ def rewrite_dae(path, name, origin, fn):
         vi, ni, ti = idx[:, 0], idx[:, 1], idx[:, 2]
         cols = C[idx[:, 3]] if (C is not None and idx.shape[1] > 3) else None
         mb.add(mat, Vw[vi], uvs=T[ti], normals=N[ni], colors=cols)
-    mb.write_dae(path, name=name, origin=o)
+    mb.write_dae(path, name=name, origin=o, orient=True)
 
 
 def items(path):

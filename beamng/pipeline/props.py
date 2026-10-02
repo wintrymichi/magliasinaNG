@@ -21,6 +21,9 @@ import camera
 LIGHT = "/levels/italy/art/shapes/buildings/italy_light_single.dae"
 WOODPOLE = "/art/shapes/common/power_lines_procedural/electric_pole_wood_old_01.dae"
 F = 800.0   # focal length (px) of the dataset views
+LAMP_RADIUS = 14.0          # m lit by the light of a street lamp (v2.4)
+LAMP_BRIGHTNESS = 1.2
+LAMP_LUMEN = 6000.0         # a street light of a village road
 
 
 def tube(c, z0, z1, r=0.045, n=10):
@@ -98,6 +101,14 @@ def build(level_dir, level_name, scene, hfn):
                                                           rot=bng.rot_local_x_to(theta), scale=(1, 1, hs),
                                                           collision=True))
             counts["street_light"] += 1
+            # v2.4: the light of the lamp, under its head: warm, no shadows (cheap); seen at night
+            scene.add(g + "/street_lights", {"class": "PointLight", "persistentId": bng.pid(),
+                                              "position": [float(hx), float(hy), float(hz) - 0.35],
+                                              "radius": LAMP_RADIUS, "intensity": LAMP_LUMEN, "intensityUnit": "lm",
+                                              "brightness": LAMP_BRIGHTNESS,        # the older field, as a fallback
+                                              "color": [1.0, 0.82, 0.58, 1.0], "castShadows": False,
+                                              "isEnabled": True})
+            counts["lamp_light"] = counts.get("lamp_light", 0) + 1
     # gather raw sign observations again to rebuild plate crops (poles.py kept the best per plate)
     for j, p in enumerate(poles):
         x, y = p["x"], p["y"]
@@ -205,7 +216,7 @@ def build(level_dir, level_name, scene, hfn):
             counts[o["cls"]] = counts.get(o["cls"], 0) + 1
     bng.write_materials(os.path.join(level_dir, "art", "shapes", "props", "main.materials.json"), mats)
     rel = "art/shapes/props/props_poles.dae"
-    mb.write_dae(os.path.join(level_dir, rel), name="props", origin=(0, 0, 0))
+    mb.write_dae(os.path.join(level_dir, rel), name="props", origin=(0, 0, 0), orient=True)
     scene.add(g, bng.tsstatic(f"/levels/{level_name}/{rel}", (0, 0, 0), collision=True))
     # materials of the vanilla models used
     import copy_materials

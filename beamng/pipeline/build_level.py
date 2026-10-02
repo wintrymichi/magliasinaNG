@@ -47,7 +47,7 @@ def stage_terrain(scene, ctx):
     base_tex = {}
     rng = np.random.default_rng(3)
     for m in terrain.TERRAIN_MATS:
-        c = np.array(colors[m], np.float32)
+        c = np.array(colors[m] if m in colors else colors[terrain.VERGE_OF[m]], np.float32)
         noise = rng.normal(0, 1, (64, 64)).astype(np.float32)
         from scipy.ndimage import gaussian_filter, zoom
         n = zoom(gaussian_filter(noise, 3, mode="wrap"), 32, order=1)
@@ -66,6 +66,9 @@ def stage_terrain(scene, ctx):
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
+    if ctx.get("river_polys"):                           # v2.4: the beds of the rivers under their water
+        import rivers
+        posts.append(lambda H, xs, ys: rivers.carve_terrain(H, xs, ys, ctx["river_polys"]))
     if "railway" in ctx.get("stages", STAGES):
         import railway                                   # the ground under the tracks at their height
         keep = override[1] if override else None         # not the ground of the roads
@@ -75,8 +78,13 @@ def stage_terrain(scene, ctx):
         for fn in posts:
             H = fn(H, xs, ys)
         return H
+    # v2.4: no grass (groundcover.py) within a terrain square of the carved road and path surfaces
+    no_cover = None
+    if override:
+        from scipy.ndimage import binary_dilation
+        no_cover = binary_dilation(override[1], iterations=1)
     z0, maxh, H = terrain.build_terrain(LEVEL_DIR, *(override or (None, None, None)), post_fn=post,
-                                        cap=ctx.get("terrain_cap"))
+                                        cap=ctx.get("terrain_cap"), no_cover=no_cover)
     mats = terrain.terrain_materials(LEVEL_NAME, base_tex)
     os.makedirs(level_path("art", "terrains"), exist_ok=True)
     json.dump(mats, open(level_path("art", "terrains", "main.materials.json"), "w"), indent=1)
@@ -120,31 +128,35 @@ def road_materials():
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
         bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
                      f"{st}_ao.data.png", ground_type="ROCK"),
-        # v2.0 network: unpaved roads and paths (textures made by road_textures), paved paths,
-        # bridge parapets
-        bng.material("mp_road_gravel", f"{L}/art/shapes/roads/t_gravel_b.png",
-                     "/assets/materials/terrain/soil/t_gravel/t_gravel_nm.png", roughness=0.9, ground_type="GRAVEL"),
-        bng.material("mp_path_dirt", f"{L}/art/shapes/roads/t_dirt_b.png",
-                     "/assets/materials/terrain/soil/t_gravel/t_gravel_nm.png", roughness=0.95, ground_type="DIRT"),
+        # v2.0 network: paved paths, bridge parapets
         bng.material("mp_path_paved", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
                      f"{a}_ao.data.dds", base_color=[0.98, 0.97, 0.95, 1], ground_type="ASPHALT"),
         bng.material("mp_bridge_parapet", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
                      base_color=[0.85, 0.85, 0.83, 1], ground_type="CONCRETE"),
-    ]
+    ] + surface_materials()
+
+
+def surface_materials():
+    """v2.4: gravel, earth, granite setts and river cobbles (surface_textures.py) on carriageways,
+    yards and paths (osm_surface.MATS); the ground type gives the grip and the sound in the game."""
+    import osm_surface
+    t = f"{L}/art/shapes/roads"
+    ground = {"gravel": "GRAVEL", "dirt": "DIRT", "sett": "COBBLESTONE", "cobble": "COBBLESTONE"}
+    out = []
+    for group, mats in osm_surface.MATS.items():
+        for surf, name in mats.items():
+            if surf == "hard":
+                continue
+            out.append(bng.material(name, f"{t}/t_road_{surf}_b.color.png", f"{t}/t_road_{surf}_nm.normal.png",
+                                    f"{t}/t_road_{surf}_r.data.png", f"{t}/t_road_{surf}_ao.data.png",
+                                    ground_type=ground[surf]))
+    return out
 
 
 def road_textures():
-    """Colour textures of the unpaved surfaces: the measured gravel / forest-path colours with noise."""
-    colors = json.load(open(os.path.join(WORK, "terrain_colors.json")))
-    rng = np.random.default_rng(5)
-    from scipy.ndimage import gaussian_filter, zoom
-    for name, key, gain in (("t_gravel_b.png", "Gravel", 1.0), ("t_dirt_b.png", "Mud", 1.15)):
-        c = np.array(colors.get(key, [140, 130, 110]), np.float32) * gain
-        noise = zoom(gaussian_filter(rng.normal(0, 1, (64, 64)).astype(np.float32), 1.5, mode="wrap"), 8, order=1)
-        fine = rng.normal(0, 1, (512, 512)).astype(np.float32)
-        n = 0.6 * noise / (np.abs(noise).max() + 1e-6) + 0.4 * fine / 3
-        img = np.clip(c[None, None, :] * (1 + 0.12 * n[..., None]), 0, 255).astype(np.uint8)
-        save_png(level_path("art", "shapes", "roads", name), img)
+    """Textures of the unpaved and stone surfaces (surface_textures.py, drawn procedurally)."""
+    import surface_textures
+    surface_textures.build(level_path("art", "shapes", "roads"))
 
 
 def road_height_fn():
@@ -193,13 +205,16 @@ def stage_roads(scene, ctx):
     sf = os.path.join(WORK, "markings_state.json")
     state = json.load(open(sf)) if os.path.exists(sf) else {}
     gone = [shapely.Point(i["x"], i["y"]) for i in state.get("removed_islands", [])]
+    # v2.4: and the sidewalk pieces across them (the walkway of the old crossing)
+    gone_sw = [shapely.Point(i["x"], i["y"]) for i in state.get("removed_sidewalks", [])]
     fresh = shapely.union_all([shapely.Polygon(r) for r in state.get("fresh_asphalt", [])]) \
         if state.get("fresh_asphalt") else None
     items = []
     for gi, cls, props in roadheight.paved_polygons():
         mat, cell, uvt = ROAD_CLASSES[cls]
         pid = roadheight.polygon_key(gi, S)
-        if cls == "spartitraffico" and any(gi.contains(q) for q in gone):
+        if (cls == "spartitraffico" and any(gi.contains(q) for q in gone)) or \
+                (cls == "marciapiede" and any(gi.contains(q) for q in gone_sw)):
             mat, cell, uvt = ROAD_CLASSES["strada_sentiero"]
         if cls == "strada_sentiero" and fresh is not None and gi.intersects(fresh):
             items.append((gi.intersection(fresh), "mp_road_asphalt_fresh", cell, uvt, pid))
@@ -249,7 +264,8 @@ def stage_roads(scene, ctx):
         x0, y0, x1, y1 = gi.bounds
         for tx in range(int(np.floor(x0 / CHUNK)), int(np.floor(x1 / CHUNK)) + 1):
             for ty in range(int(np.floor(y0 / CHUNK)), int(np.floor(y1 / CHUNK)) + 1):
-                piece = gi.intersection(shapely.box(tx * CHUNK, ty * CHUNK, (tx + 1) * CHUNK, (ty + 1) * CHUNK))
+                cbox = shapely.box(tx * CHUNK, ty * CHUNK, (tx + 1) * CHUNK, (ty + 1) * CHUNK)
+                piece = gi.intersection(cbox)
                 if piece.is_empty or piece.area < 0.05:
                     continue
                 if pid is None:                  # a sliver without cells of its own: the height function
@@ -257,7 +273,7 @@ def stage_roads(scene, ctx):
                     parts = [(None, V, T)]
                 else:                            # one mesh per surface of the polygon (walls inside it)
                     parts = []
-                    for sub, comp in road_mesh.split_by_surface(piece, S, pid):
+                    for sub, comp in road_mesh.split_by_surface(piece, S, pid, cut=cbox.exterior):
                         kf = key_fn(pid) if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
                         parts += road_mesh.mesh_polygon_surfaces(sub, z_fn(pid), kf, cell=cell)
                 for comp, V, T in parts:
@@ -287,6 +303,7 @@ def stage_roads(scene, ctx):
     ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops))
     # the rest of the network, tile by tile
     net = network_mesh.Network(exclude=corridor)
+    ctx["surfaces"] = net.assign_surfaces()
 
     def on_carve(r, c, z):
         ov[r, c] = np.fmin(ov[r, c], z)
@@ -550,7 +567,8 @@ def stage_props(scene, ctx):
     import props_osm
     from road_mesh import TriSurface
     tops = markings_net.road_tops(LEVEL_DIR)
-    carr = TriSurface(markings_net.road_tops(LEVEL_DIR, ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_road_gravel")))
+    import osm_surface
+    carr = TriSurface(markings_net.road_tops(LEVEL_DIR, osm_surface.ROAD_MATS + ("mp_road_asphalt_fresh",)))
     surf = TriSurface(tops)
     terrain_z = new_ground(ctx)
 
@@ -600,9 +618,11 @@ def stage_sky(scene, ctx):
     scene.add(g, {"name": "tod", "class": "TimeOfDay", "persistentId": bng.pid(), "position": [0, 0, 400],
                   "axisTilt": 23.44, "day": 280, "dstRule": "eu", "latitude": 45.9917, "longitude": 8.8690,
                   "utcOffset": "1", "play": False, "startTime": 0.07, "time": 0.07, "version": 2})
+    # v2.4: a little more haze, kept lower over the lake valley (density 1.1e-4 -> 1.3e-4, height
+    # 1200 -> 1000 m, a touch bluer): the slopes across the lake fade with the distance as on hazy days
     scene.add(g, {"name": "theLevelInfo", "class": "LevelInfo", "persistentId": bng.pid(),
-                  "canvasClearColor": [1, 1, 1, 255], "enabled": "1", "fogAtmosphereHeight": 1200,
-                  "fogColor": [0.78, 0.81, 0.86, 1], "fogDensity": 1.1e-04,
+                  "canvasClearColor": [1, 1, 1, 255], "enabled": "1", "fogAtmosphereHeight": 1000,
+                  "fogColor": [0.76, 0.80, 0.86, 1], "fogDensity": 1.3e-04,
                   "globalEnviromentMap": "BNG_Sky_02_cubemap", "gravity": -9.81, "visibleDistance": 12000,
                   "temperatureCurveC": [0, 12, 0.25, 11, 0.5, 18, 0.75, 14, 1, 12]})
     scene.add(g, {"name": "clouds", "class": "CloudLayer", "persistentId": bng.pid(), "position": [0, 0, 0],
@@ -638,6 +658,24 @@ def stage_water(scene, ctx):
     level, lake, wet = water.build(scene, backdrop.CX, backdrop.CY, params, (TER_X0, TER_Y0, TER_X1, TER_Y1))
     ctx["lake_level"], ctx["lake_grid"], ctx["wet_grid"] = level, lake, wet
     print("lake level", level)
+    # v2.4: water in the rivers (rivers.py), not over the lake's blocks nor the fords, on under the bridges
+    net = ctx.get("network")
+    if net is not None:
+        import pickle
+        import shapely
+        import rivers
+        import roadheight
+        av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+        boxes = [shapely.box(o["position"][0] - o["scale"][0] / 2, o["position"][1] - o["scale"][1] / 2,
+                             o["position"][0] + o["scale"][0] / 2, o["position"][1] + o["scale"][1] / 2)
+                 for o in scene.groups.get("MissionGroup/level_objects/Water", []) if o.get("class") == "WaterBlock"]
+        at_grade = [p["geom"] for p in net.polys]
+        crossings = [f for _, f in getattr(net, "deck_feet", [])] + [g for g, _, _ in roadheight.paved_polygons()]
+        fn = ctx.get("road_mesh_fn")
+        road_z = (lambda x, y: fn(x, y)) if fn is not None else (lambda x, y: np.full(len(x), np.nan))
+        ctx["rivers"], ctx["river_polys"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade,
+                                                         crossings, road_z)
+        print("rivers:", ctx["rivers"], flush=True)
 
 
 def stage_backdrop(scene, ctx):
@@ -685,6 +723,13 @@ def stage_vegetation(scene, ctx):
                   np.array([net.segs[k]["kind"] == "path" for k in net.seg], bool))
     counts = vegetation.build(LEVEL_DIR, LEVEL_NAME, scene, drivable=drv, net_xy=net_xy)
     ctx["n_forest"] = sum(counts.values())
+    # v2.4: rows of vines in the vineyards near the roads (vineyards.py)
+    if net is not None:
+        import pickle
+        import vineyards
+        av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+        ctx["vineyards"] = vineyards.build(LEVEL_DIR, LEVEL_NAME, scene, av, net_xy[0], roads + paths)
+        print("vineyards:", ctx["vineyards"], flush=True)
 
 
 def stage_backfill(scene, ctx, H, base_tex):
@@ -716,6 +761,13 @@ def stage_backfill(scene, ctx, H, base_tex):
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     walls.build_backfill(LEVEL_DIR, LEVEL_NAME, scene, ctx["wall_rec"], H, xs, ys, ctx["wall_feet"], drv, layers,
                          dtm.sample)
+
+
+def stage_groundcover(scene, ctx):
+    """v2.4: grass and meadow flowers around the camera (groundcover.py)."""
+    import groundcover
+    ctx["groundcover"] = groundcover.build(LEVEL_DIR, LEVEL_NAME, scene)
+    print("groundcover:", ctx["groundcover"], flush=True)
 
 
 def stage_spawns(scene, ctx):
@@ -839,7 +891,7 @@ def write_info(ctx):
 
 
 STAGES = ["roads", "walls", "water", "terrain", "railway", "sky", "backdrop", "buildings", "guardrails", "fences",
-          "markings", "ai", "props", "vegetation", "spawns"]
+          "markings", "ai", "props", "vegetation", "groundcover", "spawns"]
 
 
 def main():
@@ -871,7 +923,8 @@ def main():
         print(f"[stage canopy: {time.time() - t0:.0f} s]", flush=True)
     write_info(ctx)
     # what the v2.1 steps did, for the reports (zone_report.py)
-    stats = {k: ctx[k] for k in ("canopy", "railway", "osm_props", "network_paint") if k in ctx}
+    stats = {k: ctx[k] for k in ("canopy", "railway", "osm_props", "network_paint", "surfaces", "groundcover",
+                                 "rivers", "vineyards") if k in ctx}
     if stats:
         json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
     print("level written to", LEVEL_DIR)

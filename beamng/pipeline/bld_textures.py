@@ -605,6 +605,8 @@ def plaster(dst, n=1024):
     save(os.path.join(dst, "t_bld_plaster_b.color.png"), to8(col))
     save(os.path.join(dst, "t_bld_plaster_nm.normal.png"), normal_map(0.6 * grain + 0.4 * fine, 0.35))
     save(os.path.join(dst, "t_bld_plaster_r.data.png"), to8(0.88 + 0.05 * patch))
+    # v2.4: ambient occlusion of the render's grain and of the repaired patches
+    save(os.path.join(dst, "t_bld_plaster_ao.data.png"), ao_map(0.6 * grain + 0.4 * fine + 0.5 * patch, 3, 0.06))
 
 
 def voronoi_stones(n, rng, rows, jitter=0.35, flat=1.8):
@@ -682,6 +684,7 @@ def plinth(dst, w=1024, h=256):
     save(os.path.join(dst, "t_bld_plinth_b.color.png"), to8(col))
     save(os.path.join(dst, "t_bld_plinth_nm.normal.png"), normal_map(hgt, 0.8))
     save(os.path.join(dst, "t_bld_plinth_r.data.png"), to8(0.9 + 0.03 * blot))
+    save(os.path.join(dst, "t_bld_plinth_ao.data.png"), ao_map(hgt, 4, 0.08))
 
 
 def roof_coppi(dst, n=1024, tile_m=2.0):
@@ -717,6 +720,7 @@ def roof_coppi(dst, n=1024, tile_m=2.0):
     save(os.path.join(dst, "t_roof_coppi_b.color.png"), to8(col))
     save(os.path.join(dst, "t_roof_coppi_nm.normal.png"), normal_map(hgt * 14 + 0.3 * grain, 1.0))
     save(os.path.join(dst, "t_roof_coppi_r.data.png"), to8(0.72 + 0.06 * blot))
+    save(os.path.join(dst, "t_roof_coppi_ao.data.png"), ao_map(hgt * 14, 12, 0.05))       # v2.4: the channels
 
 
 def roof_tegole(dst, n=1024, tile_m=2.0):
@@ -739,6 +743,7 @@ def roof_tegole(dst, n=1024, tile_m=2.0):
     save(os.path.join(dst, "t_roof_tegole_b.color.png"), to8(col))
     save(os.path.join(dst, "t_roof_tegole_nm.normal.png"), normal_map(hgt * 10 + 0.3 * grain, 1.0))
     save(os.path.join(dst, "t_roof_tegole_r.data.png"), to8(0.7 + 0.03 * grain))
+    save(os.path.join(dst, "t_roof_tegole_ao.data.png"), ao_map(hgt * 10, 8, 0.06))
 
 
 def roof_piode(dst, n=1024, tile_m=3.0):
@@ -782,6 +787,7 @@ def roof_piode(dst, n=1024, tile_m=3.0):
     save(os.path.join(dst, "t_roof_piode_b.color.png"), to8(col))
     save(os.path.join(dst, "t_roof_piode_nm.normal.png"), normal_map(hgt * 3, 1.2))
     save(os.path.join(dst, "t_roof_piode_r.data.png"), to8(0.85 + 0.05 * grain))
+    save(os.path.join(dst, "t_roof_piode_ao.data.png"), ao_map(hgt * 3, 8, 0.08))
 
 
 def roof_flat(dst, n=1024):
@@ -809,6 +815,7 @@ def roof_metal(dst, n=1024, tile_m=2.0):
     save(os.path.join(dst, "t_roof_metal_b.color.png"), to8(col))
     save(os.path.join(dst, "t_roof_metal_nm.normal.png"), normal_map(seam * 8, 1.0))
     save(os.path.join(dst, "t_roof_metal_r.data.png"), to8(0.45 + 0.05 * streak))
+    save(os.path.join(dst, "t_roof_metal_ao.data.png"), ao_map(seam * 8, 6, 0.05))
 
 
 def concrete_wall(dst, n=1024, tile_m=4.0):

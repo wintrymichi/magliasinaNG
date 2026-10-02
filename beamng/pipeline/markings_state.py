@@ -21,8 +21,14 @@ the panoramas. Two things are taken from the photos instead:
 4. Fresh asphalt of the resurfacing works (dark in the panorama strip inside the unmarked
    stretches) -> separate darker road material; surveyed traffic islands the panoramas see as
    carriageway (removed when the start junction was rebuilt) are paved as road.
+5. v2.4: surveyed walls on a road or sidewalk the panoramas see as flat paving, with level ground
+   all around (a kerb or wall taken away when a street was rebuilt, such as the block left in the
+   middle of the start junction at Magliaso): walls.py leaves them out.
 Output: work/markings_state.json {unmarked: [[s0, s1]], red_bands: [{s, t_in, t_out}], red_rgb,
-        photo_centre: {s, t, support, seen}, fresh_asphalt: [ring], removed_islands: [{x, y}]}
+        photo_centre: {s, t, support, seen}, fresh_asphalt: [ring], removed_islands: [{x, y}],
+        removed_walls: [{x, y}]}
+   The small sidewalk pieces across the removed islands (removed_sidewalks) are paved as road too.
+    python markings_state.py [--walls]     (--walls: only item 5, into the existing file and dati/)
 """
 import json, os
 import numpy as np
@@ -262,6 +268,197 @@ def removed_islands(unmarked):
     return out
 
 
+# Mapillary Vistas labels (sv_segment.py) of flat paving: bike lane, crosswalk, curb cut, parking,
+# pedestrian area, road, service lane, sidewalk, zebra and lane markings; people and vehicles do not vote
+FLAT = (7, 8, 9, 10, 11, 13, 14, 15, 23, 24)
+MOVING = tuple(range(19, 23)) + tuple(range(52, 63))
+WALL_PAVED = 0.3          # share of a wall's footprint on surveyed roads, sidewalks, islands to be tested
+WALL_FLAT = 0.7           # share of flat paving among the votes on it
+WALL_VOTES = 30           # least votes
+WALL_LEVEL = 0.5          # m, ground this much lower than its foot is a drop beside it
+
+
+def band_votes(P, maxd=20.0, mind=2.0, cam_h=2.2):
+    """Label votes (n, 65) of the points P (n, 3) in the band-segmented panoramas of the whole dataset
+    (sv_segment.py: work/sv/seg/<id>.png, sv/selected.json, poses from the metadata as in sv_walls.py),
+    from the panoramas within maxd m whose line of sight to the point is free over the surface model
+    (but for its last 2.5 m: the surveyed object itself may still be in the model)."""
+    import camera
+    from PIL import Image
+    from scipy.spatial import cKDTree
+    from geo import Grid
+    sv = os.path.join(WORK, "sv")
+    info = json.load(open(os.path.join(sv, "seg", "band.json")))
+    conv = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati",
+                                       "attitude_convention.json")))
+    sel = [p for p in json.load(open(os.path.join(sv, "selected.json")))
+           if os.path.exists(os.path.join(sv, "seg", p["id"] + ".png"))]
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    dsm = Grid.load(os.path.join(WORK, "dsm05.npz"))
+    H = np.zeros((len(P), 65), np.int32)
+    tree = cKDTree(P[:, :2])
+    Wl = info["width"]
+    r0 = int(round((90.0 - info["top"]) / 180.0 * (Wl // 2)))
+    for p in sel:
+        idx = np.array(tree.query_ball_point([p["x"], p["y"]], maxd), np.int64)
+        if not len(idx):
+            continue
+        cam = np.array([p["x"], p["y"], float(dtm.sample(np.array([p["x"]]), np.array([p["y"]]))[0]) + cam_h])
+        Q = P[idx]
+        d = Q - cam
+        L = np.linalg.norm(d[:, :2], axis=1)
+        keep = L > mind
+        idx, Q, d, L = idx[keep], Q[keep], d[keep], L[keep]
+        if not len(idx):
+            continue
+        occ = np.zeros(len(Q), bool)
+        for t in np.linspace(0.05, 1.0, 20):
+            R_ = cam + d * t
+            occ |= (dsm.sample(R_[:, 0], R_[:, 1]) > R_[:, 2] + 0.35) & (L * (1 - t) > 2.5)
+        idx, Q = idx[~occ], Q[~occ]
+        if not len(idx):
+            continue
+        heading = p["heading_deg"] + camera.grid_convergence(p["lat"], p["lon"])
+        R = camera.attitude_matrix(heading, p.get("pitch_deg", 0.0), p.get("roll_deg", 0.0), conv)
+        u, vv = camera.dir_cam_to_pixel((Q - cam) @ R, Wl, Wl // 2)
+        lab = np.asarray(Image.open(os.path.join(sv, "seg", p["id"] + ".png")))
+        rr, cc = np.round(vv).astype(int) - r0, np.round(u).astype(int) % Wl
+        ok = (rr >= 0) & (rr < lab.shape[0])
+        np.add.at(H, (idx[ok], lab[rr[ok], cc[ok]].astype(int)), 1)
+    return H
+
+
+def removed_walls():
+    """Surveyed walls (SOSF polygons, SOLI lines 0.3 m wide) lying for WALL_PAVED of their footprint on
+    roads, sidewalks or islands of the survey, where the panoramas see flat paving 0.1 m above the
+    ground on their footprint (WALL_FLAT of >= WALL_VOTES votes): no wall stands above the paving.
+    action 'remove' where there is no drop beside them (ground 0.5-2 m around WALL_LEVEL m lower than
+    their foot), else 'flush' (walls.py keeps the wall with its top at the paving). drop_covered: the
+    share of the lower ground on roads and sidewalks (for the record)."""
+    import pickle
+    import shapely
+    from geo import Grid
+    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    sel = json.load(open(os.path.join(WORK, "sv", "selected.json")))
+    from scipy.spatial import cKDTree
+    pk = cKDTree(np.array([[p["x"], p["y"]] for p in sel]))
+    paved = [g for c in ("strada_sentiero", "marciapiede", "spartitraffico") for g, _ in av["LCSF"].get(c, [])]
+    ptree = shapely.STRtree(paved)
+    walls = [(g, "poly") for g, _ in av["SOSF"].get("muro", [])] + \
+            [(g.buffer(0.15, cap_style="flat", join_style="mitre"), "line") for g, _ in av["SOLI"].get("muro", [])]
+    cand, pts, owner = [], [], []
+    for g, kind in walls:
+        c = g.representative_point()
+        if pk.query([c.x, c.y])[0] > 16.0:                  # no panorama sees it from close enough
+            continue
+        near = ptree.query(g, predicate="intersects")
+        if not len(near) or shapely.union_all([paved[i] for i in near]).intersection(g).area < WALL_PAVED * g.area:
+            continue
+        inner = g.buffer(-0.05)
+        if inner.is_empty:
+            inner = g
+        x0, y0, x1, y1 = g.bounds
+        gx, gy = np.meshgrid(np.arange(x0, x1, 0.2), np.arange(y0, y1, 0.2))
+        ins = shapely.contains_xy(inner, gx, gy)
+        if ins.sum() < 3:
+            continue
+        cand.append((g, kind))
+        Q = np.column_stack([gx[ins], gy[ins]])
+        pts.append(Q)
+        owner.append(np.full(len(Q), len(cand) - 1))
+    if not cand:
+        return []
+    P = np.concatenate(pts)
+    own = np.concatenate(owner)
+    Z = dtm.sample(P[:, 0], P[:, 1])
+    H = band_votes(np.column_stack([P, Z + 0.1]))
+    out = []
+    for k, (g, kind) in enumerate(cand):
+        h = H[own == k].sum(0)
+        tot = int(h.sum() - h[list(MOVING)].sum())
+        flat = int(h[list(FLAT)].sum())
+        if tot < WALL_VOTES or flat < WALL_FLAT * tot:
+            continue
+        ring = g.buffer(2.0).difference(g.buffer(0.5))
+        x0, y0, x1, y1 = ring.bounds
+        gx, gy = np.meshgrid(np.arange(x0, x1, 0.25), np.arange(y0, y1, 0.25))
+        ins = shapely.contains_xy(ring, gx, gy)
+        rx, ry = gx[ins], gy[ins]
+        zr = dtm.sample(rx, ry)
+        foot = float(np.median(Z[own == k]))
+        low = zr < foot - WALL_LEVEL
+        covered = 1.0
+        if low.any():
+            near = ptree.query(ring, predicate="intersects")
+            u = shapely.union_all([paved[i] for i in near]) if len(near) else shapely.Polygon()
+            covered = float(shapely.contains_xy(u, rx[low], ry[low]).mean()) if not u.is_empty else 0.0
+        c = g.representative_point()
+        out.append({"x": round(c.x, 2), "y": round(c.y, 2), "kind": kind, "area": round(g.area, 1),
+                    "flat_votes": round(flat / tot, 2), "votes": tot, "drop_share": round(float(low.mean()), 2),
+                    "drop_covered": round(covered, 2),
+                    # level ground all around: left out; a drop beside it (a garden, a yard, a lower
+                    # street): the wall stays, its top flush with the paving (a retaining wall under the
+                    # edge of a street)
+                    "action": "remove" if not low.any() else "flush"})
+    return out
+
+
+def removed_sidewalks(max_area=15.0):
+    """Small surveyed sidewalk pieces (under max_area m2) along the route the panoramas see as
+    carriageway (road and lane markings >= 70 % of >= 30 votes): the walkway across a traffic island
+    removed with it when the junction was rebuilt; build_level paves them as road like the islands."""
+    import pickle
+    import shapely
+    from geo import Grid
+    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    rp = np.load(os.path.join(WORK, "road_profile.npz"))
+    line = shapely.LineString(rp["center"])
+    cand, pts, owner = [], [], []
+    for g, _ in av["LCSF"].get("marciapiede", []):
+        if g.area > max_area or g.distance(line) > 15:
+            continue
+        x0, y0, x1, y1 = g.bounds
+        gx, gy = np.meshgrid(np.arange(x0, x1, 0.2), np.arange(y0, y1, 0.2))
+        ins = shapely.contains_xy(g.buffer(-0.15), gx, gy)
+        if ins.sum() < 3:
+            continue
+        cand.append(g)
+        pts.append(np.column_stack([gx[ins], gy[ins]]))
+        owner.append(np.full(int(ins.sum()), len(cand) - 1))
+    if not cand:
+        return []
+    P = np.concatenate(pts)
+    own = np.concatenate(owner)
+    H = band_votes(np.column_stack([P, dtm.sample(P[:, 0], P[:, 1]) + 0.1]))
+    out = []
+    for k, g in enumerate(cand):
+        h = H[own == k].sum(0)
+        tot = int(h.sum() - h[list(MOVING)].sum())
+        road = int(h[13] + h[23] + h[24])
+        if tot >= 30 and road >= 0.7 * tot:
+            c = g.representative_point()
+            out.append({"x": round(c.x, 2), "y": round(c.y, 2), "area": round(g.area, 1),
+                        "road_votes": round(road / tot, 2)})
+    return out
+
+
+def main_walls():
+    """Only removed_walls and removed_sidewalks, into the existing markings_state.json of WORK and of dati/."""
+    rw = removed_walls()
+    rs = removed_sidewalks()
+    dati = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "markings_state.json")
+    for f in (os.path.join(WORK, "markings_state.json"), dati):
+        if os.path.exists(f):
+            d = json.load(open(f))
+            d["removed_walls"] = rw
+            d["removed_sidewalks"] = rs
+            json.dump(d, open(f, "w"))
+    print("walls the panoramas see as paving:", len(rw), [(w["x"], w["y"], w["area"], w["flat_votes"], w["action"]) for w in rw])
+    print("sidewalk pieces removed with their island:", [(w["x"], w["y"], w["area"], w["road_votes"]) for w in rs])
+
+
 def main():
     o = np.load(os.path.join(WORK, "road_strip.npz"))
     s, t = o["s"], o["t"]
@@ -273,7 +470,8 @@ def main():
     fresh = fresh_asphalt(o, un, tL, tR)
     isl = removed_islands(un)
     json.dump({"unmarked": un, "red_bands": bands, "red_rgb": rgb, "photo_centre": pc,
-               "fresh_asphalt": fresh, "removed_islands": isl},
+               "fresh_asphalt": fresh, "removed_islands": isl, "removed_walls": removed_walls(),
+               "removed_sidewalks": removed_sidewalks()},
               open(os.path.join(WORK, "markings_state.json"), "w"))
     import shapely
     print("fresh asphalt polygons", len(fresh), "%.0f m2" % sum(shapely.Polygon(r).area for r in fresh),
@@ -288,4 +486,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main_walls() if "--walls" in sys.argv[1:] else main()

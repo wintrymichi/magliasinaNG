@@ -335,5 +335,17 @@
    9.5
   ]
  ],
+ "/levels/magliaso_pura/art/shapes/trees/palm_trachycarpus.dae": [
+  [
+   -1.2566,
+   -1.2026,
+   0.0
+  ],
+  [
+   1.0515,
+   1.1913,
+   4.6449
+  ]
+ ],
  "_note": "Bounds at scale 1 of the vanilla tree models (asset_bounds.py cache format). Heights and crown widths recovered from the v1.0 level (scales of its trees against the heights and crowns measured in work/trees.npz); used when the game is not installed."
 }

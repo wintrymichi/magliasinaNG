@@ -1,5 +1,5 @@
 {
- "forest_items": 160748,
+ "forest_items": 160749,
  "forest_floating": 0,
  "forest_buried": 0,
  "crowns_in_profile": 3,
@@ -17,7 +17,7 @@
  "shrubs_on_surface": 0,
  "network_holes": 2,
  "network_off_profile": 224,
- "network_bumps": 6557,
+ "network_bumps": 6573,
  "network_stations": 288068,
  "network_above_ground": 30,
  "terrain_over_road_max_m": 1.4,
@@ -28,16 +28,18 @@
  "terrain_pit_max_m": 0.0,
  "terrain_carve_cliffs": 1,
  "terrain_carve_cliff_max_m": 21.07,
- "road_obstacles": 13,
- "path_obstacles": 125,
+ "road_obstacles": 12,
+ "path_obstacles": 127,
  "obstacles_by_kind": {
-  "strade: ponte o gradino": 6,
+  "strade: ponte o gradino": 5,
   "strade: edificio": 1,
   "strade: oggetto": 6,
   "sentieri: ponte o gradino": 100,
   "sentieri: muro": 15,
-  "sentieri: edificio": 10
+  "sentieri: edificio": 12
  },
+ "building_walls_inward_share": 0.0006,
+ "building_walls_inward_m2": 3256.0,
  "road_faces_under_ground": 327,
  "road_faces_under_ground_max_m": 2.17,
  "road_seams": 104,
@@ -336,15 +338,715 @@
   "/levels/jungle_rock_island/art/shapes/buildings/Ind_metal_trim_nm.normal.png",
   "/levels/jungle_rock_island/art/shapes/buildings/ind_metal_trim_s.color.png"
  ],
- "level_size_mb": 3122.9,
+ "level_size_mb": 3287.0,
  "failed": [],
  "places": [
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3948.6,
+   "y": -239.6,
+   "z": 261.8,
+   "score": 119.543
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3943.1,
+   "y": -241.3,
+   "z": 257.13,
+   "score": 118.211
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1430.8,
+   "y": -1315.8,
+   "z": 376.23,
+   "score": 78.53
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -443.0,
+   "y": 1147.5,
+   "z": 571.06,
+   "score": 63.93
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 946.9,
+   "y": 1430.1,
+   "z": 678.91,
+   "score": 50.082
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -419.5,
+   "y": 1155.1,
+   "z": 565.05,
+   "score": 49.881
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 14.2,
+   "y": -758.8,
+   "z": 395.16,
+   "score": 47.661
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 38.8,
+   "y": 2820.4,
+   "z": 724.83,
+   "score": 41.7
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1442.7,
+   "y": -1298.6,
+   "z": 370.68,
+   "score": 38.484
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 33.5,
+   "y": 2798.4,
+   "z": 715.48,
+   "score": 34.062
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 979.7,
+   "y": 1472.7,
+   "z": 684.24,
+   "score": 27.465
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2295.7,
+   "y": 747.9,
+   "z": 292.49,
+   "score": 23.235
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3905.3,
+   "y": 750.7,
+   "z": 403.7,
+   "score": 22.385
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -763.7,
+   "y": -2655.9,
+   "z": 284.97,
+   "score": 21.493
+  },
   {
    "what": "terreno sotto il riempimento di un muro su una parete",
    "x": 252.0,
    "y": -2958.0,
    "z": 281.72,
    "score": 21.068
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1971.1,
+   "y": 1913.9,
+   "z": 516.85,
+   "score": 21.049
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2283.8,
+   "y": 605.8,
+   "z": 292.05,
+   "score": 19.958
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 986.4,
+   "y": 2310.0,
+   "z": 776.32,
+   "score": 18.728
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2626.8,
+   "y": 1125.3,
+   "z": 278.33,
+   "score": 18.04
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 5.3,
+   "y": 2886.4,
+   "z": 723.99,
+   "score": 17.764
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4079.6,
+   "y": 2223.0,
+   "z": 636.95,
+   "score": 17.562
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1349.7,
+   "y": 314.1,
+   "z": 550.76,
+   "score": 17.462
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1024.6,
+   "y": -2351.3,
+   "z": 284.9,
+   "score": 17.167
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4090.0,
+   "y": 2249.8,
+   "z": 642.8,
+   "score": 16.544
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 898.8,
+   "y": -1768.1,
+   "z": 292.2,
+   "score": 16.468
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 27.0,
+   "y": -469.4,
+   "z": 403.65,
+   "score": 15.868
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1120.4,
+   "y": -2455.3,
+   "z": 285.14,
+   "score": 15.732
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1709.0,
+   "y": 1262.1,
+   "z": 580.1,
+   "score": 15.547
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 52.8,
+   "y": 4521.6,
+   "z": 780.8,
+   "score": 14.981
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3366.9,
+   "y": 317.7,
+   "z": 374.36,
+   "score": 14.807
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3371.0,
+   "y": 320.3,
+   "z": 374.36,
+   "score": 14.8
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1627.2,
+   "y": 1153.1,
+   "z": 555.74,
+   "score": 14.417
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2456.0,
+   "y": -593.3,
+   "z": 277.15,
+   "score": 13.99
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2362.3,
+   "y": 965.6,
+   "z": 286.47,
+   "score": 13.359
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2357.4,
+   "y": 967.3,
+   "z": 286.46,
+   "score": 13.358
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2253.1,
+   "y": -39.1,
+   "z": 421.95,
+   "score": 12.804
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2927.9,
+   "y": 4038.6,
+   "z": 557.81,
+   "score": 12.803
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3391.8,
+   "y": 360.2,
+   "z": 382.03,
+   "score": 12.688
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1155.2,
+   "y": 3687.5,
+   "z": 738.71,
+   "score": 12.361
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 3189.1,
+   "y": 3101.4,
+   "z": 400.49,
+   "score": 12.252
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1103.8,
+   "y": 2042.9,
+   "z": 649.94,
+   "score": 12.154
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2405.6,
+   "y": 3202.8,
+   "z": 557.09,
+   "score": 12.092
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -769.5,
+   "y": 1039.9,
+   "z": 538.93,
+   "score": 12.021
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2334.6,
+   "y": 240.4,
+   "z": 464.72,
+   "score": 11.775
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1879.9,
+   "y": 6.8,
+   "z": 365.58,
+   "score": 11.553
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1832.4,
+   "y": 3244.9,
+   "z": 758.58,
+   "score": 11.476
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -48.9,
+   "y": 2798.8,
+   "z": 709.57,
+   "score": 11.464
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1394.2,
+   "y": 381.3,
+   "z": 538.38,
+   "score": 11.382
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4092.8,
+   "y": 2229.1,
+   "z": 639.64,
+   "score": 11.285
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1523.1,
+   "y": -971.0,
+   "z": 288.29,
+   "score": 11.198
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4055.4,
+   "y": 2313.6,
+   "z": 649.74,
+   "score": 10.493
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2137.4,
+   "y": 2427.8,
+   "z": 680.65,
+   "score": 10.44
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -722.1,
+   "y": 2008.2,
+   "z": 626.82,
+   "score": 10.159
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1402.6,
+   "y": 393.1,
+   "z": 539.13,
+   "score": 9.798
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3182.9,
+   "y": 1408.8,
+   "z": 485.56,
+   "score": 9.509
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 52.8,
+   "y": -680.2,
+   "z": 392.08,
+   "score": 9.147
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3877.8,
+   "y": 748.0,
+   "z": 406.74,
+   "score": 8.965
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 3463.9,
+   "y": 5188.2,
+   "z": 426.41,
+   "score": 8.824
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 872.8,
+   "y": -1745.0,
+   "z": 292.25,
+   "score": 8.666
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 3782.2,
+   "y": 5374.8,
+   "z": 370.18,
+   "score": 8.641
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4535.4,
+   "y": 1222.4,
+   "z": 399.95,
+   "score": 8.548
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1458.6,
+   "y": -990.2,
+   "z": 287.41,
+   "score": 7.772
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 3590.9,
+   "y": 5834.7,
+   "z": 379.15,
+   "score": 7.539
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2887.4,
+   "y": 200.8,
+   "z": 438.78,
+   "score": 7.307
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 893.8,
+   "y": -1746.4,
+   "z": 290.51,
+   "score": 7.287
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1995.6,
+   "y": 2077.9,
+   "z": 598.99,
+   "score": 7.177
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4766.7,
+   "y": 214.2,
+   "z": 394.99,
+   "score": 7.152
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1843.8,
+   "y": -38.3,
+   "z": 367.42,
+   "score": 7.126
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1393.5,
+   "y": -1550.5,
+   "z": 364.8,
+   "score": 7.099
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1122.6,
+   "y": 2064.0,
+   "z": 649.23,
+   "score": 6.852
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2335.3,
+   "y": 6358.8,
+   "z": 875.15,
+   "score": 6.724
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4135.6,
+   "y": 2245.8,
+   "z": 637.16,
+   "score": 6.48
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 471.3,
+   "y": -2566.1,
+   "z": 276.4,
+   "score": 6.436
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1080.3,
+   "y": -2381.4,
+   "z": 285.0,
+   "score": 6.372
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 3702.5,
+   "y": 5036.0,
+   "z": 360.76,
+   "score": 6.086
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -3698.5,
+   "y": -82.8,
+   "z": 281.24,
+   "score": 5.748
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2125.5,
+   "y": 2488.2,
+   "z": 534.96,
+   "score": 5.472
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2617.4,
+   "y": 1170.3,
+   "z": 283.87,
+   "score": 5.431
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 595.9,
+   "y": -1362.7,
+   "z": 302.68,
+   "score": 5.287
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2302.2,
+   "y": 597.7,
+   "z": 287.75,
+   "score": 5.255
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -635.4,
+   "y": 2113.2,
+   "z": 627.71,
+   "score": 5.146
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -525.3,
+   "y": 1147.5,
+   "z": 574.88,
+   "score": 5.097
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -715.0,
+   "y": -2680.9,
+   "z": 278.61,
+   "score": 4.984
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2635.3,
+   "y": 2174.3,
+   "z": 310.76,
+   "score": 4.904
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1888.0,
+   "y": 1985.1,
+   "z": 589.72,
+   "score": 4.898
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2230.3,
+   "y": 1138.5,
+   "z": 616.14,
+   "score": 4.831
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1137.2,
+   "y": -2338.3,
+   "z": 283.49,
+   "score": 4.828
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1332.5,
+   "y": -1756.7,
+   "z": 358.0,
+   "score": 4.734
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 896.2,
+   "y": -1938.2,
+   "z": 286.58,
+   "score": 4.724
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1096.6,
+   "y": -2325.8,
+   "z": 285.1,
+   "score": 4.694
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2158.3,
+   "y": 736.2,
+   "z": 309.15,
+   "score": 4.688
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1027.6,
+   "y": 3632.0,
+   "z": 725.17,
+   "score": 4.648
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1105.0,
+   "y": -2423.9,
+   "z": 288.1,
+   "score": 4.611
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1440.7,
+   "y": -1320.4,
+   "z": 374.54,
+   "score": 4.576
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -4792.8,
+   "y": -84.2,
+   "z": 292.3,
+   "score": 4.395
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 977.4,
+   "y": 1433.6,
+   "z": 675.13,
+   "score": 4.378
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -1089.6,
+   "y": 2110.2,
+   "z": 657.73,
+   "score": 4.377
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 2544.3,
+   "y": 598.4,
+   "z": 279.24,
+   "score": 4.374
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": -2790.5,
+   "y": 2473.0,
+   "z": 607.17,
+   "score": 4.369
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 21.6,
+   "y": 4444.7,
+   "z": 772.21,
+   "score": 4.345
+  },
+  {
+   "what": "parete girata verso l'interno",
+   "x": 1221.3,
+   "y": -2314.6,
+   "z": 276.2,
+   "score": 4.321
   },
   {
    "what": "gradino o dosso",
@@ -428,7 +1130,7 @@
    "x": -1405.4,
    "y": 1858.3,
    "z": 623.18,
-   "score": 2.299
+   "score": 2.276
   },
   {
    "what": "strada fuori profilo",
@@ -464,15 +1166,6 @@
    "y": 4650.6,
    "z": 333.57,
    "score": 2.037
-  },
-  {
-   "what": "ostacolo sulla strada",
-   "x": 2363.6,
-   "y": 6273.7,
-   "z": 851.25,
-   "score": 2.0,
-   "cosa": "ponte o gradino",
-   "az": 259.7
   },
   {
    "what": "ostacolo sulla strada",
@@ -1408,6 +2101,13 @@
    "score": 1.061
   },
   {
+   "what": "strada fuori profilo",
+   "x": -59.2,
+   "y": -793.5,
+   "z": 406.07,
+   "score": 1.061
+  },
+  {
    "what": "gradino o dosso",
    "x": -2254.1,
    "y": 1189.0,
@@ -1849,7 +2549,7 @@
    "what": "ostacolo sul sentiero",
    "x": -47.0,
    "y": -631.5,
-   "z": 395.99,
+   "z": 395.97,
    "score": 1.0,
    "cosa": "ponte o gradino",
    "az": 222.5
@@ -1912,7 +2612,7 @@
    "what": "ostacolo sul sentiero",
    "x": -1404.3,
    "y": 1856.7,
-   "z": 621.53,
+   "z": 621.55,
    "score": 1.0,
    "cosa": "ponte o gradino",
    "az": 144.7
@@ -2099,12 +2799,12 @@
   },
   {
    "what": "ostacolo sul sentiero",
-   "x": 8.8,
-   "y": 4448.4,
-   "z": 763.47,
+   "x": 0.9,
+   "y": -624.9,
+   "z": 394.2,
    "score": 1.0,
    "cosa": "edificio",
-   "az": 273.1
+   "az": 271.0
   },
   {
    "what": "ostacolo sul sentiero",
@@ -2137,6 +2837,13 @@
    "y": 356.0,
    "z": 338.21,
    "score": 0.981
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3008.4,
+   "y": 3906.9,
+   "z": 527.99,
+   "score": 0.977
   },
   {
    "what": "gradino o dosso",
@@ -2209,13 +2916,6 @@
    "score": 0.868
   },
   {
-   "what": "strada fuori profilo",
-   "x": -59.2,
-   "y": -793.5,
-   "z": 405.87,
-   "score": 0.862
-  },
-  {
    "what": "giunzione tra pezzi",
    "x": -47.0,
    "y": -384.0,
@@ -2263,13 +2963,6 @@
    "y": 2009.0,
    "z": 660.43,
    "score": 0.827
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3004.6,
-   "y": 3901.9,
-   "z": 529.43,
-   "score": 0.826
   },
   {
    "what": "gradino o dosso",
@@ -2427,6 +3120,13 @@
   },
   {
    "what": "gradino o dosso",
+   "x": 2403.8,
+   "y": 2453.4,
+   "z": 402.82,
+   "score": 0.7
+  },
+  {
+   "what": "gradino o dosso",
    "x": 1872.1,
    "y": 3354.8,
    "z": 777.52,
@@ -2451,13 +3151,6 @@
    "x": -2781.6,
    "y": 2444.4,
    "z": 604.85,
-   "score": 0.685
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2403.8,
-   "y": 2453.4,
-   "z": 402.82,
    "score": 0.685
   },
   {
@@ -2613,699 +3306,6 @@
    "y": 3338.7,
    "z": 759.59,
    "score": 0.6
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -3839.6,
-   "y": 866.4,
-   "z": 399.01,
-   "score": 0.594
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -4733.9,
-   "y": -169.2,
-   "z": 255.7,
-   "score": 0.59
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3731.6,
-   "y": 4702.9,
-   "z": 338.64,
-   "score": 0.589
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3760.2,
-   "y": 4864.4,
-   "z": 343.53,
-   "score": 0.587
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 55.8,
-   "y": 4520.3,
-   "z": 776.76,
-   "score": 0.584
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -2251.9,
-   "y": 1225.8,
-   "z": 642.33,
-   "score": 0.572
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -36.4,
-   "y": 4443.7,
-   "z": 760.02,
-   "score": 0.572
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 730.3,
-   "y": -346.1,
-   "z": 403.73,
-   "score": 0.57
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2131.9,
-   "y": 757.2,
-   "z": 306.51,
-   "score": 0.57
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2314.4,
-   "y": 3191.0,
-   "z": 580.56,
-   "score": 0.57
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -2078.1,
-   "y": 1153.6,
-   "z": 615.1,
-   "score": 0.567
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -2186.0,
-   "y": 1150.8,
-   "z": 615.86,
-   "score": 0.565
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3366.4,
-   "y": 2987.4,
-   "z": 292.58,
-   "score": 0.565
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 1408.0,
-   "y": 3409.8,
-   "z": 815.65,
-   "score": 0.564
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -2825.1,
-   "y": 136.7,
-   "z": 430.8,
-   "score": 0.555
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 1409.1,
-   "y": 389.5,
-   "z": 540.51,
-   "score": 0.553
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3575.1,
-   "y": 5353.2,
-   "z": 394.82,
-   "score": 0.553
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -1536.0,
-   "y": -954.0,
-   "z": 388.81,
-   "score": 0.551
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -3373.3,
-   "y": 440.0,
-   "z": 381.83,
-   "score": 0.548
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2865.2,
-   "y": 2493.5,
-   "z": 308.67,
-   "score": 0.548
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2114.0,
-   "y": 173.5,
-   "z": 310.83,
-   "score": 0.546
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 726.8,
-   "y": 4375.1,
-   "z": 650.44,
-   "score": 0.545
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 2252.0,
-   "y": 512.0,
-   "z": 294.8,
-   "score": 0.54
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -4469.7,
-   "y": 115.0,
-   "z": 335.41,
-   "score": 0.535
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2340.6,
-   "y": 2221.6,
-   "z": 408.22,
-   "score": 0.535
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3116.1,
-   "y": 2473.6,
-   "z": 299.11,
-   "score": 0.533
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -2130.0,
-   "y": 1024.0,
-   "z": 590.74,
-   "score": 0.533
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 711.2,
-   "y": 3886.6,
-   "z": 740.35,
-   "score": 0.527
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -1536.0,
-   "y": -1804.5,
-   "z": 286.65,
-   "score": 0.527
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -1536.0,
-   "y": -1800.0,
-   "z": 286.92,
-   "score": 0.527
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -1024.0,
-   "y": 1752.0,
-   "z": 611.17,
-   "score": 0.526
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -899.0,
-   "y": 2048.0,
-   "z": 626.25,
-   "score": 0.524
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 2234.0,
-   "y": 512.0,
-   "z": 296.7,
-   "score": 0.523
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 73.5,
-   "y": 2808.8,
-   "z": 723.74,
-   "score": 0.516
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -1088.8,
-   "y": 469.8,
-   "z": 679.42,
-   "score": 0.514
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2331.1,
-   "y": 6261.9,
-   "z": 855.4,
-   "score": 0.514
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -46.1,
-   "y": 4441.5,
-   "z": 758.85,
-   "score": 0.513
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 2701.8,
-   "y": 2688.0,
-   "z": 331.56,
-   "score": 0.513
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -1752.5,
-   "y": -665.1,
-   "z": 397.78,
-   "score": 0.511
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2407.9,
-   "y": 2797.3,
-   "z": 441.31,
-   "score": 0.511
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -3836.3,
-   "y": 2459.5,
-   "z": 760.66,
-   "score": 0.509
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -570.5,
-   "y": 1045.1,
-   "z": 549.36,
-   "score": 0.506
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -2180.2,
-   "y": 1862.9,
-   "z": 555.08,
-   "score": 0.506
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 558.8,
-   "y": -1527.2,
-   "z": 289.55,
-   "score": 0.504
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -585.4,
-   "y": -2305.4,
-   "z": 308.05,
-   "score": 0.503
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 209.8,
-   "y": 1515.2,
-   "z": 413.86,
-   "score": 0.5
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 1653.4,
-   "y": 140.4,
-   "z": 367.25,
-   "score": 0.499
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3208.3,
-   "y": 3820.8,
-   "z": 492.96,
-   "score": 0.497
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -2401.1,
-   "y": 39.8,
-   "z": 408.73,
-   "score": 0.496
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 382.7,
-   "y": 1948.0,
-   "z": 534.47,
-   "score": 0.493
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -2370.2,
-   "y": 66.5,
-   "z": 419.5,
-   "score": 0.49
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -1037.8,
-   "y": 3644.4,
-   "z": 715.58,
-   "score": 0.486
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -3588.3,
-   "y": 277.0,
-   "z": 320.51,
-   "score": 0.485
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 540.5,
-   "y": -964.5,
-   "z": 343.35,
-   "score": 0.482
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2981.3,
-   "y": 2765.0,
-   "z": 339.18,
-   "score": 0.482
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -2371.3,
-   "y": 3797.0,
-   "z": 967.54,
-   "score": 0.479
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1398.9,
-   "y": 395.1,
-   "z": 544.78,
-   "score": 0.478
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 64.5,
-   "y": -768.0,
-   "z": 379.48,
-   "score": 0.474
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -3840.0,
-   "y": 867.5,
-   "z": 399.14,
-   "score": 0.463
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 93.7,
-   "y": -768.0,
-   "z": 381.19,
-   "score": 0.463
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1102.4,
-   "y": -2415.8,
-   "z": 276.47,
-   "score": 0.459
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -2078.1,
-   "y": 1153.6,
-   "z": 615.1,
-   "score": 0.455
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2648.7,
-   "y": 4513.0,
-   "z": 698.38,
-   "score": 0.446
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1576.8,
-   "y": 1149.9,
-   "z": 571.61,
-   "score": 0.445
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -4608.0,
-   "y": 762.0,
-   "z": 375.01,
-   "score": 0.445
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -1007.0,
-   "y": 3584.0,
-   "z": 705.93,
-   "score": 0.444
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -1000.0,
-   "y": 3584.0,
-   "z": 706.09,
-   "score": 0.439
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 560.8,
-   "y": -1558.6,
-   "z": 289.0,
-   "score": 0.434
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1900.2,
-   "y": 3375.9,
-   "z": 774.78,
-   "score": 0.425
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 3774.0,
-   "y": 3584.0,
-   "z": 289.88,
-   "score": 0.424
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 2498.9,
-   "y": 1792.0,
-   "z": 294.62,
-   "score": 0.421
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 705.2,
-   "y": 1528.4,
-   "z": 614.28,
-   "score": 0.402
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -768.0,
-   "y": -2673.1,
-   "z": 272.55,
-   "score": 0.396
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 3611.5,
-   "y": 5835.8,
-   "z": 369.2,
-   "score": 0.393
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -5668.1,
-   "y": 0.0,
-   "z": 253.74,
-   "score": 0.393
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -2048.0,
-   "y": 2074.9,
-   "z": 585.75,
-   "score": 0.393
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -1382.7,
-   "y": 2037.4,
-   "z": 672.28,
-   "score": 0.392
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": -914.2,
-   "y": 1024.0,
-   "z": 581.9,
-   "score": 0.392
-  },
-  {
-   "what": "giunzione tra pezzi",
-   "x": 3140.5,
-   "y": 4352.0,
-   "z": 575.97,
-   "score": 0.391
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -1868.3,
-   "y": -754.6,
-   "z": 350.36,
-   "score": 0.385
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 69.3,
-   "y": 2929.4,
-   "z": 730.15,
-   "score": 0.381
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1248.8,
-   "y": -194.2,
-   "z": 444.52,
-   "score": 0.366
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 454.6,
-   "y": 232.2,
-   "z": 572.8,
-   "score": 0.365
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 639.5,
-   "y": -1228.7,
-   "z": 301.32,
-   "score": 0.363
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2090.6,
-   "y": 732.8,
-   "z": 315.92,
-   "score": 0.362
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 3772.4,
-   "y": 4873.8,
-   "z": 342.52,
-   "score": 0.361
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1840.5,
-   "y": 3244.1,
-   "z": 748.66,
-   "score": 0.358
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 3447.5,
-   "y": 5193.3,
-   "z": 423.52,
-   "score": 0.356
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -1384.6,
-   "y": 2040.5,
-   "z": 674.24,
-   "score": 0.355
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1678.7,
-   "y": 1295.3,
-   "z": 553.3,
-   "score": 0.354
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -4733.9,
-   "y": -169.2,
-   "z": 255.7,
-   "score": 0.351
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 1971.7,
-   "y": 1928.1,
-   "z": 527.65,
-   "score": 0.35
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2056.2,
-   "y": 3088.9,
-   "z": 644.11,
-   "score": 0.339
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 4202.9,
-   "y": 5517.9,
-   "z": 341.51,
-   "score": 0.338
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 541.3,
-   "y": -326.3,
-   "z": 379.59,
-   "score": 0.336
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 971.8,
-   "y": 1441.4,
-   "z": 675.98,
-   "score": 0.336
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 3767.7,
-   "y": 4950.7,
-   "z": 344.87,
-   "score": 0.33
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": 2977.0,
-   "y": 3808.7,
-   "z": 514.67,
-   "score": 0.327
-  },
-  {
-   "what": "strada fuori profilo",
-   "x": -1270.5,
-   "y": -2151.8,
-   "z": 282.27,
-   "score": 0.318
   }
  ]
 }

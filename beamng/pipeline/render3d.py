@@ -26,14 +26,17 @@ SKY = (0.70, 0.79, 0.88)
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
-GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway")
+GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
+          # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
+          "level_objects/Water", "level_objects/vegetation/vineyards")
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [
     ("mp_fill_", (-1.0, -1.0, -1.0)),       # the ground restored behind the walls: the orthophoto, as the terrain
     ("asphalt_fresh", (0.23, 0.23, 0.24)), ("mp_road_asphalt", (0.36, 0.36, 0.37)),
     ("hard_asphalt", (0.40, 0.40, 0.40)), ("sidewalk", (0.56, 0.56, 0.55)), ("island", (0.62, 0.62, 0.58)),
-    ("road_wall", (0.56, 0.51, 0.45)), ("gravel", (0.64, 0.59, 0.49)), ("path_dirt", (0.55, 0.45, 0.33)),
+    ("road_wall", (0.56, 0.51, 0.45)), ("gravel", (0.64, 0.59, 0.49)), ("_dirt", (0.55, 0.45, 0.33)),
+    ("_sett", (0.55, 0.55, 0.53)), ("_cobble", (0.56, 0.54, 0.50)),
     ("path_paved", (0.46, 0.46, 0.45)), ("parapet", (0.74, 0.73, 0.70)), ("paint_yellow", (0.93, 0.78, 0.2)),
     ("paint_red", (0.75, 0.2, 0.18)), ("paint", (0.96, 0.96, 0.94)), ("guardrail", (0.80, 0.81, 0.82)),
     ("chainlink", (0.55, 0.58, 0.55)), ("fence", (0.5, 0.5, 0.5)), ("wall_stone_top", (0.70, 0.69, 0.66)),
@@ -135,7 +138,9 @@ window.renderView = async function (url) {
     g.setAttribute('uv', new THREE.BufferAttribute(A(s.uv), 2));
     g.setAttribute('color', new THREE.BufferAttribute(A(s.col), 3, true));
     g.computeVertexNormals();
-    const opt = {map: await getTex(s.tex, s.texInfo), vertexColors: true, side: THREE.DoubleSide,
+    // one side, as in the game, unless the material is double sided (v2.4)
+    const opt = {map: await getTex(s.tex, s.texInfo), vertexColors: true,
+                 side: s.double ? THREE.DoubleSide : THREE.FrontSide,
                  roughness: s.rough, metalness: 0.0};
     if (s.nrm) { opt.normalMap = await getTex(s.nrm, s.nrmInfo); opt.normalScale = new THREE.Vector2(1, 1); }
     if (s.alpha) opt.alphaTest = 0.43;
@@ -345,6 +350,7 @@ class Level:
                             if isinstance(m, dict) and m.get("class") == "Material":
                                 st = dict((m.get("Stages") or [{}])[0])
                                 st["_alpha"] = bool(m.get("alphaTest"))
+                                st["_double"] = bool(m.get("doubleSided"))
                                 self.materials[m.get("name", k)] = st
                     except (ValueError, OSError):
                         pass
@@ -592,7 +598,7 @@ class Renderer:
             out.append((name, self._tex[name][1]))
         rough = float(st.get("roughnessFactor", 0.85)) if "roughnessFactor" in st else 0.85
         return {"tex": out[0][0], "texInfo": out[0][1], "nrm": out[1][0], "nrmInfo": out[1][1],
-                "alpha": bool(st.get("_alpha")), "rough": rough}
+                "alpha": bool(st.get("_alpha")), "double": bool(st.get("_double")), "rough": rough}
 
     def _backdrop(self, cx, cy, radius, origin):
         L = self.level

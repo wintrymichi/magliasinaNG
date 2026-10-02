@@ -161,6 +161,14 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     garden = np.isin(t["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],
                                CODE["campo_prato_pascolo"], CODE["vigna"]])
     cls = classify(h, d, t["sharp"], t["rgb"], garden)
+    # v2.4: windmill palms in the gardens by the lake (palms.py: a guess on measured trees, drawn model)
+    import palms
+    palm_path, pmin, pmax = palms.build(level_dir, level_name)
+    asset_bounds.register(palm_path, pmin, pmax)
+    MODELS["palm"] = [palm_path]
+    is_palm = palms.candidates(x, y, z, h, d, t["lc"])
+    cls[is_palm] = "palm"
+    print("palms:", int(is_palm.sum()))
     paths = sorted({p for v in MODELS.values() for p in v})
     bounds = asset_bounds.cached(paths)
     dims = {}
@@ -272,7 +280,8 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     import vanilla
     if vanilla.have_game():
         import copy_materials
-        used = sorted({m for (_, p) in items for m in asset_bounds.dae_material_names(p)})
+        used = sorted({m for (_, p) in items if not p.startswith(f"/levels/{level_name}/")
+                       for m in asset_bounds.dae_material_names(p)})
         found, missing = copy_materials.collect(used)
         bng.write_materials(os.path.join(level_dir, "art", "forest", "main.materials.json"), list(found.values()))
         if missing:

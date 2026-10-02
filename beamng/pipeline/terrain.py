@@ -30,6 +30,12 @@ TERRAIN_MATS = {
     "Mud":          ("MUD",     f"{A}/mud/mud/t_mud",                             f"{A}/forest/t_macro_dirt_forest/t_macro_dirt_forest", 4, 50),
     "Moss":         ("GRASS",   f"{A}/forest/t_moss/t_moss",                      f"{A}/forest/t_macro_forest/t_macro_forest", 4, 50),
 }
+# v2.4: the meadows and lawns within a terrain square of the roads and paths: the same look, another
+# layer, so the grass of groundcover.py (on Grass and GardenGrass) does not stand through the road meshes
+VERGE = {"Grass": "GrassVerge", "GardenGrass": "GardenGrassVerge"}
+for _m, _v in VERGE.items():
+    TERRAIN_MATS[_v] = TERRAIN_MATS[_m]
+VERGE_OF = {v: m for m, v in VERGE.items()}
 MAT_ORDER = list(TERRAIN_MATS)
 MAT_ID = {m: i for i, m in enumerate(MAT_ORDER)}
 
@@ -123,7 +129,8 @@ def heights_band(xs, ys, dtm, dtm2, wgrid):
     return H
 
 
-def build_terrain(level_dir, override=None, override_mask=None, layer_override=None, post_fn=None, cap=None):
+def build_terrain(level_dir, override=None, override_mask=None, layer_override=None, post_fn=None, cap=None,
+                  no_cover=None):
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     dtm2 = Grid.load(os.path.join(WORK, "dtm2.npz"))
     wgrid = fine_weight(dtm)
@@ -176,6 +183,9 @@ def build_terrain(level_dir, override=None, override_mask=None, layer_override=N
     if layer_override is not None:
         m = layer_override >= 0
         layers[m] = layer_override[m]
+    if no_cover is not None:                             # v2.4: the verges of the roads (VERGE)
+        for a, b in VERGE.items():
+            layers[no_cover & (layers == MAT_ID[a])] = MAT_ID[b]
     z0 = float(np.floor(H.min() - 2.0))
     max_h = float(np.ceil(H.max() - z0 + 2.0))
     bng.write_ter(os.path.join(level_dir, "theTerrain.ter"), H, z0, max_h, layers, MAT_ORDER)

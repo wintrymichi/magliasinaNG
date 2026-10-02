@@ -35,6 +35,7 @@ import shapely
 from rasterio import features
 from rasterio.transform import Affine
 from scipy.spatial import cKDTree
+import osm_surface
 import patch_release as pr
 from road_mesh import TriSurface
 
@@ -43,10 +44,12 @@ DATI = os.path.join(os.path.dirname(HERE), "dati")
 LEVEL_PREFIX = "/levels/"
 
 # drivable surfaces: class 0 carriageways (and bridge decks), 1 sidewalks, yards and squares, 2 paths
-SURFACE_CLASS = {"mp_road_asphalt": 0, "mp_road_asphalt_fresh": 0, "mp_road_gravel": 0, "mp_sidewalk": 1,
-                 "mp_hard_asphalt": 1, "mp_path_dirt": 2, "mp_path_paved": 2,
+SURFACE_CLASS = {"mp_road_asphalt_fresh": 0, "mp_sidewalk": 1,
                  # the railway bed (railway.py) is kept clear like a carriageway
-                 "mp_ballast": 0, "mp_sleeper": 0, "mp_rail_head": 0, "mp_rail_deck": 0}
+                 "mp_ballast": 0, "mp_sleeper": 0, "mp_rail_head": 0, "mp_rail_deck": 0,
+                 # every surface of the carriageways, yards and paths (v2.4: gravel, earth, setts, cobbles)
+                 **{m: 0 for m in osm_surface.ROAD_MATS}, **{m: 1 for m in osm_surface.HARD_MATS},
+                 **{m: 2 for m in osm_surface.PATH_MATS}}
 CLASS_NAMES = ("carreggiata", "marciapiede o piazzale", "sentiero")
 CLEAR = np.array([4.5, 2.5, 2.5])          # m of clearance profile over the faces of each class
 EDGE_TOL = 0.3                              # m of crown allowed over the edge of a surface under the profile

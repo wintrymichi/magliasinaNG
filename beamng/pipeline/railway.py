@@ -182,8 +182,9 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
         bng.material("mp_rail_steel", base_color=[0.33, 0.30, 0.28, 1], roughness=0.55, metallic=0.8, ground_type="METAL"),
         bng.material("mp_rail_head", base_color=[0.62, 0.62, 0.63, 1], roughness=0.3, metallic=0.9, ground_type="METAL"),
         bng.material("mp_sleeper", base_color=[0.55, 0.54, 0.51, 1], roughness=0.85, ground_type="CONCRETE"),
-        bng.material("mp_ballast", f"{L}/art/shapes/roads/t_gravel_b.png",
-                     "/assets/materials/terrain/soil/t_gravel/t_gravel_nm.png", base_color=[0.78, 0.76, 0.74, 1],
+        # v2.4: the gravel texture of the roads (surface_textures.py), greyer and darker for the ballast
+        bng.material("mp_ballast", f"{L}/art/shapes/roads/t_road_gravel_b.color.png",
+                     f"{L}/art/shapes/roads/t_road_gravel_nm.normal.png", base_color=[0.68, 0.69, 0.71, 1],
                      roughness=0.95, ground_type="GRAVEL"),
         bng.material("mp_rail_deck", base_color=[0.70, 0.69, 0.66, 1], roughness=0.8, ground_type="CONCRETE")])
     tiles = {}
@@ -296,7 +297,7 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
     for (tx, ty), mb in sorted(tiles.items()):
         rel = f"art/shapes/railway/rail_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * TILE, (ty + 0.5) * TILE, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name=f"rail_{tx}_{ty}", origin=origin)
+        mb.write_dae(os.path.join(level_dir, rel), name=f"rail_{tx}_{ty}", origin=origin, orient=True)
         scene.add(g, bng.tsstatic(f"{L}/{rel}", origin, collision=True, decal=False))
     stats = {k: (round(v, 2) if isinstance(v, float) else v) for k, v in stats.items()}
     print("railway:", stats, "meshes", len(tiles))

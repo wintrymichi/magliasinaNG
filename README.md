@@ -5,7 +5,7 @@
 **Il Malcantone (Canton Ticino) ricostruito in scala 1:1 per BeamNG.drive: 52 km² di paesi, strade, sentieri, boschi e lago tra Ponte Tresa, Caslano, Agno, Bioggio, Gravesano e Arosio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
-![Versione](https://img.shields.io/badge/versione-2.3-blue)
+![Versione](https://img.shields.io/badge/versione-2.4-blue)
 ![Scala](https://img.shields.io/badge/scala-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
 ![Dati](https://img.shields.io/badge/dati-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
@@ -21,10 +21,11 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 | | |
 |---|---|
 | **Area** | circa 52 km², terreno di 12,3 × 12,3 km a 1,5 m (LiDAR swissALTI3D) |
-| **Strade e sentieri** | 228 km di strade e 337 km di sentieri, mulattiere e scalinate, tutti guidabili; 167 ponti; dalla v2.2 anche il passo sopra Gravesano fino ad Arosio, la cantonale Ponte Tresa–Caslano e Via Torrazza |
+| **Strade e sentieri** | 228 km di strade e 337 km di sentieri, mulattiere e scalinate, tutti guidabili; 167 ponti; dalla v2.2 anche il passo sopra Gravesano fino ad Arosio, la cantonale Ponte Tresa–Caslano e Via Torrazza; dalla v2.4 asfalto, ghiaia, terra, cubetti e ciottoli secondo OpenStreetMap |
 | **Edifici** | 12 792 edifici (swissBUILDINGS3D e misurazione ufficiale) con facciate, finestre, persiane, porte, vetrine, zoccoli e comignoli |
 | **Guardrail** | 2,0 km sulla cantonale Magliaso–Pura e, dalla v2.2, altri 9,7 km sul resto della rete, dove le panoramiche li mostrano |
-| **Vegetazione** | circa 161 000 alberi e arbusti dal modello di superficie: tutti quelli entro 30 m dalle strade, più radi lontano; fuori dalla sagoma libera delle strade |
+| **Vegetazione** | circa 161 000 alberi e arbusti dal modello di superficie: tutti quelli entro 30 m dalle strade, più radi lontano; fuori dalla sagoma libera delle strade. Dalla v2.4 erba e fiori, palme nei giardini sul lago, filari in 475 vigneti |
+| **Acqua** | il Lago di Lugano e, dalla v2.4, i fiumi (Magliasina, Vedeggio, Tresa e gli altri corsi d'acqua rilevati come superfici) |
 | **Segnaletica** | linee, strisce pedonali e segni rilevati nell'ortofoto 10 cm, cartelli STOP e precedenza, fermate dei bus |
 | **Traffico IA** | rete completa con sensi unici, rotonde e carreggiate separate |
 | **Punti di partenza** | 30, uno in ogni paese |
@@ -42,6 +43,14 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 | ![Caslano e Via Torrazza lungo il lago](beamng/verifica/screenshots/10_caslano_torrazza.jpg)<br>*Caslano e Via Torrazza lungo il lago* | ![Magliaso, via verso il nucleo](beamng/verifica/screenshots/11_magliaso_strada.jpg)<br>*Magliaso, via verso il nucleo* |
 | ![La cantonale verso Pura](beamng/verifica/screenshots/12_pura_cantonale.jpg)<br>*La cantonale verso Pura* | ![Agno, una via del nucleo](beamng/verifica/screenshots/13_agno_via.jpg)<br>*Agno, una via del nucleo* |
 | ![Il passo sopra Gravesano verso Arosio](beamng/verifica/screenshots/14_passo_tornante.jpg)<br>*Il passo sopra Gravesano verso Arosio* |  |
+
+## Novità della v2.4
+
+- **Case visibili da ogni lato.** Il gioco disegna una faccia sola di ogni parete. Fino alla v2.3 l'8,6 % della superficie delle pareti guardava verso l'interno (gli edifici a L, a U, a corte, le file di case): da certe angolazioni le case erano trasparenti, con i tetti sospesi. Ora il verso delle pareti si decide con un test dei raggi e le pareti girate scendono allo 0,06 %; dove il verso non si può decidere la parete ha due facce, e sotto le gronde c'è il sottotetto.
+- **Rotonda di Magliaso, salita verso Pura.** Il "cubo" che sporgeva dall'asfalto all'incrocio era la cima di un muro di sostegno, coperto dalla strada, che la mappa alzava di 16 cm; il "quadrato" in mezzo alla carreggiata era il marciapiede dell'isola pedonale tolta nel 2022. Ora i muri che le panoramiche vedono come pavimentazione sono a filo (487) o tolti dove il terreno è in piano (37), e quel marciapiede è strada.
+- **Sterrati, ghiaia e selciati dove lo sono davvero:** la superficie di OpenStreetMap (altrimenti di swissTLM3D) su ogni strada e sentiero: le strade della misurazione, prima tutte d'asfalto, hanno ora 36 ha di terra, 9,4 ha di ghiaia e 1,2 ha di cubetti e ciottoli nei nuclei. Texture disegnate con la tinta misurata sull'ortofoto; nel gioco cambia anche l'aderenza.
+- **Erba e fiori** sui prati e nei giardini attorno alla telecamera, **palme** (352) nei giardini vicino al lago, **filari** in 475 vigneti (465 km, nella direzione dell'ortofoto), **acqua nei fiumi** (30 ha, anche sotto i ponti).
+- **Materiali e luce:** ombre ambientali per intonaci, zoccoli e tetti, muri più scuri verso terra, luce dei lampioni di notte, un po' più di foschia sul lago.
 
 ## Novità della v2.3
 
@@ -64,7 +73,7 @@ La mappa è costruita da una pipeline Python a partire dai dati aperti di swisst
 
 ## Installazione
 
-1. Scaricare `magliaso_pura_v2.3.zip` dalla pagina delle [release](https://github.com/wintrymichi/magliasinaNG/releases).
+1. Scaricare `magliaso_pura_v2.4.zip` dalla pagina delle [release](https://github.com/wintrymichi/magliasinaNG/releases).
 2. Copiarlo in `Documents/BeamNG.drive/current/mods/` (o installarlo dal gestore delle mod), togliendo le versioni precedenti: il livello si chiama sempre `magliaso_pura`.
 3. Nel gioco: *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*.
 
@@ -90,12 +99,12 @@ flowchart LR
     L --> Q[check_level.py<br/>drive_test.py]
 ```
 
-Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2.3.yml` (su un server GitHub, in circa un'ora): scarica i dati ufficiali, costruisce il livello, lo controlla e pubblica la release. I dettagli di ogni passo sono in [`beamng/README.md`](beamng/README.md).
+Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2.4.yml` (su un server GitHub, in circa un'ora): scarica i dati ufficiali, costruisce il livello, lo controlla e pubblica la release. I dettagli di ogni passo sono in [`beamng/README.md`](beamng/README.md).
 
 ## Qualità e verifica
 
-- **Controlli automatici su tutta la mappa** (`check_level.py`, [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terreno sopra le strade, buchi, gradini, giunzioni tra blocchi, ostacoli sulla carreggiata cercati lungo ogni strada e sentiero, alberi nella sagoma libera, rete dell'IA, file mancanti.
-- **Prova di guida virtuale** (`drive_test.py`): un'auto (modello quarter-car sulle quattro ruote) percorre tutte le strade nei due sensi e tutti i sentieri, 670 km, sulle superfici del livello come sono scritte. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 66 % di gradini in meno sulle strade secondarie (1695 → 576) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 58 % sulle secondarie e del 58 % sulle principali, i colpi forti del 25 % e le torsioni brusche del 61 % sulle secondarie.
+- **Controlli automatici su tutta la mappa** (`check_level.py`, [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terreno sopra le strade, buchi, gradini, giunzioni tra blocchi, ostacoli sulla carreggiata cercati lungo ogni strada e sentiero, alberi nella sagoma libera, rete dell'IA, file mancanti e, dalla v2.4, pareti degli edifici girate verso l'interno.
+- **Prova di guida virtuale** (`drive_test.py`): un'auto (modello quarter-car sulle quattro ruote) percorre tutte le strade nei due sensi e tutti i sentieri, 670 km, sulle superfici del livello come sono scritte. Sulle stesse strade della v2.1 la prova di guida virtuale conta il 66 % di gradini in meno sulle strade secondarie (1695 → 570) e il 20 % in meno sulle principali (74 → 59); le ruote che si staccano dalla strada calano del 57 % sulle secondarie e del 58 % sulle principali, i colpi forti del 25 % e le torsioni brusche del 61 % sulle secondarie.
 - **Revisione su Street View** ([`beamng/verifica/REVISIONE.md`](beamng/verifica/REVISIONE.md)): per ogni strada la copertura delle panoramiche, gli edifici misurati, i guardrail e i muri visti, gli eventi della prova di guida prima e dopo, e i luoghi confrontati foto/mappa dalla stessa camera con i problemi trovati e le correzioni.
 
 ## Struttura del repository
@@ -105,7 +114,7 @@ Il livello si ricostruisce da zero con il workflow `.github/workflows/release_v2
 | [`beamng/pipeline/`](beamng/pipeline) | la pipeline: download dei dati, rete stradale, superfici, edifici, facciate, vegetazione, livello, controlli |
 | [`beamng/dati/`](beamng/dati) | risultati leggeri fissati per la release (pose, segnaletica, guardrail, colori, estratti di GWR e OSM) |
 | [`beamng/verifica/`](beamng/verifica) | controlli, prova di guida, revisione strada per strada, screenshot |
-| [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md) | note della release (quelle della v2.2 in [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
+| [`beamng/RELEASE_v2.4.md`](beamng/RELEASE_v2.4.md) | note della release (quelle precedenti in [`beamng/RELEASE_v2.3.md`](beamng/RELEASE_v2.3.md), [`beamng/RELEASE_v2.2.md`](beamng/RELEASE_v2.2.md)) |
 | `panoramas.*`, `cameras.json`, `sv_capture.py`, … | il dataset originale della cantonale Magliaso–Pura (metadati delle panoramiche, vedi sotto) |
 
 ## Il dataset delle panoramiche
@@ -139,7 +148,9 @@ Le viste si chiamano `NNNN_<panoId>_<direzione>_p<pitch>.jpg`: la direzione è r
 
 ## Limiti noti
 
-- La mappa non è stata provata dentro BeamNG.drive durante questa revisione: le verifiche sono automatiche (`check_level.py`, `drive_test.py`) e sui render del livello confrontati con le panoramiche.
+- La mappa non è stata provata dentro BeamNG.drive durante questa revisione: le verifiche sono automatiche (`check_level.py`, `drive_test.py`) e sui render del livello confrontati con le panoramiche. Della v2.4 non sono provati nel gioco l'aspetto e il costo dell'erba (GroundCover), la trasparenza dell'acqua dei fiumi, il fondo dei selciati e le luci dei lampioni.
+- Le palme sono una stima (le foto aeree non distinguono una palma da un piccolo albero); la densità dell'erba e la distanza dei filari non sono misurate. Dove OpenStreetMap non indica la superficie vale swissTLM3D.
+- Con le pareti girate dal lato giusto anche lo zoccolo di qualche casa è passato sul lato esterno: la prova degli ostacoli conta 12 punti di sentiero bloccati da edifici invece di 10. Quello controllato, sotto Pura, è un sentiero largo 1 m che entra in un vicolo tra case a schiera, ora attraversato in basso dallo zoccolo (circa 60 cm).
 - Facciate: numero e posizione di finestre, balconi e porte sono plausibili (uso, epoca e piani del registro) ma non copiati uno per uno. Il tono viene dalle foto per 3 637 edifici; in ombra alcune tinte escono sbagliate (una facciata crema resa rosa). Pietra a vista, portici e zoccoli alti un piano non sono modellati.
 - Piazzali della misurazione ufficiale che scavalcano un salto di quota diventano rampe ripide accanto alla strada (per esempio in Via Torrazza a Caslano).
 - Alcuni edifici di swissBUILDINGS3D hanno i muri solo sotto una parte del tetto (un capannone a Pura).

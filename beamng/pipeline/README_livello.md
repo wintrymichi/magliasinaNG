@@ -25,10 +25,14 @@ Ricostruzione in scala 1:1 di circa 52 km² del Malcantone (Canton Ticino), tra 
 | Fermate dei bus (v2.2) | OpenStreetMap | palo, cartello, orario e, dove registrata, pensilina |
 | Segnaletica della cantonale | ortofoto 10 cm (tratteggi 3 m / 6 m, strisce, zebre gialle), verificata nelle foto | stato di ottobre 2022 (vedi sotto) |
 | Lampioni, pali e cartelli, delineatori, arredo urbano della cantonale | triangolati dalle foto con le pose calibrate | ±0,3–0,5 m; targhe nella forma e nel colore misurati nelle foto (senza l'immagine del cartello) |
-| Alberi, siepi e arbusti (circa 161 000) | modello di superficie swissSURFACE3D (posizione, altezza e chioma di ogni albero), ortofoto | tutti entro 30 m dalle strade e 5 m dai sentieri, più radi oltre (v2.3: prima 150 m); specie approssimate con modelli vanilla; nessun tronco sulla carreggiata né a meno di 1 m dal bordo delle strade (0,5 m dei sentieri), nessuna chioma nella sagoma libera (4,50 m sopra le carreggiate, 2,50 m sopra marciapiedi e sentieri), ogni pianta sul suolo |
+| Alberi, siepi e arbusti (circa 161 000) | modello di superficie swissSURFACE3D (posizione, altezza e chioma di ogni albero), ortofoto | tutti entro 30 m dalle strade e 5 m dai sentieri, più radi oltre (v2.3: prima 150 m); specie approssimate con modelli vanilla, palme disegnate nei giardini vicino al lago (v2.4, una stima); nessun tronco sulla carreggiata né a meno di 1 m dal bordo delle strade (0,5 m dei sentieri), nessuna chioma nella sagoma libera (4,50 m sopra le carreggiate, 2,50 m sopra marciapiedi e sentieri), ogni pianta sul suolo |
 | Segnaletica orizzontale del resto della rete | ortofoto SWISSIMAGE 10 cm (2024): linee tracciate lungo ogni strada, segni vettorializzati | solo la vernice visibile nell'ortofoto; tratti coperti da alberi o ombra ricostruiti solo tra due parti viste (fino a 60 m) |
 | Sensi unici, cartelli STOP e precedenza, panchine e cestini del resto della rete | OpenStreetMap; rotonde e carreggiate separate da swissTLM3D | posizione di OSM, cartelli sul bordo della strada che li ha |
 | Ferrovia (FLP e FFS) | swissTLM3D (assi, quote, scartamento, ponti) | binari a scartamento reale alla quota di swissTLM3D, mai sotto il terreno, a filo della strada nei passaggi a livello; niente linea di contatto, niente binari sotto il parcheggio della stazione di Ponte Tresa |
+| Superficie di strade e sentieri (v2.4) | OpenStreetMap (`surface`, `tracktype`), altrimenti swissTLM3D | asfalto, ghiaia, terra, cubetti, ciottoli; dove OSM tace vale swissTLM3D; i passaggi da una superficie all'altra seguono le vie OSM con qualche metro di approssimazione |
+| Erba e fiori (v2.4) | livelli di prato e giardino del terreno (misurazione ufficiale) | ciuffi disegnati attorno alla telecamera (50 m); densità stimata, non misurata |
+| Vigneti (v2.4) | misurazione ufficiale (vigne), ortofoto 10 cm (direzione dei filari) | filari ogni 2,2 m (distanza tipica, non misurata) nei vigneti entro 150 m da strade e sentieri |
+| Fiumi (v2.4) | misurazione ufficiale (corsi d'acqua larghi almeno 2,5 m), swissALTI3D | acqua all'altezza del fondo più basso entro 3 m; anche sotto i ponti, non sui guadi |
 | Lago di Lugano, paesaggio lontano | swissALTI3D, Copernicus GLO-30 | — |
 
 ## Stato del 2022 riprodotto sulla cantonale
@@ -38,6 +42,13 @@ Le foto di ottobre 2022 sono più recenti dell'ortofoto e della misurazione uffi
 - **Nessuna segnaletica** dove la strada era in rifacimento o non era segnata: s ≈ 1,23–1,27 km, 1,52–1,82 km e 3,64–3,72 km. Nel cantiere l'asfalto nuovo è più scuro.
 - **Bande rosse** ai due bordi nel tratto s ≈ 2,29–2,44 km.
 - **Incrocio di Magliaso:** l'incrocio era stato ricostruito, quindi le due isole pedonali e l'isola dipinta del rilievo sono state rimosse, e la mezzeria segue la posizione visibile nelle foto.
+
+## Versione 2.4
+
+- **Case visibili da ogni lato:** le pareti che guardavano verso l'interno (edifici a L, a U, a corte, file di case) e che da fuori mancavano ora guardano fuori; dove il verso non si può decidere la parete ha due facce; sotto le gronde c'è il sottotetto.
+- **Rotonda di Magliaso, salita verso Pura:** tolto il blocco che sporgeva di 16 cm dall'asfalto all'incrocio (la cima di un muro di sostegno coperto dalla strada) e il pezzo di marciapiede rimasto in mezzo alla carreggiata dall'isola pedonale tolta nel 2022.
+- **Sterrati, ghiaia e selciati** dove OpenStreetMap li indica (altrimenti secondo swissTLM3D), con texture disegnate e il fondo giusto per l'aderenza: ghiaia, terra, cubetti, ciottoli.
+- **Erba e fiori** sui prati e nei giardini attorno alla telecamera; **palme** nei giardini vicino al lago; **filari** nei vigneti; **acqua** nei fiumi; ombre ambientali nei materiali degli edifici; luce dei lampioni di notte; un po' più di foschia sul lago.
 
 ## Versione 2.3
 

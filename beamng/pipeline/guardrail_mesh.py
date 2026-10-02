@@ -224,7 +224,7 @@ def build(level_dir, level_name, scene, road_fn=None):
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/guardrails/gr_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CH, (ty + 0.5) * CH, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name="guardrail", origin=origin)
+        mb.write_dae(os.path.join(level_dir, rel), name="guardrail", origin=origin, orient=True)
         scene.add("MissionGroup/roads/guardrails", bng.tsstatic(f"/levels/{level_name}/{rel}", origin,
                                                                  collision=True, decal=False))
     print("guardrails", len(runs), "runs in", len(builders), "chunks")
