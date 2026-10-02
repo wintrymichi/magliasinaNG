@@ -264,7 +264,8 @@ def stage_roads(scene, ctx):
         x0, y0, x1, y1 = gi.bounds
         for tx in range(int(np.floor(x0 / CHUNK)), int(np.floor(x1 / CHUNK)) + 1):
             for ty in range(int(np.floor(y0 / CHUNK)), int(np.floor(y1 / CHUNK)) + 1):
-                piece = gi.intersection(shapely.box(tx * CHUNK, ty * CHUNK, (tx + 1) * CHUNK, (ty + 1) * CHUNK))
+                cbox = shapely.box(tx * CHUNK, ty * CHUNK, (tx + 1) * CHUNK, (ty + 1) * CHUNK)
+                piece = gi.intersection(cbox)
                 if piece.is_empty or piece.area < 0.05:
                     continue
                 if pid is None:                  # a sliver without cells of its own: the height function
@@ -272,7 +273,7 @@ def stage_roads(scene, ctx):
                     parts = [(None, V, T)]
                 else:                            # one mesh per surface of the polygon (walls inside it)
                     parts = []
-                    for sub, comp in road_mesh.split_by_surface(piece, S, pid):
+                    for sub, comp in road_mesh.split_by_surface(piece, S, pid, cut=cbox.exterior):
                         kf = key_fn(pid) if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
                         parts += road_mesh.mesh_polygon_surfaces(sub, z_fn(pid), kf, cell=cell)
                 for comp, V, T in parts:

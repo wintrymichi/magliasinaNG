@@ -87,10 +87,11 @@ def polygonal(g):
     return parts[0] if len(parts) == 1 else MultiPolygon(parts)
 
 
-def split_by_surface(poly, S, pid, min_area=2.0, simplify=0.35):
+def split_by_surface(poly, S, pid, min_area=2.0, simplify=0.35, cut=None):
     """Parts of `poly` on the different facets of polygon `pid` (S: surface_fit.Surface): every
     point goes to the facet of the nearest cell of the polygon, the cell staircase of the lines
-    between facets is straightened by `simplify` m. Returns [(part, facet)]."""
+    between facets is straightened by `simplify` m. cut: the line `poly` was cut out of its polygon
+    along (the edge of a mesh chunk), see below. Returns [(part, facet)]."""
     from rasterio import features
     from rasterio.transform import Affine
     from scipy import ndimage as ndi
@@ -127,8 +128,11 @@ def split_by_surface(poly, S, pid, min_area=2.0, simplify=0.35):
         parts[j][1] = polygonal(shapely.union_all([parts[j][1], q]))
     # v2.4: a scrap of a part cut off from the rest of it by the straightened lines (a few cells of
     # one facet inside another) would be meshed at the height of its own facet with skirts all
-    # around, a small block standing out of the yard or the road (the "cube" at the Magliaso
-    # roundabout); it goes to the part it shares the longest edge with
+    # around, a small block standing out of the yard or the road; it goes to the part it shares the
+    # longest edge with. Not a scrap on the cut: the piece of the polygon is small there because the
+    # chunk ends, the facet goes on in the next chunk, and moved to another facet here it would
+    # stand at another height than its continuation (a step at the chunk edge)
+    near_cut = cut.buffer(0.05) if cut is not None else None
     for _ in range(3):
         moved = False
         for i in range(len(parts)):
@@ -137,7 +141,7 @@ def split_by_surface(poly, S, pid, min_area=2.0, simplify=0.35):
                 continue
             keep = []
             for q in comps:
-                if q.area >= MIN_PIECE or len(parts) < 2:
+                if q.area >= MIN_PIECE or len(parts) < 2 or (near_cut is not None and q.intersects(near_cut)):
                     keep.append(q)
                     continue
                 edge = [(q.boundary.intersection(g.buffer(0.05)).length if j != i and not g.is_empty else -1.0)

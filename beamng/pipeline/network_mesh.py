@@ -613,27 +613,32 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
                 if piece.is_empty or piece.area < 0.05:
                     continue
                 # v2.4: the parts of the polygon with another surface (osm_surface.py) are meshed apart,
-                # on the same heights
+                # on the same heights: the facets of the whole piece, then each cut into the zones
                 zones = p.get("zones") or [(p["surface"], None)]
-                for surf, zg in zones:
-                    zpiece = piece if zg is None else road_mesh.polygonal(piece.intersection(zg))
-                    if zpiece.is_empty or zpiece.area < 0.05:
-                        continue
-                    mat, cell, uvt = material(p["cls"], surf)
-                    if p["cls"].startswith("strip"):             # on its line, no raster
+                if p["cls"].startswith("strip"):                 # on its line, no raster
+                    for surf, zg in zones:
+                        zpiece = piece if zg is None else road_mesh.polygonal(piece.intersection(zg))
+                        if zpiece.is_empty or zpiece.area < 1e-3:
+                            continue
+                        mat, cell, uvt = material(p["cls"], surf)
                         V, T = road_mesh.mesh_polygon(zpiece, net.strip_height(int(pid)), cell=cell)
                         if len(T) and np.isfinite(V[:, 2]).all():
                             emit(cx, cy, mat, uvt, V, T)
                             n_tri += len(T)
-                        continue
-                    # the vertices too: no deeper than SUNK under the bare ground (an edge extrapolated
-                    # from far cells of its surface)
-                    zf = (lambda pid_: (lambda x, y, comp: np.maximum(S.height(x, y, pid=pid_, comp=int(comp)),
-                                                                      lo.sample(x, y))))(int(pid))
-                    kf_all = (lambda pid_: (lambda x, y: S.surfaces_at_polygon(x, y, pid_)))(int(pid))
-                    for part, comp in road_mesh.split_by_surface(zpiece, S, int(pid)):
-                        kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
-                        for comp_, V, T in road_mesh.mesh_polygon_surfaces(part, zf, kf, cell=cell):
+                    continue
+                # the vertices too: no deeper than SUNK under the bare ground (an edge extrapolated
+                # from far cells of its surface)
+                zf = (lambda pid_: (lambda x, y, comp: np.maximum(S.height(x, y, pid=pid_, comp=int(comp)),
+                                                                  lo.sample(x, y))))(int(pid))
+                kf_all = (lambda pid_: (lambda x, y: S.surfaces_at_polygon(x, y, pid_)))(int(pid))
+                for part, comp in road_mesh.split_by_surface(piece, S, int(pid), cut=cbox.exterior):
+                    kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
+                    for surf, zg in zones:
+                        zpart = part if zg is None else road_mesh.polygonal(part.intersection(zg))
+                        if zpart.is_empty or zpart.area < 1e-3:
+                            continue
+                        mat, cell, uvt = material(p["cls"], surf)
+                        for comp_, V, T in road_mesh.mesh_polygon_surfaces(zpart, zf, kf, cell=cell):
                             if len(T) and np.isfinite(V[:, 2]).all():
                                 emit(cx, cy, mat, uvt, V, T)
                                 n_tri += len(T)

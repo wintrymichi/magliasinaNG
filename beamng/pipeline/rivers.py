@@ -8,7 +8,9 @@ into the bed as before):
   rivers the laser model is the water surface itself (flat from bank to bank), on the stony torrents
   the water lies in the lowest channel;
 - the terrain (a 1.5 m grid, smoother than the bed) is lowered DEPTH m under the water inside the river
-  surfaces (carve_terrain), else it would stand over most of it;
+  surfaces where it is at most CARVE_MAX m above the water (carve_terrain), else it would stand over
+  most of it; not within FORD_KEEP m of the roads and paths at the level of the ground (a car on a
+  1 m path across a stream has its wheels beside the path, on the terrain: there it stays as it was);
 - not over the roads and paths that cross at the level of the water (fords), not over the lake (its
   water blocks, water.py); under the bridges it goes on;
 - a material of its own: a dark green tint with LerpAlpha transparency, smooth (the sky reflects
@@ -28,6 +30,8 @@ OVER = 0.12             # m of water over that ground
 CELL = 3.0              # m, mesh cell
 FORD = 1.5              # m, a road surface less than this above the water crosses it at its level
 DEPTH = 0.35            # m of terrain under the water
+CARVE_MAX = 1.5         # m, terrain higher than this over the water (a bank in a gorge) is not lowered
+FORD_KEEP = 2.5         # m around the roads and paths at the level of the ground: the terrain is not lowered
 CHUNK = 128.0
 
 
@@ -55,7 +59,8 @@ def material(level_name):
 
 
 def surfaces(av, lake_boxes, at_grade, crossings, road_z):
-    """The water polygons: (list of polygons, statistics).
+    """The water polygons: (list of polygons, statistics, the ground within FORD_KEEP m of the roads and
+    paths that meet the water, where the terrain keeps its height).
     lake_boxes: polygons of the lake's water blocks (no river water over them); at_grade: road and
     path polygons at the level of the ground (the network outside the bridges: a ford or a culvert
     crossing, no water over them); crossings: polygons of the bridge decks and of the corridor's paved
@@ -86,17 +91,23 @@ def surfaces(av, lake_boxes, at_grade, crossings, road_z):
         if np.isfinite(zr) and zr - water_z(np.array([q.x]), np.array([q.y]))[0] < FORD:
             low.append(c)
     water = river.union(fill)
+    ground = at_grade + low
     cut = [shapely.union_all(lake_boxes).buffer(5.0)] if lake_boxes else []
-    cut += [g.buffer(0.3) for g in at_grade + low]
+    k0 = len(cut)
+    cut += [g.buffer(0.3) for g in ground]
+    keep = shapely.Polygon()
     if cut:
         tree = shapely.STRtree(cut)
         near = tree.query(water, predicate="intersects")
         if len(near):
             water = water.difference(shapely.union_all([cut[i] for i in near]))
+            meet = [ground[i - k0] for i in near if i >= k0]
+            if meet:
+                keep = shapely.union_all([g.buffer(FORD_KEEP, quad_segs=4) for g in meet])
     out = [q for q in shapely.get_parts(water) if q.geom_type == "Polygon" and q.area > 5]
     stats.update(polygons=len(out), ha=round(sum(p.area for p in out) / 1e4, 1),
                  under_bridges_m2=round(float(fill.area), 0), fords=len(low))
-    return out, stats
+    return out, stats, keep
 
 
 _water = {}
@@ -134,7 +145,8 @@ def water_z(x, y):
 
 def carve_terrain(H, xs, ys, polys):
     """The terrain heights H (rows ys, columns xs: the vertex grid) lowered to DEPTH m under the water
-    at the vertices inside the river surfaces."""
+    at the vertices inside the river surfaces, but those more than CARVE_MAX m above the water (the
+    steep banks of a gorge that the surveyed surface takes in)."""
     n = 0
     for p in polys:
         x0, y0, x1, y1 = p.bounds
@@ -147,18 +159,22 @@ def carve_terrain(H, xs, ys, polys):
         if not ins.any():
             continue
         rr, cc = np.nonzero(ins)
-        z = water_z(X[ins], Y[ins]) - DEPTH
-        H[r0 + rr, c0 + cc] = np.minimum(H[r0 + rr, c0 + cc], z)
-        n += len(rr)
+        zw = water_z(X[ins], Y[ins])
+        cur = H[r0 + rr, c0 + cc]
+        # a vertex on a steep bank inside the surveyed surface (a gorge) stays: only the bed goes down
+        ok = cur - zw <= CARVE_MAX
+        H[r0 + rr[ok], c0 + cc[ok]] = np.minimum(cur[ok], zw[ok] - DEPTH)
+        n += int(ok.sum())
     print("rivers: terrain lowered under the water at %d vertices" % n, flush=True)
     return H
 
 
 def build(level_dir, level_name, scene, av, lake_boxes, at_grade, crossings, road_z,
           group="MissionGroup/level_objects/Water"):
-    """Meshes of the river water per CHUNK m chunk, textures and material; returns (statistics, polygons)."""
+    """Meshes of the river water per CHUNK m chunk, textures and material; returns (statistics, the
+    polygons where the terrain goes under the water: the water's but within FORD_KEEP m of the roads)."""
     import road_mesh
-    polys, stats = surfaces(av, lake_boxes, at_grade, crossings, road_z)
+    polys, stats, keep = surfaces(av, lake_boxes, at_grade, crossings, road_z)
     d = os.path.join(level_dir, "art", "shapes", "water")
     os.makedirs(d, exist_ok=True)
     textures(d)
@@ -187,4 +203,7 @@ def build(level_dir, level_name, scene, av, lake_boxes, at_grade, crossings, roa
         ntri += mb.triangle_count()
         scene.add(group, bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=False))
     stats.update(chunks=len(builders), triangles=ntri)
-    return stats, polys
+    bed = [q for p in polys for q in shapely.get_parts(p.difference(keep) if not keep.is_empty else p)
+           if q.geom_type == "Polygon" and q.area > 1.0]
+    stats["ha_bed_lowered"] = round(sum(q.area for q in bed) / 1e4, 1)
+    return stats, bed
