@@ -80,12 +80,12 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ## Gallery
 
-> Renders of the built level, made without the game (`beamng/pipeline/screenshots.py`: three.js with the map's material textures). In BeamNG.drive the light, sky, vegetation and terrain are the game's own.
+> Screenshots taken in BeamNG.drive 0.39 on the v2.6 level, at the same views as the earlier renders (`beamng/pipeline/run_readme_screenshots.ps1`: free camera, no HUD, the game's own light, sky, vegetation and terrain).
 
 | | |
 |---|---|
 | ![Agno, the old town and the Collegiate Church](beamng/verifica/screenshots/02_agno_nucleo.jpg)<br>*Agno, the old town and the Collegiate Church* | ![Cademario](beamng/verifica/screenshots/03_cademario.jpg)<br>*Cademario* |
-| ![Novaggio](beamng/verifica/screenshots/04_novaggio.jpg)<br>*Novaggio* | ![Ponte Tresa, the border bridge](beamng/verifica/screenshots/05_ponte_tresa.jpg)<br>*Ponte Tresa, the border bridge* |
+| ![Novaggio](beamng/verifica/screenshots/04_novaggio.jpg)<br>*Novaggio* | ![Ponte Tresa, seen from across the border](beamng/verifica/screenshots/05_ponte_tresa.jpg)<br>*Ponte Tresa, seen from across the border* |
 | ![Bioggio and Manno, the Vedeggio plain](beamng/verifica/screenshots/06_bioggio_manno.jpg)<br>*Bioggio and Manno, the Vedeggio plain* | ![Astano](beamng/verifica/screenshots/07_astano.jpg)<br>*Astano* |
 | ![Sessa](beamng/verifica/screenshots/08_sessa.jpg)<br>*Sessa* | ![The pass above Gravesano towards Arosio (the Penudria)](beamng/verifica/screenshots/09_passo_arosio.jpg)<br>*The pass above Gravesano towards Arosio (the Penudria)* |
 | ![Caslano and Via Torrazza along the lake](beamng/verifica/screenshots/10_caslano_torrazza.jpg)<br>*Caslano and Via Torrazza along the lake* | ![Magliaso, a street towards the old town](beamng/verifica/screenshots/11_magliaso_strada.jpg)<br>*Magliaso, a street towards the old town* |
