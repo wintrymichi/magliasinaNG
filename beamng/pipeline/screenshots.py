@@ -18,7 +18,7 @@ VIEWS = {
     "02_agno_nucleo": (45.9990, 8.9018, 230, 160, 30, 50, "Agno, il nucleo e la Collegiata"),
     "03_cademario": (46.0226, 8.8905, 330, 150, 28, 50, "Cademario"),
     "04_novaggio": (46.0100, 8.8530, 360, 120, 26, 50, "Novaggio"),
-    "05_ponte_tresa": (45.9678, 8.8570, 260, 60, 28, 50, "Ponte Tresa, il ponte di confine"),
+    "05_ponte_tresa": (45.9678, 8.8570, 320, 225, 26, 50, "Ponte Tresa vista da oltre confine"),
     "06_bioggio_manno": (46.0215, 8.9075, 600, 200, 25, 50, "Bioggio e Manno, piano del Vedeggio"),
     "07_astano": (45.9890, 8.8215, 300, 140, 28, 50, "Astano"),
     "08_sessa": (45.9990, 8.8140, 300, 220, 26, 50, "Sessa"),
@@ -28,7 +28,7 @@ VIEWS = {
 # street level: (camera lat, lon, look-at lat, lon, eye height, fov, title)
 STREET = {
     "11_magliaso_strada": (45.98183, 8.88135, 45.98247, 8.88040, 1.6, 64, "Magliaso, via verso il nucleo"),
-    "12_pura_cantonale": (45.99440, 8.86660, 45.99530, 8.86560, 1.6, 64, "La cantonale verso Pura"),
+    "12_pura_cantonale": (45.99379, 8.86519, 45.99511, 8.86451, 1.6, 64, "La cantonale verso Pura"),
     "13_agno_via": (45.99870, 8.90160, 45.99950, 8.90120, 1.6, 64, "Agno, una via del nucleo"),
     "14_passo_tornante": (46.04242, 8.91074, 46.04256, 8.91093, 1.6, 64, "Il passo sopra Gravesano verso Arosio"),
 }
