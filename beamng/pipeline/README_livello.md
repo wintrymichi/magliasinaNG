@@ -4,6 +4,8 @@ A 1:1 scale reconstruction of about 52 km² of the Malcantone (Canton Ticino, Sw
 
 ## How to play
 
+- **Install:** copy the zip, without unpacking it, to `Documents/BeamNG.drive/current/mods/` and remove older versions of this map: they all use the same level name. In the game: *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*.
+- **Memory:** the game needs about 12 GB at its peak; close other programs before loading the map. The first load takes longer (about 145 s) because the game converts the shapes; after that about 60 s.
 - **Level:** `magliaso_pura`.
 - **Spawn points:**
   - `spawn_magliaso` (default, at the Magliaso junction), `spawn_mid` (halfway up the climb) and `spawn_pura` (at the top of the cantonal road). Here the cars start in the driving lane, facing towards Pura.
@@ -122,11 +124,10 @@ The October 2022 photos are more recent than the orthophoto and the official sur
 
 - Memory: about 12 GB at the peak (v2.5). On a 16 GB PC with other programs open the game can stall after loading.
 - On the Italian side there is only terrain and landscape, without roads, buildings and trees.
-- Tunnels are not built.
 - One-way streets come from OpenStreetMap: where OSM doesn't record them, the AI drives the road in both directions.
 - Vertical signs (speed limits, place names, directions) and the railway's overhead line are present only where a source exists (the photos of the Magliaso–Pura cantonal road, the OpenStreetMap signs); guardrails where the Street View panoramas show them.
 - The façades are rebuilt from data (use, period, floors) and from the colours seen in the photos: the number and position of windows, balconies and arcades are plausible but not copied one by one.
-- The Vedeggio, the Magliasina and the Tresa downstream of the weir have no water.
+- Tunnels are not built. The full list, with an issue for each limitation, is in the project README: https://github.com/wintrymichi/magliasinaNG#known-limitations
 
 ## Sources and licences
 

@@ -1,9 +1,11 @@
 # Malcantone (Strada Cantonale Magliaso → Pura and surroundings): the BeamNG map pipeline
 
-This pipeline rebuilds the Malcantone (Ticino) at 1:1 scale as a BeamNG.drive level (`magliaso_pura`, version 0.39). The level covers about 51 km² between Ponte Tresa, Magliaso, Agno, Bioggio, Manno, Gravesano, Cademario, Novaggio, Astano and Sessa. At its centre is the Strada Cantonale from Magliaso to Pura of the 1.x versions; to the east is the cantonal road from Magliaso to Gravesano, along the lake to Agno and then along the foot of the mountains through Bioggio and Manno. The work combines two kinds of source:
+This pipeline rebuilds the Malcantone (Ticino) at 1:1 scale as a BeamNG.drive level (`magliaso_pura`, version 0.39). The level covers about 52 km² between Ponte Tresa, Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio, Astano and Sessa. At its centre is the Strada Cantonale from Magliaso to Pura of the 1.x versions; to the east is the cantonal road from Magliaso to Gravesano, along the lake to Agno and then along the foot of the mountains through Bioggio and Manno. The work combines two kinds of source:
 
 - the **366 Street View panoramas** of the dataset along the cantonal road (`C:\Users\michi\Documents\magliasinaNG`: 363 from October 2022, 3 from 2013/2014), used for camera poses, objects, road markings, textures and validation;
 - the **official data from swisstopo and the Ticino official survey**, used as the metric reference for the whole area: terrain, road network (swissTLM3D), carriageways, buildings, walls and trees.
+
+For players, installation and troubleshooting are in the [main README](../README.md); what changed in each version is in [`CHANGELOG.md`](../CHANGELOG.md). This file is for whoever wants to build the level or change the pipeline.
 
 ## Contents of this folder
 
@@ -15,7 +17,7 @@ This pipeline rebuilds the Malcantone (Ticino) at 1:1 scale as a BeamNG.drive le
 
 The **ready-made mod** is in the [v2.6 release](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.6): the [v2.4](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.4) zip passed through `optimize_level.py` (v2.5: same geometry, lighter for the game) and `patch_groundcover.py` (v2.6: the new grass). The v2.4 zip is what the `.github/workflows/release_v2.4.yml` workflow builds from scratch on a GitHub server: it downloads the data, builds the level, checks it with `check_level.py` and `drive_test.py` and publishes it. It is built with `MAGLIASO_NO_PHOTO_TEXTURES=1`, so it contains no Street View images: façades, roofs and walls have original textures drawn by the pipeline in the measured colours, and sign plates are plain-coloured. The cantonal road's objects derived from the photos (road markings, street lamps, poles, signs, street furniture) are taken from the v1.1 release and placed on the new surfaces (`carryover.py`).
 
-Earlier versions remain available:
+Every version is on the [releases](https://github.com/wintrymichi/magliasinaNG/releases) page:
 - **v1.0**: only the cantonal road corridor.
 - **v1.1**: the cantonal road with smooth roads and a clear carriageway (`patch_release.py`, `.github/workflows/release_v1.1.yml`).
 - **v2.0**: the 51 km² area with the whole road network, the bridges and the cantonal road to Gravesano (`release_v2.0.yml`).
@@ -23,46 +25,159 @@ Earlier versions remain available:
 - **v2.2**: Street View review, façades, guardrails on the whole network, new roads towards Arosio and Caslano (`release_v2.2.yml`).
 - **v2.3**: fixes after the first in-game tests, lighter woods (`release_v2.3.yml`).
 - **v2.4**: houses from every side, OSM surfaces, grass, palms, vineyards, rivers (`release_v2.4.yml`).
+- **v2.5**: the v2.4 zip made lighter for the game (`optimize_level.py`).
+- **v2.6**: the game's own grass and flowers (`patch_groundcover.py`).
 
 The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local version with photographic textures and the v1.0 geometry. The verification of the latest version is in `verifica/check_level.json` (automatic checks over the whole map), `verifica/drive_test.json` (virtual drive test) and `verifica/REVISIONE.md` (Street View review); the bridge profiles are in `verifica/ponti/`.
 
-## Version 2.0: area, road network, bridges
+## Start here
 
-- **Area** (`area.py`, `config.BOUNDARY`): the union of three parts; the terrain is a block of 8192 × 8192 samples at 1.5 m (12.3 km per side).
-  - The quadrilateral of the four given points, widened by 150 m.
-  - The corridor of the Magliaso–Pura cantonal road.
-  - The Magliaso–Agno–Bioggio–Manno–Gravesano cantonal road, with 150 m around it and the whole strip between the road and the east side of the quadrilateral. `strade_extra.py` extracts it from swissTLM3D (shortest path over the Canton's roads) and saves it in `dati/cantonale_gravesano.json`: this way the area doesn't depend on swissTLM3D, which is downloaded based on the area.
-  - (v2.2) A 100 m corridor around the roads that left the map: the pass above Gravesano to Arosio (Stradón da Rós, the «Penudria»), the Ponte Tresa–Caslano–Magliaso cantonal road and, in Caslano, the village from the station to the lake and Via Torrazza up to the Torrazza. `strade_extra.py` computes them like the Gravesano cantonal road and saves them in `dati/strade_extra_v22.json`; a pocket that a corridor closes off against the rest of the area is included.
-- **Network** (`network.py`): all swissTLM3D lines in the area, i.e. roads, forest roads, trails, mule tracks, stairways and bridges; tunnels are excluded. The lines are split at junctions, re-centred on the carriageways of the official survey and sampled every 2 m.
-- **Profile** (`network_surface.py`): a single least-squares system over all the stations of the network.
-  - Fit to the DTM, smoothness by road class, a single height at junctions, Tukey weights against survey anomalies.
-  - The cantonal road is constrained to the v1.1 surface.
-  - On bridges the profile between the abutments counts, except on culverts, where swissTLM3D and the DTM lie on the ground.
-- **Surfaces** (`network_mesh.py`): the polygons of the official survey (carriageways, pavements, yards) and a strip along the lines with no survey polygon.
-  - Heights come from projecting onto the lines within 6 m of the carriageway; yards far from the lines follow the DTM.
-  - No surface goes more than 0.75 m below the lowest bare ground within 1 m.
-  - The terrain is carved under the built meshes (`road_mesh.carve_window`): every vertex whose triangles touch a mesh drops 10 cm below the lowest face in the square of one grid step around it, so the terrain doesn't stick out even between one vertex and the next.
-- **Walls** (`walls.py`): every terrain vertex whose triangles touch a wall drops to the base of the wall, so the 1.5 m grid doesn't make the terrain stick out in front of the face. Behind retaining walls a mesh on the terrain grid (`build_backfill`) puts the ground back at its level, in the material of the surrounding terrain. A survey wall that sticks out more than 30 cm above a carriageway, or above the passage strip around a line, is cut there (`drive_free`, `above_way`): the survey and swissTLM3D don't always agree, and a wall drawn across a road would block it.
-- **Buildings** (`buildings_mesh.py`): where a building stands on a road or trail of the network (underpasses, the canopy of the Ponte Tresa customs post, an alley under a bell tower, a swissTLM3D line drawn inside a house) a passage 4.2 m high on roads and 3 m on trails is cut, closed by a ceiling and walls (`passages`); under a lower roof the passage stops under the roof, if at least 3 m (2.2 m on trails) remain.
-- **Bridges** (`bridges.py`): deck, parapets, piers (never on a road or trail), terrain lowered under the slab. The manual corrections are in `dati/ponti.json` (`z0`, `z1`, `profile` `straight` or `tlm`, `type`, `skip`); `tlm` follows the swissTLM3D 3D line, for footbridges with stairs over a road. The check sheets are made with `bridge_report.py`.
-- **Verification** (`check_level.py`, `review_map.py`, `render3d.py`):
-  - automatic checks over the whole map, with the locations of the problems; among them the obstacles on the carriageway, searched along every road and trail at 0.5 and 1.6 m height against all solid meshes, and holes in the terrain;
-  - 3D screenshots of the level without the game (three.js in Chromium), with an overview from above, bridges, roads, trails, villages and flagged spots.
+**What the pipeline does.** It reads open data for the area and writes a complete BeamNG.drive level folder (`levels/magliaso_pura`), then zips it as a mod. Every step is a separate Python script that reads the previous steps' results from a working folder and writes its own; the order is in [Script order](#script-order-pipeline-folder). The small results that are expensive to recompute or need the local panoramas (poses, markings, colours, guardrails, OSM and GWR extracts) are pinned in `dati/`, so a build on another machine needs neither the game nor the panoramas.
 
-## Version 2.1: refinement against reality
+**Three ways to get a level:**
 
-A review of the v2.0 level compared with real sources: the 2024 SWISSIMAGE 10 cm orthophoto for the whole network, the swissTLM3D attributes that v2.0 didn't use, OpenStreetMap, the automatic checks over the whole map and 3D screenshots. Everything added has a source: no line, sign or object is placed because "there usually is one".
+| You want to… | Do this | Time |
+|---|---|---|
+| publish a release built from scratch | GitHub *Actions* → *Release v2.4* → *Run workflow* ([`release_v2.4.yml`](../.github/workflows/release_v2.4.yml)) | about 1 hour |
+| build it on your own machine | the commands under [Building without the game](#building-without-the-game) | depends on the machine, plus the downloads |
+| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6) | minutes |
 
-- **Vegetation out of the roads' clearance envelope** (`canopy.py`): not just the trunk but the whole crown of every tree stays out of the envelope, 4.50 m above carriageways and 2.50 m above pavements, yards and trails. A tree whose crown enters the envelope is moved by at most 3 m onto free ground, or takes the narrowest model of its species; if that's not enough its scale is reduced and, as a last resort, the tree is removed. Every plant rests on the ground under its trunk (terrain or backfill behind walls) and no trunk stands inside walls, buildings, parapets or fences. The step works on the level as already written, both in the build and on the published level, and `check_level.py` measures the same rules.
-- **Road markings on the whole network** (`network_markings.py`, `ortho10.py`, `markings_net.py`): centre, lane and edge lines, dashed or solid, detected in the 10 cm orthophoto along every road, plus yellow pedestrian crossings, stop lines, arrows and hatched areas. In stretches covered by trees or in shadow a line seen on both sides continues for up to 60 m; longer stretches stay unpainted. Yellow (faded too) is calibrated on the pedestrian crossings recorded in OpenStreetMap and only goes on grey asphalt; wide blobs with a vehicle's windows and shadow and reflections on dark cars are discarded. The result is in `dati/network_markings.json.gz`. The Magliaso–Pura cantonal road keeps its markings verified in the photos.
-- **AI traffic**: one-way streets from OpenStreetMap; roundabouts (anticlockwise) and dual carriageways (keep right) from swissTLM3D; roads with a general traffic ban have drivability 0.1.
-- **Pinned OpenStreetMap data** in `dati/osm_area.json.gz` and `dati/osm_communes.json.gz` (Overpass extract of 28.9.2026, completed on 30.9.2026 with the strips of the v2.2 corridors, © OpenStreetMap contributors, ODbL 1.0 licence): the release uses these, so it doesn't change with OSM and doesn't depend on the Overpass servers; `download_osm.py --pin` updates them.
-- **Signs and street furniture from OpenStreetMap** (`props_osm.py`): STOP and give-way where OSM records them, with the panel drawn (not photographed), on the right-hand edge of the road they belong to; benches, bins and street lamps with the models already used by the level.
-- **Railway** (`railway.py`): the FLP (metre gauge) and SBB tracks from swissTLM3D, with sleepers, rails, ballast, level crossings flush with the road and bridges. The tracks sit at the real swissTLM3D height: where the level's terrain is higher a cutting is dug (along the lake in Agno, under the embankment of the cantonal road), where it is lower the track sits on a ballast embankment; those under the car park of Ponte Tresa station are not built, like the tunnels. The overhead line is not built.
-- **The Tresa at Ponte Tresa** (`water.py`): the lake model's dam is at the weir, 420 m downstream, and no longer at the outlet. The stretch at lake level, under the border bridge, has water.
-- **Zones, roads and log** (`zone_report.py`): `verifica/ZONE.md` (status by municipality), `verifica/STRADE.md` (every road of the network with the status of each aspect) and `verifica/REGISTRO.md` (differences found, action, status).
+The current release (v2.6) is the v2.4 workflow's zip passed through both patch scripts:
 
-## Version 2.6: grass
+```bash
+python optimize_level.py magliaso_pura_v2.4.zip magliaso_pura_v2.5.zip
+python patch_groundcover.py magliaso_pura_v2.5.zip magliaso_pura_v2.6.zip
+```
+
+### Requirements
+
+Python 3.11 or newer with the packages the workflow installs:
+
+```bash
+pip install numpy scipy shapely rasterio pyproj scikit-image opencv-python-headless pillow requests matplotlib pyogrio
+```
+
+The exact versions are pinned in [`release_v2.4.yml`](../.github/workflows/release_v2.4.yml). The Street View steps (`segment_views.py`, `sv_segment.py`) also need PyTorch with CUDA; the release build does not run them.
+
+### Paths and environment variables
+
+`pipeline/config.py` holds every path. The defaults are the author's Windows machine; on any other machine set them with environment variables:
+
+| Variable | What it points to | Default |
+|---|---|---|
+| `MAGLIASO_ROOT` | heavy data: `data/` downloads, `work/` intermediate results, `dist/` mod zips | `D:\beamng_magliaso` |
+| `MAGLIASO_DATASET` | the repository root (panorama metadata and, locally, the images) | `C:\Users\michi\Documents\magliasinaNG` |
+| `MAGLIASO_BEAMNG_USER` | the game's user folder; the level is written to `levels/magliaso_pura` inside it | `%LOCALAPPDATA%\BeamNG\BeamNG.drive\current` |
+| `MAGLIASO_BEAMNG_GAME` | the game's install folder (vanilla assets); `/nonexistent` to build without the game | Steam's `BeamNG.drive` folder |
+| `MAGLIASO_LEVEL_DIR` | where the level folder is written | `<BEAMNG_USER>/levels/magliaso_pura` |
+| `MAGLIASO_REFERENCE_ZIP` | the v1.1 release zip, source of the cantonal road's objects (`carryover.py`) | `<ROOT>/dist/magliaso_pura_v1.1.zip` |
+| `MAGLIASO_NO_PHOTO_TEXTURES` | `1` (default): no Street View imagery in the level. `0` only for private study, never distributed | `1` |
+
+## Building the level
+
+### Locally, with the game and the panoramas
+
+On Windows, with the default paths of `config.py`:
+
+```bash
+D:/beamng_magliaso/venv/Scripts/python.exe -u build_level.py
+```
+
+### Building without the game
+
+Without the game and without the panoramas, the same steps as [`release_v2.4.yml`](../.github/workflows/release_v2.4.yml). The workflow first downloads the v1.1 release zip into `$MAGLIASO_ROOT/dist` (`gh release download v1.1`): the build takes the cantonal road's objects from it.
+
+```bash
+export MAGLIASO_ROOT=/path/data MAGLIASO_DATASET=$PWD MAGLIASO_BEAMNG_USER=/path/beamng_user
+export MAGLIASO_BEAMNG_GAME=/nonexistent MAGLIASO_NO_PHOTO_TEXTURES=1 MAGLIASO_REFERENCE_ZIP=/path/magliaso_pura_v1.1.zip
+cd beamng/pipeline
+python prepare_work.py && python download_swisstopo.py && python download_av.py && python download_tlm.py && python download_gwr.py
+python build_rasters.py && python landcover.py && python extract_buildings.py && python missing_buildings.py && python trees.py
+python network.py && python network_surface.py && python build_level.py
+python check_level.py && python drive_test.py
+python package.py magliaso_pura_v2.4
+```
+
+### After the build
+
+Since v2.5 the mod zip comes from `optimize_level.py` (merged tiles, detail by distance, lighter road strips):
+
+```bash
+python optimize_level.py "$MAGLIASO_BEAMNG_USER/levels/magliaso_pura" "$MAGLIASO_ROOT/dist/magliaso_pura_v2.5.zip"
+```
+
+`build_level.py --reuse-roads` redoes all the stages except the road network, which is the longest (about 13 minutes). It reuses the road meshes of the previous build and `work/roads_state.npz`.
+
+Since v2.2 the level never contains images taken from Street View: this is the default behaviour
+(`config.NO_PHOTO`). Only `MAGLIASO_NO_PHOTO_TEXTURES=0` brings back the photographic textures of the local 1.x
+versions, for private study; that version must not be distributed.
+
+The road surface (`roadheight.py` → `work\road_surface.npz`) is computed at the first stage that uses it; delete it to recompute it, for example after changing the parameters in `surface_fit.py`. Guardrails and walls near the road are realigned to the new surface during the build. `guardrails2.py` and `wall_caps.py` read the surface only when those steps are redone.
+
+### Older steps
+
+To update the v1.0 zip without the working data (about 5 minutes; requires numpy, scipy, shapely and rasterio):
+
+```bash
+python patch_release.py magliaso_pura_v1.0.zip magliaso_pura_v1.1.zip
+```
+
+The photo verification of the cantonal road (local only, with the game) takes three steps:
+
+1. `validation.py make <indices> 90`, or `makefull` for all 366 panoramas;
+2. `run_validation.ps1`: for the full tour the JPEG screenshots must be moved to `work\validation_full\game`;
+3. `validate_metrics.py <tag>`, or `validate_metrics.py <tag> full` followed by `verify_report.py <tag>`.
+
+## Coordinate system
+
+The reference system is LV95 (EPSG:2056) with local origin E 2 710 830 / N 1 094 360, transformed as follows:
+
+```text
+x = (E − E0) / K
+y = (N − N0) / K
+K = 1.000137497   (LV95 scale factor at the origin)
+```
+
+Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 8192 × 8192 samples at 1.5 m, with the south-west corner at x = −7230, y = −4731 (v1.x: 4096 × 4096 m at 1 m). The whole level (terrain, roads, buildings, objects, cameras) uses this same system.
+
+## Script order (`pipeline` folder)
+
+| Stage | Script | Result |
+|---|---|---|
+| Data | `download_swisstopo.py`, `download_av.py`, `download_tlm.py` | swissALTI3D 0.5 m and 2 m, swissSURFACE3D 0.5 m, SWISSIMAGE 2 m (10 cm and LiDAR along the cantonal road with `--route-extras`), swissBUILDINGS3D, swissNAMES3D, Copernicus GLO-30; Ticino official survey (WFS geodienste.ch); swissTLM3D (roads, railways, watercourses) read piecewise from the national package |
+| Rasters | `build_rasters.py`, `landcover.py`, `extract_buildings.py`, `lidar_extract.py` | DTM/DSM 0.5 m, orthophoto, land cover, buildings, LiDAR points near the road |
+| Camera poses | `calibrate_attitude.py`, `refine_poses.py`, `solve_poses.py`, `calib_camheight.py` | position and orientation of every panorama, registered on the orthophoto to about 0.3 m (Viterbi along the trajectory) |
+| Segmentation | `segment_views.py` | Mask2Former Swin-L (Mapillary Vistas) on all views |
+| Road | `road_profile.py`, `road_strip.py`, `pano_strip.py`, `roadheight.py`, `surface_fit.py` | road axis and cross-section; "rectified strips" from the orthophoto and the panoramas; idealised surface of the paved areas: smooth, robust fit to the DTM (thin plate, Tukey weights), flat cross-section and stiffer profile on the cantonal road's carriageway, bridges rebuilt over the gaps in the DTM, steps where two surfaces lie at different heights |
+| Road markings | `markings.py`, `markings_photo.py`, `markings_raster.py`, `marking_votes.py`, `markings_state.py` | lines from the orthophoto verified in the photos; state of October 2022: stretches without markings, red bands, shifted centre line |
+| Walls and barriers | `roadside_walls.py`, `wall_caps.py`, `guardrails.py`, `guardrails2.py`, `fences.py` | retaining walls; visible wall height measured in the photos (removing false LiDAR ridges: roofs, balconies, guardrails above the walls); guardrails; railings and fences on the walls |
+| Objects | `poles.py`, `lamps.py`, `objects.py` | poles, signs (with the image of the plate), triangulated street lamps, street furniture |
+| Vegetation | `trees.py`, `understory.py`, `clearance.py` | trees from the normalised surface model (position, height, crown), hedges and bushes; no trunks on paved surfaces, shrubs and hedges set back from the edge |
+| Textures | `terrain_colors.py`, `texture_buildings.py`, `texture_walls.py` | colours measured in the photos; façades and walls projected from the panoramas |
+| Level | `build_level.py` | all stages, from the road to the spawns, plus `info.json` |
+| Verification | `validation.py`, `run_validation.ps1`, `validate_metrics.py`, `verify_report.py`, `bng_lua/magliaso_validate.lua` | in-game camera tour at the photo poses (all 1464 views too), comparison by segmentation, check of the road network for the AI, `VERIFICA.md` report |
+| Correction | `photo_votes.py`, `missing_veg.py` | multi-view label votes; shrubs that the photos show and the game doesn't (from the comparison over the whole dataset) |
+| Network (v2.0) | `network.py`, `network_surface.py`, `network_mesh.py`, `bridges.py`, `water.py`, `places.py`, `strade_extra.py` | swissTLM3D road and trail network, smooth profile, drivable surfaces, bridges, lake, villages, Magliaso–Gravesano cantonal road |
+| Verification (v2.0) | `check_level.py`, `review_map.py`, `bridge_report.py`, `render3d.py` | checks over the whole map, 3D screenshots, bridge sheets |
+| Without the game | `prepare_work.py`, `vanilla.py`, `carryover.py`, `ogr_tin.py` | cloud build: lightweight results from `dati/`, vanilla files and the cantonal road's objects from the v1.1 zip, reading of the swissBUILDINGS3D TINs |
+| Street View (v2.2) | `sv_coverage.py`, `sv_fetch.py`, `sv_segment.py`, `sv_facades.py`, `sv_guardrails.py`, `sv_walls.py` | coverage (metadata), review panoramas stored locally, segmentation of the roadside band; measurements: façade colour, shutters, guardrails, wall material |
+| Buildings (v2.2) | `download_gwr.py`, `missing_buildings.py`, `bld_textures.py`, `facades.py` | building register, missing and demolished buildings, original textures, per-house façades |
+| Review (v2.2) | `sv_review.py`, `qa_log.py`, `review_report.py`, `drive_test.py`, `drive_context.py`, `screenshots.py` | photo/map comparison from the same camera, log of the reviewed places, `verifica/REVISIONE.md`, virtual drive test, screenshots |
+| Graphics (v2.4) | `osm_surface.py`, `surface_textures.py`, `groundcover.py`, `palms.py`, `vineyards.py`, `rivers.py` | road and trail surfaces from OSM with their textures, grass and flowers, palms, vineyard rows, water in the rivers |
+| Package | `package.py` | mod zip in `<MAGLIASO_ROOT>/dist` |
+| Grass (v2.6) | `groundcover.py`, `patch_groundcover.py` | grass and flowers with the game's textures; into a built zip |
+| Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
+| Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
+
+## Working data
+
+The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = downloads, `work\` = intermediate results, `venv\` = Python 3.13 with CUDA torch. The level is written to `%LOCALAPPDATA%\BeamNG\BeamNG.drive\current\levels\magliaso_pura`.
+
+## Technical notes by version
+
+What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
+
+### Version 2.6: grass
 
 `groundcover.py` no longer draws its own grass atlas (in the game it showed as dark opaque cards: the material had no
 opacity map). The meadows (`Grass` layer) and gardens (`GardenGrass`) use the game's own textures in
@@ -78,7 +193,7 @@ opacity map). The meadows (`Grass` layer) and gardens (`GardenGrass`) use the ga
 
 `patch_groundcover.py <in.zip> <out.zip>` puts it into a built level. In the game: 72–111 fps at the test points.
 
-## Version 2.5: performance (measured in the game)
+### Version 2.5: performance (measured in the game)
 
 The v2.4 level, tried in BeamNG.drive 0.39.4 on a PC with 16 GB of RAM (RTX 4070, Ryzen 7 7800X3D): 215 s to load
 (371 s through BeamMP), then the game wanted more memory than the PC had free (paging, more than 10 minutes on the
@@ -108,7 +223,7 @@ The meshes cost about 300 bytes of game memory per triangle, with or without col
 Result: 60 s to load with the game's converted shapes in its cache (about 145 s the first time), 82–128 fps at the
 spawns. With other programs open (Discord, a browser, ...) the PC is still at its memory limit: the game peaks at about 12 GB.
 
-## Version 2.4: houses from every side, Magliaso roundabout, OSM surfaces and more realism
+### Version 2.4: houses from every side, Magliaso roundabout, OSM surfaces and more realism
 
 - **Wall facing** (`buildings_mesh.py`: `orient`, `undecided_walls`, `soffits`): the game draws only one
   side. The facing of each wall is decided with two nearly horizontal rays starting just in front of
@@ -159,7 +274,7 @@ spawns. With other programs open (Discord, a browser, ...) the PC is still at it
   towards the ground in the vertex colours (`buildings_mesh.GROUND_AO`); light from the 68 triangulated street lamps
   (`props.py`, without shadows); haze 1.3e-4 up to 1000 m (previously 1.1e-4 up to 1200 m).
 
-## Version 2.3: fixes after the first in-game tests
+### Version 2.3: fixes after the first in-game tests
 
 - **Walls between two roads at different heights** (`surface_fit.py`, `cross_bands`): a steep DTM band between two
   surfaces is a wall when it has cells both higher and lower than itself around it; the comparison is now made with
@@ -175,7 +290,7 @@ spawns. With other programs open (Discord, a browser, ...) the PC is still at it
   `CAP`. Slopes crossed by hairpins, like the pass above Gravesano seen from the village, are no longer
   as dense as the whole forest and the game draws them faster.
 
-## Version 2.2: Street View review, façades, guardrails and drivability
+### Version 2.2: Street View review, façades, guardrails and drivability
 
 A systematic review of the whole map compared with Google Street View, used **only as a visual
 reference**: no Street View image goes into the level or the repository. Only measurements are taken
@@ -215,95 +330,41 @@ everything that can be seen is redrawn with original textures.
   `verifica/drive_test.json`).
 - **Screenshots** of the level for the documentation (`screenshots.py`, rendered with the level's textures).
 
-## Working data
+### Version 2.1: refinement against reality
 
-The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = downloads, `work\` = intermediate results, `venv\` = Python 3.13 with CUDA torch. The level is written to `%LOCALAPPDATA%\BeamNG\BeamNG.drive\current\levels\magliaso_pura`.
+A review of the v2.0 level compared with real sources: the 2024 SWISSIMAGE 10 cm orthophoto for the whole network, the swissTLM3D attributes that v2.0 didn't use, OpenStreetMap, the automatic checks over the whole map and 3D screenshots. Everything added has a source: no line, sign or object is placed because "there usually is one".
 
-## Coordinate system
+- **Vegetation out of the roads' clearance envelope** (`canopy.py`): not just the trunk but the whole crown of every tree stays out of the envelope, 4.50 m above carriageways and 2.50 m above pavements, yards and trails. A tree whose crown enters the envelope is moved by at most 3 m onto free ground, or takes the narrowest model of its species; if that's not enough its scale is reduced and, as a last resort, the tree is removed. Every plant rests on the ground under its trunk (terrain or backfill behind walls) and no trunk stands inside walls, buildings, parapets or fences. The step works on the level as already written, both in the build and on the published level, and `check_level.py` measures the same rules.
+- **Road markings on the whole network** (`network_markings.py`, `ortho10.py`, `markings_net.py`): centre, lane and edge lines, dashed or solid, detected in the 10 cm orthophoto along every road, plus yellow pedestrian crossings, stop lines, arrows and hatched areas. In stretches covered by trees or in shadow a line seen on both sides continues for up to 60 m; longer stretches stay unpainted. Yellow (faded too) is calibrated on the pedestrian crossings recorded in OpenStreetMap and only goes on grey asphalt; wide blobs with a vehicle's windows and shadow and reflections on dark cars are discarded. The result is in `dati/network_markings.json.gz`. The Magliaso–Pura cantonal road keeps its markings verified in the photos.
+- **AI traffic**: one-way streets from OpenStreetMap; roundabouts (anticlockwise) and dual carriageways (keep right) from swissTLM3D; roads with a general traffic ban have drivability 0.1.
+- **Pinned OpenStreetMap data** in `dati/osm_area.json.gz` and `dati/osm_communes.json.gz` (Overpass extract of 28.9.2026, completed on 30.9.2026 with the strips of the v2.2 corridors, © OpenStreetMap contributors, ODbL 1.0 licence): the release uses these, so it doesn't change with OSM and doesn't depend on the Overpass servers; `download_osm.py --pin` updates them.
+- **Signs and street furniture from OpenStreetMap** (`props_osm.py`): STOP and give-way where OSM records them, with the panel drawn (not photographed), on the right-hand edge of the road they belong to; benches, bins and street lamps with the models already used by the level.
+- **Railway** (`railway.py`): the FLP (metre gauge) and SBB tracks from swissTLM3D, with sleepers, rails, ballast, level crossings flush with the road and bridges. The tracks sit at the real swissTLM3D height: where the level's terrain is higher a cutting is dug (along the lake in Agno, under the embankment of the cantonal road), where it is lower the track sits on a ballast embankment; those under the car park of Ponte Tresa station are not built, like the tunnels. The overhead line is not built.
+- **The Tresa at Ponte Tresa** (`water.py`): the lake model's dam is at the weir, 420 m downstream, and no longer at the outlet. The stretch at lake level, under the border bridge, has water.
+- **Zones, roads and log** (`zone_report.py`): `verifica/ZONE.md` (status by municipality), `verifica/STRADE.md` (every road of the network with the status of each aspect) and `verifica/REGISTRO.md` (differences found, action, status).
 
-The reference system is LV95 (EPSG:2056) with local origin E 2 710 830 / N 1 094 360, transformed as follows:
+### Version 2.0: area, road network, bridges
 
-```text
-x = (E − E0) / K
-y = (N − N0) / K
-K = 1.000137497   (LV95 scale factor at the origin)
-```
-
-Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 8192 × 8192 samples at 1.5 m, with the south-west corner at x = −7230, y = −4731 (v1.x: 4096 × 4096 m at 1 m). The whole level (terrain, roads, buildings, objects, cameras) uses this same system.
-
-## Script order (`pipeline` folder)
-
-| Stage | Script | Result |
-|---|---|---|
-| Data | `download_swisstopo.py`, `download_av.py`, `download_tlm.py` | swissALTI3D 0.5 m and 2 m, swissSURFACE3D 0.5 m, SWISSIMAGE 2 m (10 cm and LiDAR along the cantonal road with `--route-extras`), swissBUILDINGS3D, swissNAMES3D, Copernicus GLO-30; Ticino official survey (WFS geodienste.ch); swissTLM3D (roads, railways, watercourses) read piecewise from the national package |
-| Rasters | `build_rasters.py`, `landcover.py`, `extract_buildings.py`, `lidar_extract.py` | DTM/DSM 0.5 m, orthophoto, land cover, buildings, LiDAR points near the road |
-| Camera poses | `calibrate_attitude.py`, `refine_poses.py`, `solve_poses.py`, `calib_camheight.py` | position and orientation of every panorama, registered on the orthophoto to about 0.3 m (Viterbi along the trajectory) |
-| Segmentation | `segment_views.py` | Mask2Former Swin-L (Mapillary Vistas) on all views |
-| Road | `road_profile.py`, `road_strip.py`, `pano_strip.py`, `roadheight.py`, `surface_fit.py` | road axis and cross-section; "rectified strips" from the orthophoto and the panoramas; idealised surface of the paved areas: smooth, robust fit to the DTM (thin plate, Tukey weights), flat cross-section and stiffer profile on the cantonal road's carriageway, bridges rebuilt over the gaps in the DTM, steps where two surfaces lie at different heights |
-| Road markings | `markings.py`, `markings_photo.py`, `markings_raster.py`, `marking_votes.py`, `markings_state.py` | lines from the orthophoto verified in the photos; state of October 2022: stretches without markings, red bands, shifted centre line |
-| Walls and barriers | `roadside_walls.py`, `wall_caps.py`, `guardrails.py`, `guardrails2.py`, `fences.py` | retaining walls; visible wall height measured in the photos (removing false LiDAR ridges: roofs, balconies, guardrails above the walls); guardrails; railings and fences on the walls |
-| Objects | `poles.py`, `lamps.py`, `objects.py` | poles, signs (with the image of the plate), triangulated street lamps, street furniture |
-| Vegetation | `trees.py`, `understory.py`, `clearance.py` | trees from the normalised surface model (position, height, crown), hedges and bushes; no trunks on paved surfaces, shrubs and hedges set back from the edge |
-| Textures | `terrain_colors.py`, `texture_buildings.py`, `texture_walls.py` | colours measured in the photos; façades and walls projected from the panoramas |
-| Level | `build_level.py` | all stages, from the road to the spawns, plus `info.json` |
-| Verification | `validation.py`, `run_validation.ps1`, `validate_metrics.py`, `verify_report.py`, `bng_lua/magliaso_validate.lua` | in-game camera tour at the photo poses (all 1464 views too), comparison by segmentation, check of the road network for the AI, `VERIFICA.md` report |
-| Correction | `photo_votes.py`, `missing_veg.py` | multi-view label votes; shrubs that the photos show and the game doesn't (from the comparison over the whole dataset) |
-| Network (v2.0) | `network.py`, `network_surface.py`, `network_mesh.py`, `bridges.py`, `water.py`, `places.py`, `strade_extra.py` | swissTLM3D road and trail network, smooth profile, drivable surfaces, bridges, lake, villages, Magliaso–Gravesano cantonal road |
-| Verification (v2.0) | `check_level.py`, `review_map.py`, `bridge_report.py`, `render3d.py` | checks over the whole map, 3D screenshots, bridge sheets |
-| Without the game | `prepare_work.py`, `vanilla.py`, `carryover.py`, `ogr_tin.py` | cloud build: lightweight results from `dati/`, vanilla files and the cantonal road's objects from the v1.1 zip, reading of the swissBUILDINGS3D TINs |
-| Street View (v2.2) | `sv_coverage.py`, `sv_fetch.py`, `sv_segment.py`, `sv_facades.py`, `sv_guardrails.py`, `sv_walls.py` | coverage (metadata), review panoramas stored locally, segmentation of the roadside band; measurements: façade colour, shutters, guardrails, wall material |
-| Buildings (v2.2) | `download_gwr.py`, `missing_buildings.py`, `bld_textures.py`, `facades.py` | building register, missing and demolished buildings, original textures, per-house façades |
-| Review (v2.2) | `sv_review.py`, `qa_log.py`, `review_report.py`, `drive_test.py`, `drive_context.py`, `screenshots.py` | photo/map comparison from the same camera, log of the reviewed places, `verifica/REVISIONE.md`, virtual drive test, screenshots |
-| Graphics (v2.4) | `osm_surface.py`, `surface_textures.py`, `groundcover.py`, `palms.py`, `vineyards.py`, `rivers.py` | road and trail surfaces from OSM with their textures, grass and flowers, palms, vineyard rows, water in the rivers |
-| Package | `package.py` | mod zip in `<MAGLIASO_ROOT>/dist` |
-| Grass (v2.6) | `groundcover.py`, `patch_groundcover.py` | grass and flowers with the game's textures; into a built zip |
-| Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
-| Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
-
-## Rebuilding the level
-
-Locally (Windows, with the game and the panoramas):
-
-```bash
-D:/beamng_magliaso/venv/Scripts/python.exe -u build_level.py
-```
-
-Without the game and without the panoramas (as the v2.0 workflow does), with the data paths from environment variables:
-
-```bash
-export MAGLIASO_ROOT=/path/data MAGLIASO_DATASET=$PWD/../.. MAGLIASO_BEAMNG_USER=/path/beamng_user
-export MAGLIASO_BEAMNG_GAME=/nonexistent MAGLIASO_NO_PHOTO_TEXTURES=1 MAGLIASO_REFERENCE_ZIP=/path/magliaso_pura_v1.1.zip
-python prepare_work.py && python download_swisstopo.py && python download_av.py && python download_tlm.py
-python build_rasters.py && python landcover.py && python extract_buildings.py && python trees.py
-python network.py && python network_surface.py && python build_level.py && python check_level.py
-python package.py magliaso_pura_v2.0
-```
-
-Since v2.5 the mod zip comes from `optimize_level.py` (merged tiles, detail by distance, lighter road strips):
-
-```bash
-python optimize_level.py "$MAGLIASO_BEAMNG_USER/levels/magliaso_pura" "$MAGLIASO_ROOT/dist/magliaso_pura_v2.5.zip"
-```
-
-`build_level.py --reuse-roads` redoes all the stages except the road network, which is the longest (about 13 minutes). It reuses the road meshes of the previous build and `work/roads_state.npz`.
-
-Since v2.2 the level never contains images taken from Street View: this is the default behaviour
-(`config.NO_PHOTO`). Only `MAGLIASO_NO_PHOTO_TEXTURES=0` brings back the photographic textures of the local 1.x
-versions, for private study; that version must not be distributed.
-
-The road surface (`roadheight.py` → `work\road_surface.npz`) is computed at the first stage that uses it; delete it to recompute it, for example after changing the parameters in `surface_fit.py`. Guardrails and walls near the road are realigned to the new surface during the build. `guardrails2.py` and `wall_caps.py` read the surface only when those steps are redone.
-
-To update the v1.0 zip without the working data (about 5 minutes; requires numpy, scipy, shapely and rasterio):
-
-```bash
-python patch_release.py magliaso_pura_v1.0.zip magliaso_pura_v1.1.zip
-```
-
-Verification takes three steps:
-
-1. `validation.py make <indices> 90`, or `makefull` for all 366 panoramas;
-2. `run_validation.ps1`: for the full tour the JPEG screenshots must be moved to `work\validation_full\game`;
-3. `validate_metrics.py <tag>`, or `validate_metrics.py <tag> full` followed by `verify_report.py <tag>`.
+- **Area** (`area.py`, `config.BOUNDARY`): the union of three parts; the terrain is a block of 8192 × 8192 samples at 1.5 m (12.3 km per side).
+  - The quadrilateral of the four given points, widened by 150 m.
+  - The corridor of the Magliaso–Pura cantonal road.
+  - The Magliaso–Agno–Bioggio–Manno–Gravesano cantonal road, with 150 m around it and the whole strip between the road and the east side of the quadrilateral. `strade_extra.py` extracts it from swissTLM3D (shortest path over the Canton's roads) and saves it in `dati/cantonale_gravesano.json`: this way the area doesn't depend on swissTLM3D, which is downloaded based on the area.
+  - (v2.2) A 100 m corridor around the roads that left the map: the pass above Gravesano to Arosio (Stradón da Rós, the «Penudria»), the Ponte Tresa–Caslano–Magliaso cantonal road and, in Caslano, the village from the station to the lake and Via Torrazza up to the Torrazza. `strade_extra.py` computes them like the Gravesano cantonal road and saves them in `dati/strade_extra_v22.json`; a pocket that a corridor closes off against the rest of the area is included.
+- **Network** (`network.py`): all swissTLM3D lines in the area, i.e. roads, forest roads, trails, mule tracks, stairways and bridges; tunnels are excluded. The lines are split at junctions, re-centred on the carriageways of the official survey and sampled every 2 m.
+- **Profile** (`network_surface.py`): a single least-squares system over all the stations of the network.
+  - Fit to the DTM, smoothness by road class, a single height at junctions, Tukey weights against survey anomalies.
+  - The cantonal road is constrained to the v1.1 surface.
+  - On bridges the profile between the abutments counts, except on culverts, where swissTLM3D and the DTM lie on the ground.
+- **Surfaces** (`network_mesh.py`): the polygons of the official survey (carriageways, pavements, yards) and a strip along the lines with no survey polygon.
+  - Heights come from projecting onto the lines within 6 m of the carriageway; yards far from the lines follow the DTM.
+  - No surface goes more than 0.75 m below the lowest bare ground within 1 m.
+  - The terrain is carved under the built meshes (`road_mesh.carve_window`): every vertex whose triangles touch a mesh drops 10 cm below the lowest face in the square of one grid step around it, so the terrain doesn't stick out even between one vertex and the next.
+- **Walls** (`walls.py`): every terrain vertex whose triangles touch a wall drops to the base of the wall, so the 1.5 m grid doesn't make the terrain stick out in front of the face. Behind retaining walls a mesh on the terrain grid (`build_backfill`) puts the ground back at its level, in the material of the surrounding terrain. A survey wall that sticks out more than 30 cm above a carriageway, or above the passage strip around a line, is cut there (`drive_free`, `above_way`): the survey and swissTLM3D don't always agree, and a wall drawn across a road would block it.
+- **Buildings** (`buildings_mesh.py`): where a building stands on a road or trail of the network (underpasses, the canopy of the Ponte Tresa customs post, an alley under a bell tower, a swissTLM3D line drawn inside a house) a passage 4.2 m high on roads and 3 m on trails is cut, closed by a ceiling and walls (`passages`); under a lower roof the passage stops under the roof, if at least 3 m (2.2 m on trails) remain.
+- **Bridges** (`bridges.py`): deck, parapets, piers (never on a road or trail), terrain lowered under the slab. The manual corrections are in `dati/ponti.json` (`z0`, `z1`, `profile` `straight` or `tlm`, `type`, `skip`); `tlm` follows the swissTLM3D 3D line, for footbridges with stairs over a road. The check sheets are made with `bridge_report.py`.
+- **Verification** (`check_level.py`, `review_map.py`, `render3d.py`):
+  - automatic checks over the whole map, with the locations of the problems; among them the obstacles on the carriageway, searched along every road and trail at 0.5 and 1.6 m height against all solid meshes, and holes in the terrain;
+  - 3D screenshots of the level without the game (three.js in Chromium), with an overview from above, bridges, roads, trails, villages and flagged spots.
 
 ## Sources and licences
 
