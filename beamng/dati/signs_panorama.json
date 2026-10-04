@@ -7,7 +7,13 @@
  "sign_003_0": {
   "code": "2.59.1",
   "value": "30",
-  "note": "zone 30 entry ('ZONA' over the 30 circle); a 2.16 16 t weight limit plate below on the same pole, same crop (see sign_075_0)"
+  "note": "zone 30 entry ('ZONA' over the 30 circle); a 2.16 16 t weight limit plate below on the same pole, same crop (see sign_075_0)",
+  "below": [
+   [
+    "2.16",
+    "16"
+   ]
+  ]
  },
  "sign_005_0": {
   "code": "back",
@@ -40,9 +46,9 @@
   "note": "white municipal notice with red text, not an OSStr signal"
  },
  "sign_014_0": {
-  "code": "2.34",
+  "code": "2.33",
   "value": null,
-  "note": "keep right (pass the obstacle on the right), blue round, arrow down-right; a 4.11 is visible behind"
+  "note": "keep right (pass the obstacle on the right), blue round, arrow down-right; a 4.11 is visible behind (OSStr 2.33, pass the obstacle on the right; first written as 2.34)"
  },
  "sign_016_0": {
   "code": "not_a_sign",
@@ -65,9 +71,9 @@
   "note": "end of the 60 limit"
  },
  "sign_022_0": {
-  "code": "2.34",
+  "code": "2.33",
   "value": null,
-  "note": "keep right (pass the obstacle on the right)"
+  "note": "keep right (pass the obstacle on the right) (OSStr 2.33, pass the obstacle on the right; first written as 2.34)"
  },
  "sign_024_0": {
   "code": "unknown",
@@ -146,13 +152,13 @@
  },
  "sign_038_2": {
   "code": "4.32",
-  "value": "Astano",
+  "value": "right|Astano",
   "note": "white arrow direction sign (minor road), pointing right; 'Pura' pointer above"
  },
  "sign_038_3": {
-  "code": "4.32",
+  "code": "direction",
   "value": "Arosio / Novaggio Pura / Astano",
-  "note": "three white arrow direction signs (minor road), pointing right"
+  "note": "three white arrow direction signs (minor road), pointing right (three pointers in one crop, left as measured)"
  },
  "sign_040_0": {
   "code": "bus_stop",
@@ -181,7 +187,7 @@
  },
  "sign_048_0": {
   "code": "4.32",
-  "value": "Caslano / Pura",
+  "value": "left|Caslano / Pura",
   "note": "white arrow direction sign (minor road), pointing left"
  },
  "sign_051_0": {
@@ -230,9 +236,9 @@
   "note": "red street-name plate"
  },
  "sign_063_0": {
-  "code": "2.34",
+  "code": "2.33",
   "value": null,
-  "note": "keep right (pass the obstacle on the right)"
+  "note": "keep right (pass the obstacle on the right) (OSStr 2.33, pass the obstacle on the right; first written as 2.34)"
  },
  "sign_064_0": {
   "code": "not_a_sign",
@@ -245,9 +251,9 @@
   "note": "white commemorative street-name plate"
  },
  "sign_067_0": {
-  "code": "2.34",
+  "code": "2.33",
   "value": null,
-  "note": "keep right (pass the obstacle on the right)"
+  "note": "keep right (pass the obstacle on the right) (OSStr 2.33, pass the obstacle on the right; first written as 2.34)"
  },
  "sign_067_1": {
   "code": "4.17",
@@ -260,14 +266,20 @@
   "note": "yellow hiking trail pointers"
  },
  "sign_070_0": {
-  "code": "2.34",
+  "code": "2.33",
   "value": null,
-  "note": "keep right (pass the obstacle on the right)"
+  "note": "keep right (pass the obstacle on the right) (OSStr 2.33, pass the obstacle on the right; first written as 2.34)"
  },
  "sign_075_0": {
   "code": "2.59.1",
   "value": "30",
-  "note": "zone 30 entry; a 2.16 16 t weight limit plate below in the same crop"
+  "note": "zone 30 entry; a 2.16 16 t weight limit plate below in the same crop",
+  "below": [
+   [
+    "2.16",
+    "16"
+   ]
+  ]
  },
  "sign_076_0": {
   "code": "direction_advance",
@@ -320,9 +332,9 @@
   "note": "red street-name plate, text unreadable"
  },
  "sign_092_0": {
-  "code": "2.34",
+  "code": "2.33",
   "value": null,
-  "note": "keep right; the crop also shows the grey back of a round sign on the left, with traffic bollards"
+  "note": "keep right; the crop also shows the grey back of a round sign on the left, with traffic bollards (OSStr 2.33, pass the obstacle on the right; first written as 2.34)"
  },
  "sign_093_0": {
   "code": "unknown",
@@ -331,7 +343,7 @@
  },
  "sign_093_1": {
   "code": "4.32",
-  "value": "Caslano / Pura",
+  "value": "left|Caslano / Pura",
   "note": "white arrow direction sign (minor road), pointing left"
  }
 }

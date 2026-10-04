@@ -43,7 +43,7 @@ The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local ver
 | build it on your own machine | the commands under [Building without the game](#building-without-the-game) | depends on the machine, plus the downloads |
 | change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_signs.py` (v2.7) | minutes |
 
-The current release (v2.6) is the v2.4 workflow's zip passed through the first two patch scripts; v2.7 (in preparation, to be checked in the game) adds the third:
+The current release (v2.6) is the v2.4 workflow's zip passed through the first two patch scripts; v2.7 (checked in the game) adds the third:
 
 ```bash
 python optimize_level.py magliaso_pura_v2.4.zip magliaso_pura_v2.5.zip

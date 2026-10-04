@@ -428,6 +428,63 @@ def s_text_plate(text, w=256, h=96, arrows=False):
     return c.done()
 
 
+def s_pass_obstacle(right=True, n=256):
+    """2.33 / 2.34 pass the obstacle on the right / left: blue disk, a white arrow pointing down
+    to that side (45 degrees)."""
+    c = Canvas(n)
+    c.circle(n / 2, n / 2, n / 2 - 0.5, WHITE)
+    c.circle(n / 2, n / 2, n / 2 * 0.97, BLUE)
+    img = c.done()
+    a = Canvas(n)
+    _arrow_up(a, n / 2, n * 0.18, n * 0.82, n * 0.30, WHITE)
+    arrow = a.done().rotate(-135 if right else 135, resample=Image.BICUBIC)   # PIL turns anticlockwise
+    img.alpha_composite(arrow)
+    return img
+
+
+def s_curve(right=True, n=256):
+    """1.01 / 1.02 curve to the right / left: danger triangle, a black road bending to that side."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    s = 1 if right else -1
+    w = n * 0.07
+    x0 = n / 2 - s * n * 0.05
+    pts = [(x0, top + h * 0.88), (x0, top + h * 0.66)]
+    for k in range(1, 7):                                  # a quarter circle to the side
+        t = k / 6 * math.pi / 3
+        r = n * 0.16
+        pts.append((x0 + s * r * (1 - math.cos(t)), top + h * 0.66 - r * math.sin(t)))
+    c.line(pts, BLACK, w)
+    (xa, ya), (xb, yb) = pts[-2], pts[-1]
+    d = np.array([xb - xa, yb - ya]); d /= np.linalg.norm(d)
+    q = np.array([d[1], -d[0]])
+    tip = np.array([xb, yb]) + d * w * 1.6
+    c.poly([tuple(tip), tuple(np.array([xb, yb]) + q * w * 1.1), tuple(np.array([xb, yb]) - q * w * 1.1)], BLACK)
+    return c.done()
+
+
+def s_pointer(text, right=True, main=False, w=512, h=128):
+    """4.31 / 4.32 direction sign of a main road (blue, white letters) / a minor road (white, black
+    letters): a plate with an arrow point on the side it shows; 'A / B' puts two places on two lines."""
+    lines = [t.strip() for t in text.split("/") if t.strip()]
+    h = h * max(1, len(lines)) * (0.75 if len(lines) > 1 else 1)
+    h = int(h)
+    c = Canvas(w, h)
+    bg, fg = (BLUE, WHITE) if main else (WHITE, BLACK)
+    tip = h * 0.45
+    def shape(e):
+        if right:
+            return [(e, e), (w - tip, e), (w - e * 1.4, h / 2), (w - tip, h - e), (e, h - e)]
+        return [(w - e, e), (tip, e), (e * 1.4, h / 2), (tip, h - e), (w - e, h - e)]
+    c.poly(shape(0.5), fg if main else BLACK)
+    c.poly(shape(h * 0.035), bg)
+    cx = (w - tip) / 2 + (0 if right else tip)
+    step = h / len(lines)
+    for k, t in enumerate(lines):
+        c.text(cx, step * (k + 0.5), t, min(step * 0.48, h * 0.40), fg, max_w=(w - tip) * 0.86)
+    return c.done()
+
+
 # ------------------------------------------------------------------ catalogue
 # code -> (drawer(value) -> RGBA, shape, (width, height) m at the normal size)
 R60, T90, Q60 = (0.60, 0.60), (0.90, 0.90 * math.sqrt(3) / 2), (0.60, 0.60)
@@ -439,6 +496,8 @@ def _with(fn, *a):
 
 
 DRAW = {
+    "1.01": (lambda v: s_curve(right=True), "triangle", T90),
+    "1.02": (lambda v: s_curve(right=False), "triangle", T90),
     "1.07": (lambda v: s_narrowing(), "triangle", T90),
     "2.01": (lambda v: s_prohibition()[0](), "round", R60),
     "2.02": (lambda v: s_no_entry(), "round", R60),
@@ -451,6 +510,8 @@ DRAW = {
     "2.30": (lambda v: s_prohibition("number", v)[0](), "round", R60),
     "2.45": (lambda v: s_prohibition("truck_overtake")[0](), "round", R60),
     "2.53": (lambda v: s_end_limit(v), "round", R60),
+    "2.33": (lambda v: s_pass_obstacle(right=True), "round", R60),
+    "2.34": (lambda v: s_pass_obstacle(right=False), "round", R60),
     "2.41.1": (lambda v: s_roundabout(), "round", R60),
     "2.59.1": (lambda v: s_zone(v or "30"), "rect", (0.60, 0.75)),
     "2.59.2": (lambda v: s_zone(v or "30", end=True), "rect", (0.60, 0.75)),
@@ -468,6 +529,9 @@ DRAW = {
     "4.28": (lambda v: s_place(v, main=True, end=True), "rect", (1.20, 0.45)),
     "4.29": (lambda v: s_place(v, main=False), "rect", (1.20, 0.45)),
     "4.30": (lambda v: s_place(v, main=False, end=True), "rect", (1.20, 0.45)),
+    # direction signs: the value is 'right|Place' or 'left|Place A / Place B'
+    "4.31": (lambda v: _pointer(v, True), "pointer", None),
+    "4.32": (lambda v: _pointer(v, False), "pointer", None),
     "5.01": (lambda v: s_text_plate(v), "plate", (0.60, 0.225)),
     "5.03": (lambda v: s_text_plate(v, arrows=True), "plate", (0.60, 0.225)),
     "text": (lambda v: s_text_plate(v), "plate", (0.60, 0.225)),
@@ -476,7 +540,12 @@ DRAW = {
 # with the word "generale"
 GENERAL = {"2.30.1": "2.30", "2.53.1": "2.53"}
 # codes that need a value to be drawn
-NEEDS_VALUE = {"2.16", "2.18", "2.19", "2.20", "2.30", "2.53", "4.27", "4.28", "4.29", "4.30", "5.01", "5.03", "text"}
+NEEDS_VALUE = {"4.31", "4.32", "2.16", "2.18", "2.19", "2.20", "2.30", "2.53", "4.27", "4.28", "4.29", "4.30", "5.01", "5.03", "text"}
+
+
+def _pointer(v, main):
+    side, _, text = v.partition("|")
+    return s_pointer(text, right=(side == "right"), main=main)
 
 
 def known(code, value=None):
@@ -488,9 +557,12 @@ def plate(code, value=None, big=False):
     """Plate(img, w, h, shape) of a signal, None when it is not drawn here."""
     if not known(code, value):
         return None
-    fn, shape, (w, h) = DRAW[GENERAL.get(code, code)]
+    fn, shape, size = DRAW[GENERAL.get(code, code)]
+    img = fn(value)
+    if size is None:                                     # a pointer: 1.00 m long, as high as its lines
+        size = (1.00, 1.00 * img.height / img.width)
     k = SIZE_UP.get(shape, 1.0) if big else 1.0
-    return Plate(fn(value), w * k, h * k, shape)
+    return Plate(img, size[0] * k, size[1] * k, shape)
 
 
 def parse(tag):

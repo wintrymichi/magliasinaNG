@@ -6,7 +6,8 @@ What changed in each version of the map, newest first. The release notes that go
 
 - **Swiss road signs on the whole network** (286 new signs): pedestrian crossings, roundabouts, one-way streets and no entry, 30 zones and meeting zones, speed limits, the general 50 with the village name on the main roads, and every sign mapped one by one in OpenStreetMap. Drawn after the Swiss standard, texts in Italian, on poles at the right edge of the road for the traffic that reads them.
 - **STOP, give-way and bus-stop signs face the traffic.** Up to v2.6 their plates were wound the wrong way for the game: approaching cars saw the grey back.
-- Not yet checked in the game.
+- **The plates of the Magliaso–Pura cantonal road are real signs:** 17 plates seen in the panoramas are drawn as the signal they are (pass on the right, zone 30, crossings, parking, direction signs, curve, STOP, …); 5 that were no sign are gone.
+- **Checked in the game:** every kind of sign the right way round from the traffic, 60–71 s to load (211 s the first time), 81–128 fps. Fixed on the way: plates upside down, the game showing the old converted shapes, textures that did not load because their sides were not powers of two.
 
 ## v2.6
 

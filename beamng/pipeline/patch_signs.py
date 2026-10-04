@@ -54,6 +54,10 @@ ROAD_MATS = ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_road_gravel", "mp_r
              "mp_road_cobble")
 GREY_BACK = (150, 152, 154)
 LEVEL_README = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README_livello.md")
+# what the plates of the cantonal road (props_poles.dae, mp_sign_NNN_k) are, read on the crops of the
+# panoramas (work/signs) on michi's PC: only the codes and notes, no image of the panoramas
+PANO_SIGNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "signs_panorama.json")
+PANO_OFF = 0.06           # m: props.py put the panorama plates this far in front of their pole
 
 
 # ------------------------------------------------------------------ reading the level
@@ -404,6 +408,50 @@ def build(z, signs):
         rep["signs"].append({"x": round(float(c[0]), 2), "y": round(float(c[1]), 2), "z": round(z0, 2),
                              "facing": [round(float(nrm[0]), 3), round(float(nrm[1]), 3)],
                              "plates": [[a, b] for a, b in s.plates], "src": s.src, "osm": s.osm_id})
+    # the plates of the cantonal road seen in the panoramas: drawn as the signals they are, the size of
+    # the standard, in the place and at the height the panoramas measured; the ones that are no sign go
+    pano = json.load(open(PANO_SIGNS, encoding="utf-8")) if os.path.exists(PANO_SIGNS) else {}
+    rep["panorama"] = Counter()
+    poles = []                                             # [pole centre, [(zc, stack, normal)]]
+    for mat, cc, n2 in pano_plates:
+        info = pano.get(mat[3:])
+        if mat in drop_pano or info is None:
+            continue
+        if info["code"] == "not_a_sign":
+            drop_pano.add(mat)
+            rep["panorama"]["removed_not_a_sign"] += 1
+            continue
+        stack = [(info["code"], info["value"])] + [tuple(b) for b in info.get("below", [])]
+        if not all(signs_ch.known(c_, v_) for c_, v_ in stack):
+            rep["panorama"]["kept_" + info["code"]] += 1     # backs, bus stops, boards: as measured
+            continue
+        drop_pano.add(mat)
+        rep["panorama"]["drawn_" + info["code"]] += 1
+        pc = cc[:2] - n2 * PANO_OFF
+        for q in poles:
+            if np.hypot(*(q[0] - pc)) < 0.3:
+                q[1].append((float(cc[2]), stack, n2))
+                break
+        else:
+            poles.append([pc, [(float(cc[2]), stack, n2)]])
+    for pc, items in poles:
+        # top to bottom; a plate drawn bigger than the one measured pushes the ones under it down
+        floor = None
+        for zc, stack, n2 in sorted(items, key=lambda t: -t[0]):
+            for k, (code, val) in enumerate(stack):
+                p = signs_ch.plate(code, val)
+                if k:                                      # the plates under the signal: right under it
+                    zc = floor - GAP - p.h / 2
+                elif floor is not None:
+                    zc = min(zc, floor - GAP - p.h / 2)
+                mat, _ = material_for(code, val)
+                F, uv = plate_quads(pc, n2, zc, p.w, p.h, off=PANO_OFF)
+                mb.add(mat, F, uvs=uv, normals=np.repeat(np.r_[n2, 0][None], 6, 0))
+                Bk = F[::-1] - np.r_[n2 * 0.006, 0]
+                mb.add(mat + "_back", Bk, uvs=uv[::-1], normals=np.repeat(np.r_[-n2, 0][None], 6, 0))
+                floor = zc - p.h / 2
+    # the grey backs (mp_sign_back) of the panorama plates that go
+    rep["drop_backs"] = [c2 - np.r_[n2 * 0.01, 0] for m2, c2, n2 in pano_plates if m2 in drop_pano]
     # the STOP and give-way plates of v2.6, drawn again
     for name, code in (("osm_stop", "3.01"), ("osm_giveway", "3.02")):
         col, op = rgba_files(signs_ch.plate(code).img)
@@ -417,9 +465,10 @@ def build(z, signs):
 FLIP = re.compile(r"mp_sign_\d|mp_sign_back$|mp_osm_(stop|giveway|timetable|sign_back|bus_)")
 
 
-def rewrite(z, path, drop=()):
-    """A props mesh (bytes) without the materials `drop` and with the old sign plates (FLIP) turned to
-    face their traffic: winding reversed and the image turned upright and read left to right."""
+def rewrite(z, path, drop=(), drop_backs=()):
+    """A props mesh (bytes) without the materials `drop` (and the grey backs mp_sign_back centred at
+    `drop_backs`) and with the old sign plates (FLIP) turned to face their traffic: winding reversed
+    and the image turned upright and read left to right."""
     data = z.read(path)
     node = re.search(rb'<node id="([^"]+)" name="[^"]+" type="NODE"><instance_geometry', data).group(1).decode()
     V, N, T, C, parts = read_dae(data)
@@ -430,6 +479,13 @@ def rewrite(z, path, drop=()):
             continue
         uv, cols = T[idx[:, 2]], (C[idx[:, 3]] if (C is not None and idx.shape[1] > 3) else None)
         tris = np.arange(len(idx)).reshape(-1, 3)
+        if mat == "mp_sign_back" and len(drop_backs):
+            # every back is two triangles: drop the pairs centred on a plate that goes
+            t = V[idx[:, 0]].reshape(-1, 3, 3).mean(1)
+            pc = (t[0::2] + t[1::2]) / 2
+            DB = np.array(drop_backs)
+            gone = np.min(np.linalg.norm(pc[:, None, :] - DB[None], axis=2), axis=1) < 0.03
+            tris = tris.reshape(-1, 2, 3)[~gone].reshape(-1, 3)
         if FLIP.match(mat):
             tris = tris[:, ::-1]
             uv = uv.copy()
@@ -454,10 +510,11 @@ def main(src, dst, report=None):
         mb.write_dae(f, name="props_signs")
         files[SHAPE] = open(f, "rb").read()
     rep["flipped_triangles"] = 0
-    for name, dr in (("props_poles", drop), ("props_osm", ())):
+    backs = rep.pop("drop_backs")
+    for name, dr, db in (("props_poles", drop, backs), ("props_osm", (), ())):
         path = f"{LEVEL}/art/shapes/props/{name}.dae"
         if path in zi.namelist():
-            files[path], k = rewrite(zi, path, dr)
+            files[path], k = rewrite(zi, path, dr, db)
             rep["flipped_triangles"] += k
     files[MATERIALS] = json.dumps({m["name"]: m for m in mats}, indent=1).encode("utf-8")
     group_file = f"{LEVEL}/main/MissionGroup/props/osm/items.level.json"
@@ -494,6 +551,7 @@ def main(src, dst, report=None):
            "outside_map_total": sum(rep["outside"].values()),
            "replaced_panorama": rep["replaced_panorama"], "old_plate_triangles_turned": rep["flipped_triangles"], "panorama_plates_removed": len(drop),
            "old_textures_resized": rep.get("textures_resized", 0),
+           "panorama_plates": dict(rep["panorama"]),
            "placed_total": sum(rep["placed"].values()), "left_out_total": sum(rep["left_out"].values()),
            "signs": rep["signs"]}
     if report:

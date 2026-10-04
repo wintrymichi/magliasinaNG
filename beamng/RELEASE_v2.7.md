@@ -17,12 +17,18 @@ Up to v2.6 the map had the STOP and give-way signs recorded in OpenStreetMap, th
 
 The signals are drawn by the pipeline after the Swiss standard (OSStr, SN 640 871 colours), with the texts in Italian: no photos. They stand on grey steel poles at the right edge of the road for the traffic that reads them, 0.6 m from the carriageway, with the lowest plate at 2.1 m in the villages and 1.5 m outside.
 
-**The STOP, give-way and bus-stop signs now face the traffic.** Up to v2.6 their plates were wound the wrong way for the game, which draws a triangle from one side only: approaching cars saw the grey back. Those plates are turned (2,152 triangles), and the STOP and give-way plates are drawn again.
+**The STOP, give-way and bus-stop signs now face the traffic.** Up to v2.6 their plates were wound the wrong way for the game, which draws a triangle from one side only: approaching cars saw the grey back. Those plates are turned, and the STOP and give-way plates are drawn again.
+
+**The cantonal road's plates are real signs.** Up to v2.6 the plates seen in the Magliaso–Pura panoramas were plain-coloured. Each one was looked at again in the photos and 17 of them are now drawn as the signal they are, at the size of the standard, in the measured place and height: 2.33 pass on the right (5), zone 30 with the 16 t limit under it (2), pedestrian crossing (2), parking (2), direction signs to Astano and to Caslano / Pura (2), end of the 60 limit, curve to the right, no entry and STOP. 5 plates that were no sign (a vehicle behind a hedge, a delineator, a utility cabinet, a stone marker, meter boxes) are gone. The bus stops, the information, hiking and street-name boards, the backs of signs and 10 plates the photos do not show well enough keep the measured shape and colour.
+
+## Checked in the game
+
+On michi's PC (BeamNG.drive 0.39, RTX 4070): every kind of sign seen from the traffic that reads it, the right way round, with no errors in the log. 60–71 s to load once the game has converted the shapes (211 s the first time), 81–128 fps. The check found three faults, fixed in this release: the plates were upside down, the game kept showing the v2.6 shapes it had converted before (the changed files now carry the date of the patch), and plate textures whose sides are not powers of two did not load ("IMPORT FAILED"; the 281 bus-stop and timetable textures of v2.6 too).
 
 ## Limits
 
 - A sign is there only where OpenStreetMap maps it or records the rule that needs it: warning signs, direction signs and parking rules nobody mapped are missing, and a sign the rule implies (a crossing, a zone) can stand a few metres from the real one.
-- On the Magliaso–Pura cantonal road the panorama plates stay plain-coloured, except 10 plates (6 poles) where OpenStreetMap or a rule says which sign stands there.
+- On the Magliaso–Pura cantonal road 35 plates (bus stops, boards, backs of signs, plates the photos do not show well enough) keep the measured shape and colour without a picture.
 - The village name is on the sign only where the commune has a single village; in Alto Malcantone, Tresa, Lema, Bioggio and Lugano the 50 "generale" sign stands without a name.
 - 387 signs of the OSM extract are on roads beyond the edge of the map and are not built; 8 found no free ground beside the road.
 
