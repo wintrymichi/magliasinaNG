@@ -65,6 +65,9 @@ local function run()
         job.sleep(3.0)                                        -- settle on the wheels
         local p0 = veh:getPosition()
         probe = {veh = veh, prevVz = nil, peak = 0, n = 0, zmin = p0.z, zmax = p0.z}
+        local headingDot = veh:getDirectionVector():dot(dir)
+        -- the car stands in park / neutral and the throttle alone does not move it: first gear
+        veh:queueLuaCommand('if controller.mainController.shiftToGearIndex then controller.mainController.shiftToGearIndex(1) end')
         veh:queueLuaCommand(string.format('input.event("throttle", %.2f, 1)', v.throttle or 0.4))
         job.sleep((v.time or 4.0) / 2)
         shot(v.name)
@@ -72,7 +75,7 @@ local function run()
         veh:queueLuaCommand('input.event("throttle", 0, 1); input.event("brake", 1, 1)')
         local p1 = veh:getPosition()
         local d = p1 - p0
-        local r = {name = v.name, peak_az = probe.peak, frames = probe.n,
+        local r = {name = v.name, peak_az = probe.peak, frames = probe.n, heading_dot = headingDot,
                    along = d.x * dir.x + d.y * dir.y, dz = d.z,
                    speed = veh:getVelocity():length(), end_pos = {p1.x, p1.y, p1.z}}
         probe = nil
