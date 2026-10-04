@@ -25,7 +25,6 @@ Nothing is taken from a photograph: the leaf and needle textures are drawn here.
 """
 import os
 import numpy as np
-from scipy.ndimage import gaussian_filter
 import bng
 from bld_textures import noise, to8, save
 
