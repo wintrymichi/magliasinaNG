@@ -338,12 +338,15 @@ class MeshBuilder:
             p[0], p[1], p[2], p[3], p[5] = [V], [N], [U], [T], [Cc]
         return int(flip.sum())
 
-    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False, weld=True):
+    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False, weld=True, billboard=None):
         """One geometry with one <triangles> list per material, in a single node named
         '<name>_a<detail>' under base00/start01. Torque reads the trailing number of a mesh
         node as its LOD pixel size, so node names must not end with other digits.
         orient: the solid pieces turned out first (orient_closed, v2.4).
-        weld: shared vertices (weld_corners, v2.5)."""
+        weld: shared vertices (weld_corners, v2.5).
+        billboard: (pixel size, {"BB::...": value}) adds an imposter detail level (an empty node
+        'bb_autobillboard<size>' beside start01, its BB:: settings as FCOLLADA user properties):
+        under that size on screen the game draws a picture of the mesh it renders itself (v2.7)."""
         if orient:
             self.orient_closed()
         if weld:
@@ -390,6 +393,12 @@ class MeshBuilder:
         safe = "".join(ch if ch.isalnum() else "_" for ch in name).strip("_") or "mesh"
         safe = safe.rstrip("0123456789_") or "mesh"
         node = f"{safe}_a{int(detail)}"
+        bb = ""
+        if billboard is not None:
+            size, props = billboard
+            bb = (f'<node id="bb" name="bb_autobillboard{int(size)}" type="NODE"><extra><technique profile="FCOLLADA">'
+                  f'<user_properties>{" ".join(f"{k}={v}" for k, v in props.items())}</user_properties>'
+                  f'</technique></extra></node>')
         doc = f"""<?xml version="1.0" encoding="utf-8"?>
 <COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
 <asset><contributor><authoring_tool>magliaso_pura pipeline</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset>
@@ -409,7 +418,7 @@ class MeshBuilder:
 <library_visual_scenes><visual_scene id="Scene" name="Scene">
 <node id="base00" name="base00" type="NODE"><node id="start01" name="start01" type="NODE">
 <node id="{node}" name="{node}" type="NODE"><instance_geometry url="#g" name="{node}"><bind_material><technique_common>{"".join(binds)}</technique_common></bind_material></instance_geometry></node>
-</node></node>
+</node>{bb}</node>
 </visual_scene></library_visual_scenes>
 <scene><instance_visual_scene url="#Scene"/></scene>
 </COLLADA>"""

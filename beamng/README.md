@@ -27,7 +27,7 @@ Every version is on the [releases](https://github.com/wintrymichi/magliasinaNG/r
 - **v2.4**: houses from every side, OSM surfaces, grass, palms, vineyards, rivers (`release_v2.4.yml`).
 - **v2.5**: the v2.4 zip made lighter for the game (`optimize_level.py`).
 - **v2.6**: the game's own grass and flowers (`patch_groundcover.py`).
-- **v2.7** (in preparation): the road markings of the network redrawn as Swiss markings (`markings_clean.py`, `patch_markings.py`).
+- **v2.7** (in preparation): the road markings of the network redrawn as Swiss markings (`markings_clean.py`, `patch_markings.py`); every measured tree back on the slopes away from the roads, drawn as imposters (`far_trees.py`, `patch_far_trees.py`).
 
 The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local version with photographic textures and the v1.0 geometry. The verification of the latest version is in `verifica/check_level.json` (automatic checks over the whole map), `verifica/drive_test.json` (virtual drive test) and `verifica/REVISIONE.md` (Street View review); the bridge profiles are in `verifica/ponti/`.
 
@@ -41,14 +41,15 @@ The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local ver
 |---|---|---|
 | publish a release built from scratch | GitHub *Actions* → *Release v2.4* → *Run workflow* ([`release_v2.4.yml`](../.github/workflows/release_v2.4.yml)) | about 1 hour |
 | build it on your own machine | the commands under [Building without the game](#building-without-the-game) | depends on the machine, plus the downloads |
-| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_markings.py` (v2.7) | minutes |
+| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_markings.py` and `patch_far_trees.py` (v2.7) | minutes |
 
 The current release (v2.6) is the v2.4 workflow's zip passed through both patch scripts:
 
 ```bash
 python optimize_level.py magliaso_pura_v2.4.zip magliaso_pura_v2.5.zip
 python patch_groundcover.py magliaso_pura_v2.5.zip magliaso_pura_v2.6.zip
-python patch_markings.py magliaso_pura_v2.6.zip magliaso_pura_v2.7.zip
+python patch_markings.py magliaso_pura_v2.6.zip magliaso_pura_v2.7_markings.zip
+python patch_far_trees.py magliaso_pura_v2.7_markings.zip magliaso_pura_v2.7.zip   # needs work/trees.npz (trees.py)
 ```
 
 ### Requirements
@@ -169,6 +170,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Package | `package.py` | mod zip in `<MAGLIASO_ROOT>/dist` |
 | Grass (v2.6) | `groundcover.py`, `patch_groundcover.py` | grass and flowers with the game's textures; into a built zip |
 | Road markings, cleaned (v2.7) | `markings_clean.py`, `patch_markings.py` | the paint traced by `network_markings.py` redrawn as Swiss markings (smooth lines, regular dashes, standard crossings, no blobs); into a built zip |
+| Far trees (v2.7) | `far_trees.py`, `patch_far_trees.py` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -179,6 +181,25 @@ The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = do
 ## Technical notes by version
 
 What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
+
+### Version 2.7: far trees
+
+Since v2.3 `vegetation.thin` keeps every tree only within 30 m of a road and 5 m of a path; farther out one tree per
+11–17 m cell, beyond 100 m one per cell of a grid coarse enough for `CAP`: seen from the valley the slopes looked bald.
+The trees it leaves out now come back as **far trees** (`far_trees.py`): three drawn models (a round and a narrow
+broad-leaved crown, a fir; about 150 triangles of cut-out leaf and needle cards around a trunk, textures drawn, no
+photos) in three shades each, the shade being the measured orthophoto colour of the tree (terciles of brightness per
+kind, median colour × `ALBEDO_K`). Each DAE has two detail levels: the mesh above `MESH_PX` pixels on screen (a few tens
+of metres from the camera) and an **imposter** below it: an empty node `bb_autobillboard<size>` beside `start01` with
+its `BB::` settings as FCOLLADA user properties (`bng.MeshBuilder.write_dae(billboard=...)`), from which the game renders
+8 pictures of the mesh around it and draws every tree as one camera-facing quad, batched per forest cell. The last
+detail level is never culled, so the far trees stay visible at any distance. Far trees are never near a road, so from
+the roads they are always quads; the vanilla trees near the roads are the same as before.
+
+No far tree has its crown within 0.5 m of a path; `canopy.py` treats them like the other trees (`far_fir_*` are conifers).
+`optimize_level.py` leaves shapes with an imposter as they are. `patch_far_trees.py <in.zip> <out.zip> [trees.npz]`
+adds them to a built zip: the measured trees more than 33 m from a road surface and 8 m from a path surface of the zip,
+with no forest item within 1 m.
 
 ### Version 2.6: grass
 
