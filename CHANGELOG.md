@@ -2,6 +2,12 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
+## v2.7
+
+- **Swiss road signs on the whole network** (286 new signs): pedestrian crossings, roundabouts, one-way streets and no entry, 30 zones and meeting zones, speed limits, the general 50 with the village name on the main roads, and every sign mapped one by one in OpenStreetMap. Drawn after the Swiss standard, texts in Italian, on poles at the right edge of the road for the traffic that reads them.
+- **STOP, give-way and bus-stop signs face the traffic.** Up to v2.6 their plates were wound the wrong way for the game: approaching cars saw the grey back.
+- Not yet checked in the game.
+
 ## v2.6
 
 - **New grass.** Up to v2.5 the grass was drawn by the pipeline in one texture without transparency maps: in the game it showed as dark opaque cards, and only up to 50 m. Now the meadows and gardens use the game's own grass and flower textures (colour, opacity, normal, roughness and ambient occlusion maps, light through the blades), laid out like the game's Italy level: short grass up to 50 m around the camera, short and long grass up to 120 m, meadow flowers (daisies, buttercups, geraniums, poppies), mown lawns in the gardens.
