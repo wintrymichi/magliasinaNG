@@ -103,7 +103,6 @@ def track_of(ln):
     # the runs may reach a little beyond the points of the track (they are every 2 m)
     ends = np.array([r[0] for r in runs] + [r[-1] for r in runs]) if runs else np.zeros((0, 2))
     if len(ends):
-        uu = t.project(ends)
         d0 = t.P[1] - t.P[0]; d0 /= max(np.linalg.norm(d0), 1e-9)
         d1 = t.P[-1] - t.P[-2]; d1 /= max(np.linalg.norm(d1), 1e-9)
         lo = min(((ends - t.P[0]) @ d0).min(), 0.0)
@@ -283,7 +282,6 @@ def clean_line(ln, tr, hidden, net):
         if joined:
             pa, pb = joined[-1]
             g = a - pb
-            mid = tr.at([(pb + a) / 2])[0]
             gap_pts = tr.at(np.linspace(pb, a, max(int(g / 2.0), 2)))
             hid = hidden_share(tr, pb, a, hidden)
             long_piece = max(pb - pa, b - a) >= MIN_SOLID_PIECE      # two dashes are not a broken solid line
