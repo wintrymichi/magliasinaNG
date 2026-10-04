@@ -8,6 +8,14 @@ What changed in each version of the map, newest first. The release notes that go
 - **STOP, give-way and bus-stop signs face the traffic.** Up to v2.6 their plates were wound the wrong way for the game: approaching cars saw the grey back.
 - **The plates of the Magliaso–Pura cantonal road are real signs:** 17 plates seen in the panoramas are drawn as the signal they are (pass on the right, zone 30, crossings, parking, direction signs, curve, STOP, …); 5 that were no sign are gone.
 - **Checked in the game:** every kind of sign the right way round from the traffic, 60–71 s to load (211 s the first time), 81–128 fps. Fixed on the way: plates upside down, the game showing the old converted shapes, textures that did not load because their sides were not powers of two.
+- **Road markings redrawn as they are painted in Switzerland.** Up to v2.6 the markings of the network (208 km of roads outside the cantonal road) were the raw trace of the orthophoto: wobbling lines, dashes of different lengths, a line traced twice (the paint and the light concrete gutter beside it), solid lines broken wherever a car stood, pedestrian crossings made of a few yellow blobs, white blobs left by cars, glare and manholes. Now (`markings_clean.py`, into the zip with `patch_markings.py`):
+  - lines follow the road smoothly (a quadratic fit over 14 m, which keeps the curves);
+  - dashed lines have one dash length and one period per stretch, at the Swiss values where the measure is close (3 m dashes every 6 or 9 m in most places), with the dashes a car hid put back;
+  - solid lines continue under parked cars and shadows (gaps up to 9 m) and under trees (up to 150 m, where the photo is hidden), never across a junction;
+  - doubled lines and the gutter beside the edge line are gone;
+  - 99 pedestrian crossings are standard Swiss ones (yellow bars 0.5 m wide and 0.5 m apart, across the whole carriageway, the lines along the road stopping 0.5 m before them), and 10 marked crossings of OpenStreetMap that the photo doesn't show (under a tree or a car) are added;
+  - stop and give-way lines and the bars of hatched areas are clean rectangles; 1320 blobs that are neither a strip nor an arrow or letter are gone.
+- The cantonal road Magliaso – Pura keeps its own markings (measured in the photos, state of October 2022).
 
 ## v2.6
 

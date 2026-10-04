@@ -27,7 +27,7 @@ Every version is on the [releases](https://github.com/wintrymichi/magliasinaNG/r
 - **v2.4**: houses from every side, OSM surfaces, grass, palms, vineyards, rivers (`release_v2.4.yml`).
 - **v2.5**: the v2.4 zip made lighter for the game (`optimize_level.py`).
 - **v2.6**: the game's own grass and flowers (`patch_groundcover.py`).
-- **v2.7**: the Swiss road signs of the whole network (`patch_signs.py`).
+- **v2.7**: the Swiss road signs of the whole network (`patch_signs.py`) and the road markings of the network redrawn as Swiss markings (`markings_clean.py`, `patch_markings.py`).
 
 The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local version with photographic textures and the v1.0 geometry. The verification of the latest version is in `verifica/check_level.json` (automatic checks over the whole map), `verifica/drive_test.json` (virtual drive test) and `verifica/REVISIONE.md` (Street View review); the bridge profiles are in `verifica/ponti/`.
 
@@ -41,14 +41,15 @@ The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local ver
 |---|---|---|
 | publish a release built from scratch | GitHub *Actions* → *Release v2.4* → *Run workflow* ([`release_v2.4.yml`](../.github/workflows/release_v2.4.yml)) | about 1 hour |
 | build it on your own machine | the commands under [Building without the game](#building-without-the-game) | depends on the machine, plus the downloads |
-| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_signs.py` (v2.7) | minutes |
+| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_markings.py` and `patch_signs.py` (v2.7) | minutes |
 
-The current release (v2.6) is the v2.4 workflow's zip passed through the first two patch scripts; v2.7 (checked in the game) adds the third:
+The current release (v2.6) is the v2.4 workflow's zip passed through the first two patch scripts; v2.7 adds the markings and the signs:
 
 ```bash
 python optimize_level.py magliaso_pura_v2.4.zip magliaso_pura_v2.5.zip
 python patch_groundcover.py magliaso_pura_v2.5.zip magliaso_pura_v2.6.zip
-python patch_signs.py magliaso_pura_v2.6.zip magliaso_pura_v2.7.zip --report ../verifica/signs_v2.7.json
+python patch_markings.py magliaso_pura_v2.6.zip magliaso_pura_v2.7_markings.zip
+python patch_signs.py magliaso_pura_v2.7_markings.zip magliaso_pura_v2.7.zip --report ../verifica/signs_v2.7.json
 ```
 
 ### Requirements
@@ -169,6 +170,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Package | `package.py` | mod zip in `<MAGLIASO_ROOT>/dist` |
 | Grass (v2.6) | `groundcover.py`, `patch_groundcover.py` | grass and flowers with the game's textures; into a built zip |
 | Road signs (v2.7) | `signs_ch.py`, `signs_net.py`, `patch_signs.py` | the Swiss signals drawn as textures; where they stand from OpenStreetMap (mapped signs and the rules); into a built zip |
+| Road markings, cleaned (v2.7) | `markings_clean.py`, `patch_markings.py` | the paint traced by `network_markings.py` redrawn as Swiss markings (smooth lines, regular dashes, standard crossings, no blobs); into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
