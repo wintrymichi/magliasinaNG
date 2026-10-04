@@ -1,0 +1,337 @@
+{
+ "sign_001_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "small blue rectangular plate under a round sign cut off by the crop; unreadable"
+ },
+ "sign_003_0": {
+  "code": "2.59.1",
+  "value": "30",
+  "note": "zone 30 entry ('ZONA' over the 30 circle); a 2.16 16 t weight limit plate below on the same pole, same crop (see sign_075_0)"
+ },
+ "sign_005_0": {
+  "code": "back",
+  "value": null,
+  "note": "back of a round sign"
+ },
+ "sign_006_0": {
+  "code": "back",
+  "value": null,
+  "note": "back of a round sign (grey, sticker); marked front in poles.json but it is the back"
+ },
+ "sign_007_0": {
+  "code": "info",
+  "value": "Defibrillatore - Salone Comunale",
+  "note": "green defibrillator (AED) sign, not an OSStr signal"
+ },
+ "sign_009_0": {
+  "code": "bus_stop",
+  "value": null,
+  "note": "bus stop flag with timetable (yellow band), seen from the side"
+ },
+ "sign_011_0": {
+  "code": "4.11",
+  "value": null,
+  "note": "pedestrian crossing, small and partly hidden"
+ },
+ "sign_012_0": {
+  "code": "info",
+  "value": "Vietato deporre rifiuti e materiali - Multa ai contravventori - Il Municipio",
+  "note": "white municipal notice with red text, not an OSStr signal"
+ },
+ "sign_014_0": {
+  "code": "2.34",
+  "value": null,
+  "note": "keep right (pass the obstacle on the right), blue round, arrow down-right; a 4.11 is visible behind"
+ },
+ "sign_016_0": {
+  "code": "not_a_sign",
+  "value": null,
+  "note": "stone boundary / kilometre marker, no plate"
+ },
+ "sign_016_1": {
+  "code": "unknown",
+  "value": null,
+  "note": "three stacked danger triangles (top probably road works, bottom uneven road 1.10?), too small to read; a 2.02 in the background"
+ },
+ "sign_018_0": {
+  "code": "not_a_sign",
+  "value": null,
+  "note": "false detection: a vehicle (truck / bus) behind a hedge"
+ },
+ "sign_020_0": {
+  "code": "2.53",
+  "value": "60",
+  "note": "end of the 60 limit"
+ },
+ "sign_022_0": {
+  "code": "2.34",
+  "value": null,
+  "note": "keep right (pass the obstacle on the right)"
+ },
+ "sign_024_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "blurred purple-grey patch, unreadable"
+ },
+ "sign_024_1": {
+  "code": "unknown",
+  "value": null,
+  "note": "blurred dark red patch, unreadable"
+ },
+ "sign_025_0": {
+  "code": "not_a_sign",
+  "value": null,
+  "note": "false detection: lamp pole and a utility cabinet"
+ },
+ "sign_027_0": {
+  "code": "not_a_sign",
+  "value": null,
+  "note": "white delineator post with black band (Leitpfosten)"
+ },
+ "sign_028_0": {
+  "code": "1.01",
+  "value": null,
+  "note": "danger: curve to the right"
+ },
+ "sign_030_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "dark blurred square plate, probably a back"
+ },
+ "sign_032_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "blurred white/blue direction plate pointing left, text unreadable"
+ },
+ "sign_032_1": {
+  "code": "unknown",
+  "value": "700 m",
+  "note": "blue rectangular plate: tank vehicle over water waves, '700 m' with two up arrows (water-protection / dangerous-goods advance notice); OSStr number not certain"
+ },
+ "sign_036_0": {
+  "code": "2.02",
+  "value": null,
+  "note": "no-entry symbol on a white private board with small text (not a standard OSStr plate)"
+ },
+ "sign_037_0": {
+  "code": "direction",
+  "value": null,
+  "note": "brown / white arrow pointers seen almost edge-on, text unreadable"
+ },
+ "sign_037_1": {
+  "code": "back",
+  "value": null,
+  "note": "back of an arrow pointer"
+ },
+ "sign_037_2": {
+  "code": "back",
+  "value": null,
+  "note": "backs of three arrow pointers"
+ },
+ "sign_037_3": {
+  "code": "back",
+  "value": null,
+  "note": "back of an arrow pointer"
+ },
+ "sign_038_0": {
+  "code": "tourist",
+  "value": "Museo del Malcantone / Alberghi-Hôtels",
+  "note": "brown tourist arrow pointers, pointing right"
+ },
+ "sign_038_1": {
+  "code": "tourist",
+  "value": "(blurred) / Museo del Malcantone / Alberghi-Hôtels",
+  "note": "brown tourist arrow pointers, pointing right; the top one has a pictogram and blurred text"
+ },
+ "sign_038_2": {
+  "code": "4.32",
+  "value": "Astano",
+  "note": "white arrow direction sign (minor road), pointing right; 'Pura' pointer above"
+ },
+ "sign_038_3": {
+  "code": "4.32",
+  "value": "Arosio / Novaggio Pura / Astano",
+  "note": "three white arrow direction signs (minor road), pointing right"
+ },
+ "sign_040_0": {
+  "code": "bus_stop",
+  "value": null,
+  "note": "bus stop flag with timetable (yellow band), seen at an angle"
+ },
+ "sign_041_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "small blue square plate, possibly 4.11 or an info sign; too small"
+ },
+ "sign_042_0": {
+  "code": "back",
+  "value": null,
+  "note": "narrow plate seen edge-on / from behind"
+ },
+ "sign_042_1": {
+  "code": "3.01",
+  "value": null,
+  "note": "STOP"
+ },
+ "sign_043_0": {
+  "code": "4.11",
+  "value": null,
+  "note": "pedestrian crossing"
+ },
+ "sign_048_0": {
+  "code": "4.32",
+  "value": "Caslano / Pura",
+  "note": "white arrow direction sign (minor road), pointing left"
+ },
+ "sign_051_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "plate seen edge-on, unreadable"
+ },
+ "sign_052_0": {
+  "code": "2.59.1",
+  "value": "30",
+  "note": "zone 30 entry; blank grey panel below"
+ },
+ "sign_054_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "blue rectangular plate cut by the crop, white arrow tip at the left edge (maybe 4.08 one-way)"
+ },
+ "sign_056_0": {
+  "code": "hiking",
+  "value": null,
+  "note": "yellow hiking trail pointers"
+ },
+ "sign_057_0": {
+  "code": "bus_stop",
+  "value": null,
+  "note": "bus stop timetable board (yellow edge), seen at an angle"
+ },
+ "sign_057_1": {
+  "code": "bus_stop",
+  "value": "Ai Ronchetti",
+  "note": "bus stop flag 'Ai Ronchetti' (Pura) with PostAuto lines"
+ },
+ "sign_058_0": {
+  "code": "street_name",
+  "value": "Via Bruccia?",
+  "note": "red street-name plate, text partly blurred"
+ },
+ "sign_060_0": {
+  "code": "back",
+  "value": null,
+  "note": "back of a rectangular plate"
+ },
+ "sign_061_0": {
+  "code": "street_name",
+  "value": "Strada Cantonale",
+  "note": "red street-name plate"
+ },
+ "sign_063_0": {
+  "code": "2.34",
+  "value": null,
+  "note": "keep right (pass the obstacle on the right)"
+ },
+ "sign_064_0": {
+  "code": "not_a_sign",
+  "value": null,
+  "note": "small white boxes / meters on a post, not a road sign"
+ },
+ "sign_065_0": {
+  "code": "street_name",
+  "value": "Via Davide Bianchi",
+  "note": "white commemorative street-name plate"
+ },
+ "sign_067_0": {
+  "code": "2.34",
+  "value": null,
+  "note": "keep right (pass the obstacle on the right)"
+ },
+ "sign_067_1": {
+  "code": "4.17",
+  "value": null,
+  "note": "parking, with a small arrow plate pointing left below"
+ },
+ "sign_068_0": {
+  "code": "hiking",
+  "value": null,
+  "note": "yellow hiking trail pointers"
+ },
+ "sign_070_0": {
+  "code": "2.34",
+  "value": null,
+  "note": "keep right (pass the obstacle on the right)"
+ },
+ "sign_075_0": {
+  "code": "2.59.1",
+  "value": "30",
+  "note": "zone 30 entry; a 2.16 16 t weight limit plate below in the same crop"
+ },
+ "sign_076_0": {
+  "code": "direction_advance",
+  "value": "Via Golf / Lugano / Ponte Tresa",
+  "note": "white advance direction sign with a roundabout diagram: Via Golf (golf, P) ahead, Lugano (airport) left, Ponte Tresa right; OSStr number not certain"
+ },
+ "sign_079_0": {
+  "code": "bus_stop",
+  "value": null,
+  "note": "bus stop timetable board"
+ },
+ "sign_079_1": {
+  "code": "bus_stop",
+  "value": null,
+  "note": "top of a bus stop flag (yellow band)"
+ },
+ "sign_084_0": {
+  "code": "back",
+  "value": null,
+  "note": "back of an octagonal STOP plate"
+ },
+ "sign_084_1": {
+  "code": "info",
+  "value": null,
+  "note": "green defibrillator (AED) sign"
+ },
+ "sign_084_2": {
+  "code": "4.17",
+  "value": null,
+  "note": "parking, small"
+ },
+ "sign_085_0": {
+  "code": "back",
+  "value": null,
+  "note": "back of a round sign"
+ },
+ "sign_085_1": {
+  "code": "covered",
+  "value": null,
+  "note": "plate covered with a black plastic bag (sign out of service)"
+ },
+ "sign_088_0": {
+  "code": "info",
+  "value": null,
+  "note": "green defibrillator (AED) sign"
+ },
+ "sign_090_0": {
+  "code": "street_name",
+  "value": null,
+  "note": "red street-name plate, text unreadable"
+ },
+ "sign_092_0": {
+  "code": "2.34",
+  "value": null,
+  "note": "keep right; the crop also shows the grey back of a round sign on the left, with traffic bollards"
+ },
+ "sign_093_0": {
+  "code": "unknown",
+  "value": null,
+  "note": "back of a give-way triangle and a round red-ring sign seen edge-on (speed or weight limit?)"
+ },
+ "sign_093_1": {
+  "code": "4.32",
+  "value": "Caslano / Pura",
+  "note": "white arrow direction sign (minor road), pointing left"
+ }
+}
