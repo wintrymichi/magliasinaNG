@@ -1,4 +1,5 @@
-"""Road paint of the network (network_markings.py) as painted meshes on the road surfaces (v2.1).
+"""Road paint of the network (network_markings.py) as painted meshes on the road surfaces (v2.1),
+redrawn as Swiss road markings by markings_clean.py (v2.7).
 
 Lines: quad strips of their painted width along every painted run; the other paint (crossings,
 stop and give-way lines, arrows, hatched areas, text): its polygons triangulated. Heights: the top
@@ -20,16 +21,19 @@ LIFT = 0.02
 STEP = 0.5                    # m between the vertices of a strip
 MATS = {"white": "mp_road_paint", "yellow": "mp_road_paint_yellow"}
 SRC = os.path.join(WORK, "network_markings.json")      # or .json.gz (the copy kept in dati/)
+DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "network_markings.json.gz")
 
 
 def load():
     """The result of network_markings.py: work/network_markings.json, or the compressed copy of the
-    repository (dati/network_markings.json.gz, seeded into work by prepare_work.py); None if neither."""
+    repository (dati/network_markings.json.gz, seeded into work by prepare_work.py, or read from
+    dati/ directly); None if neither."""
     import gzip
     if os.path.exists(SRC):
         return json.load(open(SRC))
-    if os.path.exists(SRC + ".gz"):
-        return json.load(gzip.open(SRC + ".gz", "rt"))
+    for f in (SRC + ".gz", DATI):
+        if os.path.exists(f):
+            return json.load(gzip.open(f, "rt"))
     return None
 
 
@@ -94,18 +98,53 @@ def road_tops(level_dir, mats=ROAD_MATS):
     return np.concatenate(out) if out else np.zeros((0, 3, 3))
 
 
-def build(level_dir, scene, net=None, tops=None):
+CARRIAGE_MATS = osm_surface.ROAD_MATS + ("mp_road_asphalt_fresh",)
+
+
+def cleaned(d, carriage_tops, painted=None):
+    """The paint of network_markings.py redrawn as Swiss markings (markings_clean.py) on the
+    carriageways carriage_tops (k, 3, 3), with the junctions and crossings of OSM where available.
+    painted: points (n, 2) of the paint built from the panoramas (no OSM crossing is added there)."""
+    import markings_clean
+    import osm
+    ways = nodes = None
+    if osm.available():
+        ways, nodes = osm.load()
+    out = markings_clean.clean(d, markings_clean.Carriage(carriage_tops) if len(carriage_tops) else None,
+                               ways, nodes, osm.DRIVE, painted)
+    print("network paint cleaned:", out["clean"])
+    return out
+
+
+def sv_paint_points(level_dir):
+    """Points (n, 2) of the paint of the Street View route (art/shapes/roads/markings.dae), if built."""
+    f = os.path.join(level_dir, "art", "shapes", "roads", "markings.dae")
+    if not os.path.exists(f):
+        return None
+    import patch_release as pr
+    return pr.read_dae(f)[0][:, :2]
+
+
+def build(level_dir, scene, net=None, tops=None, hint=None, carriage_tops=None, painted=None, clean=True):
     """Paint meshes of work/network_markings.json on the road meshes of the level. tops: the top
-    faces (k, 3, 3) of the road meshes (default: read from the level's road meshes)."""
+    faces (k, 3, 3) of the road meshes (default: read from the level's road meshes); hint: heights
+    (n,) at points (n, 2) near the road the paint lies on, where faces overlap (default: the profile
+    of the network `net`); carriage_tops: the carriageways (default: the road meshes of the level
+    with the materials CARRIAGE_MATS); painted: see cleaned(); clean: redraw the paint (v2.7)."""
     d = load()
     if d is None:
         print("no network markings (network_markings.py): the network stays without paint")
         return
     road_tops_ = road_tops(level_dir) if tops is None else tops
     S = TriSurface(road_tops_)
+    if clean:
+        if carriage_tops is None:
+            carriage_tops = road_tops(level_dir, CARRIAGE_MATS)
+        if painted is None:
+            painted = sv_paint_points(level_dir)
+        d = cleaned(d, carriage_tops, painted)
     # the profile of the network as the height hint where a road passes under a bridge
-    hint = None
-    if net is not None:
+    if hint is None and net is not None:
         from scipy.spatial import cKDTree
         kd = cKDTree(np.column_stack([net.x, net.y]))
         hint = lambda P: net.z[kd.query(P)[1]]
