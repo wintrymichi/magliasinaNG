@@ -1,4 +1,4 @@
-"""Dirt and gravel roads and paths flush with the ground (v2.7), in a built level zip.
+﻿"""Dirt and gravel roads and paths flush with the ground (v2.7), in a built level zip.
 
 Up to v2.6 the terrain under every road mesh was carved 0.1 m under the lowest face within one
 terrain step (1.5 m) of each vertex (network_mesh.carve_tile): the terrain stays under the faces
@@ -26,7 +26,7 @@ everything else are copied as they are.
 
 Usage: python patch_unpaved.py <in.zip> <out.zip>
 """
-import json, os, re, struct, sys, time, zipfile
+import json, os, re, shutil, struct, sys, tempfile, time, zipfile
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from scipy import ndimage as ndi
@@ -98,9 +98,10 @@ def corner_weights(u, v):
     return out
 
 
-# faces of the whole level, set in main() before the workers fork
+# faces of the whole level, set in main() and in every worker (pool(): Windows spawns the workers)
 UN = ALL = None
 Z0 = MAXH = None
+WORKERS = int(os.environ.get("PATCH_WORKERS", min(os.cpu_count(), 4)))   # each holds the faces of the level (~1.5 GB)
 
 
 def block(args):
@@ -197,7 +198,31 @@ def terrain_top(Zt, x, y):
     return Z0 + np.maximum(a, b) / 65535.0 * MAXH
 
 
-QT = None             # the patched terrain (uint16), set in main() before the workers fork
+QT = None             # the patched terrain (uint16): main() and terrain() in the workers
+
+
+def init(files, z0, maxh):
+    global UN, ALL, Z0, MAXH
+    if UN is None:                    # spawned: not a fork of main()
+        UN, ALL = (road_mesh.TriSurface(np.load(files[k])) for k in ("un", "al"))
+    Z0, MAXH = z0, maxh
+
+
+def pool(tmp, un, al):
+    """Workers with the faces of the whole level: through .npy files in `tmp`, too big for the pipe
+    of a spawned worker."""
+    files = {k: os.path.join(tmp, k + ".npy") for k in ("un", "al")}
+    np.save(files["un"], un)
+    np.save(files["al"], al)
+    return ProcessPoolExecutor(max_workers=WORKERS, initializer=init, initargs=(files, Z0, MAXH))
+
+
+def terrain(path):
+    """The patched terrain in a worker (written by main() after the workers started)."""
+    global QT
+    if QT is None:
+        QT = np.load(path, mmap_mode="r")
+    return QT
 
 
 def taper(args):
@@ -205,7 +230,8 @@ def taper(args):
     An edge vertex goes down to EDGE_UP over the terrain where that is at most EDGE_DROP m down, with
     the top of the edge face under it; the vertices of the faces of another surface, and those on
     an edge with a road face beyond it (a seam between two tiles or two polygons), stay."""
-    name, text, pos = args
+    name, text, pos, qpath = args
+    qt = terrain(qpath)
     V, _, _, _, parts, _ = optimize_level.parse(text)
     W = V + pos
     key = np.round(W * 1000).astype(np.int64)
@@ -252,7 +278,7 @@ def taper(args):
     if not len(move):
         return None
     X = W[rep[move]]
-    drop = X[:, 2] - (terrain_top(QT, X[:, 0], X[:, 1]) + EDGE_UP)
+    drop = X[:, 2] - (terrain_top(qt, X[:, 0], X[:, 1]) + EDGE_UP)
     ok = (drop > 0.002) & (drop <= EDGE_DROP)
     move, drop, X = move[ok], drop[ok], X[ok]
     if not len(move):
@@ -295,6 +321,9 @@ def main(src, dst):
     cc = np.floor((un[:, :, 0].mean(1) - TER_X0) / TER_SQUARE / BLOCK).astype(int)
     keys = sorted(set(zip(cr.tolist(), cc.tolist())))
     q0 = q.copy()
+    tmp = tempfile.mkdtemp(prefix="patch_unpaved_")
+
+    ex = pool(tmp, un, al)
 
     def run(qa):
         jobs = []
@@ -305,13 +334,12 @@ def main(src, dst):
                 continue                                # the edge of the terrain: no roads there
             jobs.append((r0, c0, q0[ra:rb, ca:cb], None if qa is None else qa[ra:rb, ca:cb]))
         out = q0.copy()
-        with ProcessPoolExecutor(max_workers=os.cpu_count()) as ex:
-            for res in ex.map(block, jobs, chunksize=2):
-                if res is not None:
-                    rr, cc, z = res
-                    qn = np.floor((z - Z0) / MAXH * 65535.0).astype(np.int64)    # down: never over a face
-                    up = qn > q0[rr, cc]
-                    out[rr[up], cc[up]] = qn[up].astype(np.uint16)
+        for res in ex.map(block, jobs, chunksize=2):
+            if res is not None:
+                rr, cc, z = res
+                qn = np.floor((z - Z0) / MAXH * 65535.0).astype(np.int64)    # down: never over a face
+                up = qn > q0[rr, cc]
+                out[rr[up], cc[up]] = qn[up].astype(np.uint16)
         return out
     print("%d blocks with unpaved faces" % len(keys))
     q = run(None)
@@ -321,15 +349,17 @@ def main(src, dst):
     print("terrain vertices raised: %d, by median %.2f m, 95th percentile %.2f m, at most %.2f m"
           % (ch.sum(), np.median(lift), np.percentile(lift, 95), lift.max()))
     QT = q
+    qpath = os.path.join(tmp, "qt.npy")
+    np.save(qpath, q)
     jobs = []
     for o in objs:
         sn = o.get("shapeName", "").lstrip("/")
         if o.get("class") == "TSStatic" and sn in zi.NameToInfo:
             text = zi.read(sn).decode("utf-8")
             if any(f'material="{m}-mat"' in text for m in UNPAVED):
-                jobs.append((sn, text, np.asarray(o.get("position", [0, 0, 0]), np.float64)))
+                jobs.append((sn, text, np.asarray(o.get("position", [0, 0, 0]), np.float64), qpath))
     shapes, nmove = {}, 0
-    with ProcessPoolExecutor(max_workers=os.cpu_count()) as ex:
+    with ex:
         for res in ex.map(taper, jobs, chunksize=1):
             if res is not None:
                 shapes[res[0]] = res[1].encode("utf-8")
@@ -346,6 +376,7 @@ def main(src, dst):
                 zo.writestr(ni, new_ter if i.filename == ter_name else shapes[i.filename])
             else:
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+    shutil.rmtree(tmp, ignore_errors=True)
     print("%s written" % dst)
 
 
