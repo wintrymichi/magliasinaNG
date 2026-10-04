@@ -197,14 +197,14 @@ def tube(c, z0, z1, r=POLE_R, n=8):
 def plate_quads(c, nrm, zc, w, h, off=0.035):
     """Front quad (6, 3) of a plate centred at (c, zc) facing nrm (2D), and its texture coordinates:
     counter-clockwise seen from the side it faces (the game culls the other side), the image read
-    left to right by whoever looks at it."""
+    left to right by whoever looks at it, upright (COLLADA: v = 0 at the bottom of the image)."""
     r = np.array([-nrm[1], nrm[0]])                    # left to right for whoever faces the plate
     p = c + nrm * off
     A = np.r_[p - r * w / 2, zc - h / 2]
     B = np.r_[p + r * w / 2, zc - h / 2]
     C = np.r_[p + r * w / 2, zc + h / 2]
     D = np.r_[p - r * w / 2, zc + h / 2]
-    uv = np.array([[0, 1], [1, 1], [1, 0], [0, 1], [1, 0], [0, 0]], float)
+    uv = np.array([[0, 0], [1, 0], [1, 1], [0, 0], [1, 1], [0, 1]], float)
     return np.array([A, B, C, A, C, D]), uv
 
 
@@ -220,9 +220,17 @@ def png(img):
     return b.getvalue()
 
 
+def pot(img):
+    """The image stretched to power-of-two sides: the game does not load a plate texture of other sizes
+    (the log says 'skip cooking ... not power of 2' and the plate shows 'IMPORT FAILED'). The plate's
+    texture coordinates run 0..1, so the stretch is undone on the plate."""
+    w, h = (1 << max(0, (v - 1).bit_length()) for v in img.size)
+    return img if (w, h) == img.size else img.resize((w, h), Image.LANCZOS)
+
+
 def rgba_files(img):
     """(colour png, opacity png) of an RGBA image, as props_osm.save_rgba writes them."""
-    img = img.convert("RGBA")
+    img = pot(img.convert("RGBA"))
     rgb = Image.new("RGB", img.size, (128, 128, 128))
     rgb.paste(img.convert("RGB"), (0, 0), img.split()[3])
     return png(rgb), png(img.split()[3])
@@ -411,7 +419,7 @@ FLIP = re.compile(r"mp_sign_\d|mp_sign_back$|mp_osm_(stop|giveway|timetable|sign
 
 def rewrite(z, path, drop=()):
     """A props mesh (bytes) without the materials `drop` and with the old sign plates (FLIP) turned to
-    face their traffic: winding reversed and the image mirrored back."""
+    face their traffic: winding reversed and the image turned upright and read left to right."""
     data = z.read(path)
     node = re.search(rb'<node id="([^"]+)" name="[^"]+" type="NODE"><instance_geometry', data).group(1).decode()
     V, N, T, C, parts = read_dae(data)
@@ -426,6 +434,7 @@ def rewrite(z, path, drop=()):
             tris = tris[:, ::-1]
             uv = uv.copy()
             uv[:, 0] = 1.0 - uv[:, 0]
+            uv[:, 1] = 1.0 - uv[:, 1]       # they had v = 0 at the top too: upside down in the game
             flipped += len(tris)
         mb.add(mat, V[idx[:, 0]], uvs=uv, normals=N[idx[:, 1]], tris=tris, colors=cols)
     with tempfile.TemporaryDirectory() as d:
@@ -458,7 +467,10 @@ def main(src, dst, report=None):
         for i in zi.infolist():
             n = i.filename
             if n in files:
-                zo.writestr(i, files.pop(n), compress_type=i.compress_type)
+                # today's date: the game keeps a converted copy of every shape and texture (<user>/temp) and
+                # converts again only a file newer than that copy, so with the old date it showed v2.6
+                zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), files.pop(n),
+                            compress_type=i.compress_type)
                 continue
             data = zi.read(i)
             if n == group_file:
@@ -466,12 +478,22 @@ def main(src, dst, report=None):
                 data = ("\n".join(lines + [json.dumps(obj, separators=(",", ":"))]) + "\n").encode("utf-8")
             elif re.fullmatch(r"levels/[^/]+/README\.md", n) and os.path.exists(LEVEL_README):
                 data = open(LEVEL_README, "rb").read()
+            elif n.startswith(f"{LEVEL}/art/shapes/signs/") and n.endswith(".png"):
+                # the bus stop flags and timetables of v2.6: power-of-two sides too, with today's date
+                img = Image.open(io.BytesIO(data))
+                big = pot(img)
+                if big is not img:
+                    zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), png(big),
+                                compress_type=i.compress_type)
+                    rep["textures_resized"] = rep.get("textures_resized", 0) + 1
+                    continue
             zo.writestr(i, data, compress_type=i.compress_type)
         for n, data in sorted(files.items()):
             zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), data, compress_type=zipfile.ZIP_DEFLATED)
     out = {"placed": dict(rep["placed"]), "left_out": dict(rep["left_out"]), "outside_map": dict(rep["outside"]),
            "outside_map_total": sum(rep["outside"].values()),
            "replaced_panorama": rep["replaced_panorama"], "old_plate_triangles_turned": rep["flipped_triangles"], "panorama_plates_removed": len(drop),
+           "old_textures_resized": rep.get("textures_resized", 0),
            "placed_total": sum(rep["placed"].values()), "left_out_total": sum(rep["left_out"].values()),
            "signs": rep["signs"]}
     if report:
