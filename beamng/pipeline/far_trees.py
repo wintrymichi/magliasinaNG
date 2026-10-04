@@ -8,8 +8,8 @@ bald: one tree in five or six on a slope that is a closed forest.
 
 Here the trees the thinning leaves out come back, all of them, as instances of three drawn models
 (round and narrow broad-leaved crowns, a fir) in three shades each. Every model has two detail
-levels: the mesh (about 150 triangles of cut-out leaf cards around a trunk) while it covers more
-than MESH_PX pixels on screen, a few tens of metres from the camera, and below that an imposter
+levels: the mesh (150-300 triangles of cut-out leaf cards around a trunk) while it covers more
+than MESH_PX pixels on screen, within about ten metres of the camera, and below that an imposter
 (Torque 'autobillboard'): BB['BB::EQUATOR_STEPS'] pictures of the mesh around it, rendered and
 lit by the game itself, drawn as one camera-facing quad per tree and batched per forest cell. These
 trees are never near a road (they are where thin() drops a tree: more than 30 m from a road, 5 m
@@ -19,8 +19,9 @@ cost of two triangles a tree, and the vanilla trees near the roads are the same 
 Models are scaled to the measured height (H0 m at scale 1); among the broad-leaved forms the one
 whose crown at that scale is closest to the measured crown diameter. The shade is the measured
 orthophoto colour of the tree: the trees of each kind (broad-leaved, conifer) are split into
-SHADES equal groups by brightness and every group gets its median colour (times ALBEDO_K: the
-orthophoto sees crowns with their own shadow in them, the game shades the model again).
+SHADES equal groups by brightness and every group gets its median colour, made more saturated and
+darker (SATURATION, VALUE: the orthophoto sees the crowns through haze, and next to the vanilla trees
+the plain median looked pale and frosted in the game).
 Nothing is taken from a photograph: the leaf and needle textures are drawn here.
 """
 import os
@@ -33,8 +34,9 @@ H0 = 10.0                 # m, height of every far model at scale 1
 FORMS = {"broad": ("broadleaf", 8.0), "narrow": ("broadleaf", 5.0), "fir": ("conifer", 4.6)}
 SHADES = 3
 SHADE_NAMES = "abc"
-ALBEDO_K = 1.15
-MESH_PX = 600             # detail size of the mesh: about 30-40 m from the camera for a 10 m tree
+SATURATION = 1.8         # the orthophoto sees the crowns through haze: grey-green, paler than the vanilla trees
+VALUE = 0.8
+MESH_PX = 8000            # detail size of the mesh: within about 10 m of a 20 m tree (600 drew it up to 150 m, in game at 1440p)
 BB_PX = 100               # detail size of the imposter (any size under MESH_PX: the last detail is never culled)
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
       "BB::DIM": 128, "BB::INCLUDE_POLES": 1}
@@ -64,8 +66,14 @@ def colors(rgb, conifer):
         v = rgb[m].mean(1)
         edges = np.quantile(v, np.arange(1, SHADES) / SHADES)
         idx = np.digitize(v, edges)
-        out[kind] = (edges, [np.clip(np.median(rgb[m][idx == k], 0) / 255.0 * ALBEDO_K, 0, 1) for k in range(SHADES)])
+        out[kind] = (edges, [vivid(np.median(rgb[m][idx == k], 0) / 255.0) for k in range(SHADES)])
     return out
+
+
+def vivid(c):
+    c = np.asarray(c, float)
+    lum = c.mean()
+    return np.clip((lum + (c - lum) * SATURATION) * VALUE, 0, 1)
 
 
 def assign(h, d, rgb, conifer, cols):
@@ -82,18 +90,32 @@ def assign(h, d, rgb, conifer, cols):
 
 
 # ---------------------------------------------------------------------- textures (drawn)
-def clump_texture(col, rng, n=256):
-    """RGBA cluster of leaves: a ragged round patch with holes towards its edge, lighter on top."""
-    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32) / n
-    r = np.hypot(xx - 0.5, yy - 0.5) / 0.5
-    field = 0.6 * noise(n, n, n / 48, rng, wrap=False) + 0.4 * noise(n, n, n / 14, rng, wrap=False)
-    alpha = (1.5 * (1.0 - r ** 1.6) + 0.45 * field) > 0.6
-    fine = noise(n, n, 1.2, rng, wrap=False)
-    leaves = noise(n, n, n / 64, rng, wrap=False)
-    light = (1.08 - 0.3 * yy) * (0.86 + 0.07 * fine + 0.07 * leaves)
+def clump_texture(col, rng, n=256, leaves=420):
+    """RGBA cluster of leaves: single leaves (ellipses, each its own shade, lighter on top) packed in
+    a round patch, sparser towards its edge; between them the texture is transparent."""
     img = np.zeros((n, n, 4), np.float32)
-    img[..., :3] = np.asarray(col, np.float32) * light[..., None]
-    img[..., 3] = alpha
+    col = np.asarray(col, np.float32)
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32)
+    for _ in range(leaves):
+        r = 0.47 * n * np.sqrt(rng.uniform(0, 1)) ** 0.8
+        a = rng.uniform(0, 2 * np.pi)
+        cx, cy = n / 2 + r * np.cos(a), n / 2 + r * np.sin(a)
+        L = rng.uniform(0.035, 0.06) * n
+        W = L * rng.uniform(0.45, 0.6)
+        th = rng.uniform(0, np.pi)
+        x0, x1 = int(max(cx - L, 0)), int(min(cx + L + 1, n))
+        y0, y1 = int(max(cy - L, 0)), int(min(cy + L + 1, n))
+        if x1 <= x0 or y1 <= y0:
+            continue
+        dx, dy = xx[y0:y1, x0:x1] - cx, yy[y0:y1, x0:x1] - cy
+        u = dx * np.cos(th) + dy * np.sin(th)
+        v = -dx * np.sin(th) + dy * np.cos(th)
+        inside = (u / L) ** 2 + (v / W) ** 2 <= 1.0
+        shade = rng.uniform(0.7, 1.15) * (1.12 - 0.35 * cy / n)
+        rib = 1.0 - 0.18 * (np.abs(v) < 0.08 * W)              # the midrib a little darker
+        sub = img[y0:y1, x0:x1]
+        sub[inside, :3] = (col * shade)[None, :] * rib[inside, None]
+        sub[inside, 3] = 1.0
     return img
 
 
@@ -133,7 +155,7 @@ def _trunk(parts, mat, z0, z1, r0, r1, sides=6):
               lambda p: tuple(np.array([p[0], p[1], 0.0]) / max(np.hypot(p[0], p[1]), 1e-6)))
 
 
-def broadleaf_mesh(diam, leaf_mat, trunk_mat, rng, n_cards=80, n_inner=12):
+def broadleaf_mesh(diam, leaf_mat, trunk_mat, rng, n_cards=140, n_inner=16):
     """Ellipsoid crown (half axes diam/2 across, 0.33 H0 high, as canopy.py's broad-leaved crown)
     of leaf cards, normals pointing out of the crown so it shades like one volume."""
     a, c = diam / 2, 0.33 * H0
@@ -144,10 +166,10 @@ def broadleaf_mesh(diam, leaf_mat, trunk_mat, rng, n_cards=80, n_inner=12):
 
     def nfn(p):
         g = (p - centre) / np.array([a * a, a * a, c * c])
-        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.35])
+        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.1])
         return tuple(g / np.linalg.norm(g))
 
-    side = 0.65 * np.sqrt(a * c)
+    side = 0.45 * np.sqrt(a * c)
     k = np.arange(n_cards + n_inner) + 0.5
     zz = 1 - 2 * k / len(k)
     az = np.pi * (1 + 5 ** 0.5) * k
@@ -176,7 +198,7 @@ def conifer_mesh(diam, leaf_mat, trunk_mat, rng, tiers=10, per_tier=7):
 
     def nfn(p):
         g = np.array([p[0], p[1], 0.0])
-        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.6])
+        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.25])
         return tuple(g / np.linalg.norm(g))
 
     golden = np.pi * (3 - 5 ** 0.5)
@@ -213,7 +235,7 @@ def build(level_dir, level_name, cols):
         for k, col in enumerate(cols[kind][1]):
             m = f"far_{kind}_{SHADE_NAMES[k]}"
             save(os.path.join(d, f"{m}.color.png"), to8(tex(col, np.random.default_rng(SEED + k))))
-            mats.append(bng.material(m, f"{L}/{m}.color.png", alpha_test=100, double_sided=True, roughness=0.9))
+            mats.append(bng.material(m, f"{L}/{m}.color.png", alpha_test=100, double_sided=True, roughness=1.0, metallic=0.0))
     bng.write_materials(os.path.join(d, "far_trees.materials.json"), mats)
     out = {}
     for form, (kind, diam) in FORMS.items():

@@ -12,7 +12,7 @@ What changed in each version of the map, newest first. The release notes that go
   - 99 pedestrian crossings are standard Swiss ones (yellow bars 0.5 m wide and 0.5 m apart, across the whole carriageway, the lines along the road stopping 0.5 m before them), and 10 marked crossings of OpenStreetMap that the photo doesn't show (under a tree or a car) are added;
   - stop and give-way lines and the bars of hatched areas are clean rectangles; 1320 blobs that are neither a strip nor an arrow or letter are gone.
 - The cantonal road Magliaso – Pura keeps its own markings (measured in the photos, state of October 2022).
-- **Wooded mountains again.** Since v2.3 the forest away from the roads was thinned to keep the game fluid: seen from the valley the slopes looked like a mountain with a few scraggy trees. Now every tree measured in the area is back (`far_trees.py`, into the zip with `patch_far_trees.py`): near the roads the same trees as before; farther away a lighter drawn tree (round or narrow broad-leaved, or a fir, in three shades from the orthophoto colour) that the game draws as a flat picture of itself once it is a few tens of metres away, two triangles per tree.
+- **Wooded mountains again.** Since v2.3 the forest away from the roads was thinned to keep the game fluid: seen from the valley the slopes looked like a mountain with a few scraggy trees. Now every tree measured in the area is back (`far_trees.py`, into the zip with `patch_far_trees.py`): near the roads the same trees as before; farther away a lighter drawn tree (round or narrow broad-leaved, or a fir, in three shades from the orthophoto colour) that the game draws as a flat picture of itself beyond about ten metres, two triangles per tree.
 
 ## v2.6
 
