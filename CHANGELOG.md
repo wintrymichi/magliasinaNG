@@ -2,6 +2,17 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
+## v2.7 (in preparation)
+
+- **Road markings redrawn as they are painted in Switzerland.** Up to v2.6 the markings of the network (208 km of roads outside the cantonal road) were the raw trace of the orthophoto: wobbling lines, dashes of different lengths, a line traced twice (the paint and the light concrete gutter beside it), solid lines broken wherever a car stood, pedestrian crossings made of a few yellow blobs, white blobs left by cars, glare and manholes. Now (`markings_clean.py`, into the zip with `patch_markings.py`):
+  - lines follow the road smoothly (a quadratic fit over 14 m, which keeps the curves);
+  - dashed lines have one dash length and one period per stretch, at the Swiss values where the measure is close (3 m dashes every 6 or 9 m in most places), with the dashes a car hid put back;
+  - solid lines continue under parked cars and shadows (gaps up to 9 m) and under trees (up to 150 m, where the photo is hidden), never across a junction;
+  - doubled lines and the gutter beside the edge line are gone;
+  - 99 pedestrian crossings are standard Swiss ones (yellow bars 0.5 m wide and 0.5 m apart, across the whole carriageway, the lines along the road stopping 0.5 m before them), and 10 marked crossings of OpenStreetMap that the photo doesn't show (under a tree or a car) are added;
+  - stop and give-way lines and the bars of hatched areas are clean rectangles; 1320 blobs that are neither a strip nor an arrow or letter are gone.
+- The cantonal road Magliaso – Pura keeps its own markings (measured in the photos, state of October 2022).
+
 ## v2.6
 
 - **New grass.** Up to v2.5 the grass was drawn by the pipeline in one texture without transparency maps: in the game it showed as dark opaque cards, and only up to 50 m. Now the meadows and gardens use the game's own grass and flower textures (colour, opacity, normal, roughness and ambient occlusion maps, light through the blades), laid out like the game's Italy level: short grass up to 50 m around the camera, short and long grass up to 120 m, meadow flowers (daisies, buttercups, geraniums, poppies), mown lawns in the gardens.
