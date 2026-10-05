@@ -202,6 +202,9 @@ card, cut out by a drawn `opacityMap` (`*_o.data.dds`, BC1 with mipmaps, `far_tr
 uncompressed DDS). With a colour texture, png or dds, the game baked the imposters pale grey: it bakes them at load
 before the texture is there, and keeps them in its cache. Without an `opacityMap` it ignores the alpha of the colour
 texture, so the leaf cards were drawn as full squares.
+In game (round 6, BeamNG 0.39.4 at 1440p) the far trees on a cold load are dark green, within the range of the
+vanilla trees beside them; 3-6 % fewer fps, about 20 s longer load, about 1 GB more memory. The mesh itself, seen
+only within about 12 m of a far tree (never from a road), renders much darker than its imposter: near-black leaves.
 
 No far tree has its crown within 0.5 m of a path; `canopy.py` treats them like the other trees (`far_fir_*` are conifers).
 `optimize_level.py` leaves shapes with an imposter as they are. `patch_far_trees.py <in.zip> <out.zip> [trees.npz]`
