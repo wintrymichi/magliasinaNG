@@ -1,0 +1,114 @@
+{
+ "zip": "magliaso_pura_v2.7.zip",
+ "zip_bytes": 516337013,
+ "zip_md5": "689a8816182b08c496f119b16b545f99",
+ "build": {
+  "order": [
+   "patch_unpaved.py",
+   "patch_markings.py",
+   "patch_far_trees.py",
+   "patch_signs.py"
+  ],
+  "from": "magliaso_pura_v2.6.zip",
+  "zips": {
+   "v26u.zip": {
+    "bytes": 508548494,
+    "md5": "d17fc0aca5120c7d4272074fc6bf625a"
+   },
+   "v26m.zip": {
+    "bytes": 507851144,
+    "md5": "2d7b07034d9c5e2afc72684230b678c7"
+   },
+   "v26t.zip": {
+    "bytes": 513590805,
+    "md5": "cc38f306d50776980d78071e7439ce6e"
+   },
+   "magliaso_pura_v2.7.zip": {
+    "bytes": 516337013,
+    "md5": "689a8816182b08c496f119b16b545f99"
+   }
+  },
+  "summaries": {
+   "patch_unpaved.py": [
+    "top faces: 802104 unpaved, 3353319 in all",
+    "362 blocks with unpaved faces",
+    "terrain vertices raised: 879222, by median 0.18 m, 95th percentile 0.53 m, at most 0.99 m",
+    "edge vertices of unpaved faces lowered onto the terrain: 486794, in 368 shapes",
+    "D:\\beamng_magliaso\\dist\\v26u.zip written"
+   ],
+   "patch_markings.py": [
+    "road faces 2509204 (carriageways 1087810), old paint vertices 1314045",
+    "network paint cleaned: {'crossings': 99, 'crossings_osm': 10, 'strips': 3424, 'marks': 956, 'dropped': 1320, 'lines_in': 1256, 'lines_out': 1219, 'polygons_in': 6208}",
+    "network paint: 4240 strips (62.7 km), 4557 polygons, 9231 vertices off the road left out, 155 meshes",
+    "D:\\beamng_magliaso\\dist\\v26m.zip: 155 network paint shapes (were 156)"
+   ],
+   "patch_far_trees.py": [
+    "trees measured 411392: road and path surfaces 4697682 / 944452 points, forest items 160749; far tree candidates 201794",
+    "far trees: 201634 of 201794 left out by the thinning (160 with the crown over a path or over the cap)",
+    "D:\\beamng_magliaso\\dist\\v26t.zip: 201634 far trees {'far_fir_b': 4259, 'far_narrow_a': 50511, 'far_broad_a': 12156, 'far_narrow_c': 45449, 'far_broad_c': 17777, 'far_fir_c': 4386, 'far_broad_b': 15394, 'far_narrow_b': 47409, 'far_fir_a': 4293}"
+   ],
+   "patch_signs.py": [
+    "681 signs planned: Counter({'rule': 633, 'osm': 48})",
+    "existing: 440 pole points, 101 STOP/give-way plates, 67 panorama plates",
+    "roads 1394399 carriageway faces, 3337988 faces (14 s)",
+    "buildings and walls near the signs (40 s)",
+    "{'placed': {'2.30+text+4.27': 1, '2.53+text+4.30': 1, '2.59.2': 17, '2.59.1': 9, '2.59.3': 3, '2.59.3+text': 1, '1.07+5.01+text': 1, '2.59.1+2.03+text+2.16': 1, '2.01+text': 2, '2.20': 1, 'city_limit': 2, '4.09+2.16': 1, '4.09+2.19+2.18': 1, '2.59.1+2.02+5.01': 1, 'village_end': 7, 'village_begin': 8, '4.08': 31, 'roundabout': 40, '2.02': 31, '2.30': 5, '4.11': 122}, 'left_out': {'4.17': 1, '4.08': 3, '4.09+1.07': 1, '2.02': 2, '2.30': 1}, 'outside_map': {'city_limit': 6, '4.17': 1, '2.01': 4, '2.05': 1, '2.01+5.01+text': 1, '2.01+5.01': 1, '2.01+text': 2, '2.30': 23, '2.45+5.03': 2, '2.30+tex",
+    "D:\\beamng_magliaso\\dist\\magliaso_pura_v2.7.zip (76 s)"
+   ]
+  }
+ },
+ "game": "BeamNG.drive 0.39, 2560x1440 window, frame limit 100 fps (frameLimitMS 10)",
+ "level_load_s": {
+  "cold_run1": 157.093,
+  "cold_run2": 154.2,
+  "warm": 68.968
+ },
+ "level_load_detail": {
+  "cold": "Level loaded in 157.093s: init 0.001s + datablocks 0.071s + materials 0.016s + objects 143.472s + ai.map 0.000s + decals 0.017s + physics 8.748s + cam 0.006s + player 3.598s + fade 1.163s",
+  "warm": "Level loaded in 68.968s: init 0.001s + datablocks 0.068s + materials 0.015s + objects 56.362s + ai.map 0.000s + decals 0.001s + physics 8.202s + cam 0.003s + player 3.214s + fade 1.101s"
+ },
+ "fps_warm_focused": {
+  "signs_zone30": 120.0,
+  "signs_roundabout": 121.5,
+  "signs_village50": 110.9,
+  "signs_crossing": 122.0,
+  "signs_stop": 128.9,
+  "signs_cantonale_233": 118.8,
+  "signs_cantonale_zone30_16t": 97.6,
+  "signs_cantonale_pointer": 80.9,
+  "markings_dashed_line": 86.5,
+  "markings_crossing": 114.6,
+  "markings_roundabout": 107.2,
+  "unpaved_cademario": 100.4,
+  "unpaved_arosio": 74.2,
+  "fartrees_gravesano_pass": 99.8,
+  "fartrees_lake_malcantone": 81.9
+ },
+ "fps_note": "3 s of frames per view after the view settled; the cold runs measured 1-5 fps while shapes and imposters were being converted and 30 fps with the game window in the background, not kept",
+ "log_errors": [
+  "E|GELua.core_levels.| No entry point for level found: /levels/GridMap. Ignoring level.",
+  "E|OnlineServiceProvider| Could not initialize online service provider: Steam - Error code 1",
+  "E|engine::Platform::Win32::getMonitorDescription| Unable to enumerate display devices during fallback: 0"
+ ],
+ "log_errors_note": "none from the level: a missing GridMap entry point, Steam online services, monitor enumeration",
+ "screenshots": [
+  "fartrees_gravesano_pass.jpg",
+  "fartrees_lake_malcantone.jpg",
+  "markings_crossing.jpg",
+  "markings_dashed_line.jpg",
+  "markings_roundabout.jpg",
+  "signs_cantonale_233.jpg",
+  "signs_cantonale_pointer.jpg",
+  "signs_cantonale_zone30_16t.jpg",
+  "signs_crossing.jpg",
+  "signs_roundabout.jpg",
+  "signs_stop.jpg",
+  "signs_village50.jpg",
+  "signs_zone30.jpg",
+  "unpaved_arosio.jpg",
+  "unpaved_cademario.jpg"
+ ],
+ "problems": [
+  "panorama plates kept 'as measured' by patch_signs.py (kept_unknown/back/info/bus_stop/tourist/hiking/street_name/direction, mp_sign_NNN_k in props_poles.dae) now face the traffic and show as black rectangles with a pale shape: their colour map sign_NNN_k.png carries the plate outline in its alpha channel, which the game does not use for the alpha test (no opacityMap); seen beside the 2.33 at (753,-1106) and below the Caslano/Pura pointer at (-770,1073), signs_cantonale_233.jpg and signs_cantonale_pointer.jpg"
+ ]
+}
