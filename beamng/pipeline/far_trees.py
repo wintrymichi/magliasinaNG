@@ -22,7 +22,10 @@ orthophoto colour of the tree: the trees of each kind (broad-leaved, conifer) ar
 SHADES equal groups by brightness and every group gets its median colour, made more saturated and
 darker (SATURATION, VALUE: the orthophoto sees the crowns through haze, and next to the vanilla trees
 the plain median looked pale and frosted in the game).
-Nothing is taken from a photograph: the leaf and needle textures are drawn here.
+Nothing is taken from a photograph: the leaf and needle shapes are drawn here, as the cut-out
+(opacityMap) of each leaf material; the colour is the material's own (baseColorFactor) times a vertex
+colour per card. With a colour texture the game baked the imposters grey: it bakes them at load,
+before the texture is there, and kept that picture in its cache.
 """
 import os, struct
 import numpy as np
@@ -40,6 +43,7 @@ MESH_PX = 5000            # detail size of the mesh: within about 12 m of a 20 m
 BB_PX = 100               # detail size of the imposter (any size under MESH_PX: the last detail is never culled)
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
       "BB::DIM": 256, "BB::INCLUDE_POLES": 1}
+CARD_SHADE = (0.78, 1.0)   # vertex colour of each leaf card (the shade colour is the material's at the top)
 PATH_GAP = 0.5            # m: no far tree whose crown comes closer than this to a path
 SEED = 61
 
@@ -224,16 +228,6 @@ def conifer_mesh(diam, leaf_mat, trunk_mat, rng, tiers=10, per_tier=7):
 
 
 # ---------------------------------------------------------------------- DDS
-def _fill_clear(rgba):
-    """The colour of the transparent texels set to the mean leaf colour: the filtered texture and its
-    mipmaps get no dark fringe around the leaves."""
-    a = rgba[..., 3:4]
-    out = rgba.copy()
-    mean = (rgba[..., :3] * a).sum((0, 1)) / max(float(a.sum()), 1e-6)
-    out[..., :3] = rgba[..., :3] * a + mean * (1 - a)
-    return out
-
-
 def _bc1(rgb):
     """BC1 blocks (bytes) of rgb (h, w, 3) 0..1, h and w multiples of 4: per block the two end
     colours are the texels farthest apart along the main axis of its colours, 4-colour mode."""
@@ -270,9 +264,8 @@ def _bc1(rgb):
 
 
 def write_dds(path, rgb):
-    """BC1 (DXT1) DDS of rgb (n, n, >=3) 0..1, n a power of two, with its mipmaps down to 4x4. The
-    game reads it as it is; a .png it converts at load, after the imposters are baked, so these were
-    baked from a grey placeholder. It rejects uncompressed DDS ("only RGB formats are supported")."""
+    """BC1 (DXT1) DDS of rgb (n, n, >=3) 0..1, n a power of two, with its mipmaps down to 4x4 (the
+    game rejects uncompressed DDS: "only RGB formats are supported")."""
     mips, a = [], np.asarray(rgb, np.float32)[..., :3]
     while True:
         mips.append(_bc1(a))
@@ -294,26 +287,30 @@ def build(level_dir, level_name, cols):
     d = os.path.join(level_dir, "art", "shapes", "trees")
     os.makedirs(d, exist_ok=True)
     L = f"/levels/{level_name}/art/shapes/trees"
-    mats = [bng.material("far_trunk", base_color=(0.17, 0.15, 0.13, 1.0), roughness=0.95)]
+    mats = [bng.material("far_trunk", base_color=(0.20, 0.19, 0.17, 1.0), roughness=0.95)]
     for kind, tex in (("broadleaf", clump_texture), ("conifer", branch_texture)):
         for k, col in enumerate(cols[kind][1]):
             m = f"far_{kind}_{SHADE_NAMES[k]}"
-            img = _fill_clear(tex(col, np.random.default_rng(SEED + k)))
-            write_dds(os.path.join(d, f"{m}_b.color.dds"), img)
-            write_dds(os.path.join(d, f"{m}_o.data.dds"), np.repeat(img[..., 3:4], 4, axis=2))
-            mats.append(bng.material(m, f"{L}/{m}_b.color.dds", alpha_test=100, double_sided=True, roughness=1.0,
-                                     metallic=0.0, detail={"opacityMap": f"{L}/{m}_o.data.dds"}))
+            alpha = tex(col, np.random.default_rng(SEED + k))[..., 3:4]
+            write_dds(os.path.join(d, f"{m}_o.data.dds"), np.repeat(alpha, 3, axis=2))
+            mats.append(bng.material(m, base_color=(*np.asarray(col) / CARD_SHADE[1], 1.0), alpha_test=100,
+                                     double_sided=True, roughness=1.0, metallic=0.0, vert_color=True,
+                                     detail={"opacityMap": f"{L}/{m}_o.data.dds"}))
     bng.write_materials(os.path.join(d, "far_trees.materials.json"), mats)
     out = {}
     for form, (kind, diam) in FORMS.items():
         mesh = conifer_mesh if kind == "conifer" else broadleaf_mesh
         for k in range(SHADES):
-            parts = mesh(diam, f"far_{kind}_{SHADE_NAMES[k]}", "far_trunk", np.random.default_rng(SEED + 7 * k))
+            rng = np.random.default_rng(SEED + 7 * k)
+            parts = mesh(diam, f"far_{kind}_{SHADE_NAMES[k]}", "far_trunk", rng)
             mb = bng.MeshBuilder()
             allv = []
             for mat, (Vs, UVs, Ns) in parts.items():
                 V = np.concatenate(Vs)
-                mb.add(mat, V, uvs=np.concatenate(UVs), normals=np.concatenate(Ns))
+                shade = np.concatenate([np.full(len(v), rng.uniform(*CARD_SHADE)) for v in Vs]) \
+                    if mat != "far_trunk" else np.ones(len(V))
+                mb.add(mat, V, uvs=np.concatenate(UVs), normals=np.concatenate(Ns),
+                       colors=np.column_stack([shade, shade, shade, np.ones(len(V))]))
                 allv.append(V)
             n = name(form, k)
             mb.write_dae(os.path.join(d, f"{n}.dae"), name=n, detail=MESH_PX,
