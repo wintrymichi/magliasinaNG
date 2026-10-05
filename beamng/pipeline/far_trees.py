@@ -27,7 +27,7 @@ Nothing is taken from a photograph: the leaf and needle textures are drawn here.
 import os, struct
 import numpy as np
 import bng
-from bld_textures import noise, to8
+from bld_textures import noise
 
 H0 = 10.0                 # m, height of every far model at scale 1
 # form -> (kind, crown diameter at scale 1, m)
@@ -234,20 +234,55 @@ def _fill_clear(rgba):
     return out
 
 
-def write_dds(path, rgba):
-    """Uncompressed A8R8G8B8 DDS (rgba (n, n, 4) 0..1, n a power of two) with its whole mipmap chain.
-    The game reads it as it is; a .png it converts at load, after the imposters are baked, so these
-    were baked from a grey placeholder."""
-    mips, a = [], np.asarray(rgba, np.float32)
+def _bc1(rgb):
+    """BC1 blocks (bytes) of rgb (h, w, 3) 0..1, h and w multiples of 4: per block the two end
+    colours are the texels farthest apart along the main axis of its colours, 4-colour mode."""
+    h, w = rgb.shape[:2]
+    b = rgb.reshape(h // 4, 4, w // 4, 4, 3).transpose(0, 2, 1, 3, 4).reshape(-1, 16, 3).astype(np.float32)
+    c = b - b.mean(1, keepdims=True)
+    axis = np.einsum("nki,nkj->nij", c, c)
+    v = np.ones((len(b), 3), np.float32)
+    for _ in range(8):                                          # power iteration: the main axis
+        v = np.einsum("nij,nj->ni", axis, v)
+        v /= np.linalg.norm(v, axis=1, keepdims=True) + 1e-12
+    p = np.einsum("nki,ni->nk", c, v)
+    lo, hi = b[np.arange(len(b)), p.argmin(1)], b[np.arange(len(b)), p.argmax(1)]
+
+    def q565(x):
+        r, g, bl = (np.clip(np.rint(x * s), 0, s).astype(np.uint32) for x, s in
+                    ((x[:, 0], 31), (x[:, 1], 63), (x[:, 2], 31)))
+        return (r << 11) | (g << 5) | bl
+
+    def rgb565(k):
+        return np.stack([(k >> 11) / 31.0, ((k >> 5) & 63) / 63.0, (k & 31) / 31.0], 1).astype(np.float32)
+
+    c0, c1 = q565(hi), q565(lo)
+    swap = c0 < c1
+    c0, c1 = np.where(swap, c1, c0), np.where(swap, c0, c1)
+    e0, e1 = rgb565(c0), rgb565(c1)
+    pal = np.stack([e0, e1, (2 * e0 + e1) / 3, (e0 + 2 * e1) / 3], 1)  # (n, 4, 3)
+    idx = ((b[:, :, None, :] - pal[:, None]) ** 2).sum(-1).argmin(-1).astype(np.uint32)
+    idx[c0 == c1] = 0                                           # one colour: 3-colour mode, keep index 0
+    bits = (idx << (2 * np.arange(16, dtype=np.uint32))).sum(1, dtype=np.uint64).astype(np.uint32)
+    out = np.zeros(len(b), dtype=[("c0", "<u2"), ("c1", "<u2"), ("bits", "<u4")])
+    out["c0"], out["c1"], out["bits"] = c0, c1, bits
+    return out.tobytes()
+
+
+def write_dds(path, rgb):
+    """BC1 (DXT1) DDS of rgb (n, n, >=3) 0..1, n a power of two, with its mipmaps down to 4x4. The
+    game reads it as it is; a .png it converts at load, after the imposters are baked, so these were
+    baked from a grey placeholder. It rejects uncompressed DDS ("only RGB formats are supported")."""
+    mips, a = [], np.asarray(rgb, np.float32)[..., :3]
     while True:
-        mips.append(to8(a)[..., [2, 1, 0, 3]].tobytes())
-        if a.shape[0] == 1:
+        mips.append(_bc1(a))
+        if a.shape[0] == 4:
             break
-        a = a.reshape(a.shape[0] // 2, 2, a.shape[1] // 2, 2, 4).mean((1, 3))
-    n = rgba.shape[0]
-    flags = 0x1 | 0x2 | 0x4 | 0x8 | 0x1000 | 0x20000            # caps, height, width, pitch, pixelformat, mipmapcount
-    pf = struct.pack("<II4sIIIII", 32, 0x41, b"\0\0\0\0", 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
-    head = struct.pack("<4sIIIIIII44x", b"DDS ", 124, flags, n, n, n * 4, 0, len(mips)) + pf + \
+        a = a.reshape(a.shape[0] // 2, 2, a.shape[1] // 2, 2, 3).mean((1, 3))
+    n = rgb.shape[0]
+    flags = 0x1 | 0x2 | 0x4 | 0x1000 | 0x20000 | 0x80000        # caps, height, width, pixelformat, mipmapcount, linearsize
+    pf = struct.pack("<II4sIIIII", 32, 0x4, b"DXT1", 0, 0, 0, 0, 0)
+    head = struct.pack("<4sIIIIIII44x", b"DDS ", 124, flags, n, n, len(mips[0]), 0, len(mips)) + pf + \
         struct.pack("<IIII4x", 0x1000 | 0x8 | 0x400000, 0, 0, 0)  # texture, complex, mipmap
     with open(path, "wb") as f:
         f.write(head + b"".join(mips))

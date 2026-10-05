@@ -197,7 +197,8 @@ its `BB::` settings as FCOLLADA user properties (`bng.MeshBuilder.write_dae(bill
 detail level is never culled, so the far trees stay visible at any distance. Far trees are never near a road, so from
 the roads they are always quads; the vanilla trees near the roads are the same as before.
 
-The leaf textures are written as uncompressed DDS with their mipmaps (`far_trees.write_dds`), colour
+The leaf textures are written as BC1 (DXT1) DDS with their mipmaps (`far_trees.write_dds`; the game rejects
+uncompressed DDS), colour
 (`*_b.color.dds`) and cut-out (`*_o.data.dds`, the material's `opacityMap`) apart. The game bakes the imposters at
 load before it has converted any `.png`, so with png textures it baked them from a grey placeholder; and without an
 `opacityMap` it ignores the alpha of the colour texture, so the leaf cards were drawn as full squares.
