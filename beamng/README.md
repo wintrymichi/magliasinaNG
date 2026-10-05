@@ -197,6 +197,11 @@ its `BB::` settings as FCOLLADA user properties (`bng.MeshBuilder.write_dae(bill
 detail level is never culled, so the far trees stay visible at any distance. Far trees are never near a road, so from
 the roads they are always quads; the vanilla trees near the roads are the same as before.
 
+The leaf textures are written as uncompressed DDS with their mipmaps (`far_trees.write_dds`), colour
+(`*_b.color.dds`) and cut-out (`*_o.data.dds`, the material's `opacityMap`) apart. The game bakes the imposters at
+load before it has converted any `.png`, so with png textures it baked them from a grey placeholder; and without an
+`opacityMap` it ignores the alpha of the colour texture, so the leaf cards were drawn as full squares.
+
 No far tree has its crown within 0.5 m of a path; `canopy.py` treats them like the other trees (`far_fir_*` are conifers).
 `optimize_level.py` leaves shapes with an imposter as they are. `patch_far_trees.py <in.zip> <out.zip> [trees.npz]`
 adds them to a built zip: the measured trees more than 33 m from a road surface and 8 m from a path surface of the zip,

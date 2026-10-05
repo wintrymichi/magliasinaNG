@@ -24,10 +24,10 @@ darker (SATURATION, VALUE: the orthophoto sees the crowns through haze, and next
 the plain median looked pale and frosted in the game).
 Nothing is taken from a photograph: the leaf and needle textures are drawn here.
 """
-import os
+import os, struct
 import numpy as np
 import bng
-from bld_textures import noise, to8, save
+from bld_textures import noise, to8
 
 H0 = 10.0                 # m, height of every far model at scale 1
 # form -> (kind, crown diameter at scale 1, m)
@@ -35,7 +35,7 @@ FORMS = {"broad": ("broadleaf", 8.0), "narrow": ("broadleaf", 5.0), "fir": ("con
 SHADES = 3
 SHADE_NAMES = "abc"
 SATURATION = 1.4         # the orthophoto sees the crowns through haze: grey-green, paler than the vanilla trees
-VALUE = 0.55              # in game the imposters came out ~1.4x brighter than the vanilla trees beside them at VALUE 0.8
+VALUE = 0.62              # at 0.8 the imposters came out ~1.4x brighter than the vanilla trees beside them, at 0.55 the meshes near-black
 MESH_PX = 5000            # detail size of the mesh: within about 12 m of a 20 m tree (in game at 1440p: 8000 -> 8 m, 600 -> 150 m)
 BB_PX = 100               # detail size of the imposter (any size under MESH_PX: the last detail is never culled)
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
@@ -223,18 +223,51 @@ def conifer_mesh(diam, leaf_mat, trunk_mat, rng, tiers=10, per_tier=7):
     return parts
 
 
+# ---------------------------------------------------------------------- DDS
+def _fill_clear(rgba):
+    """The colour of the transparent texels set to the mean leaf colour: the filtered texture and its
+    mipmaps get no dark fringe around the leaves."""
+    a = rgba[..., 3:4]
+    out = rgba.copy()
+    mean = (rgba[..., :3] * a).sum((0, 1)) / max(float(a.sum()), 1e-6)
+    out[..., :3] = rgba[..., :3] * a + mean * (1 - a)
+    return out
+
+
+def write_dds(path, rgba):
+    """Uncompressed A8R8G8B8 DDS (rgba (n, n, 4) 0..1, n a power of two) with its whole mipmap chain.
+    The game reads it as it is; a .png it converts at load, after the imposters are baked, so these
+    were baked from a grey placeholder."""
+    mips, a = [], np.asarray(rgba, np.float32)
+    while True:
+        mips.append(to8(a)[..., [2, 1, 0, 3]].tobytes())
+        if a.shape[0] == 1:
+            break
+        a = a.reshape(a.shape[0] // 2, 2, a.shape[1] // 2, 2, 4).mean((1, 3))
+    n = rgba.shape[0]
+    flags = 0x1 | 0x2 | 0x4 | 0x8 | 0x1000 | 0x20000            # caps, height, width, pitch, pixelformat, mipmapcount
+    pf = struct.pack("<II4sIIIII", 32, 0x41, b"\0\0\0\0", 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
+    head = struct.pack("<4sIIIIIII44x", b"DDS ", 124, flags, n, n, n * 4, 0, len(mips)) + pf + \
+        struct.pack("<IIII4x", 0x1000 | 0x8 | 0x400000, 0, 0, 0)  # texture, complex, mipmap
+    with open(path, "wb") as f:
+        f.write(head + b"".join(mips))
+
+
 def build(level_dir, level_name, cols):
     """Textures, materials and the DAEs of the far models in the level (art/shapes/trees);
     returns {name: (shape path, bounds min, bounds max)}."""
     d = os.path.join(level_dir, "art", "shapes", "trees")
     os.makedirs(d, exist_ok=True)
     L = f"/levels/{level_name}/art/shapes/trees"
-    mats = [bng.material("far_trunk", base_color=(0.30, 0.25, 0.20, 1.0), roughness=0.95)]
+    mats = [bng.material("far_trunk", base_color=(0.17, 0.15, 0.13, 1.0), roughness=0.95)]
     for kind, tex in (("broadleaf", clump_texture), ("conifer", branch_texture)):
         for k, col in enumerate(cols[kind][1]):
             m = f"far_{kind}_{SHADE_NAMES[k]}"
-            save(os.path.join(d, f"{m}.color.png"), to8(tex(col, np.random.default_rng(SEED + k))))
-            mats.append(bng.material(m, f"{L}/{m}.color.png", alpha_test=100, double_sided=True, roughness=1.0, metallic=0.0))
+            img = _fill_clear(tex(col, np.random.default_rng(SEED + k)))
+            write_dds(os.path.join(d, f"{m}_b.color.dds"), img)
+            write_dds(os.path.join(d, f"{m}_o.data.dds"), np.repeat(img[..., 3:4], 4, axis=2))
+            mats.append(bng.material(m, f"{L}/{m}_b.color.dds", alpha_test=100, double_sided=True, roughness=1.0,
+                                     metallic=0.0, detail={"opacityMap": f"{L}/{m}_o.data.dds"}))
     bng.write_materials(os.path.join(d, "far_trees.materials.json"), mats)
     out = {}
     for form, (kind, diam) in FORMS.items():
