@@ -191,7 +191,7 @@ broad-leaved crown, a fir; about 150 triangles of cut-out leaf and needle cards 
 photos) in three shades each, the shade being the measured orthophoto colour of the tree (terciles of brightness per
 kind, median colour made more saturated and darker: `SATURATION`, `VALUE`). Each DAE has two detail levels: the mesh
 above `MESH_PX` pixels on screen (within about 10 m of the camera; in the first in-game test 600 px still drew the mesh
-150 m away at 1440p) and an **imposter** below it: an empty node `bb_autobillboard<size>` beside `start01` with
+150 m away at 1440p, 8000 px 8 m; now 5000 px) and an **imposter** below it: an empty node `bb_autobillboard<size>` beside `start01` with
 its `BB::` settings as FCOLLADA user properties (`bng.MeshBuilder.write_dae(billboard=...)`), from which the game renders
 8 pictures of the mesh around it and draws every tree as one camera-facing quad, batched per forest cell. The last
 detail level is never culled, so the far trees stay visible at any distance. Far trees are never near a road, so from

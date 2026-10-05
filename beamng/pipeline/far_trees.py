@@ -34,12 +34,12 @@ H0 = 10.0                 # m, height of every far model at scale 1
 FORMS = {"broad": ("broadleaf", 8.0), "narrow": ("broadleaf", 5.0), "fir": ("conifer", 4.6)}
 SHADES = 3
 SHADE_NAMES = "abc"
-SATURATION = 1.8         # the orthophoto sees the crowns through haze: grey-green, paler than the vanilla trees
-VALUE = 0.8
-MESH_PX = 8000            # detail size of the mesh: within about 10 m of a 20 m tree (600 drew it up to 150 m, in game at 1440p)
+SATURATION = 1.4         # the orthophoto sees the crowns through haze: grey-green, paler than the vanilla trees
+VALUE = 0.55              # in game the imposters came out ~1.4x brighter than the vanilla trees beside them at VALUE 0.8
+MESH_PX = 5000            # detail size of the mesh: within about 12 m of a 20 m tree (in game at 1440p: 8000 -> 8 m, 600 -> 150 m)
 BB_PX = 100               # detail size of the imposter (any size under MESH_PX: the last detail is never culled)
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
-      "BB::DIM": 128, "BB::INCLUDE_POLES": 1}
+      "BB::DIM": 256, "BB::INCLUDE_POLES": 1}
 PATH_GAP = 0.5            # m: no far tree whose crown comes closer than this to a path
 SEED = 61
 
@@ -111,10 +111,9 @@ def clump_texture(col, rng, n=256, leaves=420):
         u = dx * np.cos(th) + dy * np.sin(th)
         v = -dx * np.sin(th) + dy * np.cos(th)
         inside = (u / L) ** 2 + (v / W) ** 2 <= 1.0
-        shade = rng.uniform(0.7, 1.15) * (1.12 - 0.35 * cy / n)
-        rib = 1.0 - 0.18 * (np.abs(v) < 0.08 * W)              # the midrib a little darker
+        shade = rng.uniform(0.88, 1.06) * (1.04 - 0.12 * cy / n)   # low contrast: the imposter bake shows it as streaks
         sub = img[y0:y1, x0:x1]
-        sub[inside, :3] = (col * shade)[None, :] * rib[inside, None]
+        sub[inside, :3] = (col * shade)[None, :]
         sub[inside, 3] = 1.0
     return img
 
@@ -166,7 +165,7 @@ def broadleaf_mesh(diam, leaf_mat, trunk_mat, rng, n_cards=140, n_inner=16):
 
     def nfn(p):
         g = (p - centre) / np.array([a * a, a * a, c * c])
-        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.1])
+        g = g / max(np.linalg.norm(g), 1e-6)
         return tuple(g / np.linalg.norm(g))
 
     side = 0.45 * np.sqrt(a * c)
@@ -198,7 +197,7 @@ def conifer_mesh(diam, leaf_mat, trunk_mat, rng, tiers=10, per_tier=7):
 
     def nfn(p):
         g = np.array([p[0], p[1], 0.0])
-        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.25])
+        g = g / max(np.linalg.norm(g), 1e-6) + np.array([0, 0, 0.1])
         return tuple(g / np.linalg.norm(g))
 
     golden = np.pi * (3 - 5 ** 0.5)
