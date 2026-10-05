@@ -5,7 +5,7 @@
 **The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 52 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano and Arosio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
-![Version](https://img.shields.io/badge/version-2.6-blue)
+![Version](https://img.shields.io/badge/version-2.7-blue)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
@@ -22,7 +22,7 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 
 ## Quick start
 
-1. **Download** `magliaso_pura_v2.6.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
+1. **Download** `magliaso_pura_v2.7.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
 2. **Install it:** copy the zip, without unpacking it, to `Documents/BeamNG.drive/current/mods/` (or add it from the game's mod manager).
 3. **Remove older versions** of the map from the same folder (`magliaso_pura_v2.x.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
 4. **Play:** in the game choose *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*. You start at the Magliaso junction, at the foot of the cantonal road to Pura.
@@ -140,7 +140,7 @@ flowchart LR
     O --> P[Game grass<br/>patch_groundcover.py → v2.6]
 ```
 
-**How a release is built.** The [`release_v2.4.yml`](.github/workflows/release_v2.4.yml) workflow builds the level from scratch on a GitHub server, in about an hour (*Actions* → *Release v2.4* → *Run workflow*): it downloads the data, builds the level, runs the checks and publishes the zip. v2.5 and v2.6 do not rebuild the level: they are patch scripts that run on the previous zip.
+**How a release is built.** The [`release_v2.4.yml`](.github/workflows/release_v2.4.yml) workflow builds the level from scratch on a GitHub server, in about an hour (*Actions* → *Release v2.4* → *Run workflow*): it downloads the data, builds the level, runs the checks and publishes the zip. v2.5, v2.6 and v2.7 do not rebuild the level: they are patch scripts that run on the previous zip ([`release_v2.7.yml`](.github/workflows/release_v2.7.yml) runs the four v2.7 scripts on the v2.6 zip and publishes it).
 
 ```bash
 cd beamng/pipeline

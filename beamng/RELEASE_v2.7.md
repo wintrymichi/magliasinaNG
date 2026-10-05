@@ -58,7 +58,7 @@ The list of every sign placed is in [`beamng/verifica/signs_v2.7.json`](https://
 
 ## How it is made
 
-Four patch scripts turn the v2.6 release zip into this one, in this order (the paint follows the flattened tracks):
+Four patch scripts turn the v2.6 release zip into this one, in this order (the paint follows the flattened tracks); the `release_v2.7.yml` workflow runs them on a GitHub server and computes the full-area tree list with `trees.py`:
 
 ```bash
 python patch_unpaved.py magliaso_pura_v2.6.zip v26u.zip
