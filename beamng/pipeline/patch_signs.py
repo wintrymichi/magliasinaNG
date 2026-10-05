@@ -566,7 +566,10 @@ def main(src, dst, report=None):
                     continue
             zo.writestr(i, data, compress_type=i.compress_type)
         for n, data in sorted(files.items()):
-            zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), data, compress_type=zipfile.ZIP_DEFLATED)
+            # PNGs stored: a deflated PNG can come out exactly its own size, and the game then reads the entry
+            # as stored and finds no PNG in it (sign_024_0_o, sign_084_1_o in the first build of round 2)
+            zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), data,
+                        compress_type=zipfile.ZIP_STORED if n.endswith(".png") else zipfile.ZIP_DEFLATED)
     out = {"placed": dict(rep["placed"]), "left_out": dict(rep["left_out"]), "outside_map": dict(rep["outside"]),
            "outside_map_total": sum(rep["outside"].values()),
            "replaced_panorama": rep["replaced_panorama"], "old_plate_triangles_turned": rep["flipped_triangles"], "panorama_plates_removed": len(drop),

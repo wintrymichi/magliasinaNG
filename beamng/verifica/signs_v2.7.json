@@ -53,7 +53,7 @@
  "replaced_panorama": 6,
  "old_plate_triangles_turned": 2044,
  "panorama_plates_removed": 32,
- "old_textures_resized": 281,
+ "old_textures_resized": 214,
  "panorama_plates": {
   "kept_unknown": 10,
   "drawn_2.59.1": 2,
@@ -75,6 +75,7 @@
   "drawn_4.17": 2,
   "kept_direction_advance": 1
  },
+ "panorama_opacity_maps": 67,
  "placed_total": 286,
  "left_out_total": 8,
  "signs": [

@@ -1,7 +1,7 @@
 {
  "zip": "magliaso_pura_v2.7.zip",
- "zip_bytes": 516337013,
- "zip_md5": "689a8816182b08c496f119b16b545f99",
+ "zip_bytes": 516368447,
+ "zip_md5": "31363db433a99e07bb240b0c58ec91de",
  "build": {
   "order": [
    "patch_unpaved.py",
@@ -108,7 +108,37 @@
   "unpaved_arosio.jpg",
   "unpaved_cademario.jpg"
  ],
- "problems": [
-  "panorama plates kept 'as measured' by patch_signs.py (kept_unknown/back/info/bus_stop/tourist/hiking/street_name/direction, mp_sign_NNN_k in props_poles.dae) now face the traffic and show as black rectangles with a pale shape: their colour map sign_NNN_k.png carries the plate outline in its alpha channel, which the game does not use for the alpha test (no opacityMap); seen beside the 2.33 at (753,-1106) and below the Caslano/Pura pointer at (-770,1073), signs_cantonale_233.jpg and signs_cantonale_pointer.jpg"
- ]
+ "problems": [],
+ "round2": {
+  "build": "patch_signs.py v26t.zip -> magliaso_pura_v2.7.zip again: panorama_opacity_maps 67; PNG entries written stored (the first round-2 zip had sign_024_0_o / sign_084_1_o deflated to exactly their own size, which the game read as stored: 'stream doesn't contain a PNG')",
+  "first_round_zip": {
+   "zip_bytes": 516337013,
+   "zip_md5": "689a8816182b08c496f119b16b545f99",
+   "problems": [
+    "panorama plates kept 'as measured' by patch_signs.py (kept_unknown/back/info/bus_stop/tourist/hiking/street_name/direction, mp_sign_NNN_k in props_poles.dae) now face the traffic and show as black rectangles with a pale shape: their colour map sign_NNN_k.png carries the plate outline in its alpha channel, which the game does not use for the alpha test (no opacityMap); seen beside the 2.33 at (753,-1106) and below the Caslano/Pura pointer at (-770,1073), signs_cantonale_233.jpg and signs_cantonale_pointer.jpg"
+   ]
+  },
+  "cache": "temp/levels/magliaso_pura/art/shapes/props and .../signs deleted",
+  "level_load": "Level loaded in 72.164s: init 0.001s + datablocks 0.088s + materials 0.016s + objects 59.437s + ai.map 0.000s + decals 0.001s + physics 8.220s + cam 0.003s + player 3.264s + fade 1.134s",
+  "fps": {
+   "signs_zone30": 121.2,
+   "signs_stop": 131.3,
+   "signs_cantonale_233": 121.8,
+   "signs_cantonale_pointer": 81.8
+  },
+  "retaken": [
+   "signs_cantonale_233.jpg",
+   "signs_cantonale_pointer.jpg",
+   "signs_stop.jpg",
+   "signs_zone30.jpg"
+  ],
+  "check": "no plate shows a dark rectangle around its shape: the kept panorama plates beside the 2.33 and below the Caslano / Pura pointer show only their measured outline; zone 30 and STOP unchanged",
+  "log_errors": [
+   "E|GELua.core_levels.| No entry point for level found: /levels/GridMap. Ignoring level.",
+   "E|OnlineServiceProvider| Could not initialize online service provider: Steam - Error code 1",
+   "E|engine::GFXd3d12CmdBuffer::_updateStatesInternal| D3D12 cmd: root descriptor has no descriptor set data (set=3 rootIdx=2 reg=1 isCS=0 frameId=1329 shader vs='shaders/common/material/shadergen/defaultMat.hlsl' ps='shade",
+   "E|engine::Platform::Win32::getMonitorDescription| Unable to enumerate display devices during fallback: 0"
+  ],
+  "log_note": "one D3D12 root-descriptor message (defaultMat shader, frame 1329, during the load), not seen in the earlier runs, no visible effect; the rest as in round 1"
+ }
 }

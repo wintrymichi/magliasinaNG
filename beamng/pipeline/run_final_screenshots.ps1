@@ -3,7 +3,7 @@
 # converted copy of the level (<user>/temp/levels/magliaso_pura) so shapes and imposters are converted again,
 # runs the magliaso_signs extension on the tour of final_screenshots.py and writes the shots as 1920x1080 jpg
 # to beamng/verifica/screenshots/v2.7/<name>.jpg and the load time, fps per view and log errors to test.json.
-param([string]$Zip = "D:\beamng_magliaso\dist\magliaso_pura_v2.7.zip", [int]$TimeoutSec = 2400, [switch]$KeepCache,
+param([string]$Zip = "D:\beamng_magliaso\dist\magliaso_pura_v2.7.zip", [int]$TimeoutSec = 2400, [switch]$KeepCache, [string[]]$Views = @(), [string]$TestJson = "test.json",
       [string]$Python = "D:\beamng_magliaso\venv\Scripts\python.exe")
 $here = $PSScriptRoot
 $game = "C:\Program Files (x86)\Steam\steamapps\common\BeamNG.drive"
@@ -12,6 +12,9 @@ $out = Join-Path (Split-Path $here) "verifica\screenshots\v2.7"
 if (Get-Process "BeamNG.drive.x64" -ErrorAction SilentlyContinue) { throw "BeamNG.drive is already running" }
 New-Item -ItemType Directory -Force $out | Out-Null
 Push-Location $here; & $Python final_screenshots.py $Zip; Pop-Location
+if ($Views.Count) {   # only these views (after the warm-up)
+    & $Python -c "import json, sys; p = sys.argv[1]; v = json.load(open(p)); json.dump([x for x in v if x['name'] == '_warmup' or x['name'] in sys.argv[2:]], open(p, 'w'), indent=1)" (Join-Path $user "magliaso_signs_views.json") @Views
+}
 $ext = Join-Path $user "lua\ge\extensions\magliaso"
 New-Item -ItemType Directory -Force $ext | Out-Null
 Copy-Item (Join-Path $here "bng_lua\magliaso_signs.lua") (Join-Path $ext "signs.lua") -Force
@@ -48,7 +51,7 @@ Start-Sleep -Seconds 3
 Copy-Item $log (Join-Path $env:TEMP "magliaso_final_beamng.log") -Force
 & $Python -c "import glob, hashlib, json, os, re, sys
 from PIL import Image
-shots, out, log, zp, run, cache = sys.argv[1:7]
+shots, out, log, zp, run, cache, tj = sys.argv[1:8]
 files = []
 for f in sorted(glob.glob(os.path.join(shots, '[!_]*.png'))):
     im = Image.open(f).convert('RGB').resize((1920, 1080), Image.LANCZOS)
@@ -64,5 +67,5 @@ err = sorted({re.sub(r'^\s*[\d.]+\|', '', l)[:220] for l in L if '|E|' in l and 
 md5 = hashlib.md5(open(zp, 'rb').read()).hexdigest()
 json.dump({'zip': os.path.basename(zp), 'zip_bytes': os.path.getsize(zp), 'zip_md5': md5, 'level_load': load,
            'run_s': int(run), 'cache': cache, 'fps': fps, 'log_errors': err,
-           'screenshots': files}, open(os.path.join(out, 'test.json'), 'w'), indent=1)
-print(load); print(len(err), 'log errors'); print(fps)" $shots $out (Join-Path $env:TEMP "magliaso_final_beamng.log") $Zip $run $(if ($KeepCache) { "warm" } else { "cold (temp/levels/magliaso_pura deleted)" })
+           'screenshots': files}, open(os.path.join(out, tj), 'w'), indent=1)
+print(load); print(len(err), 'log errors'); print(fps)" $shots $out (Join-Path $env:TEMP "magliaso_final_beamng.log") $Zip $run $(if ($KeepCache) { "warm" } else { "cold (temp/levels/magliaso_pura deleted)" }) $TestJson
