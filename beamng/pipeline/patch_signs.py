@@ -57,6 +57,8 @@ LEVEL_README = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README_
 # what the plates of the cantonal road (props_poles.dae, mp_sign_NNN_k) are, read on the crops of the
 # panoramas (work/signs) on michi's PC: only the codes and notes, no image of the panoramas
 PANO_SIGNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "signs_panorama.json")
+PANO_TEX = re.compile(rf"{LEVEL}/art/shapes/signs/sign_\d{{3}}_\d\.png")
+PROPS_MATERIALS = f"{LEVEL}/art/shapes/props/main.materials.json"
 PANO_OFF = 0.06           # m: props.py put the panorama plates this far in front of their pole
 
 
@@ -535,6 +537,24 @@ def main(src, dst, report=None):
                 data = ("\n".join(lines + [json.dumps(obj, separators=(",", ":"))]) + "\n").encode("utf-8")
             elif re.fullmatch(r"levels/[^/]+/README\.md", n) and os.path.exists(LEVEL_README):
                 data = open(LEVEL_README, "rb").read()
+            elif PANO_TEX.fullmatch(n):
+                # the panorama plates kept as measured: their outline was in the alpha channel of the colour
+                # texture, which the game does not test, so with the plates facing the traffic it saw a dark
+                # rectangle around them; the outline goes into an opacity map like the drawn plates
+                col, op = rgba_files(Image.open(io.BytesIO(data)))
+                zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), col, compress_type=i.compress_type)
+                files[n[:-4] + "_o.data.png"] = op
+                rep["panorama_opacity"] = rep.get("panorama_opacity", 0) + 1
+                continue
+            elif n == PROPS_MATERIALS:
+                m = json.loads(data)
+                for k, v in m.items():
+                    st = v.get("Stages", [{}])[0]
+                    if re.fullmatch(r"mp_sign_\d{3}_\d", k) and st.get("baseColorMap", "").endswith(".png"):
+                        st["opacityMap"] = st["baseColorMap"][:-4] + "_o.data.png"
+                data = json.dumps(m, indent=1).encode("utf-8")
+                zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), data, compress_type=i.compress_type)
+                continue
             elif n.startswith(f"{LEVEL}/art/shapes/signs/") and n.endswith(".png"):
                 # the bus stop flags and timetables of v2.6: power-of-two sides too, with today's date
                 img = Image.open(io.BytesIO(data))
@@ -551,7 +571,7 @@ def main(src, dst, report=None):
            "outside_map_total": sum(rep["outside"].values()),
            "replaced_panorama": rep["replaced_panorama"], "old_plate_triangles_turned": rep["flipped_triangles"], "panorama_plates_removed": len(drop),
            "old_textures_resized": rep.get("textures_resized", 0),
-           "panorama_plates": dict(rep["panorama"]),
+           "panorama_plates": dict(rep["panorama"]), "panorama_opacity_maps": rep.get("panorama_opacity", 0),
            "placed_total": sum(rep["placed"].values()), "left_out_total": sum(rep["left_out"].values()),
            "signs": rep["signs"]}
     if report:

@@ -80,6 +80,20 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ## Gallery
 
+### New in v2.7
+
+> In-game screenshots of the v2.7 level (BeamNG.drive 0.39, driver's eye height): Swiss road signs, markings redrawn to the Swiss standard, dirt tracks flush with the ground, wooded slopes. More in [`beamng/verifica/screenshots/v2.7/`](beamng/verifica/screenshots/v2.7).
+
+| | |
+|---|---|
+| ![Roundabout entry: 2.41.1 over give way](beamng/verifica/screenshots/v2.7/signs_roundabout.jpg)<br>*Road signs: roundabout entry* | ![The 50 "generale" with the village name](beamng/verifica/screenshots/v2.7/signs_village50.jpg)<br>*Road signs: the 50 "generale" into Magliaso* |
+| ![Zone 30 with the 16 t limit on the cantonal road](beamng/verifica/screenshots/v2.7/signs_cantonale_zone30_16t.jpg)<br>*Cantonal road: zone 30 with the 16 t limit, as in the photos* | ![Swiss pedestrian crossing](beamng/verifica/screenshots/v2.7/markings_crossing.jpg)<br>*Markings: Swiss pedestrian crossing and arrows* |
+| ![Dashed centre line](beamng/verifica/screenshots/v2.7/markings_dashed_line.jpg)<br>*Markings: dashes at one length and period* | ![Roundabout markings](beamng/verifica/screenshots/v2.7/markings_roundabout.jpg)<br>*Markings: roundabout* |
+| ![Track above Arosio](beamng/verifica/screenshots/v2.7/unpaved_arosio.jpg)<br>*Dirt track above Arosio, flush with the ground* | ![Track at Cademario](beamng/verifica/screenshots/v2.7/unpaved_cademario.jpg)<br>*Gravel track at Cademario* |
+| ![The pass above Gravesano](beamng/verifica/screenshots/v2.7/fartrees_gravesano_pass.jpg)<br>*Far trees: the pass above Gravesano from the village* | ![The Malcantone from the lake](beamng/verifica/screenshots/v2.7/fartrees_lake_malcantone.jpg)<br>*Far trees: the Malcantone from the lake* |
+
+### v2.6
+
 > Screenshots taken in BeamNG.drive 0.39 on the v2.6 level, at the same views as the earlier renders (`beamng/pipeline/run_readme_screenshots.ps1`: free camera, no HUD, the game's own light, sky, vegetation and terrain).
 
 | | |

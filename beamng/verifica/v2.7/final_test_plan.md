@@ -27,3 +27,17 @@ screenshots of the improvements in the PR and in the README, and then the PC shu
    per site, log errors, zip MD5) to `claude/real-road-signs-mphrtz` and push. The zip stays on the PC.
 6. Close BeamNG and report. If something is wrong in the game, describe it and stop. Shut the PC down
    (`shutdown /s /t 60`) only after everything is pushed and nothing is wrong.
+
+## Round 2 (after the first test)
+
+The first test found the panorama plates kept "as measured" showing as dark rectangles: `patch_signs.py` now writes their
+outline as an opacity map (`sign_NNN_k_o.data.png`, `opacityMap` in `main.materials.json`).
+
+1. `git pull` on `claude/real-road-signs-mphrtz`.
+2. Run only the last step again: `python patch_signs.py v26t.zip magliaso_pura_v2.7.zip --report ..\verifica\signs_v2.7.json`
+   (it should print `panorama_opacity_maps: 67`), and put the zip in `mods` in place of the first one.
+3. Delete `<user>\temp\levels\magliaso_pura\art\shapes\props` and `...\art\shapes\signs` (the trees' cache can stay).
+4. Start the game, take again `signs_cantonale_233.jpg`, `signs_cantonale_pointer.jpg`, `signs_zone30.jpg` and
+   `signs_stop.jpg` with `final_screenshots.py`, and check that no plate shows a dark rectangle around its shape.
+5. Update `test.json` (new zip MD5 and size, the result of this check, `problems` emptied if fixed), commit, push.
+6. If everything is right, close BeamNG and shut the PC down (`shutdown /s /t 60`); otherwise describe the problem and stop.
