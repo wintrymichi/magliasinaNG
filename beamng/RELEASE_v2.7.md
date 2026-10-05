@@ -41,7 +41,7 @@ Since v2.3 the forest away from the roads was thinned to keep the game fluid, an
 
 ## Checked in the game
 
-On michi's PC (BeamNG.drive 0.39, RTX 4070, 2560 × 1440): the level loads in about 155 s the first time (the game converts the shapes and the tree pictures) and 69 s after that; 74–129 fps at the 15 test views; no level errors in the log. Every kind of sign reads correctly from the traffic. The screenshots are in [`beamng/verifica/screenshots/v2.7/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/screenshots/v2.7) and the measures in `test.json` there.
+On michi's PC (BeamNG.drive 0.39, RTX 4070, 2560 × 1440): the level loads in about 155 s the first time (the game converts the shapes and the tree pictures) and 69–72 s after that; 74–131 fps at the test views; no level errors in the log. Every kind of sign reads correctly from the traffic. The screenshots are in [`beamng/verifica/screenshots/v2.7/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/screenshots/v2.7) and the measures in `test.json` there.
 
 The checks found and fixed: sign plates upside down; the game showing the v2.6 shapes it had converted before (the changed files carry the date of the patch); plate textures whose sides are not powers of two not loading; and the panorama plates kept as measured showing as dark rectangles around their shape (their outline is now an opacity map).
 
