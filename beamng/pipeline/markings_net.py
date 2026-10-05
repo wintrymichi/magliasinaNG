@@ -70,7 +70,11 @@ def strip_tris(P, z, width):
     return t
 
 
-ROAD_MATS = osm_surface.ROAD_MATS + osm_surface.HARD_MATS + ("mp_road_asphalt_fresh", "mp_sidewalk", "mp_island")
+# v2.7: not the gravel and dirt surfaces, which have no paint: what the orthophoto traced there (light
+# stones, puddles, tyre tracks) is left out like paint off the road
+UNPAVED_MATS = tuple(m for g in osm_surface.MATS.values() for c, m in g.items() if c in ("gravel", "dirt"))
+ROAD_MATS = tuple(m for m in osm_surface.ROAD_MATS + osm_surface.HARD_MATS + ("mp_road_asphalt_fresh", "mp_sidewalk", "mp_island")
+                  if m not in UNPAVED_MATS)
 CHUNK = 128.0
 
 
@@ -98,7 +102,7 @@ def road_tops(level_dir, mats=ROAD_MATS):
     return np.concatenate(out) if out else np.zeros((0, 3, 3))
 
 
-CARRIAGE_MATS = osm_surface.ROAD_MATS + ("mp_road_asphalt_fresh",)
+CARRIAGE_MATS = tuple(m for m in osm_surface.ROAD_MATS + ("mp_road_asphalt_fresh",) if m not in UNPAVED_MATS)
 
 
 def cleaned(d, carriage_tops, painted=None):

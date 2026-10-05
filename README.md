@@ -5,7 +5,7 @@
 **The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 52 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano and Arosio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
-![Version](https://img.shields.io/badge/version-2.6-blue)
+![Version](https://img.shields.io/badge/version-2.7-blue)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
@@ -22,7 +22,7 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 
 ## Quick start
 
-1. **Download** `magliaso_pura_v2.6.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
+1. **Download** `magliaso_pura_v2.7.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
 2. **Install it:** copy the zip, without unpacking it, to `Documents/BeamNG.drive/current/mods/` (or add it from the game's mod manager).
 3. **Remove older versions** of the map from the same folder (`magliaso_pura_v2.x.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
 4. **Play:** in the game choose *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*. You start at the Magliaso junction, at the foot of the cantonal road to Pura.
@@ -80,6 +80,20 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ## Gallery
 
+### New in v2.7
+
+> In-game screenshots of the v2.7 level (BeamNG.drive 0.39, driver's eye height): Swiss road signs, markings redrawn to the Swiss standard, dirt tracks flush with the ground, wooded slopes. More in [`beamng/verifica/screenshots/v2.7/`](beamng/verifica/screenshots/v2.7).
+
+| | |
+|---|---|
+| ![Roundabout entry: 2.41.1 over give way](beamng/verifica/screenshots/v2.7/signs_roundabout.jpg)<br>*Road signs: roundabout entry* | ![The 50 "generale" with the village name](beamng/verifica/screenshots/v2.7/signs_village50.jpg)<br>*Road signs: the 50 "generale" into Magliaso* |
+| ![Zone 30 with the 16 t limit on the cantonal road](beamng/verifica/screenshots/v2.7/signs_cantonale_zone30_16t.jpg)<br>*Cantonal road: zone 30 with the 16 t limit, as in the photos* | ![Swiss pedestrian crossing](beamng/verifica/screenshots/v2.7/markings_crossing.jpg)<br>*Markings: Swiss pedestrian crossing and arrows* |
+| ![Dashed centre line](beamng/verifica/screenshots/v2.7/markings_dashed_line.jpg)<br>*Markings: dashes at one length and period* | ![Roundabout markings](beamng/verifica/screenshots/v2.7/markings_roundabout.jpg)<br>*Markings: roundabout* |
+| ![Track above Arosio](beamng/verifica/screenshots/v2.7/unpaved_arosio.jpg)<br>*Dirt track above Arosio, flush with the ground* | ![Track at Cademario](beamng/verifica/screenshots/v2.7/unpaved_cademario.jpg)<br>*Gravel track at Cademario* |
+| ![The pass above Gravesano](beamng/verifica/screenshots/v2.7/fartrees_gravesano_pass.jpg)<br>*Far trees: the pass above Gravesano from the village* | ![The Malcantone from the lake](beamng/verifica/screenshots/v2.7/fartrees_lake_malcantone.jpg)<br>*Far trees: the Malcantone from the lake* |
+
+### v2.6
+
 > Screenshots taken in BeamNG.drive 0.39 on the v2.6 level, at the same views as the earlier renders (`beamng/pipeline/run_readme_screenshots.ps1`: free camera, no HUD, the game's own light, sky, vegetation and terrain).
 
 | | |
@@ -126,7 +140,7 @@ flowchart LR
     O --> P[Game grass<br/>patch_groundcover.py → v2.6]
 ```
 
-**How a release is built.** The [`release_v2.4.yml`](.github/workflows/release_v2.4.yml) workflow builds the level from scratch on a GitHub server, in about an hour (*Actions* → *Release v2.4* → *Run workflow*): it downloads the data, builds the level, runs the checks and publishes the zip. v2.5 and v2.6 do not rebuild the level: they are patch scripts that run on the previous zip.
+**How a release is built.** The [`release_v2.4.yml`](.github/workflows/release_v2.4.yml) workflow builds the level from scratch on a GitHub server, in about an hour (*Actions* → *Release v2.4* → *Run workflow*): it downloads the data, builds the level, runs the checks and publishes the zip. v2.5, v2.6 and v2.7 do not rebuild the level: they are patch scripts that run on the previous zip ([`release_v2.7.yml`](.github/workflows/release_v2.7.yml) runs the four v2.7 scripts on the v2.6 zip and publishes it).
 
 ```bash
 cd beamng/pipeline

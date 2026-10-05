@@ -94,8 +94,12 @@ def classify(h, d, sharp, rgb, lc_garden):
 NEAR = 30.0           # m from a road: every tree measured is kept
 BANDS = ((60.0, 11.0), (100.0, 17.0))   # (m from a road, m): up to there the tallest tree of every cell of this size
 NEAR_PATH = 5.0       # m from a path: every tree measured is kept
-CAP = 170_000         # forest items at most: the trees beyond the bands are thinned to stay under it
+CAP = 170_000         # vanilla forest items at most: the trees beyond the bands are thinned to stay under it
 SHRUBS = 12_000       # of them left for the shrubs and hedges (about 10 000 in v2.0)
+# v2.7: the trees thin() leaves out come back as far trees (far_trees.py: a drawn model the game shows
+# as an imposter), so the slopes away from the roads keep every measured tree
+FAR = True
+FAR_CAP = 600_000     # far trees at most
 
 
 def tallest_per_cell(x, y, h, idx, cell):
@@ -136,11 +140,38 @@ def thin(x, y, h, dist, cap, dist_path=None):
     return np.sort(np.concatenate(keep))
 
 
+def far_items(far, level_dir, level_name):
+    """{(name, shape path): [(x, y, z, yaw, scale, None)]} of the far trees `far` (trees.npz fields,
+    plus 'dist_path': m from the nearest path) and their models written into the level."""
+    import far_trees
+    from landcover import CODE
+    garden = np.isin(far["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],
+                                 CODE["campo_prato_pascolo"], CODE["vigna"]])
+    cls = classify(far["h"], far["d"], far["sharp"], far["rgb"], garden)
+    conifer = np.isin(cls, ["conifer", "conifer_narrow"])
+    cols = far_trees.colors(far["rgb"], conifer)
+    models = far_trees.build(level_dir, level_name, cols)
+    for n, (p, mn, mx) in models.items():
+        asset_bounds.register(p, mn, mx)
+    names, scale, radius = far_trees.assign(far["h"], far["d"], far["rgb"], conifer, cols)
+    keep = far_trees.select(names, radius, far.get("dist_path"), FAR_CAP, far["h"], far["x"], far["y"])
+    rng = np.random.default_rng(11)
+    yaw = rng.uniform(0, 2 * np.pi, len(names))
+    out = {}
+    for i in np.flatnonzero(keep):
+        n = names[i]
+        out.setdefault((n, models[n][0]), []).append((far["x"][i], far["y"][i], far["z"][i] - 0.15, yaw[i], scale[i], None))
+    print("far trees: %d of %d left out by the thinning (%d with the crown over a path or over the cap)"
+          % (int(keep.sum()), len(names), int((~keep).sum())))
+    return out
+
+
 def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     """drivable: clearance.Drivable of every road and path (v2.0; None: the cadastral paved
     surfaces of the route corridor, v1.x). net_xy: (points, half widths) of the network lines,
     for the thinning."""
     from landcover import CODE
+    far = None
     t = np.load(os.path.join(WORK, "trees.npz"))
     # no trees where the cadastral land cover is missing (Italy, outside the area): there the
     # buildings have no footprints and the canopy model would turn their roofs into trees
@@ -156,6 +187,10 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
             dd, jj = cKDTree(pts[m]).query(txy) if m.any() else (np.full(len(txy), 1e9), np.zeros(len(txy), int))
             dist.append(dd - (hw[m][jj] if m.any() else 0.0))
         keep = thin(t["x"], t["y"], t["h"], dist[0], CAP - SHRUBS, dist[1])
+        dropped = np.ones(len(t["x"]), bool)
+        dropped[keep] = False
+        far = {k: v[dropped] for k, v in t.items()}
+        far["dist_path"] = dist[1][dropped]
         t = {k: v[keep] for k, v in t.items()}
     x, y, z, h, d = t["x"], t["y"], t["z"], t["h"], t["d"]
     garden = np.isin(t["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],
@@ -262,6 +297,9 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
         new_items.setdefault(key, []).append((r[0], r[1], pz, yaw, sc, theta))
     items = new_items
     print("off the paved surfaces: dropped", n_drop, "| shrubs and hedges moved back", n_move)
+    if far is not None and FAR:
+        for key, lst in far_items(far, level_dir, level_name).items():
+            items.setdefault(key, []).extend(lst)
     fdir = os.path.join(level_dir, "forest")
     os.makedirs(fdir, exist_ok=True)
     managed = {}

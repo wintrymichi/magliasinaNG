@@ -347,5 +347,113 @@
    4.6449
   ]
  ],
- "_note": "Bounds at scale 1 of the vanilla tree models (asset_bounds.py cache format). Heights and crown widths recovered from the v1.0 level (scales of its trees against the heights and crowns measured in work/trees.npz); used when the game is not installed."
+ "_note": "Bounds at scale 1 of the vanilla tree models (asset_bounds.py cache format). Heights and crown widths recovered from the v1.0 level (scales of its trees against the heights and crowns measured in work/trees.npz); used when the game is not installed.",
+ "/levels/magliaso_pura/art/shapes/trees/far_broad_a.dae": [
+  [
+   -4.199,
+   -4.492,
+   -0.3
+  ],
+  [
+   5.15,
+   4.63,
+   10.661
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_broad_b.dae": [
+  [
+   -4.054,
+   -4.4,
+   -0.3
+  ],
+  [
+   4.197,
+   4.953,
+   10.505
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_broad_c.dae": [
+  [
+   -4.513,
+   -4.514,
+   -0.3
+  ],
+  [
+   4.561,
+   4.449,
+   11.109
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_narrow_a.dae": [
+  [
+   -2.777,
+   -2.969,
+   -0.3
+  ],
+  [
+   3.498,
+   3.143,
+   10.378
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_narrow_b.dae": [
+  [
+   -2.705,
+   -3.038,
+   -0.3
+  ],
+  [
+   2.737,
+   3.341,
+   10.197
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_narrow_c.dae": [
+  [
+   -3.079,
+   -3.046,
+   -0.3
+  ],
+  [
+   3.132,
+   2.975,
+   10.785
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_fir_a.dae": [
+  [
+   -2.41,
+   -2.304,
+   -0.383
+  ],
+  [
+   2.303,
+   2.324,
+   10.0
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_fir_b.dae": [
+  [
+   -2.451,
+   -2.422,
+   -0.3
+  ],
+  [
+   2.235,
+   2.589,
+   10.0
+  ]
+ ],
+ "/levels/magliaso_pura/art/shapes/trees/far_fir_c.dae": [
+  [
+   -2.325,
+   -2.208,
+   -0.3
+  ],
+  [
+   2.468,
+   2.601,
+   10.0
+  ]
+ ]
 }

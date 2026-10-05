@@ -2,8 +2,12 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
-## v2.7 (in preparation)
+## v2.7
 
+- **Swiss road signs on the whole network** (286 new signs): pedestrian crossings, roundabouts, one-way streets and no entry, 30 zones and meeting zones, speed limits, the general 50 with the village name on the main roads, and every sign mapped one by one in OpenStreetMap. Drawn after the Swiss standard, texts in Italian, on poles at the right edge of the road for the traffic that reads them.
+- **STOP, give-way and bus-stop signs face the traffic.** Up to v2.6 their plates were wound the wrong way for the game: approaching cars saw the grey back.
+- **The plates of the Magliaso–Pura cantonal road are real signs:** 17 plates seen in the panoramas are drawn as the signal they are (pass on the right, zone 30, crossings, parking, direction signs, curve, STOP, …); 5 that were no sign are gone.
+- **Checked in the game** (the whole v2.7): every kind of sign the right way round from the traffic, about 155 s to load the first time and 69–72 s after, 74–131 fps at the test views, no level errors; screenshots in `beamng/verifica/screenshots/v2.7/`. Fixed on the way: plates upside down, the game showing the old converted shapes, textures that did not load because their sides were not powers of two, dark rectangles around the panorama plates kept as measured.
 - **Road markings redrawn as they are painted in Switzerland.** Up to v2.6 the markings of the network (208 km of roads outside the cantonal road) were the raw trace of the orthophoto: wobbling lines, dashes of different lengths, a line traced twice (the paint and the light concrete gutter beside it), solid lines broken wherever a car stood, pedestrian crossings made of a few yellow blobs, white blobs left by cars, glare and manholes. Now (`markings_clean.py`, into the zip with `patch_markings.py`):
   - lines follow the road smoothly (a quadratic fit over 14 m, which keeps the curves);
   - dashed lines have one dash length and one period per stretch, at the Swiss values where the measure is close (3 m dashes every 6 or 9 m in most places), with the dashes a car hid put back;
@@ -11,7 +15,10 @@ What changed in each version of the map, newest first. The release notes that go
   - doubled lines and the gutter beside the edge line are gone;
   - 99 pedestrian crossings are standard Swiss ones (yellow bars 0.5 m wide and 0.5 m apart, across the whole carriageway, the lines along the road stopping 0.5 m before them), and 10 marked crossings of OpenStreetMap that the photo doesn't show (under a tree or a car) are added;
   - stop and give-way lines and the bars of hatched areas are clean rectangles; 1320 blobs that are neither a strip nor an arrow or letter are gone.
+  - no paint on gravel and dirt: the light stones and puddles the orthophoto showed there (white pieces lying on the gravel above Arosio) are gone.
 - The cantonal road Magliaso – Pura keeps its own markings (measured in the photos, state of October 2022).
+- **Dirt and gravel roads and paths are part of the ground.** Up to v2.6 every unpaved track (36 ha of dirt and 10 ha of gravel roads, 19 ha of paths) stood on the terrain like a slab: the terrain under the road meshes was carved 0.1 m under the lowest face within 1.5 m, which left a trench on both sides, and the edge of the track showed about 0.3 m above the ground (median of the outer edges; 0.6 m at the 90th percentile). Now (`patch_unpaved.py`) the terrain around them is raised to their surface and fades back to the ground within 4.5 m, and their outer edges are lowered onto it: between track and ground there are 1–2 cm (median; under 5 cm on 93 % of the edges). The terrain stays under every road face; where a track runs on a wall or a bridge, and where it meets an asphalt road, nothing changes.
+- **Wooded mountains again.** Since v2.3 the forest away from the roads was thinned to keep the game fluid: seen from the valley the slopes looked like a mountain with a few scraggy trees. Now every tree measured in the area is back (`far_trees.py`, into the zip with `patch_far_trees.py`): near the roads the same trees as before; farther away a lighter drawn tree (round or narrow broad-leaved, or a fir, in three shades from the orthophoto colour) that the game draws as a flat picture of itself beyond about ten metres, two triangles per tree.
 
 ## v2.6
 

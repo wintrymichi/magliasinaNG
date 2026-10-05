@@ -81,7 +81,9 @@ def category_dist(rel):
 
 
 def is_pipeline(text):
-    return "magliaso_pura pipeline" in text[:400] and "<triangles" in text
+    """A shape of the pipeline this step may rewrite; one with an imposter detail level (far_trees.py)
+    keeps its own detail sizes."""
+    return "magliaso_pura pipeline" in text[:400] and "<triangles" in text and "bb_autobillboard" not in text
 
 
 def optimize_dae(members, rel):
