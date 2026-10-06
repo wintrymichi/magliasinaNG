@@ -7,8 +7,8 @@ data on either, so a rule places them, not their real places (patch_lamps.py tel
 - delineators: on the roads of the AI network of 6 m and more (drivability >= MAIN) outside the villages, on
   both sides, every DELIN_STEP m on the straight and closer in the bends (DELIN_BENDS: radius -> step), as
   the Swiss ones stand; DELIN_OFF m beyond the edge of the carriageway, on ground within DELIN_STEP_Z m of
-  its height; not where a guard rail, a fence, a wall, a building or another road is (the post would stand
-  in it or be needless), not within JUNCTION m of another road's axis. White posts with a black band, 1 m
+  its height; not where a guard rail, a fence, a wall, a building, the railway or another road is (the post
+  would stand in it or be needless), not within JUNCTION m of another road's axis. White posts with a black band, 1 m
   over the ground, as props.py draws the delineators of the cantonal road; pipeline meshes in tiles of
   TILE m, drawn up to DELIN_DRAW m, without collision (plastic posts a car knocks over, not a wall);
 - wooden poles: on the country roads (drivability COUNTRY: the 3 and 4 m roads) outside the villages
@@ -17,7 +17,9 @@ data on either, so a rule places them, not their real places (patch_lamps.py tel
   POLE_H m at scale 1, as its three poles there measure) at POLE_SCALE, with collision; one cable from the
   top of a pole to the next of the same line (CABLE_DROP m under the top, sagging by CABLE_SAG of the span),
   a thin black tube in the tiles of the delineators (the attachment points of the game model are not known
-  without the game: the cable starts at the pole's axis).
+  without the game: the cable starts at the pole's axis). A line ends where its cable would pass within
+  CABLE_CLEAR m of a street lamp (patch_lamps.py runs before) or of a roof over or beside it, and goes on
+  from the next pole if MIN_LINE poles are left.
 - none along the panoramas' route (the cantonal road): the poles there are the measured ones.
 Everything else is copied as it is.
 
@@ -51,6 +53,7 @@ POLE_SCALE = 0.85           # 8.5 m poles
 POLE_STEP_Z = 1.2           # m, ground under a pole within this of the edge height
 POLE_H = 10.05              # m, height of the game's wooden pole at scale 1
 CABLE_DROP, CABLE_SAG, CABLE_R = 0.25, 0.015, 0.012     # m under the top, share of the span, radius (m)
+CABLE_CLEAR = 1.0           # m between a cable and a street lamp or a roof: else the line ends there (v2.8 chain)
 TILE = 384.0                # m, tiles of the delineator meshes (as optimize_level's merged tiles)
 WOODPOLE = props.WOODPOLE
 
@@ -107,7 +110,12 @@ def main(src, dst, report=None):
     GROUND = road_mesh.TriSurface(np.concatenate([t for m, t in road.items() if not pl.CARRIAGEWAY.match(m)]))
     ROOF = road_mesh.TriSurface(np.concatenate(list(pl.faces(zi, lv, ["buildings"]).values())))
     WALL = road_mesh.TriSurface(np.concatenate(list(pl.faces(zi, lv, ["walls"], keep=lambda sn: "backfill" not in sn).values())))
+    RAIL = road_mesh.TriSurface(np.concatenate(list(pl.faces(zi, lv, ["railway"]).values()) or [np.zeros((0, 3, 3))]))
     obst = cKDTree(pl.obstacle_points(zi, lv))
+    # the street lamps (patch_lamps.py runs before): no cable through one
+    lamp_xy = np.array([o["position"][:2] for f in zi.namelist() if f.endswith("street_lights/items.level.json")
+                        for o in pl.read_items(zi, f) if o.get("class") == "TSStatic"], np.float64).reshape(-1, 2)
+    ltree = cKDTree(lamp_xy) if len(lamp_xy) else None
     gwr = json.load(gzip.open(os.path.join(pl.DATI, "gwr_area.json.gz")))["buildings"]
     G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or pl.MIN_AREA) >= pl.MIN_AREA])
     gtree = cKDTree(G)
@@ -118,7 +126,7 @@ def main(src, dst, report=None):
     allp = np.concatenate([s[0][:, :2] for s in S if s is not None])
     allw = np.concatenate([s[2] for s in S if s is not None])
     atree = cKDTree(allp)
-    why = {"tried": 0, "carriageway": 0, "step": 0, "building": 0, "wall": 0, "clear": 0}
+    why = {"tried": 0, "carriageway": 0, "step": 0, "building": 0, "wall": 0, "railway": 0, "clear": 0, "cable": 0}
 
     def spot(c, t, w, side, off, clear, step_z, road):
         """A free place beside the axis point c (tangent t, width w) of road `road`, `off` m beyond the
@@ -152,10 +160,34 @@ def main(src, dst, report=None):
         if np.isfinite(WALL.height(ring[:, 0], ring[:, 1], "high")).any():
             why["wall"] += 1
             return None
+        if np.isfinite(RAIL.height(ring[:, 0], ring[:, 1], "high")).any():
+            why["railway"] += 1
+            return None
         if obst.query_ball_point(p, clear, return_length=True) > 0:
             why["clear"] += 1
             return None
         return float(p[0]), float(p[1]), float(z), -n
+
+    top = lambda p: np.array([p[0], p[1], p[2] + POLE_H * POLE_SCALE - CABLE_DROP])
+
+    def cable_free(a, b):
+        """No street lamp within CABLE_CLEAR m (xy) of the cable between the poles a and b, and no roof over it
+        or within CABLE_CLEAR m under it."""
+        A, B = top(a), top(b)
+        span = float(np.linalg.norm(B[:2] - A[:2]))
+        t = np.linspace(0.0, 1.0, max(int(span / 0.25), 2) + 1)
+        C = A[None] + t[:, None] * (B - A)[None]
+        C[:, 2] -= 4 * CABLE_SAG * span * t * (1 - t)
+        if ltree is not None and any(ltree.query_ball_point(C[:, :2], CABLE_CLEAR)):
+            return False
+        u = (B[:2] - A[:2]) / max(span, 1e-9)
+        side = np.array([-u[1], u[0]])
+        for off in (0.0, -0.5, 0.5, -1.0, 1.0):                     # over the cable and up to CABLE_CLEAR beside it
+            Q = C[:, :2] + off * CABLE_CLEAR * side
+            h = ROOF.height(Q[:, 0], Q[:, 1], "high")
+            if (np.isfinite(h) & (h > C[:, 2] - CABLE_CLEAR)).any():
+                return False
+        return True
 
     delins, poles, lines = [], [], []
     for i, (o, s) in enumerate(zip(roads, S)):
@@ -189,12 +221,23 @@ def main(src, dst, report=None):
             houses = gtree.query_ball_point(P[:, :2], HOUSE_R, return_length=True) > 0
             side, next_s, run = 1, None, []
 
-            def flush(run):
+            def keep(run):
                 if len(run) >= MIN_LINE:
                     k0 = len(poles)
                     poles.extend(r for r, _ in run)
                     lines.extend((k0 + m, k0 + m + 1) for m in range(len(run) - 1))
                 why["short_line"] = why.get("short_line", 0) + (len(run) if len(run) < MIN_LINE else 0)
+
+            def flush(run):
+                """The run as lines, broken where a cable would pass through a lamp or a house."""
+                piece = []
+                for r in run:
+                    if piece and not cable_free(piece[-1][0], r[0]):
+                        why["cable"] += 1
+                        keep(piece)
+                        piece = []
+                    piece.append(r)
+                keep(piece)
             for j in np.flatnonzero(out & houses):
                 if next_s is None:
                     next_s = dist[j] + 10.0
@@ -221,7 +264,6 @@ def main(src, dst, report=None):
         w, b = delineator(np.array([x, y]), np.asarray(to_road), z)
         tiles.setdefault(key(x, y), []).append(("mp_delineator_white", w, True))
         tiles[key(x, y)].append(("mp_delineator_black", b, True))
-    top = lambda p: np.array([p[0], p[1], p[2] + POLE_H * POLE_SCALE - CABLE_DROP])
     for a, b in lines:
         c = cable(top(poles[a]), top(poles[b]))
         m = 0.5 * (np.asarray(poles[a][:2]) + np.asarray(poles[b][:2]))

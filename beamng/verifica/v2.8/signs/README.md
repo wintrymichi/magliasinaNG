@@ -22,6 +22,7 @@ Warning and parking signs nobody mapped in OpenStreetMap (issue #21). What the p
 | 1.13 falling rocks | 4 | 3 | 1 |
 | **total** | **151** | **80** | **70** |
 
+- In the v2.8 chain the poles also keep clear of the street lamps, delineators, wooden poles and catenary masts the patches before put up (`v2_8_posts`); in the chain before that rule no sign stood within 1 m of one of them (`../build/`), and on the v2.7 zip alone nothing changes.
 - 4 signs went 12 m back because one the same traffic already reads stood within 10 m (in the falling rocks view at Magliaso, the beginning of the village sign of v2.7 in front of it).
 - 9 new textures (the new signals and three length plates), 256 px or less; one new shape for the whole map, like `props_signs.dae` of v2.7: no change in frame rate or memory is expected.
 
