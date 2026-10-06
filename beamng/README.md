@@ -176,6 +176,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Unpaved surfaces flush (v2.7) | `patch_unpaved.py` | the terrain raised to the edges of the dirt and gravel meshes (no trench beside them, never over a road face) and their outer edges lowered onto it: 1-2 cm between track and ground instead of about 0.3 m; into a built zip, before `patch_markings.py` (the paint follows the faces) |
 | Far trees (v2.7) | `far_trees.py`, `patch_far_trees.py` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; into a built zip |
 | Ground behind the walls (v2.8, in progress) | `patch_wall_fill.py`, `wall_fill_tour.py`, `run_wall_fill_screenshots.ps1` | the backfill behind the retaining walls with the normals of the ground it restores (smooth, like the terrain) instead of one per triangle, and no game grass under it or over walls lower than the grass; geometry and terrain heights unchanged (checked by the script); into a built zip, first on the v2.7 zip; the places and views of its check, rendered with `render3d.py` or in the game |
+| Street lamps (v2.8, in progress) | `patch_lamps.py`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -218,6 +219,26 @@ textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed
 Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
 colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
 `run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
+
+### Version 2.8 (in progress): street lamps in the villages
+
+There are no open data on street lamps: `patch_lamps.py <in.zip> <out.zip> [--village-lights] [--report <json>]`
+places them by a rule. A point of a road of the AI network is in a village where at least 6 existing buildings of the
+Federal Register (`dati/gwr_area.json.gz`, at least 30 m²) stand within 45 m. There a lamp every 30 m, 0.6 m beyond
+the edge of the carriageway (the `mp_road_*` faces), on the side of the previous lamp where it can stand: on a
+pavement, a yard or the ground within 0.6 m of the height of the road edge, not on a carriageway, under a roof or on
+a wall, 1 m clear of furniture, sign poles, guard rails, fences and trunks, 9 m from the axis of another road (a
+junction) and 18 m from any other lamp. None along the panoramas' route (the cantonal road), where the lamps are
+the measured ones. The model is the one of those lamps (`italy_light_single.dae` of the game's Italy level,
+referred to), arm towards the road. On v2.7: 1,779 new lamps; rejected tries are counted in the report (most in the
+old towns: a wall or a building at the edge of the road).
+
+The lights: `props.py` puts a PointLight under every lamp head since v2.4, but the release builds take the cantonal
+road's objects from the v1.1 zip (`carryover.py`), so no release had them. The patch adds them to the 73 lamps of
+v2.7 (the head 1.2 m along the arm and 8.75 m up at scale 1, the median of `dati/lamps.json`), and to the new lamps
+only with `--village-lights`: 1,852 lights in all, whose cost in the game is to be measured
+(`.github/workflows/lamps_test.yml` builds both zips; `run_lamps_screenshots.ps1` takes the views by day and at
+night with the frame rate and the peak memory).
 
 ### Version 2.7: far trees
 
