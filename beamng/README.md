@@ -178,6 +178,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Ground behind the walls (v2.8, in progress) | `patch_wall_fill.py`, `wall_fill_tour.py`, `run_wall_fill_screenshots.ps1` | the backfill behind the retaining walls with the normals of the ground it restores (smooth, like the terrain) instead of one per triangle, and no game grass under it or over walls lower than the grass; geometry and terrain heights unchanged (checked by the script); into a built zip, first on the v2.7 zip; the places and views of its check, rendered with `render3d.py` or in the game |
 | Street lamps (v2.8, in progress) | `patch_lamps.py`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
 | Undergrowth (v2.8, in progress) | `patch_understory.py`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; into a built zip |
+| Delineators and pole lines (v2.8, in progress) | `patch_roadside.py`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -220,6 +221,26 @@ textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed
 Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
 colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
 `run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
+
+### Version 2.8 (in progress): delineators and wooden pole lines
+
+`patch_roadside.py <in.zip> <out.zip> [--report <json>]`, by a rule (no open data), outside the villages of
+`patch_lamps.py` and away from the panoramas' route:
+- **delineators** on the AI roads of drivability ≥ 0.9 (swissTLM3D roads of 6 m and more), on both sides, every 50 m,
+  every 25 m in bends under 300 m of radius and 12.5 m under 100 m; 0.5 m beyond the carriageway edge on ground within
+  0.6 m of its height; not where a guard rail, fence, wall, building or another road is, not within 12 m of another
+  road's axis. The post of props.py (white, black band towards the road, 1 m high), pipeline meshes in 384 m tiles
+  (`art/shapes/props/roadside_*.dae`) drawn up to 300 m, without collision (a plastic post a car knocks over). On v2.7:
+  507;
+- **wooden pole lines** on the roads of drivability 0.5-0.8 (3 and 4 m) with a building within 60 m, on one side,
+  every 45 m, 1.5 m beyond the edge, only lines of 4 poles or more: the game's `electric_pole_wood_old_01.dae`
+  (10.05 m at scale 1, from the cantonal road's poles) at 0.85, with collision; a cable from the top of a pole to the
+  next (0.25 m under the top, sagging by 1.5 % of the span, `mp_cable` in `roadside.materials.json`). The attachment
+  points of the game model are not known without the game: the cable starts at the pole's axis. On v2.7: 628 poles,
+  124 lines, 504 spans.
+
+`render3d.py` draws the game models it cannot load as posts of their known height (`POST_HEIGHT`). Checked without
+the game: `verifica/v2.8/roadside/`; in the game: `run_roadside_screenshots.ps1`.
 
 ### Version 2.8 (in progress): undergrowth and a darker forest floor
 

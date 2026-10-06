@@ -48,6 +48,9 @@ MAT_COLORS = [
     ("delineator", (0.95, 0.95, 0.95)), ("cabinet", (0.6, 0.6, 0.55)), ("backdrop", (0.35, 0.42, 0.28)),
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
+# m, height at scale 1 of the game models drawn as posts (measured on the cantonal road: dati/lamps.json and
+# the wooden poles of props.py); the others are drawn 4 m high
+POST_HEIGHT = {"italy_light_single": 8.75, "electric_pole_wood_old_01": 10.05}
 # sRGB colour of every terrain layer (terrain.TERRAIN_MATS; the verges as their meadow): the ground where
 # there is no orthophoto in WORK (a level checked on a machine without the downloads, v2.8), when the level
 # has no base texture for the layer (Level._layer_colors takes the median of those first)
@@ -565,7 +568,8 @@ class Renderer:
             local = shape.startswith("/levels/") and os.path.exists(os.path.join(L.lv, *shape.split("/")[3:]))
             if not local:
                 if x0 < pos[0] < x1 and y0 < pos[1] < y1:
-                    out["posts"].append(pos)
+                    h = POST_HEIGHT.get(os.path.basename(shape).rsplit(".", 1)[0], 4.0) * float(np.asarray(scale).ravel()[-1])
+                    out["posts"].append((pos, h))
                 continue
             whole = np.allclose(pos, 0)
             if not whole and not (far_x0 < pos[0] < far_x1 and far_y0 < pos[1] < far_y1):
@@ -812,9 +816,9 @@ class Renderer:
                     arrays[f"{key}_nrm"] = np.concatenate(nrms).reshape(-1).astype(np.float32)
                     soups[-1]["nrm"] = f"{key}_nrm"
         if S["posts"]:
-            P = np.array(S["posts"])
+            P = np.array([p for p, _ in S["posts"]])
             M = np.zeros((len(P), 16), np.float32)
-            M[:, 0], M[:, 5], M[:, 10], M[:, 15] = 0.25, 0.25, 4.0, 1
+            M[:, 0], M[:, 5], M[:, 10], M[:, 15] = 0.25, 0.25, np.array([h for _, h in S["posts"]]), 1
             M[:, 12:15] = P - origin
             arrays["posts_m"] = M.reshape(-1)
             arrays["posts_c"] = np.tile(srgb_to_lin([0.5, 0.5, 0.52]).astype(np.float32), len(P))
