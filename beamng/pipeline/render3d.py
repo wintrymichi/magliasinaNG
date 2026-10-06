@@ -48,6 +48,12 @@ MAT_COLORS = [
     ("delineator", (0.95, 0.95, 0.95)), ("cabinet", (0.6, 0.6, 0.55)), ("backdrop", (0.35, 0.42, 0.28)),
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
+# sRGB colour of every terrain layer (terrain.TERRAIN_MATS; the verges as their meadow): the ground where
+# there is no orthophoto in WORK (a level checked on a machine without the downloads, v2.8)
+LAYER_COLORS = {"Grass": (0.40, 0.50, 0.27), "GardenGrass": (0.37, 0.49, 0.26), "ForestFloor": (0.33, 0.29, 0.21),
+                "ForestFloor2": (0.36, 0.32, 0.23), "Asphalt": (0.36, 0.36, 0.37), "Concrete": (0.55, 0.55, 0.53),
+                "Gravel": (0.58, 0.55, 0.48), "Rock": (0.50, 0.48, 0.45), "Mud": (0.36, 0.31, 0.25),
+                "Moss": (0.35, 0.42, 0.25), "GrassVerge": (0.40, 0.50, 0.27), "GardenGrassVerge": (0.37, 0.49, 0.26)}
 
 PAGE = """<!doctype html><html><head><meta charset="utf-8">
 <style>html,body{margin:0;background:#000}canvas{display:block}</style></head><body><canvas id="c"></canvas>
@@ -126,7 +132,8 @@ window.renderView = async function (url) {
   for (const s of H.soups) {
     const g = geom(A, s.pos);
     g.setAttribute('color', new THREE.BufferAttribute(A(s.col), 3, true));
-    g.computeVertexNormals();
+    if (s.nrm) g.setAttribute('normal', new THREE.BufferAttribute(A(s.nrm), 3));
+    else g.computeVertexNormals();
     const mat = new THREE.MeshLambertMaterial({vertexColors: true, side: THREE.DoubleSide});
     if (s.offset) { mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -2; }
     const m = new THREE.Mesh(g, mat);
@@ -275,8 +282,8 @@ def _read_dae_parts(path):
 
 
 def _read_dae(path):
-    """Triangles (k, 3, 3) float64 in the DAE frame and their sRGB vertex colours (k, 3, 3) (from the
-    material or the vertex colours)."""
+    """Triangles (k, 3, 3) float64 in the DAE frame, their sRGB vertex colours (k, 3, 3) (from the
+    material or the vertex colours) and the normals of their corners (k, 3, 3) as the DAE has them."""
     s = open(path, encoding="utf-8").read()
 
     def arr(i):
@@ -284,11 +291,13 @@ def _read_dae(path):
         return np.array(m.group(1).split(), np.float64) if m else None
     V = arr("g-pa")
     if V is None:
-        return np.zeros((0, 3, 3)), np.zeros((0, 3, 3), np.float32)
+        return np.zeros((0, 3, 3)), np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32)
     V = V.reshape(-1, 3)
     C = arr("g-ca")
     C = C.reshape(-1, 4) if C is not None else None
-    tris, cols = [], []
+    N = arr("g-na")
+    N = N.reshape(-1, 3) if N is not None else None
+    tris, cols, nrms = [], [], []
     for m in re.finditer(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', s, re.S):
         nin = m.group(2).count("<input")
         idx = np.array(m.group(3).split(), np.int64).reshape(-1, nin)
@@ -301,9 +310,10 @@ def _read_dae(path):
             col = np.broadcast_to(base, t.shape)
         tris.append(t)
         cols.append(np.asarray(col, np.float32))
+        nrms.append(N[idx[:, 1]].reshape(-1, 3, 3) if N is not None and nin > 1 else np.zeros(t.shape))
     if not tris:
-        return np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32)
-    return np.concatenate(tris).astype(np.float32), np.concatenate(cols)
+        return np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32)
+    return np.concatenate(tris).astype(np.float32), np.concatenate(cols), np.concatenate(nrms).astype(np.float32)
 
 
 class Level:
@@ -320,6 +330,7 @@ class Level:
             path = os.path.join(lv, "theTerrain.ter")
         n = int(np.fromfile(path, "<u4", count=1, offset=1)[0])
         self.n = n
+        self.ter_path = path
         self.q = np.memmap(path, "<u2", "r", offset=5, shape=(n, n))          # row 0 = south
         self.statics = []                                                      # (group, shape, position)
         for g in GROUPS + ("level_objects/backdrop",):
@@ -387,6 +398,8 @@ class Level:
         return self.tz0 + q / 65535.0 * self.maxh
 
     def ortho(self):
+        if self._ortho is None and not os.path.exists(os.path.join(WORK, "ortho.tif")):
+            self._ortho = self._layer_colors()
         if self._ortho is None:
             import rasterio
             from config import E0, N0, K
@@ -401,6 +414,25 @@ class Level:
                 return o[:, r, c]
             self._ortho = fn
         return self._ortho
+
+    def _layer_colors(self):
+        """In place of the orthophoto: (x, y) -> sRGB uint8 (3, k), the colour of the terrain layer at the
+        nearest terrain vertex."""
+        n = self.n
+        f = self.ter_path
+        lay = np.memmap(f, np.uint8, "r", offset=5 + 2 * n * n, shape=(n, n))
+        tail = open(f, "rb").read()[5 + 3 * n * n:]
+        names, o = [], 4
+        for _ in range(int(np.frombuffer(tail[:4], "<u4")[0])):
+            names.append(tail[o + 1:o + 1 + tail[o]].decode("utf-8"))
+            o += 1 + tail[o]
+        lut = np.array([[round(255 * v) for v in LAYER_COLORS.get(m, (0.4, 0.45, 0.3))] for m in names], np.uint8)
+
+        def fn(x, y):
+            c = np.clip(np.round((np.asarray(x) - self.tx0) / self.sq).astype(np.int64), 0, n - 1)
+            r = np.clip(np.round((np.asarray(y) - self.ty0) / self.sq).astype(np.int64), 0, n - 1)
+            return lut[lay[r, c]].T
+        return fn
 
     def parts(self, shape):
         if shape not in self._parts:
@@ -424,12 +456,15 @@ class Level:
 
 
 class Renderer:
-    def __init__(self, lv, W=1280, H=720, quality=0.88, textured=False):
+    def __init__(self, lv, W=1280, H=720, quality=0.88, textured=False, dae_normals=False):
         """textured: the meshes whose materials have textures in the level folder (the buildings of
-        v2.2) are drawn with them (colour, opacity, normal map), the rest in the colours of MAT_COLORS."""
+        v2.2) are drawn with them (colour, opacity, normal map), the rest in the colours of MAT_COLORS.
+        dae_normals: the untextured meshes are lit with the normals of their DAE, as in the game (v2.8:
+        patch_wall_fill.py), instead of one normal per triangle."""
         self.level = Level(lv)
         self.W, self.H, self.quality = W, H, quality
         self.textured = textured
+        self.dae_normals = dae_normals
         self._tex = {}
         if not os.path.exists(THREE):
             import requests
@@ -511,7 +546,7 @@ class Renderer:
 
     def _soups(self, x0, y0, x1, y1, origin):
         L = self.level
-        out = {"mesh": ([], []), "paint": ([], []), "posts": []}
+        out = {"mesh": ([], [], []), "paint": ([], [], []), "posts": []}
         far_x0, far_y0, far_x1, far_y1 = x0 - 300, y0 - 300, x1 + 300, y1 + 300
         for g, shape, pos, scale in L.statics:
             if g == "level_objects/backdrop":
@@ -543,7 +578,7 @@ class Renderer:
             d = L.dae(shape)
             if d is None or not len(d[0]):
                 continue
-            tri, col = d
+            tri, col, nrm = d
             if self.textured:                          # the untextured materials of the shape only
                 keep = np.zeros(len(tri), bool)
                 o = 0
@@ -551,7 +586,7 @@ class Renderer:
                     if mat in rest:
                         keep[o:o + len(t_)] = True
                     o += len(t_)
-                tri, col = tri[keep], col[keep]
+                tri, col, nrm = tri[keep], col[keep], nrm[keep]
             tw = tri + pos
             c = tw.mean(1)
             m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
@@ -566,6 +601,7 @@ class Renderer:
             key = "paint" if "markings" in shape else "mesh"
             out[key][0].append(tw[m] - origin)
             out[key][1].append(col[m])
+            out[key][2].append(nrm[m])
         return out
 
     def texture(self, mat):
@@ -624,7 +660,7 @@ class Renderer:
             d = L.dae(shape)
             if d is None or not len(d[0]):
                 continue
-            tri, col = d
+            tri, col = d[0], d[1]
             if self.textured:                          # the untextured materials of the shape only
                 keep = np.zeros(len(tri), bool)
                 o = 0
@@ -756,11 +792,14 @@ class Renderer:
             tsoups.append(dict(pos=f"ts{j}_pos", uv=f"ts{j}_uv", col=f"ts{j}_col", **info,
                                offset="markings" in mat or "openings" in mat or "plinth" in mat))
         for key, off in (("mesh", False), ("paint", True)):
-            tris, cols = S[key]
+            tris, cols, nrms = S[key]
             if tris:
                 arrays[f"{key}_pos"] = np.concatenate(tris).reshape(-1).astype(np.float32)
                 arrays[f"{key}_col"] = (srgb_to_lin(np.concatenate(cols)).reshape(-1) * 255).astype(np.uint8)
                 soups.append({"pos": f"{key}_pos", "col": f"{key}_col", "cast": key == "mesh", "offset": off})
+                if self.dae_normals:                   # the normals the game lights the meshes with
+                    arrays[f"{key}_nrm"] = np.concatenate(nrms).reshape(-1).astype(np.float32)
+                    soups[-1]["nrm"] = f"{key}_nrm"
         if S["posts"]:
             P = np.array(S["posts"])
             M = np.zeros((len(P), 16), np.float32)

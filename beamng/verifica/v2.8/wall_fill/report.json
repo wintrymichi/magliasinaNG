@@ -1,0 +1,33 @@
+{
+ "source": "magliaso_pura_v2.7.zip",
+ "backfill_shapes": 316,
+ "backfill_triangles": 784035,
+ "backfill_squares": 281695,
+ "backfill_area_ha": 63.4,
+ "vertices_before": 1551036,
+ "vertices_after": 896120,
+ "terrain_vertices_with_normal": 394844,
+ "seam_vertices_terrain_normal": 203631,
+ "vertices_interpolated_in_square": 544722,
+ "vertices_nearest_node": 14203,
+ "normal_vs_face_deg": {
+  "median": 17.68,
+  "p95": 59.28
+ },
+ "normal_new_vs_old_deg": {
+  "median": 17.48,
+  "p95": 58.96
+ },
+ "wall_squares": 407535,
+ "grass_tall_m": 0.8,
+ "grass_removed_vertices": {
+  "Grass -> GrassVerge": 40557,
+  "GardenGrass -> GardenGrassVerge": 159884
+ },
+ "grass_removed_why": {
+  "under_backfill": 183889,
+  "over_wall_top": 16552
+ },
+ "geometry_unchanged": true,
+ "terrain_heights_unchanged": true
+}

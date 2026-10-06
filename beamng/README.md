@@ -41,7 +41,7 @@ The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local ver
 |---|---|---|
 | publish a release built from scratch | GitHub *Actions* → *Release v2.4* → *Run workflow* ([`release_v2.4.yml`](../.github/workflows/release_v2.4.yml)) | about 1 hour |
 | build it on your own machine | the commands under [Building without the game](#building-without-the-game) | depends on the machine, plus the downloads |
-| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_unpaved.py`, `patch_markings.py`, `patch_far_trees.py` and `patch_signs.py` (v2.7) | minutes |
+| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_unpaved.py`, `patch_markings.py`, `patch_far_trees.py` and `patch_signs.py` (v2.7), `patch_wall_fill.py` (v2.8, in progress) | minutes |
 
 v2.6 is the v2.4 workflow's zip passed through the first two patch scripts; the current release, v2.7, adds four more, in this order (the paint follows the flattened dirt tracks):
 
@@ -175,6 +175,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Road markings, cleaned (v2.7) | `markings_clean.py`, `patch_markings.py` | the paint traced by `network_markings.py` redrawn as Swiss markings (smooth lines, regular dashes, standard crossings, no blobs); into a built zip |
 | Unpaved surfaces flush (v2.7) | `patch_unpaved.py` | the terrain raised to the edges of the dirt and gravel meshes (no trench beside them, never over a road face) and their outer edges lowered onto it: 1-2 cm between track and ground instead of about 0.3 m; into a built zip, before `patch_markings.py` (the paint follows the faces) |
 | Far trees (v2.7) | `far_trees.py`, `patch_far_trees.py` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; into a built zip |
+| Ground behind the walls (v2.8, in progress) | `patch_wall_fill.py`, `wall_fill_tour.py`, `run_wall_fill_screenshots.ps1` | the backfill behind the retaining walls with the normals of the ground it restores (smooth, like the terrain) instead of one per triangle, and no game grass under it or over walls lower than the grass; geometry and terrain heights unchanged (checked by the script); into a built zip, first on the v2.7 zip; the places and views of its check, rendered with `render3d.py` or in the game |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -185,6 +186,38 @@ The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = do
 ## Technical notes by version
 
 What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
+
+### Version 2.8 (in progress): the ground behind the walls
+
+The terrain is a 1.5 m grid and cannot hold a step inside a 0.3 m wall: `walls.carve_terrain` lowers every terrain
+vertex whose triangles touch a wall to the foot of the wall, and `walls.build_backfill` covers the trench this leaves on
+the high side with a mesh at the height of the ground as it was (784,035 triangles, 63 ha in v2.7). That mesh had one
+normal per triangle (`bng.flat_normals_soup`): in the game every triangle was lit on its own, flat facets and saw teeth
+beside a smoothly shaded terrain. And the game's grass grew on the terrain lowered under it (29 % of those vertices are
+less than 0.8 m under the backfill, the grass clumps up to 0.8 m tall) and over the walls lower than the grass.
+
+`patch_wall_fill.py <in.zip> <out.zip> [--report <json>]` changes neither the geometry nor the terrain heights (the
+script checks every backfill triangle, position and texture coordinate, and the heights of the `.ter`):
+- **normals**: every backfill vertex takes the normal of the ground it restores, computed like the terrain's own
+  (central differences over one terrain step) on the heights of the backfill at the terrain vertices and of the
+  terrain elsewhere; the vertices lowered to the foot of a wall and not covered are left out (one-sided differences).
+  On the edge where the backfill meets the visible terrain it takes the terrain's own normal, so the light does not
+  jump at the seam (tried the other way, with the ground's normal on the edge too: in the renders the outline of the
+  backfill shows as a line of light). The cut vertices inside a terrain square interpolate the normals of its corners.
+  Welded again, the backfill has 896,120 vertices instead of 1,551,036;
+- **grass**: the terrain vertices of the squares under the backfill, and those of the squares a wall passes through
+  from which the tallest grass (`groundcover.py`, 0.8 m) would reach over the wall top, go to the verge twins of their
+  layer (`terrain.VERGE`: the same material without grass, as along the roads since v2.4): 200,441 vertices
+  (183,889 under the backfill, 16,552 over low walls), 0.3 % of the terrain. At the foot of the taller walls and on
+  the rest of the meadows the grass stays.
+
+Not changed: the saw teeth themselves (the corners of the backfill alternate between the wall top and the meadow), the
+crests of the walls along noisy heights, and the colour of the backfill (the terrain's base texture without its detail
+textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed heights, a full build).
+
+Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
+colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
+`run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
 
 ### Version 2.7: far trees
 

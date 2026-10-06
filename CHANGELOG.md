@@ -2,6 +2,12 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
+## v2.8 (in progress, not released)
+
+- **The ground behind the retaining walls shaded like the terrain.** Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh puts the ground back at its height: 63 ha in all. Up to v2.7 every triangle of that mesh was lit on its own, so the slopes behind the walls showed flat facets and saw teeth, lighter and darker, beside the smoothly shaded terrain (for example along the walls at Ponte Tresa, Agno and below the cantonal road to Pura). Now (`patch_wall_fill.py`) the mesh has the normals of the ground it restores, computed like the terrain's own, and the terrain's own normal where it meets the terrain: the same shapes, lit smoothly. Same geometry and collision as before.
+- **No grass through the ground behind the walls, nor over low walls.** The game's grass grew on the terrain lowered under that mesh and stood through it, and on the foot of the walls lower than the grass it stood over their top. There the terrain keeps its material without the game's grass (200,441 terrain vertices, 0.3 % of the terrain); at the foot of the taller walls and on the meadows the grass stays.
+- Checked so far with the 3D renderer of the pipeline (before and after at the same views: `beamng/verifica/v2.8/wall_fill/`); the test in BeamNG.drive is still to be done.
+
 ## v2.7
 
 - **Swiss road signs on the whole network** (286 new signs): pedestrian crossings, roundabouts, one-way streets and no entry, 30 zones and meeting zones, speed limits, the general 50 with the village name on the main roads, and every sign mapped one by one in OpenStreetMap. Drawn after the Swiss standard, texts in Italian, on poles at the right edge of the road for the traffic that reads them.
