@@ -180,6 +180,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Undergrowth (v2.8, in progress) | `patch_understory.py`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; into a built zip |
 | Delineators and pole lines (v2.8, in progress) | `patch_roadside.py`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; into a built zip |
 | Paved edges flush (v2.8, in progress) | `patch_paved_edges.py` (with `patch_unpaved.main`), `paved_tour.py`, `run_paved_screenshots.ps1` | the terrain raised to the outer edges of the asphalt, sett, cobble and pavement meshes and their edges lowered onto it by at most 8 cm, not within 2 m of a guard rail, fence, wall, building, the railway or a bridge parapet; the paint over the lowered faces down with them; into a built zip, before the other v2.8 patches (it changes the terrain heights) |
+| Warning and parking signs (v2.8, in progress) | `signs_more.py`, `patch_signs_more.py`, `signs_ch.py` (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24), `signs_more_tour.py`, `run_signs_more_screenshots.ps1` | the signs OpenStreetMap does not map, by the Swiss rules: curve warnings before the unexpected sharp curves of the main roads outside the villages, the warnings of the level crossings, the hazards OSM records on a road, the parking signs at the public car parks; put up as `patch_signs.py` does, into a built zip (after `patch_paved_edges.py`: the poles stand on the ground) |
 | Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
@@ -257,6 +258,39 @@ the faces inside the edges as in v2.7 (0.006 % of the points, 0.004 % in v2.7). 
 vertices and objects, the zip 0.6 MB bigger; the game converts the 460 changed shapes again on the first load.
 Checked without the game with `paved_tour.py` (`render3d.py` before and after at three places, a driver on the road
 and a low view along the edge): `verifica/v2.8/paved_edges/`; in the game: `run_paved_screenshots.ps1`.
+
+### Version 2.8 (in progress): warning and parking signs nobody mapped
+
+v2.7 put up the signs mapped one by one in OpenStreetMap and those the regulation OSM records implies
+(`signs_net.py`, `patch_signs.py`); a Swiss road also has warning and parking signs nobody maps (issue #21).
+`signs_more.py` places them by the rules (OSStr art. 3-4 and 103: a danger signal 150-250 m before the danger outside
+the villages, up to 50 m inside), only on the Swiss side, not where v2.7 has the same signal within 60 m for the same
+traffic:
+- **curves** (1.01 / 1.02): on the main roads (OSM primary, secondary, tertiary, trunk) outside the villages (a mapped
+  limit of 60 or more, or none and fewer than 6 buildings of the Federal Register within 45 m, as `patch_lamps.py`),
+  150 m before a curve under 60 m of radius turning more than 45 degrees that comes after 150 m of nearly straight road
+  (radius over 200 m) for the traffic going that way: an unexpected curve, not every bend of a mountain road (16
+  planned, 5 on roads the map builds). Sharp curves less than 200 m apart are one winding stretch: 1.03 / 1.04
+  (double curve, first to the right / left), its length under it (5.03) where over 300 m;
+- **level crossings** (1.15 with barriers, 1.16 without, from `crossing:barrier`): both ways on every road over a
+  `railway=level_crossing` node, 150 m before it outside the villages, 50 m inside, less where a junction comes first,
+  none closer than 20 m;
+- the **hazards OSM records on a road** (`hazard=falling_rocks` 1.13, `animal_crossing` 1.24, `school_zone` 1.23,
+  `road_narrows` 1.07): at both ends of the way, its length under it where over 100 m (on the Swiss side only falling
+  rocks so far: the lake road at Magliaso, Caslano);
+- **parking** (4.17): at the entrance of the public car parks (OSM `access` public, customers or permissive, 300 m²
+  or 10 places; with no access recorded 1000 m² or 40 places, else most likely the car park of a block of flats; a
+  `parking_entrance` node), where the drive into it leaves a road, for the traffic that has it on its right.
+`signs_ch.py` draws the new signals (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24) like the others, from shapes, no image.
+`patch_signs_more.py <in.zip> <out.zip> [--report <json>]` puts them up as `patch_signs.py` does (a grey pole beside the
+carriageway, on the right of the traffic that reads it, on free ground, not within 0.45 m of a pole already there) in
+a new shape (`props_signs_v28.dae`, collision like the other poles) with its own materials file for the plates v2.7
+does not have; a sign within 10 m of one the same traffic already reads goes 12 m back. On v2.7: 151 planned, 80 put
+up (54 parking, 10 + 8 level crossings, 5 curves, 3 falling rocks), 70 on roads the map does not build, 1 with no
+room; 9 new textures of 256 px or less. Checked without the game: `verifica/v2.8/signs/`; in the game:
+`run_signs_more_screenshots.ps1`. Direction signs are not drawn: the data in the repository have the communes, not
+the villages they merged (Tresa, Lema, Alto Malcantone), so a sign would name the wrong place; swissNAMES3D would give
+them.
 
 ### Version 2.8 (in progress): the railway's overhead line
 
