@@ -1,0 +1,57 @@
+# Test zip for the undergrowth and the darker forest floor (patch_understory.py, v2.8): the published v2.7 zip
+# through patch_understory.py, uploaded as an artifact of the run with its report. Nothing is published as a
+# release; the patch needs only the zip (no data downloads), and reads no Street View image.
+name: Understory test zip
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/v2.8-understory]
+    paths: [.github/workflows/understory_test.yml, beamng/pipeline/patch_understory.py, beamng/pipeline/groundcover.py]
+
+jobs:
+  understory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: v2.7 zip through patch_understory.py
+        working-directory: beamng/pipeline
+        run: |
+          D="$MAGLIASO_ROOT/dist"
+          mkdir -p "$D" "$GITHUB_WORKSPACE/out"
+          gh release download v2.7 --pattern 'magliaso_pura_v2.7.zip' --dir "$D"
+          python patch_understory.py "$D/magliaso_pura_v2.7.zip" "$GITHUB_WORKSPACE/out/magliaso_pura_v2.7_understory.zip" \
+            --report "$GITHUB_WORKSPACE/out/understory_report.json"
+          ls -la "$GITHUB_WORKSPACE/out"
+          md5sum "$GITHUB_WORKSPACE/out/magliaso_pura_v2.7_understory.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: understory-test
+          path: out/
+          retention-days: 14
+          compression-level: 0

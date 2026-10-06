@@ -1,0 +1,36 @@
+{
+ "source": "magliaso_pura_v2.7.zip",
+ "forest_floor_vertices": 26130282,
+ "to_verge": {
+  "ForestFloor -> ForestFloorVerge": 960329,
+  "ForestFloor2 -> ForestFloor2Verge": 20624
+ },
+ "floor_colour_before": {
+  "ForestFloor": [
+   102,
+   98,
+   67
+  ],
+  "ForestFloor2": [
+   101,
+   97,
+   66
+  ]
+ },
+ "floor_colour_after": [
+  62,
+  66,
+  42
+ ],
+ "understory": {
+  "radius_m": 60.0,
+  "max_elements": 600,
+  "shapes": [
+   "/levels/italy/art/shapes/trees/trees_italy/generibush.dae",
+   "/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae",
+   "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_c.dae",
+   "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_b.dae"
+  ]
+ },
+ "terrain_heights_unchanged": true
+}

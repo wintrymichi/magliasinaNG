@@ -1,0 +1,60 @@
+# Test zips for the street lamps of the villages (patch_lamps.py, v2.8): the published v2.7 zip through
+# patch_lamps.py twice, without and with the lights of the new lamps (--village-lights: their cost in the
+# game is to be measured), uploaded as an artifact of the run with the report. Nothing is published as a
+# release; the patch needs only the zip and beamng/dati (no data downloads), and reads no Street View image.
+name: Street lamps test zip
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/v2.8-street-lamps]
+    paths: [.github/workflows/lamps_test.yml, beamng/pipeline/patch_lamps.py]
+
+jobs:
+  lamps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: v2.7 zip through patch_lamps.py, without and with the lights of the new lamps
+        working-directory: beamng/pipeline
+        run: |
+          D="$MAGLIASO_ROOT/dist"
+          O="$GITHUB_WORKSPACE/out"
+          mkdir -p "$D" "$O"
+          gh release download v2.7 --pattern 'magliaso_pura_v2.7.zip' --dir "$D"
+          python patch_lamps.py "$D/magliaso_pura_v2.7.zip" "$O/magliaso_pura_v2.7_lamps.zip" --report "$O/lamps_report.json"
+          python patch_lamps.py "$D/magliaso_pura_v2.7.zip" "$O/magliaso_pura_v2.7_lamps_lights.zip" --village-lights \
+            --report "$O/lamps_lights_report.json"
+          ls -la "$O"
+          md5sum "$O"/*.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lamps-test
+          path: out/
+          retention-days: 14
+          compression-level: 0

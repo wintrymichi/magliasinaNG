@@ -1,7 +1,10 @@
 -- Dirt and gravel tracks flush with the ground (v2.7, patch_unpaved.py): the in-game check.
 -- Loaded with:  BeamNG.drive.x64.exe -level magliaso_pura -onLevelLoad_ext magliaso_unpaved
 -- Reads <user>/magliaso_unpaved_views.json (unpaved_tour.py): a list of
---   {kind = "view", name, cam = {x, y, z}, target = {x, y, z}, fov, wait}  -> screenshot <name>.png
+--   {kind = "view", name, cam = {x, y, z}, target = {x, y, z}, fov, wait, tod}  -> screenshot <name>.png
+--     (tod, optional, v2.8: the time of day, 0 noon, 0.5 midnight; set before the view if the game has
+--     core_environment.setTimeOfDay, else ignored; fps, optional, v2.8: the frame rate over the last 3 s
+--     of the wait, in the log and in _drive.json)
 --   {kind = "drive", name, pos = {x, y, z}, dir = {x, y}, throttle, time, cam, target, fov}
 --     the player's car on the track heading at the edge, throttle for `time` s: the peak vertical
 --     acceleration of the body (from its velocity, frame to frame) and how far it went, in the log and
@@ -11,6 +14,7 @@ local M = {}
 local started = false
 local DIR = 'screenshots/magliaso_unpaved'
 local probe = nil   -- {veh, prevVz, peak, samples}
+local frames, ftime = 0, 0
 
 local function shot(name)
   createScreenshot2({filename = DIR .. '/' .. name, writeJPG = false, superSampling = 1})
@@ -48,9 +52,26 @@ local function run()
     job.sleep(1.0)
     for _, v in ipairs(views) do
       if v.kind == 'view' then
+        if v.tod and core_environment and core_environment.setTimeOfDay then
+          pcall(function()
+            local t = core_environment.getTimeOfDay and core_environment.getTimeOfDay() or {}
+            t.time = v.tod
+            t.play = false
+            core_environment.setTimeOfDay(t)
+          end)
+        end
         place(v.cam, v.target, v.fov)
         log('I', 'magliaso_unpaved', 'view ' .. v.name)
-        job.sleep(v.wait or 8.0)
+        if v.fps then
+          job.sleep(math.max((v.wait or 8.0) - 3.0, 0.5))
+          frames, ftime = 0, 0
+          job.sleep(3.0)
+          local fps = frames / math.max(ftime, 1e-3)
+          log('I', 'magliaso_unpaved', string.format('fps %s %.1f', v.name, fps))
+          table.insert(results, {name = v.name, fps = fps})
+        else
+          job.sleep(v.wait or 8.0)
+        end
         shot(v.name)
         job.sleep(1.5)
       elseif v.kind == 'drive' and veh then
@@ -97,6 +118,8 @@ local function run()
 end
 
 M.onUpdate = function(dtReal, dtSim)
+  frames = frames + 1
+  ftime = ftime + (dtReal or 0)
   if not probe or not dtSim or dtSim <= 0 then return end
   local vz = probe.veh:getVelocity().z
   if probe.prevVz then
