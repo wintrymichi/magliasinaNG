@@ -179,6 +179,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Street lamps (v2.8, in progress) | `patch_lamps.py`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
 | Undergrowth (v2.8, in progress) | `patch_understory.py`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; into a built zip |
 | Delineators and pole lines (v2.8, in progress) | `patch_roadside.py`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; into a built zip |
+| Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -221,6 +222,25 @@ textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed
 Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
 colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
 `run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
+
+### Version 2.8 (in progress): the railway's overhead line
+
+`railway.py` builds the tracks from swissTLM3D but not the catenary ("its masts are not in the data", issue #21).
+`patch_catenary.py <in.zip> <out.zip> [--report <json>]` adds it on the tracks as the level has them:
+- the axes: the centre of the top of every sleeper box of the railway meshes (the duplicated sleepers of
+  overlapping lines removed), its length telling the gauge (1.90 m FLP, 2.60 m SBB); chained 1 m apart (the
+  released level has a sleeper every metre), the chains joined across the level crossings (no sleepers there) up to
+  30 m; electrified: all the metre gauge, the standard-gauge chains of 400 m or more (the line; the sidings of the
+  industrial zones are shorter);
+- a steel mast every 50 m (30 m in bends under 150 m of radius, 40 m under 400 m), 2.6 m (FLP) or 3.1 m (SBB) from the
+  axis on the outside of the bend or the other side, not on a carriageway, in a building or on a wall, not within 2 m
+  of another track's axis; 7.2 m over the rails, a cantilever to over the track;
+- the contact wire 5.5 m over the rails, staggered ±0.2 m, under a messenger wire from 6.7 m at the masts down to
+  0.35 m over the contact wire mid-span, droppers every 9 m; no wires over a gap of more than 75 m between masts;
+- meshes in 512 m tiles in the railway group: the masts with collision (drawn up to 800 m), the wires without (up to
+  400 m), materials in `art/shapes/railway/catenary.materials.json`.
+On v2.7: 11,504 sleepers, 20 chains, 9.9 km electrified, 201 masts (median span 50 m), 6 gaps without wires.
+Checked without the game: `verifica/v2.8/catenary/`; in the game: `run_catenary_screenshots.ps1`.
 
 ### Version 2.8 (in progress): delineators and wooden pole lines
 

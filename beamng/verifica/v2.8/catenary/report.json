@@ -1,0 +1,102 @@
+{
+ "source": "magliaso_pura_v2.7.zip",
+ "sleepers": 11504,
+ "electrified_km": 9.91,
+ "chains": [
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 579.7
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 188.0
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 33.4
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 56.7
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 1028.5
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 1658.6
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 359.9
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 752.7
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 135.5
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 116.0
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 9.8
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 1718.5
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 825.2
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 28.9
+  },
+  {
+   "gauge_sleeper_m": 1.9,
+   "length_m": 6.2
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 434.8
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 407.1
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 586.4
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 510.0
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 469.1
+  }
+ ],
+ "masts": 201,
+ "skipped_places": 153,
+ "skipped_why": {
+  "road": 67,
+  "building": 7,
+  "wall": 97,
+  "track": 206
+ },
+ "span_m": {
+  "median": 50.0,
+  "max": 165,
+  "over_max_without_wires": 6
+ },
+ "mast_tiles": 22,
+ "wire_tiles": 20
+}
