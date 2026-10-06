@@ -54,8 +54,10 @@ def read_items(zi, name):
     return [json.loads(l) for l in zi.read(name).decode("utf-8").splitlines() if l.strip()]
 
 
-def top_faces(zi, objs):
-    """(unpaved, all) top faces (k, 3, 3) of the TSStatic shapes `objs` of the zip."""
+def top_faces(zi, objs, mats=None):
+    """(faces of the materials `mats` (default UNPAVED), all) top faces (k, 3, 3) of the TSStatic shapes
+    `objs` of the zip."""
+    mats = UNPAVED if mats is None else mats
     un, al = [], []
     for o in objs:
         sn = o.get("shapeName", "")
@@ -71,7 +73,7 @@ def top_faces(zi, objs):
             n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
             t = t[n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-12) > 0.5]
             al.append(t)
-            if mat in UNPAVED:
+            if mat in mats:
                 un.append(t)
     return np.concatenate(un), np.concatenate(al)
 
@@ -229,8 +231,11 @@ def taper(args):
     """The outer edges of the unpaved faces of one shape down onto the terrain: new DAE text, or None.
     An edge vertex goes down to EDGE_UP over the terrain where that is at most EDGE_DROP m down, with
     the top of the edge face under it; the vertices of the faces of another surface, and those on
-    an edge with a road face beyond it (a seam between two tiles or two polygons), stay."""
-    name, text, pos, qpath = args
+    an edge with a road face beyond it (a seam between two tiles or two polygons), stay.
+    v2.8: args may add the materials (default UNPAVED) and the deepest drop (default EDGE_DROP)."""
+    name, text, pos, qpath = args[:4]
+    mats = args[4] if len(args) > 4 else UNPAVED
+    edge_drop = args[5] if len(args) > 5 else EDGE_DROP
     qt = terrain(qpath)
     V, _, _, _, parts, _ = optimize_level.parse(text)
     W = V + pos
@@ -244,8 +249,8 @@ def taper(args):
         n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
         up = n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-12) > 0.5
         tops.append(T[up])
-        kinds.append(np.full(up.sum(), mat in UNPAVED))
-        if mat in UNPAVED:
+        kinds.append(np.full(up.sum(), mat in mats))
+        if mat in mats:
             steep.append(T[~up].ravel())
     T = np.concatenate(tops)
     un = np.concatenate(kinds)
@@ -279,7 +284,7 @@ def taper(args):
         return None
     X = W[rep[move]]
     drop = X[:, 2] - (terrain_top(qt, X[:, 0], X[:, 1]) + EDGE_UP)
-    ok = (drop > 0.002) & (drop <= EDGE_DROP)
+    ok = (drop > 0.002) & (drop <= edge_drop)
     move, drop, X = move[ok], drop[ok], X[ok]
     if not len(move):
         return None
@@ -301,13 +306,35 @@ def taper(args):
     return name, out, len(move)
 
 
-def main(src, dst):
+def cell_ids(x, y):
+    """Ids of the 1 m cells (over the terrain block) of points."""
+    from config import TER_SIZE
+    w = int(np.ceil(TER_SIZE * TER_SQUARE))
+    return np.floor(np.asarray(y) - TER_Y0).astype(np.int64) * w + np.floor(np.asarray(x) - TER_X0).astype(np.int64)
+
+
+def in_cells(cells, x, y):
+    """Points in the sorted cell ids `cells`."""
+    c = cell_ids(x, y)
+    i = np.clip(np.searchsorted(cells, c), 0, max(len(cells) - 1, 0))
+    return (cells[i] == c) if len(cells) else np.zeros(len(c), bool)
+
+
+def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None):
+    """mats: the materials whose surroundings are raised and whose outer edges go down (default UNPAVED);
+    edge_drop: the deepest an edge goes down (0: the faces stay as they are, only the terrain is raised);
+    keep_out: sorted 1 m cell ids (cell_ids) where no terrain is raised to the faces (v2.8,
+    patch_paved_edges.py)."""
     global UN, ALL, Z0, MAXH, QT
+    mats = UNPAVED if mats is None else tuple(mats)
     zi = zipfile.ZipFile(src)
     lv = f"levels/{LEVEL_NAME}"
     objs = read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json")
-    un, al = top_faces(zi, objs)
-    print("top faces: %d unpaved, %d in all" % (len(un), len(al)))
+    un, al = top_faces(zi, objs, mats)
+    if keep_out is not None:                    # no terrain raised to the faces there
+        c = un.mean(1)
+        un = un[~in_cells(keep_out, c[:, 0], c[:, 1])]
+    print("top faces: %d of %s, %d in all" % (len(un), "the unpaved" if mats == UNPAVED else "these", len(al)))
     UN, ALL = road_mesh.TriSurface(un), road_mesh.TriSurface(al)
     blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
                if o.get("class") == "TerrainBlock")
@@ -352,19 +379,19 @@ def main(src, dst):
     qpath = os.path.join(tmp, "qt.npy")
     np.save(qpath, q)
     jobs = []
-    for o in objs:
+    for o in objs if edge_drop > 0 else ():             # edge_drop 0: the faces stay as they are
         sn = o.get("shapeName", "").lstrip("/")
         if o.get("class") == "TSStatic" and sn in zi.NameToInfo:
             text = zi.read(sn).decode("utf-8")
-            if any(f'material="{m}-mat"' in text for m in UNPAVED):
-                jobs.append((sn, text, np.asarray(o.get("position", [0, 0, 0]), np.float64), qpath))
+            if any(f'material="{m}-mat"' in text for m in mats):
+                jobs.append((sn, text, np.asarray(o.get("position", [0, 0, 0]), np.float64), qpath, mats, edge_drop))
     shapes, nmove = {}, 0
     with ex:
         for res in ex.map(taper, jobs, chunksize=1):
             if res is not None:
                 shapes[res[0]] = res[1].encode("utf-8")
                 nmove += res[2]
-    print("edge vertices of unpaved faces lowered onto the terrain: %d, in %d shapes" % (nmove, len(shapes)))
+    print("edge vertices lowered onto the terrain: %d, in %d shapes" % (nmove, len(shapes)))
     new_ter = data[:5] + q.astype("<u2").tobytes() + data[5 + 2 * n * n:]
     with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zo:
         now = time.localtime()[:6]

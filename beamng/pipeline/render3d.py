@@ -46,8 +46,19 @@ MAT_COLORS = [
     ("osm_giveway", (0.95, 0.95, 0.95)),
     ("pole", (0.55, 0.56, 0.58)), ("sign", (0.9, 0.9, 0.92)), ("delineator_black", (0.1, 0.1, 0.1)),
     ("delineator", (0.95, 0.95, 0.95)), ("cabinet", (0.6, 0.6, 0.55)), ("backdrop", (0.35, 0.42, 0.28)),
+    # v2.8 lake (patch_lake.py): the colours of its materials
+    ("pier_deck", (0.50, 0.44, 0.36)), ("pier_beam", (0.30, 0.25, 0.19)), ("pier_float", (0.16, 0.17, 0.17)),
+    ("pier_pile", (0.42, 0.43, 0.44)), ("boat_white", (0.90, 0.90, 0.88)), ("boat_blue", (0.08, 0.16, 0.32)),
+    ("boat_grey", (0.50, 0.52, 0.54)), ("boat_beige", (0.72, 0.66, 0.54)), ("boat_dark", (0.08, 0.08, 0.09)),
+    ("boat_metal", (0.75, 0.76, 0.77)), ("boat_inside", (0.78, 0.78, 0.76)),
+    # v2.8 house details (patch_house_details.py)
+    ("house_zinc", (0.60, 0.61, 0.60)), ("house_copper", (0.47, 0.30, 0.20)), ("house_metal", (0.70, 0.71, 0.72)),
+    ("house_dish", (0.86, 0.86, 0.84)),
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
+# m, height at scale 1 of the game models drawn as posts (measured on the cantonal road: dati/lamps.json and
+# the wooden poles of props.py); the others are drawn 4 m high
+POST_HEIGHT = {"italy_light_single": 8.75, "electric_pole_wood_old_01": 10.05}
 # sRGB colour of every terrain layer (terrain.TERRAIN_MATS; the verges as their meadow): the ground where
 # there is no orthophoto in WORK (a level checked on a machine without the downloads, v2.8), when the level
 # has no base texture for the layer (Level._layer_colors takes the median of those first)
@@ -565,7 +576,8 @@ class Renderer:
             local = shape.startswith("/levels/") and os.path.exists(os.path.join(L.lv, *shape.split("/")[3:]))
             if not local:
                 if x0 < pos[0] < x1 and y0 < pos[1] < y1:
-                    out["posts"].append(pos)
+                    h = POST_HEIGHT.get(os.path.basename(shape).rsplit(".", 1)[0], 4.0) * float(np.asarray(scale).ravel()[-1])
+                    out["posts"].append((pos, h))
                 continue
             whole = np.allclose(pos, 0)
             if not whole and not (far_x0 < pos[0] < far_x1 and far_y0 < pos[1] < far_y1):
@@ -812,9 +824,9 @@ class Renderer:
                     arrays[f"{key}_nrm"] = np.concatenate(nrms).reshape(-1).astype(np.float32)
                     soups[-1]["nrm"] = f"{key}_nrm"
         if S["posts"]:
-            P = np.array(S["posts"])
+            P = np.array([p for p, _ in S["posts"]])
             M = np.zeros((len(P), 16), np.float32)
-            M[:, 0], M[:, 5], M[:, 10], M[:, 15] = 0.25, 0.25, 4.0, 1
+            M[:, 0], M[:, 5], M[:, 10], M[:, 15] = 0.25, 0.25, np.array([h for _, h in S["posts"]]), 1
             M[:, 12:15] = P - origin
             arrays["posts_m"] = M.reshape(-1)
             arrays["posts_c"] = np.tile(srgb_to_lin([0.5, 0.5, 0.52]).astype(np.float32), len(P))
