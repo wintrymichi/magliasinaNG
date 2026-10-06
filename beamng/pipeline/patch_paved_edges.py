@@ -1,32 +1,29 @@
-"""Paved roads, yards, pavements and paths flush with the ground where nothing marks their edge (v2.8), in a
-built level zip.
+"""Paved roads, yards and pavements flush with the ground where nothing marks their edge (v2.8), in a built
+level zip.
 
-On v2.7 the outer edges of the paved surfaces (asphalt, setts, cobbles, pavements, paved paths: 991 km of
-edges) stood 0.24 m over the terrain 0.3 m beyond them (median; 0.83 m at the 90th percentile, 37 % over
-0.3 m): the build carves the terrain 0.1 m under the lowest road face within one terrain step
-(network_mesh.carve_tile), so that it stays under the road whatever the grade, and the asphalt stood on it
-like a slab with a trench beside it. The dirt and gravel tracks were laid flush in v2.7 (patch_unpaved.py);
-here the same for the paved surfaces, with patch_unpaved.main:
-- the terrain around them raised to their surface (within 1.5 m, fading back to the ground at 4.5 m, only
-  where the ground is lower, and not where it lies more than 1 m under the road: an embankment or a bridge
-  stays as it is), never over a road face;
-- their outer edges lowered onto it by at most EDGE_DROP m (the tracks: 0.25 m): on the asphalt the
-  cross-fall of the last strip of a road changes by a few per cent at most;
-- then the raised terrain checked again against the faces as they are now, CLAMP m under them: a lowered edge
-  tilts the last strip of its face, and the terrain raised under the strip would show through the asphalt;
+On v2.7 the outer edges of the paved surfaces (asphalt, setts, cobbles, pavements) stood over the terrain like a
+slab with a trench beside it: the build carves the terrain 0.1 m under the lowest road face within one terrain
+step (network_mesh.carve_tile), so that it stays under the road whatever the grade. The dirt and gravel tracks
+were laid flush in v2.7 (patch_unpaved.py: the terrain raised to them and their edges lowered onto it); here the
+terrain is raised to the paved surfaces with patch_unpaved.main, and the surfaces stay as they are:
+- the terrain within 1.5 m of a paved top face raised to patch_unpaved.EPS m under its height (fading back to the
+  ground at 4.5 m, only where the ground is lower, and not where it lies more than 1 m under the road: an
+  embankment or a bridge stays as it is), never over a road face;
+- the faces are not lowered (EDGE_DROP 0): lowering the outer edges tilts the last strip of a road, where the
+  wheels of a car run, and drive_test.py counted 40-60 % more hard knocks on the roads (tried in the first
+  version of this patch);
+- the paved paths are left out: the drive test runs its car along them with the wheels on the ground beside
+  them, which the raised terrain would change;
 - none of it within KEEP_OUT m of a guard rail, a fence, a wall (and the backfill behind it), a building, the
   railway or a bridge parapet: there the step is the real one (an embankment behind a guard rail, a kerb
-  against a wall, a plinth);
-- the road paint over the faces that went down (an edge line near the edge) down with them, so that it stays
-  markings_net.LIFT over the road.
-The changed files get the date of the patch; everything else is copied as it is. The report measures the
-edges before and after.
+  against a wall, a plinth).
+The terrain gets the date of the patch; everything else is copied as it is. The report measures the edges
+before and after.
 
 Usage: python patch_paved_edges.py <in.zip> <out.zip> [--report <json>]
 """
-import argparse, json, os, re, sys, zipfile
+import argparse, json, os, sys, zipfile
 import numpy as np
-import markings_net
 import optimize_level
 import osm_surface
 import patch_lamps as pl
@@ -35,11 +32,10 @@ import patch_wall_fill as pw
 import road_mesh
 from config import LEVEL_NAME
 
-PAVED = tuple(m for g in osm_surface.MATS.values() for c, m in g.items() if c in ("hard", "sett", "cobble")) + \
-    ("mp_road_asphalt_fresh", "mp_sidewalk")
-EDGE_DROP = 0.08            # m, deepest an outer edge goes down
+PAVED = tuple(m for g in osm_surface.MATS.values() for c, m in g.items()
+              if c in ("hard", "sett", "cobble") and not m.startswith("mp_path_")) + ("mp_road_asphalt_fresh", "mp_sidewalk")
+EDGE_DROP = 0.0             # m: the faces stay as they are
 KEEP_OUT = 2.0              # m around guard rails, fences, walls, buildings, railway, parapets
-CLAMP = 0.02                # m, the raised terrain under every face once the edges went down
 SAMPLE = 0.5                # m between the samples along the edges of their faces
 KEEP_GROUPS = ("roads/guardrails", "roads/fences", "walls", "buildings", "railway")
 PARAPET = ("mp_bridge_parapet",)
@@ -87,63 +83,6 @@ def keep_out_cells(zi, lv):
     return np.unique(np.concatenate([base + o for o in offs]))
 
 
-def drape(zi, shapes):
-    """The paint (MissionGroup/roads/markings: markings.dae and markings_net_*.dae, markings_net.LIFT over the
-    road) down with the faces under it that went down: {entry: new DAE bytes} of the paint shapes that change.
-    The road faces only move in height, so the old and the new face under a paint vertex are the same face."""
-    lv = f"levels/{LEVEL_NAME}"
-    pos = {o["shapeName"].lstrip("/"): np.asarray(o.get("position", [0, 0, 0]), np.float64)
-           for o in pl.read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json")
-           if o.get("class") == "TSStatic" and "shapeName" in o}
-    old, new = [], []
-    for name, data in shapes.items():
-        if not name.endswith(".dae"):
-            continue
-        V0, _, _, _, parts, _ = optimize_level.parse(zi.read(name).decode("utf-8"))
-        V1 = optimize_level.parse(data.decode("utf-8"))[0]
-        p = pos.get(name, np.zeros(3))
-        moved = np.abs(V1[:, 2] - V0[:, 2]) > 1e-4
-        for _, idx in parts:
-            T = idx[:, 0].reshape(-1, 3)
-            T = T[moved[T].any(1)]
-            t = V0[T] + p
-            n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
-            up = n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-12) > 0.5     # top faces, not the edge faces
-            old.append(t[up])
-            new.append(V1[T[up]] + p)
-    if not old:
-        return {}
-    S0, S1 = road_mesh.TriSurface(np.concatenate(old)), road_mesh.TriSurface(np.concatenate(new))
-    lo, hi = S0.t[:, :, :2].min((0, 1)), S0.t[:, :, :2].max((0, 1))
-    out, nv = {}, 0
-    for o in pl.read_items(zi, f"{lv}/main/MissionGroup/roads/markings/items.level.json"):
-        sn = o.get("shapeName", "").lstrip("/")
-        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo:
-            continue
-        text = zi.read(sn).decode("utf-8")
-        V = optimize_level.parse(text)[0]
-        W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
-        q = np.flatnonzero(((W[:, :2] >= lo) & (W[:, :2] <= hi)).all(1))
-        if not len(q):
-            continue
-        under = W[q, 2] - markings_net.LIFT
-        h0 = S0.height(W[q, 0], W[q, 1], "near", under)
-        ok = np.isfinite(h0) & (np.abs(h0 - under) < 0.03)        # on a face that went down, not a bridge over it
-        q, h0 = q[ok], h0[ok]
-        dz = S1.height(W[q, 0], W[q, 1], "near", h0) - h0
-        ok = np.isfinite(dz) & (dz < -0.001)
-        if not ok.any():
-            continue
-        V2 = V.copy()
-        V2[q[ok], 2] += dz[ok]
-        fmt = " ".join(("%.3f" % v).rstrip("0").rstrip(".") for v in V2.ravel())
-        out[sn] = re.sub(r'(<float_array id="g-pa" count="\d+">)[^<]*(</float_array>)',
-                         lambda m: m.group(1) + fmt + m.group(2), text, count=1).encode("utf-8")
-        nv += int(ok.sum())
-    print("paint vertices lowered with the edges: %d, in %d shapes" % (nv, len(out)), flush=True)
-    return out
-
-
 def measure(zp, keep_out):
     """The outer edges of the paved faces of a zip, out of the keep-out cells: their height over the terrain
     0.3 m beyond them (median, 75th and 90th percentiles, shares over 0.15 and 0.3 m), their length, and the
@@ -188,13 +127,13 @@ def main(src, dst, report=None):
           flush=True)
     before = measure(src, keep)
     print("before:", before, flush=True)
-    pu.main(src, dst, mats=PAVED, edge_drop=EDGE_DROP, keep_out=keep, more=drape, clamp=CLAMP)
+    pu.main(src, dst, mats=PAVED, edge_drop=EDGE_DROP, keep_out=keep)
     after = measure(dst, keep)
     print("after:", after, flush=True)
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump({"source": os.path.basename(src), "materials": list(PAVED), "edge_drop_m": EDGE_DROP,
-                   "terrain_under_faces_m": CLAMP, "keep_out_m": KEEP_OUT, "keep_out_km2": round(len(keep) / 1e6, 2),
+                   "terrain_under_faces_m": pu.EPS, "keep_out_m": KEEP_OUT, "keep_out_km2": round(len(keep) / 1e6, 2),
                    "paved_outer_edges_before": before, "paved_outer_edges_after": after}, open(report, "w"), indent=1)
     return 0
 
