@@ -396,16 +396,17 @@ Checked without the game: `verifica/v2.8/catenary/`; in the game: `run_catenary_
 `patch_lamps.py` and away from the panoramas' route:
 - **delineators** on the AI roads of drivability ≥ 0.9 (swissTLM3D roads of 6 m and more), on both sides, every 50 m,
   every 25 m in bends under 300 m of radius and 12.5 m under 100 m; 0.5 m beyond the carriageway edge on ground within
-  0.6 m of its height; not where a guard rail, fence, wall, building or another road is, not within 12 m of another
-  road's axis. The post of props.py (white, black band towards the road, 1 m high), pipeline meshes in 384 m tiles
+  0.6 m of its height; not where a guard rail, fence, wall, building, the railway or another road is, not within 12 m
+  of another road's axis. The post of props.py (white, black band towards the road, 1 m high), pipeline meshes in 384 m tiles
   (`art/shapes/props/roadside_*.dae`) drawn up to 300 m, without collision (a plastic post a car knocks over). On v2.7:
-  507;
+  499;
 - **wooden pole lines** on the roads of drivability 0.5-0.8 (3 and 4 m) with a building within 60 m, on one side,
   every 45 m, 1.5 m beyond the edge, only lines of 4 poles or more: the game's `electric_pole_wood_old_01.dae`
   (10.05 m at scale 1, from the cantonal road's poles) at 0.85, with collision; a cable from the top of a pole to the
   next (0.25 m under the top, sagging by 1.5 % of the span, `mp_cable` in `roadside.materials.json`). The attachment
-  points of the game model are not known without the game: the cable starts at the pole's axis. On v2.7: 628 poles,
-  124 lines, 504 spans.
+  points of the game model are not known without the game: the cable starts at the pole's axis. A line ends where its
+  cable would pass within 1 m of a street lamp (those of `patch_lamps.py`, which runs before) or a roof, and goes on
+  from the next pole if 4 are left; no pole on the railway. On v2.7: 591 poles, 471 spans.
 
 `render3d.py` draws the game models it cannot load as posts of their known height (`POST_HEIGHT`). Checked without
 the game: `verifica/v2.8/roadside/`; in the game: `run_roadside_screenshots.ps1`.
@@ -435,11 +436,12 @@ There are no open data on street lamps: `patch_lamps.py <in.zip> <out.zip> [--vi
 places them by a rule. A point of a road of the AI network is in a village where at least 6 existing buildings of the
 Federal Register (`dati/gwr_area.json.gz`, at least 30 m²) stand within 45 m. There a lamp every 30 m, 0.6 m beyond
 the edge of the carriageway (the `mp_road_*` faces), on the side of the previous lamp where it can stand: on a
-pavement, a yard or the ground within 0.6 m of the height of the road edge, not on a carriageway, under a roof or on
-a wall, 1 m clear of furniture, sign poles, guard rails, fences and trunks, 9 m from the axis of another road (a
-junction) and 18 m from any other lamp. None along the panoramas' route (the cantonal road), where the lamps are
+pavement, a yard or the ground within 0.6 m of the height of the road edge, not on a carriageway, within 0.5 m of a
+roof (the gutters and downpipes of `patch_house_details.py` hang there), on a wall or on the railway, 1 m clear of
+furniture, sign poles, guard rails, fences and trunks, 9 m from the axis of another road (a junction) and 18 m from any
+other lamp. None along the panoramas' route (the cantonal road), where the lamps are
 the measured ones. The model is the one of those lamps (`italy_light_single.dae` of the game's Italy level,
-referred to), arm towards the road. On v2.7: 1,779 new lamps; rejected tries are counted in the report (most in the
+referred to), arm towards the road. On v2.7: 1,758 new lamps; rejected tries are counted in the report (most in the
 old towns: a wall or a building at the edge of the road).
 
 The lights: `props.py` puts a PointLight under every lamp head since v2.4, but the release builds take the cantonal

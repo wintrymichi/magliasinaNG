@@ -14,7 +14,8 @@ Delineator posts along the main roads outside the villages, and wooden pole line
 ## Results (3D renderer)
 
 - The delineators stand along the ring of cantonal roads (Ponte Tresa – Caslano – Magliaso – Agno – Bioggio – Manno – Gravesano) and on the road towards Sessa, at the edge of the carriageway, with the black band towards the road. Where a guard rail, a wall or a building marks the edge there are none. There are none on the Magliaso–Pura cantonal road, which keeps its measured posts.
-- The pole lines, with their cable, follow the country roads past the scattered houses. Lines of fewer than 4 poles are left out (1,585 poles), because a lone pole carries nothing.
+- The pole lines, with their cable, follow the country roads past the scattered houses. Lines of fewer than 4 poles are left out (1,619 poles), because a lone pole carries nothing.
+- On v2.7: 499 delineators, 591 wooden poles in 471 spans. A line ends where its cable would pass within 1 m of a street lamp or of a roof over or beside it (41 places on v2.7; in the v2.8 chain also beside the new lamps, which run before: there 8 lamp columns stood within 0.5 m of a cable and cables went through houses at 18 places, `../build/`); no post or pole on the railway's track or ballast (101 places).
 
 ## Test in BeamNG.drive 0.39 (still to do)
 

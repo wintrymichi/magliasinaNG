@@ -14,7 +14,9 @@ Here, with no official data on where the lamps stand (a plausible rule, not thei
   width where there are none), on the side of the previous lamp of that road where it can stand,
   otherwise on the other side. A lamp stands on a pavement, a yard or the ground within STEP m of the
   height of the road edge (not under a road on a bridge or a wall), not on a carriageway nor within
-  half the width + LATERAL of the axis of another road of the AI network, not in a building or on a wall,
+  half the width + LATERAL of the axis of another road of the AI network, not in a building or within
+  ROOF_CLEAR m of its roof (the gutters and downpipes of patch_house_details.py hang there), not on a wall
+  nor on the railway's track and ballast,
   at least CLEAR m from street furniture, sign poles, guard rails, fences and tree trunks, not within
   JUNCTION m of another road's axis (a junction) and at least MIN_GAP m from every other lamp;
 - none on the cantonal road covered by the panoramas (within PANO_R m of their route): the lamps there
@@ -51,11 +53,13 @@ SPACING = 30.0                          # m between two lamps along a road
 LATERAL = 0.6                           # m beyond the edge of the carriageway
 STEP = 0.6                              # m, the ground under a lamp at most this far from the road edge height
 CLEAR = 1.0                             # m from furniture, poles, guard rails, fences, trunks
+ROOF_CLEAR = 0.5                        # m from the outline of a roof (its gutter and downpipes, v2.8)
 JUNCTION = 9.0                          # m from the axis of another road
 MIN_GAP = 18.0                          # m between two lamps
 PANO_R = 30.0                           # m around the route of the panoramas (cantonal road)
 HEAD = (1.2, 8.75)                      # m, lamp head at scale 1: along the arm, up
 CARRIAGEWAY = re.compile(r"^mp_road_(?!wall)")
+EAVES = np.array([[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]])
 
 
 def read_items(zi, name):
@@ -139,6 +143,7 @@ def main(src, dst, village_lights=False, report=None):
     GROUND = road_mesh.TriSurface(np.concatenate([t for m, t in road.items() if not CARRIAGEWAY.match(m)]))
     ROOF = road_mesh.TriSurface(np.concatenate(list(faces(zi, lv, ["buildings"]).values())))
     WALL = road_mesh.TriSurface(np.concatenate(list(faces(zi, lv, ["walls"], keep=lambda sn: "backfill" not in sn).values())))
+    RAIL = road_mesh.TriSurface(np.concatenate(list(faces(zi, lv, ["railway"]).values()) or [np.zeros((0, 3, 3))]))
     obst = cKDTree(obstacle_points(zi, lv))
     print("faces: %d carriageway, %d other road, %d roofs, %d wall tops; %d obstacle points"
           % (len(CARR.t), len(GROUND.t), len(ROOF.t), len(WALL.t), obst.n), flush=True)
@@ -163,7 +168,7 @@ def main(src, dst, village_lights=False, report=None):
     atree = cKDTree(allp)
 
     lamps = np.array([o["position"][:2] for o in old_lamps], np.float64).reshape(-1, 2)
-    new, why = [], {"tried": 0, "carriageway": 0, "step": 0, "building": 0, "wall": 0, "clear": 0, "gap": 0}
+    new, why = [], {"tried": 0, "carriageway": 0, "step": 0, "building": 0, "wall": 0, "railway": 0, "clear": 0, "gap": 0}
 
     def try_place(c, t, w, side, road):
         """Lamp beside the axis point c (tangent t, width w) of the AI road `road` on side +1 (right) or -1:
@@ -187,11 +192,15 @@ def main(src, dst, village_lights=False, report=None):
         if not (-0.4 <= z - ze <= STEP):
             why["step"] += 1
             return None
-        if np.isfinite(ROOF.height([p[0]], [p[1]], "high")[0]):
+        eaves = p + ROOF_CLEAR * EAVES
+        if np.isfinite(ROOF.height(eaves[:, 0], eaves[:, 1], "high")).any():
             why["building"] += 1
             return None
         if np.isfinite(WALL.height(ring[:, 0], ring[:, 1], "high")).any():
             why["wall"] += 1
+            return None
+        if np.isfinite(RAIL.height(ring[:, 0], ring[:, 1], "high")).any():
+            why["railway"] += 1
             return None
         k = [x for x in atree.query_ball_point(p, 8.0) if ids[x] != road]     # in the way on another road
         if k and np.any(np.hypot(*(allp[k] - p).T) < allw[k] / 2 + LATERAL - 0.05):

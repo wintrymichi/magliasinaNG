@@ -14,7 +14,8 @@ Street lamps along the roads of the villages, and the lights of the street lamps
 
 ## Results (3D renderer)
 
-- 1,779 new lamps (Tresa 340, Lema 252, Agno 232, Bioggio 187, Gravesano 130, Caslano 128, Manno 111, Pura 100, Cademario 86, Vernate 68, Magliaso 52, Aranno 40, Alto Malcantone 38, Neggio 13, Lamone 2), about one every 30 m on one side of the village streets, at the edge of the carriageway, not at junctions.
+- 1,758 new lamps (Tresa 335, Lema 248, Agno 232, Bioggio 184, Gravesano 129, Caslano 127, Manno 110, Pura 100, Cademario 83, Vernate 68, Magliaso 50, Aranno 40, Alto Malcantone 37, Neggio 13, Lamone 2), about one every 30 m on one side of the village streets, at the edge of the carriageway, not at junctions.
+- None within 0.5 m of a roof, nor on the track and ballast of the railway (the first version: 1,779 lamps, tested against the roof at the foot only; in the v2.8 chain 25 lamp columns had a gutter or downpipe of `patch_house_details.py` within 0.3 m, and 3 lamps stood on the ballast: `../build/`).
 - Few in the old towns (Novaggio, Agno): the houses stand at the edge of the road, and there the real lamps hang on the walls.
 - Some stand in car parks crossed by a road of the AI network; that is plausible.
 - The 73 lamps of v2.7 get their lights. The new ones get lights only in the `_lights` variant.

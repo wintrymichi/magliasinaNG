@@ -7,7 +7,8 @@ hazards OSM records on a road (1.13, 1.23, 1.24, 1.07) and the parking signs at 
 public car parks (4.17). They are drawn by signs_ch.py and put up as patch_signs.py does: a grey steel
 pole beside the carriageway, on the right of the traffic that reads them (else on the left), on free
 ground (not on a carriageway, a building or a wall, not within patch_signs.CLEAR m of a pole already
-there); one with no room within 2 m is left out (counted). A sign within SPACING m of one the same traffic
+there, the street lamps, delineators, wooden poles and catenary masts of v2.8 included); one with no room
+within 2 m is left out (counted). A sign within SPACING m of one the same traffic
 already reads goes BACK m further back, so that one plate does not hide the other. Their mesh is a new shape
 (art/shapes/props/props_signs_v28.dae, one object in the props/osm group, collision like the other
 poles) with its own materials file for the plates v2.7 does not have; everything else is copied as it is.
@@ -30,8 +31,8 @@ BACK = 12.0               # m, by this much (once), so that one plate does not h
 
 
 def existing_poles(z):
-    """[(x, y)] of the poles already in the level: those patch_signs.existing_props knows and the poles of
-    the v2.7 signs (props_signs.dae, mp_ch_pole)."""
+    """[(x, y)] of the poles already in the level: those patch_signs.existing_props knows, the poles of
+    the v2.7 signs (props_signs.dae, mp_ch_pole), and what the v2.8 patches before this one put up (v2_8_posts)."""
     P, _, _ = ps.existing_props(z)
     f = f"{LEVEL}/art/shapes/props/props_signs.dae"
     if f in z.namelist():
@@ -39,7 +40,32 @@ def existing_poles(z):
         for mat, idx in parts:
             if mat == "mp_ch_pole":
                 P = np.concatenate([P, np.unique(np.round(V[idx[:, 0]][:, :2] * 4) / 4, axis=0)])
-    return P
+    return np.concatenate([P, v2_8_posts(z)])
+
+
+def v2_8_posts(z):
+    """(k, 2) of the street lamps and wooden poles (the position of the game model) and of the delineators and
+    catenary masts (the vertices of their meshes) that patch_lamps, patch_roadside and patch_catenary put up."""
+    import optimize_level
+    items = lambda f: [json.loads(l) for l in z.read(f).decode("utf-8").splitlines() if l.strip()]
+    mg = f"{LEVEL}/main/MissionGroup"
+    out = [np.zeros((0, 2))]
+    for g in ("props/street_lights", "props/country_poles"):
+        f = f"{mg}/{g}/items.level.json"
+        if f in z.NameToInfo:
+            out.append(np.array([o["position"][:2] for o in items(f) if o.get("class") == "TSStatic"], float).reshape(-1, 2))
+    for g, mat in (("props/delineators", "mp_delineator_white"), ("railway", "mp_catenary_steel")):
+        f = f"{mg}/{g}/items.level.json"
+        for o in items(f) if f in z.NameToInfo else []:
+            sn = o.get("shapeName", "").lstrip("/")
+            if o.get("class") != "TSStatic" or sn not in z.NameToInfo:
+                continue
+            V, _, _, _, parts, _ = optimize_level.parse(z.read(sn).decode("utf-8"))
+            W = V[:, :2] + np.asarray(o.get("position", [0, 0, 0]), float)[:2]
+            for m, idx in parts:
+                if m == mat:
+                    out.append(np.unique(np.round(W[idx[:, 0]] * 4) / 4, axis=0))
+    return np.concatenate(out)
 
 
 def main(src, dst, report=None):
