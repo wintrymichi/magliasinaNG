@@ -184,6 +184,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Piers and boats (v2.8, in progress) | `patch_lake.py`, `lake_tour.py`, `run_lake_screenshots.ps1` | the piers OpenStreetMap maps on the Swiss shore (fixed on wooden posts or floating on pontoons, a plank deck drawn here) and low-poly boats at the piers where boats moor; meshes in 512 m tiles in `props/lake`; into a built zip |
 | House details (v2.8, in progress) | `patch_house_details.py`, `houses_tour.py`, `run_houses_screenshots.ps1` | gutters along the eaves of every pitched roof and downpipes at the ends of their runs, from the roof meshes of the level; on the houses of the Federal Register, by a rule, TV aerials, satellite dishes and solar panels; meshes in 512 m tiles (panels 1024 m) in `buildings/details`, no collision; into a built zip |
 | Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
+| The v2.8 zip (in progress) | `patch_v2_8.py`, `v28_tour.py`, `run_v28_screenshots.ps1` | the v2.7 zip through the nine v2.8 patches in their order (the ground first, then what stands on it), as `release_v2.8.yml` and the *v2.8 build test* workflow (`v28_build_test.yml`) run them; the 42 views of the nine checks together, for the test of the whole zip in the game (`verifica/v2.8/final_test_plan.md`) |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -194,6 +195,31 @@ The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = do
 ## Technical notes by version
 
 What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
+
+### Version 2.8 (in progress): the build and the release
+
+v2.8 is the v2.7 release zip through the nine v2.8 patch scripts, in this order: `patch_v2_8.py <v2.7 zip> <v2.8 zip>
+[--reports <dir>] [--village-lights]` runs them one after the other (each reads the zip the one before wrote; the
+intermediate zips are deleted as it goes).
+
+| | Patch | Why there |
+|---|---|---|
+| 1 | `patch_paved_edges.py` | it changes the terrain heights: first, so that everything placed after it stands on the v2.8 ground |
+| 2 | `patch_wall_fill.py` | the normals of the backfill from the terrain heights, the verge layers without grass |
+| 3 | `patch_understory.py` | the forest floor layers and their verge twins, the undergrowth GroundCover (it refuses a zip that has the forest verge layers already) |
+| 4-9 | `patch_lamps.py`, `patch_roadside.py`, `patch_catenary.py`, `patch_signs_more.py`, `patch_lake.py`, `patch_house_details.py` | objects on the ground; each one keeps clear of what is there before it |
+
+The patches read nothing but the zip: building v2.8 needs no download. `--reports <dir>` writes every patch's report
+there; the last line printed is a digest of the zip's contents (the names, sizes and CRC-32 of its entries, not their
+dates), so two builds from the same v2.7 zip with the same patches can be compared. `--village-lights` gives the variant
+with the lights of the new street lamps (`patch_lamps.py --village-lights`), whose frame rate is still to be measured.
+
+- `.github/workflows/v28_build_test.yml` (*v2.8 build test*): builds the zip on a GitHub server, runs `check_level.py`
+  and `drive_test.py` on v2.7 and on v2.8 (with the work data they need, built there) and uploads the zip, the reports and
+  the four results as an artifact. Nothing is published.
+- `.github/workflows/release_v2.8.yml` (*Release v2.8*): started by hand, only after the test of the whole zip in the game
+  (`verifica/v2.8/final_test_plan.md`, `run_v28_screenshots.ps1`); it refuses to run while `RELEASE_v2.8.md` is still
+  the draft or if the v2.8 release exists, builds the zip as above and publishes it with `RELEASE_v2.8.md`.
 
 ### Version 2.8 (in progress): the ground behind the walls
 
