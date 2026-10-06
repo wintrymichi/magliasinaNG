@@ -181,6 +181,8 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Delineators and pole lines (v2.8, in progress) | `patch_roadside.py`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; into a built zip |
 | Paved edges flush (v2.8, in progress) | `patch_paved_edges.py` (with `patch_unpaved.main`), `paved_tour.py`, `run_paved_screenshots.ps1` | the terrain raised to 4 cm under the outer edges of the asphalt, sett, cobble and pavement meshes (the meshes unchanged), not within 2 m of a guard rail, fence, wall, building, the railway or a bridge parapet; into a built zip, before the other v2.8 patches (it changes the terrain heights) |
 | Warning and parking signs (v2.8, in progress) | `signs_more.py`, `patch_signs_more.py`, `signs_ch.py` (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24), `signs_more_tour.py`, `run_signs_more_screenshots.ps1` | the signs OpenStreetMap does not map, by the Swiss rules: curve warnings before the unexpected sharp curves of the main roads outside the villages, the warnings of the level crossings, the hazards OSM records on a road, the parking signs at the public car parks; put up as `patch_signs.py` does, into a built zip (after `patch_paved_edges.py`: the poles stand on the ground) |
+| Piers and boats (v2.8, in progress) | `patch_lake.py`, `lake_tour.py`, `run_lake_screenshots.ps1` | the piers OpenStreetMap maps on the Swiss shore (fixed on wooden posts or floating on pontoons, a plank deck drawn here) and low-poly boats at the piers where boats moor; meshes in 512 m tiles in `props/lake`; into a built zip |
+| House details (v2.8, in progress) | `patch_house_details.py`, `houses_tour.py`, `run_houses_screenshots.ps1` | gutters along the eaves of every pitched roof and downpipes at the ends of their runs, from the roof meshes of the level; on the houses of the Federal Register, by a rule, TV aerials, satellite dishes and solar panels; meshes in 512 m tiles (panels 1024 m) in `buildings/details`, no collision; into a built zip |
 | Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
@@ -284,6 +286,54 @@ room; 9 new textures of 256 px or less. Checked without the game: `verifica/v2.8
 `run_signs_more_screenshots.ps1`. Direction signs are not drawn: the data in the repository have the communes, not
 the villages they merged (Tresa, Lema, Alto Malcantone), so a sign would name the wrong place; swissNAMES3D would give
 them.
+
+### Version 2.8 (in progress): piers and boats on the lake
+
+Up to v2.7 the shore of the Lake of Lugano had no pier: the lidos, the boat clubs and the landing stages ended at
+the water. `patch_lake.py <in.zip> <out.zip> [--report <json>]` builds every pier OpenStreetMap maps on the Swiss side
+(`man_made=pier`, lines and areas) over the water as the level has it (the WaterBlocks `LagoDiLugano`, 270.48 m):
+- fixed piers (no `floating`): a plank deck 0.75 m over the water, beams 0.22 m deep, square wooden posts every 3 m on
+  both sides down into the lake bed; floating ones (`floating=yes`): a deck 0.40 m over the water on dark pontoons
+  reaching 0.30 m under it, steel guide piles every 12 m, alternate sides, 1.6 m over the water; 2.0 / 2.4 m wide
+  where OSM has no `width`. The planks are a texture drawn by the script (`t_pier_planks_b.color.png`, boards
+  across the pier);
+- a pier mapped from the shore starts where the bank drops under the deck (the part on land is a path or a lawn
+  already); two piers mapped on land are left out;
+- boats at the piers where boats moor (a `mooring` tag, or a floating pier of 40 m or more): one every 3 m on both
+  sides, bow to the pier, a quarter of the berths empty, only where the water is 0.6 m deep or more under the whole
+  boat and nothing else stands: motor boats under a cover (blue, grey or beige) or open with an outboard, and sailing
+  boats with a cabin and a mast, 4.5-8 m long, low-poly, plain colours; the same every build (seeded by the pier's
+  OSM id);
+- meshes in 512 m tiles in `MissionGroup/props/lake`, with collision; piers drawn up to 600 m, boats up to 400 m.
+On v2.7: 23 piers (12 fixed, 11 floating, 954 m), 137 boats, 15,291 triangles and 2.5 MB in 16 shapes. Nothing on
+the Italian side. `render3d.py` knows the colours of the new materials. Checked without the game:
+`verifica/v2.8/lake/`; in the game: `run_lake_screenshots.ps1`. Not done: mooring buoys and the boats at them,
+stone shores, slipways (no data for the first two; the slipways are few).
+
+### Version 2.8 (in progress): gutters, downpipes, aerials, dishes, solar panels
+
+The buildings of the level are the swissBUILDINGS3D roofs and walls (`buildings.py`) with the windows, doors and
+balconies drawn on the façades: no gutter, no downpipe, nothing on the roofs. `patch_house_details.py <in.zip>
+<out.zip> [--report <json>]` adds them from the building meshes of the level and the Federal Register
+(`dati/gwr_area.json.gz`), by rules (no open data has them):
+- gutters along the eaves of every pitched roof: the boundary edges of the roof faces that are level (within 5 cm)
+  and lower than the roof beside them, chained into runs and joined where they run on straight; a channel 12 cm
+  wide and 10 cm deep just outside the wall, zinc grey or (a third of the roofs) copper, the same for a whole roof;
+- downpipes (8 cm square, down to the ground) at both ends of the runs of eaves of 4 m or more, the longest runs
+  first, 4 a roof at most;
+- on the roofs of the houses (GWR residential categories): a TV aerial (a mast and two cross-arms) on the ridge of
+  30 % of those built before 1991, a satellite dish on 20 % (turned to the satellites over the equator at 13 degrees
+  east), solar panels on 20 % of those with a roof face turned within 50 degrees of south of 12 m² or more (a
+  rectangle of panels 0.5 m inside the face, 10 cm over it, a texture drawn here); which house gets what is the same
+  every build (a hash of its EGID);
+- meshes in `MissionGroup/buildings/details`, no collision: gutters, downpipes, aerials and dishes in 512 m tiles
+  drawn up to 450 m, the panels in 1024 m tiles up to 1100 m. The game measures the drawing distance from the centre
+  of a shape, so the draw distance is over the radius of a tile (the details of a house are there when the camera
+  is near it); the tiles are not smaller, so that they add few objects to the level (tried: 256 m tiles, 813
+  objects).
+On v2.7: 7,212 houses; 305 km of gutters, 38,407 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels
+(16,151 m²); 547,354 triangles in 263 shapes. Checked without the game: `verifica/v2.8/houses/`; in the game:
+`run_houses_screenshots.ps1`, with the frame rate and memory (the map is at about 12 GB, #31).
 
 ### Version 2.8 (in progress): the railway's overhead line
 
