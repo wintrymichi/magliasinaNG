@@ -32,16 +32,23 @@
  "paved_outer_edges_after": {
   "edges_km": 443.0,
   "over_terrain_m": {
-   "p10": 0.05,
-   "median": 0.07,
-   "p75": 0.087,
-   "p90": 0.124
+   "p10": 0.051,
+   "median": 0.071,
+   "p75": 0.09,
+   "p90": 0.136
   },
-  "share_over_0.15m": 0.067,
-  "share_over_0.3m": 0.026,
+  "share_over_0.15m": 0.083,
+  "share_over_0.3m": 0.031,
   "terrain_over_the_faces_inside": {
    "share": 6e-05,
    "max_m": 3.315
   }
+ },
+ "terrain_vertices_raised": {
+  "vertices": 1244297,
+  "median_m": 0.132,
+  "p95_m": 0.417,
+  "max_m": 0.987,
+  "in_keep_out": 0
  }
 }

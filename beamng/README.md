@@ -282,13 +282,19 @@ v2.6 zip: the same terrain and road shapes as the v2.7 release):
 - the paved paths are left out: the drive test runs its car along them with the wheels on the ground beside them;
 - nothing within 2 m of a guard rail, a fence, a wall (and the backfill behind it), a building, the railway or a
   bridge parapet (1 m cells around the outlines of their meshes: 5.7 km² in all): there the step is a real one,
-  an embankment behind a guard rail, a kerb against a wall, a plinth.
-On v2.7: 1.74 million terrain vertices raised (median 0.11 m), no face changed. The outer edges out of the keep-out
-zones (443 of the 973 km of edges of these surfaces) stand 7 cm over the ground 0.3 m beyond them instead of 21 cm
-(median; 90th percentile 12 instead of 46 cm; over 15 cm: 6.7 % instead of 74 %); the terrain over the faces inside
-the edges as in v2.7 (0.006 % of the points, 0.004 % in v2.7). Nothing is added: only the terrain file changes.
+  an embankment behind a guard rail, a kerb against a wall, a plinth. The faces there raise no terrain, and the
+  terrain vertices there stay as they were (`patch_unpaved.main` puts them back after the raise). The first merged
+  version only left the faces there out: the faces farther off still raised the terrain in the zone through their
+  4.5 m fade, 499,255 vertices, against the walls (106,348 within 0.75 m, 16,518 of them by over 0.3 m), fences
+  (median 0.33 m) and houses, up to 0.99 m.
+On v2.7: 1.24 million terrain vertices raised (median 0.13 m), none in the keep-out zones, no face changed. The outer
+edges out of the keep-out zones (443 of the 973 km of edges of these surfaces) stand 7 cm over the ground 0.3 m beyond
+them instead of 21 cm (median; 90th percentile 14 instead of 46 cm; over 15 cm: 8.3 % instead of 74 %); the terrain
+over the faces inside the edges as in v2.7 (0.006 % of the points, 0.004 % in v2.7). Nothing is added: only the
+terrain file changes.
 Checked without the game with `paved_tour.py` (`render3d.py` before and after at three places, a driver on the road
-and a low view along the edge): `verifica/v2.8/paved_edges/`; in the game: `run_paved_screenshots.ps1`.
+and a low view along the edge; the terrain raised by the first version and now beside a fence, a wall and a house,
+`keep_sites` and `keep_map`): `verifica/v2.8/paved_edges/`; in the game: `run_paved_screenshots.ps1`.
 
 ### Version 2.8 (in progress): warning and parking signs nobody mapped
 

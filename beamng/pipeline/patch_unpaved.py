@@ -323,8 +323,8 @@ def in_cells(cells, x, y):
 def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     """mats: the materials whose surroundings are raised and whose outer edges go down (default UNPAVED);
     edge_drop: the deepest an edge goes down (0: the faces stay as they are, only the terrain is raised);
-    keep_out: sorted 1 m cell ids (cell_ids) where no terrain is raised to the faces (v2.8,
-    patch_paved_edges.py)."""
+    keep_out: sorted 1 m cell ids (cell_ids) whose faces raise no terrain and whose terrain vertices stay as they
+    were (v2.8, patch_paved_edges.py)."""
     global UN, ALL, Z0, MAXH, QT
     mats = UNPAVED if mats is None else tuple(mats)
     zi = zipfile.ZipFile(src)
@@ -371,6 +371,11 @@ def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     print("%d blocks with unpaved faces" % len(keys))
     q = run(None)
     q = run(q)          # the vertices along the edges of the blocks, checked with both sides known
+    if keep_out is not None:                    # the ground there as it was, also where a face farther off raised it
+        rr, cc = np.nonzero(q != q0)
+        back = in_cells(keep_out, TER_X0 + cc * TER_SQUARE, TER_Y0 + rr * TER_SQUARE)
+        q[rr[back], cc[back]] = q0[rr[back], cc[back]]
+        print("terrain vertices in the keep-out left as they were: %d" % back.sum())
     ch = q != q0
     lift = (q[ch].astype(np.float64) - q0[ch]) / 65535.0 * MAXH
     print("terrain vertices raised: %d, by median %.2f m, 95th percentile %.2f m, at most %.2f m"
