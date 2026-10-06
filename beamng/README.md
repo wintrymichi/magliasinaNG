@@ -218,10 +218,11 @@ GitHub give the same digest; on Windows a few text plates are drawn in another f
 `--village-lights` gives the variant with the lights of the new street lamps (`patch_lamps.py --village-lights`),
 whose frame rate is still to be measured.
 
-What the patches do not yet check against each other, measured on the chained zip by `v28_check.py` (`verifica/v2.8/build/`):
-signs, catenary masts and house details do not see the lamps, delineators and wooden poles placed before them, the
-wooden poles' cables are not tested against lamps and roofs, and lamps and roadside posts do not treat the railway's
-ballast as solid.
+The patches keep clear of each other as they run: the lamps keep 0.5 m from the roofs (the gutters and downpipes of
+step 9 hang there) and off the railway, the wooden pole lines end where a cable would pass a lamp or a house, the
+signs keep clear of the lamps, delineators, wooden poles and catenary masts. The catenary masts and the house details
+do not look at the lamps and posts, which do not come close to them. `v28_check.py` measures it all on the chained zip
+(`verifica/v2.8/build/`): on the merged patches no object of one patch stands in one of another.
 
 - `.github/workflows/v28_build_test.yml` (*v2.8 build test*): builds the zip on a GitHub server, runs `check_level.py`
   and `drive_test.py` on v2.7 and on v2.8 (with the work data they need, built there) and uploads the zip, the reports,

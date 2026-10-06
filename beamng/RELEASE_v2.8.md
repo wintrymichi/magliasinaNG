@@ -5,17 +5,17 @@ BeamNG.drive (0.39) map of the **Malcantone**, version 2.8: the [v2.7](https://g
 
 ## Asphalt flush with the ground
 
-Up to v2.7 the paved roads, pavements and yards stood on the ground like a slab, with a trench beside them: their edge 21 cm over the ground beside it (median; 46 cm on one edge in ten). Now (`patch_paved_edges.py`) the ground beside them is raised to 4 cm under their edge: 7 cm between asphalt and ground 30 cm from the edge (median), and only 2.6 % of the edges more than 30 cm over the ground instead of 25 %. The asphalt itself does not move, so the roads drive as before (`drive_test.py`: the same or fewer knocks). Beside guard rails, fences, walls, houses, the railway and bridge parapets the step stays as it was.
+Up to v2.7 the paved roads, pavements and yards stood on the ground like a slab, with a trench beside them: their edge 21 cm over the ground beside it (median; 46 cm on one edge in ten). Now (`patch_paved_edges.py`) the ground beside them is raised to 4 cm under their edge: 7 cm between asphalt and ground 30 cm from the edge (median), and only 3.1 % of the edges more than 30 cm over the ground instead of 25 %. The asphalt itself does not move, so the roads drive as before (`drive_test.py`: the same or fewer knocks). Beside guard rails, fences, walls, houses, the railway and bridge parapets the step stays as it was.
 
 ## Street lamps
 
-Up to v2.7 only the Magliaso–Pura cantonal road had street lamps (68 where the panoramas show them, and 5 more). Now (`patch_lamps.py`) 1,785 more stand along the roads of the villages, about one every 30 m on one side of the road, with the same model: where at least six buildings of the Federal Register stand within 45 m, on the pavement or the verge, never on a carriageway, a wall, a bridge or in a building, clear of junctions, signs, furniture and trees. In the old towns, where the lamps hang on the walls, there are few.
+Up to v2.7 only the Magliaso–Pura cantonal road had street lamps (68 where the panoramas show them, and 5 more). Now (`patch_lamps.py`) 1,764 more stand along the roads of the villages, about one every 30 m on one side of the road, with the same model: where at least six buildings of the Federal Register stand within 45 m, on the pavement or the verge, never on a carriageway, a wall, a bridge, the railway or in a building nor within 0.5 m of a roof, clear of junctions, signs, furniture and trees. In the old towns, where the lamps hang on the walls, there are few.
 
 **The cantonal road's lamps light at night.** Their lights, described for v2.4, never reached a release (the release builds take the cantonal road's objects from the v1.1 zip, older than the lights); the 73 lamps of v2.7 have them now. The new lamps do not light: what that costs in frame rate is still to be measured.
 
 ## Between the villages
 
-White delineator posts with the black band stand on both sides of the main roads (6 m and wider) outside the villages, every 50 m on the straight and closer in the bends (507), except where a guard rail, a wall or a building already marks the edge; they have no collision, like the plastic posts a car knocks over. Lines of the game's wooden poles, one every 45 m with a cable between them, follow the country roads past the scattered houses (628 poles in 124 lines); a pole stops a car (`patch_roadside.py`).
+White delineator posts with the black band stand on both sides of the main roads (6 m and wider) outside the villages, every 50 m on the straight and closer in the bends (499), except where a guard rail, a wall or a building already marks the edge; they have no collision, like the plastic posts a car knocks over. Lines of the game's wooden poles, one every 45 m with a cable between them, follow the country roads past the scattered houses (543 poles in 110 lines; a line ends where its cable would pass a street lamp or a house); a pole stops a car (`patch_roadside.py`).
 
 ## Signs
 
@@ -23,7 +23,7 @@ v2.7 put up the signs OpenStreetMap maps and those its rules imply. Now (`patch_
 
 ## The railway's overhead line
 
-The FLP (and the SBB line where it crosses the map) ran without its catenary. Now (`patch_catenary.py`) steel masts stand beside the tracks every 50 m (closer in the bends), on the outside of the bends, with a cantilever, a messenger wire, droppers and the contact wire 5.5 m over the rails, staggered from mast to mast: 201 masts over 9.9 km of track. The masts stop a car, the wires do not.
+The FLP (and the few electrified standard-gauge tracks of the Vedeggio valley) ran without its catenary. Now (`patch_catenary.py`) steel masts stand beside the tracks every 50 m (closer in the bends), on the outside of the bends, with a cantilever, a messenger wire, droppers and the contact wire 5.5 m over the rails, staggered from mast to mast: 168 masts over 8.1 km of track, where OpenStreetMap marks the track electrified. The masts stop a car, the wires do not.
 
 ## Piers and boats on the lake
 
@@ -31,7 +31,7 @@ The 23 piers OpenStreetMap maps on the Swiss shore stand over the water (11 at C
 
 ## The houses
 
-Every pitched roof has its gutters along the eaves, in zinc or copper, and downpipes down the corners; and by a rule, TV aerials on a share of the older houses, satellite dishes turned to the satellites, and solar panels on some roofs facing south: 305 km of gutters, 38,377 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels (`patch_house_details.py`). They have no collision.
+Every pitched roof has its gutters along the eaves, in zinc or copper, and downpipes down the corners; and by a rule, TV aerials on a share of the older houses, satellite dishes turned to the satellites, and solar panels on some roofs facing south: 305 km of gutters, 38,405 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels (`patch_house_details.py`). They have no collision.
 
 ## The woods
 
@@ -39,11 +39,11 @@ The forest floor had the colour measured in the panoramas on the sunlit forest e
 
 ## The ground behind the walls
 
-Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh puts the ground back at its height: 63 ha in all. Up to v2.7 every triangle of that mesh was lit on its own, so the slopes behind the walls showed flat facets and saw teeth beside the smoothly shaded terrain. Now (`patch_wall_fill.py`) the mesh has the normals of the ground it restores: the same shapes, lit smoothly, with the same collision. The game's grass no longer grows through it, nor over walls lower than the grass (200,444 terrain vertices keep their material without grass); at the foot of the taller walls and on the meadows the grass stays.
+Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh puts the ground back at its height: 63 ha in all. Up to v2.7 every triangle of that mesh was lit on its own, so the slopes behind the walls showed flat facets and saw teeth beside the smoothly shaded terrain. Now (`patch_wall_fill.py`) the mesh has the normals of the ground it restores: the same shapes, lit smoothly, with the same collision. The game's grass no longer grows through it, nor over walls lower than the grass (200,441 terrain vertices keep their material without grass); at the foot of the taller walls and on the meadows the grass stays.
 
 ## Checked
 
-- **Without the game:** each change on its own with the pipeline's 3D renderer, before and after at the same views ([`beamng/verifica/v2.8/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8), one folder per change); the automatic checks of the whole level on v2.7 and on v2.8 (*v2.8 build test* workflow): `check_level.py` without a change, `drive_test.py` with the same or fewer knocks (hard knocks on the main roads 12,284 → 12,110, on the minor roads 142,463 → 142,342); the objects of the changes against each other in [`beamng/verifica/v2.8/build/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8/build).
+- **Without the game:** each change on its own with the pipeline's 3D renderer, before and after at the same views ([`beamng/verifica/v2.8/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8), one folder per change); the automatic checks of the whole level on v2.7 and on v2.8 (*v2.8 build test* workflow): `check_level.py` without a change, `drive_test.py` with the same or fewer knocks (hard knocks on the main roads 12,284 → 12,150, on the minor roads 142,463 → 142,383); no object of one change standing in one of another (lamps, delineators, wooden poles and their cables, signs, catenary masts, gutters, the railway), in [`beamng/verifica/v2.8/build/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8/build).
 - **In the game:** to be written after the test (load time, frame rate and memory against v2.7 at the same views, what was found and fixed).
 
 ## Limits
