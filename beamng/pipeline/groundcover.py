@@ -72,6 +72,38 @@ COVERS = {
 }
 
 
+# v2.8 (patch_understory.py): the undergrowth of the woods, low shrubs of the game's own models (the bushes the
+# level already uses, verified in the game) on the forest floor layers, only around the camera: a GroundCover
+# places them as it goes, without collision, nothing stored per shrub, culled beyond the radius.
+# (model, probability, scale min, max): about 0.6-1.5 m tall
+UNDERSTORY_SHAPES = [
+    ("/levels/italy/art/shapes/trees/trees_italy/generibush.dae", 1.0, 0.30, 0.55),
+    ("/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae", 0.7, 0.30, 0.50),
+    ("/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_c.dae", 0.4, 0.25, 0.40),
+    ("/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_b.dae", 0.3, 0.22, 0.35),
+]
+FOREST_LAYERS = ("ForestFloor", "ForestFloor2")
+# name, radius (m), dissolve radius, grid size, max elements, seed
+UNDERSTORY = ("understory", 60.0, 40.0, 8, 600, 21)
+
+
+def understory_object():
+    """The GroundCover of the undergrowth (UNDERSTORY_SHAPES on FOREST_LAYERS)."""
+    name, radius, dissolve, grid, max_el, seed = UNDERSTORY
+    types = []
+    for layer in FOREST_LAYERS:
+        for shape, p, smin, smax in UNDERSTORY_SHAPES:
+            t = _t(layer, [0, 0, 1, 1], p, smin, smax, 1, 2, 1.0, 0.0)
+            t.update(shapeFilename=shape, maxSlope=40)
+            types.append(t)
+    o = {"name": name, "class": "GroundCover", "persistentId": bng.pid(), "position": [0, 0, 0],
+         "material": "mp_gc_grass_short", "radius": radius, "dissolveRadius": dissolve, "gridSize": grid, "zOffset": 0,
+         "seed": seed, "maxElements": max_el, "maxBillboardTiltAngle": 40, "shapeCullRadius": radius,
+         "shapesCastShadows": False, "Types": types}
+    o.update(WIND)
+    return o
+
+
 def materials():
     out = []
     for name, (color, maps, alpha_ref) in MATERIALS.items():

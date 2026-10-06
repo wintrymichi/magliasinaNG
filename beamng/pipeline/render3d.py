@@ -49,7 +49,8 @@ MAT_COLORS = [
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
 # sRGB colour of every terrain layer (terrain.TERRAIN_MATS; the verges as their meadow): the ground where
-# there is no orthophoto in WORK (a level checked on a machine without the downloads, v2.8)
+# there is no orthophoto in WORK (a level checked on a machine without the downloads, v2.8), when the level
+# has no base texture for the layer (Level._layer_colors takes the median of those first)
 LAYER_COLORS = {"Grass": (0.40, 0.50, 0.27), "GardenGrass": (0.37, 0.49, 0.26), "ForestFloor": (0.33, 0.29, 0.21),
                 "ForestFloor2": (0.36, 0.32, 0.23), "Asphalt": (0.36, 0.36, 0.37), "Concrete": (0.55, 0.55, 0.53),
                 "Gravel": (0.58, 0.55, 0.48), "Rock": (0.50, 0.48, 0.45), "Mud": (0.36, 0.31, 0.25),
@@ -417,7 +418,7 @@ class Level:
 
     def _layer_colors(self):
         """In place of the orthophoto: (x, y) -> sRGB uint8 (3, k), the colour of the terrain layer at the
-        nearest terrain vertex."""
+        nearest terrain vertex: the median of its base colour texture in the level, else LAYER_COLORS."""
         n = self.n
         f = self.ter_path
         lay = np.memmap(f, np.uint8, "r", offset=5 + 2 * n * n, shape=(n, n))
@@ -426,7 +427,17 @@ class Level:
         for _ in range(int(np.frombuffer(tail[:4], "<u4")[0])):
             names.append(tail[o + 1:o + 1 + tail[o]].decode("utf-8"))
             o += 1 + tail[o]
-        lut = np.array([[round(255 * v) for v in LAYER_COLORS.get(m, (0.4, 0.45, 0.3))] for m in names], np.uint8)
+        base = {}
+        f_mat = os.path.join(self.lv, "art", "terrains", "main.materials.json")
+        if os.path.exists(f_mat):
+            from PIL import Image
+            for m in json.load(open(f_mat, encoding="utf-8")).values():
+                tex = self.local_file(m.get("baseColorBaseTex")) if m.get("class") == "TerrainMaterial" else None
+                if tex:
+                    a = np.asarray(Image.open(tex).convert("RGB")).reshape(-1, 3)
+                    base[m["internalName"]] = np.median(a, 0)
+        lut = np.array([base[m] if m in base else [round(255 * v) for v in LAYER_COLORS.get(m, (0.4, 0.45, 0.3))]
+                        for m in names], np.uint8)
 
         def fn(x, y):
             c = np.clip(np.round((np.asarray(x) - self.tx0) / self.sq).astype(np.int64), 0, n - 1)

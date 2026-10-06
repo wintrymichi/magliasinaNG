@@ -177,6 +177,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Far trees (v2.7) | `far_trees.py`, `patch_far_trees.py` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; into a built zip |
 | Ground behind the walls (v2.8, in progress) | `patch_wall_fill.py`, `wall_fill_tour.py`, `run_wall_fill_screenshots.ps1` | the backfill behind the retaining walls with the normals of the ground it restores (smooth, like the terrain) instead of one per triangle, and no game grass under it or over walls lower than the grass; geometry and terrain heights unchanged (checked by the script); into a built zip, first on the v2.7 zip; the places and views of its check, rendered with `render3d.py` or in the game |
 | Street lamps (v2.8, in progress) | `patch_lamps.py`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
+| Undergrowth (v2.8, in progress) | `patch_understory.py`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -219,6 +220,25 @@ textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed
 Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
 colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
 `run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
+
+### Version 2.8 (in progress): undergrowth and a darker forest floor
+
+`patch_understory.py <in.zip> <out.zip> [--report <json>]`:
+- the base textures of ForestFloor and ForestFloor2 (`art/terrains/t_base_forestfloor*_b.png`, the colour measured
+  by `terrain_colors.py` on the forest edges in the panoramas, 102, 98, 67) scaled to `FLOOR` (62, 66, 42), their noise
+  kept; the backfill behind the walls in the woods uses the same textures and follows;
+- a GroundCover `understory` (`groundcover.understory_object`): the bush models the level already uses
+  (`generibush`, `fluffy_bush` of Italy, `tree_beech_bush_c`, `tree_oak_bush_b` of East Coast USA, scaled to
+  0.6-1.5 m) on the two forest floor layers, within 60 m of the camera (fading from 40 m), at most 600 elements of 1-2
+  shrubs, no collision, no shadows;
+- the forest floor vertices of the terrain squares under a face of the road surfaces, walls (with the backfill),
+  buildings or railway, and one square around them, go to new terrain materials `ForestFloorVerge` and
+  `ForestFloor2Verge` (copies of the forest ones, the same textures) without the undergrowth: 980,953 of 26.1
+  million forest floor vertices. Terrain heights unchanged.
+
+No fern among the game models the level already uses (verified in the game); the undergrowth is low bushes.
+Checked without the game: `verifica/v2.8/understory/` (`render3d.py` draws the ground in the median colour of its
+layer's base texture, not the GroundCover). In the game: `run_understory_screenshots.ps1`.
 
 ### Version 2.8 (in progress): street lamps in the villages
 
