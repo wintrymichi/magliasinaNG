@@ -1,0 +1,14 @@
+{
+ "shapes": 333,
+ "houses": 7212,
+ "downpipes": 38407,
+ "aerials": 1903,
+ "dishes": 1483,
+ "pv": 398,
+ "pv_m2": 16151,
+ "source": "magliaso_pura_v2.7.zip",
+ "gutter_km": 304.7,
+ "detail_tiles": 207,
+ "panel_tiles": 56,
+ "triangles": 547354
+}

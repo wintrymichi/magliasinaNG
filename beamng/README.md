@@ -41,7 +41,7 @@ The metrics in `verifica/VERIFICA.md` concern the cantonal road in the local ver
 |---|---|---|
 | publish a release built from scratch | GitHub *Actions* → *Release v2.4* → *Run workflow* ([`release_v2.4.yml`](../.github/workflows/release_v2.4.yml)) | about 1 hour |
 | build it on your own machine | the commands under [Building without the game](#building-without-the-game) | depends on the machine, plus the downloads |
-| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_unpaved.py`, `patch_markings.py`, `patch_far_trees.py` and `patch_signs.py` (v2.7) | minutes |
+| change an already built zip | a patch script: `optimize_level.py` (v2.5), `patch_groundcover.py` (v2.6), `patch_unpaved.py`, `patch_markings.py`, `patch_far_trees.py` and `patch_signs.py` (v2.7), `patch_paved_edges.py`, `patch_wall_fill.py` and the other v2.8 patches (in progress; `patch_paved_edges.py` first, it changes the terrain heights the others stand on) | minutes |
 
 v2.6 is the v2.4 workflow's zip passed through the first two patch scripts; the current release, v2.7, adds four more, in this order (the paint follows the flattened dirt tracks):
 
@@ -175,6 +175,15 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Road markings, cleaned (v2.7) | `markings_clean.py`, `patch_markings.py` | the paint traced by `network_markings.py` redrawn as Swiss markings (smooth lines, regular dashes, standard crossings, no blobs); into a built zip |
 | Unpaved surfaces flush (v2.7) | `patch_unpaved.py` | the terrain raised to the edges of the dirt and gravel meshes (no trench beside them, never over a road face) and their outer edges lowered onto it: 1-2 cm between track and ground instead of about 0.3 m; into a built zip, before `patch_markings.py` (the paint follows the faces) |
 | Far trees (v2.7) | `far_trees.py`, `patch_far_trees.py` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; into a built zip |
+| Ground behind the walls (v2.8, in progress) | `patch_wall_fill.py`, `wall_fill_tour.py`, `run_wall_fill_screenshots.ps1` | the backfill behind the retaining walls with the normals of the ground it restores (smooth, like the terrain) instead of one per triangle, and no game grass under it or over walls lower than the grass; geometry and terrain heights unchanged (checked by the script); into a built zip, first on the v2.7 zip; the places and views of its check, rendered with `render3d.py` or in the game |
+| Street lamps (v2.8, in progress) | `patch_lamps.py`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
+| Undergrowth (v2.8, in progress) | `patch_understory.py`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; into a built zip |
+| Delineators and pole lines (v2.8, in progress) | `patch_roadside.py`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; into a built zip |
+| Paved edges flush (v2.8, in progress) | `patch_paved_edges.py` (with `patch_unpaved.main`), `paved_tour.py`, `run_paved_screenshots.ps1` | the terrain raised to 4 cm under the outer edges of the asphalt, sett, cobble and pavement meshes (the meshes unchanged), not within 2 m of a guard rail, fence, wall, building, the railway or a bridge parapet; into a built zip, before the other v2.8 patches (it changes the terrain heights) |
+| Warning and parking signs (v2.8, in progress) | `signs_more.py`, `patch_signs_more.py`, `signs_ch.py` (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24), `signs_more_tour.py`, `run_signs_more_screenshots.ps1` | the signs OpenStreetMap does not map, by the Swiss rules: curve warnings before the unexpected sharp curves of the main roads outside the villages, the warnings of the level crossings, the hazards OSM records on a road, the parking signs at the public car parks; put up as `patch_signs.py` does, into a built zip (after `patch_paved_edges.py`: the poles stand on the ground) |
+| Piers and boats (v2.8, in progress) | `patch_lake.py`, `lake_tour.py`, `run_lake_screenshots.ps1` | the piers OpenStreetMap maps on the Swiss shore (fixed on wooden posts or floating on pontoons, a plank deck drawn here) and low-poly boats at the piers where boats moor; meshes in 512 m tiles in `props/lake`; into a built zip |
+| House details (v2.8, in progress) | `patch_house_details.py`, `houses_tour.py`, `run_houses_screenshots.ps1` | gutters along the eaves of every pitched roof and downpipes at the ends of their runs, from the roof meshes of the level; on the houses of the Federal Register, by a rule, TV aerials, satellite dishes and solar panels; meshes in 512 m tiles (panels 1024 m) in `buildings/details`, no collision; into a built zip |
+| Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -185,6 +194,224 @@ The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = do
 ## Technical notes by version
 
 What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
+
+### Version 2.8 (in progress): the ground behind the walls
+
+The terrain is a 1.5 m grid and cannot hold a step inside a 0.3 m wall: `walls.carve_terrain` lowers every terrain
+vertex whose triangles touch a wall to the foot of the wall, and `walls.build_backfill` covers the trench this leaves on
+the high side with a mesh at the height of the ground as it was (784,035 triangles, 63 ha in v2.7). That mesh had one
+normal per triangle (`bng.flat_normals_soup`): in the game every triangle was lit on its own, flat facets and saw teeth
+beside a smoothly shaded terrain. And the game's grass grew on the terrain lowered under it (29 % of those vertices are
+less than 0.8 m under the backfill, the grass clumps up to 0.8 m tall) and over the walls lower than the grass.
+
+`patch_wall_fill.py <in.zip> <out.zip> [--report <json>]` changes neither the geometry nor the terrain heights (the
+script checks every backfill triangle, position and texture coordinate, and the heights of the `.ter`):
+- **normals**: every backfill vertex takes the normal of the ground it restores, computed like the terrain's own
+  (central differences over one terrain step) on the heights of the backfill at the terrain vertices and of the
+  terrain elsewhere; the vertices lowered to the foot of a wall and not covered are left out (one-sided differences).
+  On the edge where the backfill meets the visible terrain it takes the terrain's own normal, so the light does not
+  jump at the seam (tried the other way, with the ground's normal on the edge too: in the renders the outline of the
+  backfill shows as a line of light). The cut vertices inside a terrain square interpolate the normals of its corners.
+  Welded again, the backfill has 896,120 vertices instead of 1,551,036;
+- **grass**: the terrain vertices of the squares under the backfill, and those of the squares a wall passes through
+  from which the tallest grass (`groundcover.py`, 0.8 m) would reach over the wall top, go to the verge twins of their
+  layer (`terrain.VERGE`: the same material without grass, as along the roads since v2.4): 200,441 vertices
+  (183,889 under the backfill, 16,552 over low walls), 0.3 % of the terrain. At the foot of the taller walls and on
+  the rest of the meadows the grass stays.
+
+Not changed: the saw teeth themselves (the corners of the backfill alternate between the wall top and the meadow), the
+crests of the walls along noisy heights, and the colour of the backfill (the terrain's base texture without its detail
+textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed heights, a full build).
+
+Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
+colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
+`run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
+
+### Version 2.8 (in progress): paved edges flush with the ground
+
+The build carves the terrain 0.1 m under the lowest road face within one terrain step of every vertex
+(`network_mesh.carve_tile`), so that it stays under the road whatever the grade. Beside a road with nothing at its
+edge this leaves the asphalt standing on the ground like a slab, with a trench beside it. The dirt and gravel tracks
+were laid flush in v2.7 (`patch_unpaved.py`); `patch_paved_edges.py <in.zip> <out.zip> [--report <json>]` raises the
+terrain to the paved surfaces (asphalt, setts, cobbles, pavements, yards) with `patch_unpaved.main` (its materials,
+deepest drop and keep-out cells are parameters now; called without them it does what it did in v2.7, checked on the
+v2.6 zip: the same terrain and road shapes as the v2.7 release):
+- the terrain within 1.5 m of a paved top face raised to 4 cm under its height (fading back to the ground at 4.5 m,
+  only where the ground is lower, not where it lies more than 1 m under the road: an embankment or a bridge stays),
+  never over a road face;
+- the faces themselves stay as they are. The first version of the patch also lowered the outer edges onto the
+  raised terrain by up to 8 cm, as `patch_unpaved.py` does for the tracks: `check_level.py` did not change, but
+  `drive_test.py` counted 41 % more hard knocks on the main roads and 64 % more on the minor ones (the last strip of a
+  road tilts, by a different amount at every edge vertex, under the wheels of a car);
+- the paved paths are left out: the drive test runs its car along them with the wheels on the ground beside them;
+- nothing within 2 m of a guard rail, a fence, a wall (and the backfill behind it), a building, the railway or a
+  bridge parapet (1 m cells around the outlines of their meshes: 5.7 km² in all): there the step is a real one,
+  an embankment behind a guard rail, a kerb against a wall, a plinth.
+On v2.7: 1.74 million terrain vertices raised (median 0.11 m), no face changed. The outer edges out of the keep-out
+zones (443 of the 973 km of edges of these surfaces) stand 7 cm over the ground 0.3 m beyond them instead of 21 cm
+(median; 90th percentile 12 instead of 46 cm; over 15 cm: 6.7 % instead of 74 %); the terrain over the faces inside
+the edges as in v2.7 (0.006 % of the points, 0.004 % in v2.7). Nothing is added: only the terrain file changes.
+Checked without the game with `paved_tour.py` (`render3d.py` before and after at three places, a driver on the road
+and a low view along the edge): `verifica/v2.8/paved_edges/`; in the game: `run_paved_screenshots.ps1`.
+
+### Version 2.8 (in progress): warning and parking signs nobody mapped
+
+v2.7 put up the signs mapped one by one in OpenStreetMap and those the regulation OSM records implies
+(`signs_net.py`, `patch_signs.py`); a Swiss road also has warning and parking signs nobody maps (issue #21).
+`signs_more.py` places them by the rules (OSStr art. 3-4 and 103: a danger signal 150-250 m before the danger outside
+the villages, up to 50 m inside), only on the Swiss side, not where v2.7 has the same signal within 60 m for the same
+traffic:
+- **curves** (1.01 / 1.02): on the main roads (OSM primary, secondary, tertiary, trunk) outside the villages (a mapped
+  limit of 60 or more, or none and fewer than 6 buildings of the Federal Register within 45 m, as `patch_lamps.py`),
+  150 m before a curve under 60 m of radius turning more than 45 degrees that comes after 150 m of nearly straight road
+  (radius over 200 m) for the traffic going that way: an unexpected curve, not every bend of a mountain road (16
+  planned, 5 on roads the map builds). Sharp curves less than 200 m apart are one winding stretch: 1.03 / 1.04
+  (double curve, first to the right / left), its length under it (5.03) where over 300 m;
+- **level crossings** (1.15 with barriers, 1.16 without, from `crossing:barrier`): both ways on every road over a
+  `railway=level_crossing` node, 150 m before it outside the villages, 50 m inside, less where a junction comes first,
+  none closer than 20 m;
+- the **hazards OSM records on a road** (`hazard=falling_rocks` 1.13, `animal_crossing` 1.24, `school_zone` 1.23,
+  `road_narrows` 1.07): at both ends of the way, its length under it where over 100 m (on the Swiss side only falling
+  rocks so far: the lake road at Magliaso, Caslano);
+- **parking** (4.17): at the entrance of the public car parks (OSM `access` public, customers or permissive, 300 m²
+  or 10 places; with no access recorded 1000 m² or 40 places, else most likely the car park of a block of flats; a
+  `parking_entrance` node), where the drive into it leaves a road, for the traffic that has it on its right.
+`signs_ch.py` draws the new signals (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24) like the others, from shapes, no image.
+`patch_signs_more.py <in.zip> <out.zip> [--report <json>]` puts them up as `patch_signs.py` does (a grey pole beside the
+carriageway, on the right of the traffic that reads it, on free ground, not within 0.45 m of a pole already there) in
+a new shape (`props_signs_v28.dae`, collision like the other poles) with its own materials file for the plates v2.7
+does not have; a sign within 10 m of one the same traffic already reads goes 12 m back. On v2.7: 151 planned, 80 put
+up (54 parking, 10 + 8 level crossings, 5 curves, 3 falling rocks), 70 on roads the map does not build, 1 with no
+room; 9 new textures of 256 px or less. Checked without the game: `verifica/v2.8/signs/`; in the game:
+`run_signs_more_screenshots.ps1`. Direction signs are not drawn: the data in the repository have the communes, not
+the villages they merged (Tresa, Lema, Alto Malcantone), so a sign would name the wrong place; swissNAMES3D would give
+them.
+
+### Version 2.8 (in progress): piers and boats on the lake
+
+Up to v2.7 the shore of the Lake of Lugano had no pier: the lidos, the boat clubs and the landing stages ended at
+the water. `patch_lake.py <in.zip> <out.zip> [--report <json>]` builds every pier OpenStreetMap maps on the Swiss side
+(`man_made=pier`, lines and areas) over the water as the level has it (the WaterBlocks `LagoDiLugano`, 270.48 m):
+- fixed piers (no `floating`): a plank deck 0.75 m over the water, beams 0.22 m deep, square wooden posts every 3 m on
+  both sides down into the lake bed; floating ones (`floating=yes`): a deck 0.40 m over the water on dark pontoons
+  reaching 0.30 m under it, steel guide piles every 12 m, alternate sides, 1.6 m over the water; 2.0 / 2.4 m wide
+  where OSM has no `width`. The planks are a texture drawn by the script (`t_pier_planks_b.color.png`, boards
+  across the pier);
+- a pier mapped from the shore starts where the bank drops under the deck (the part on land is a path or a lawn
+  already); two piers mapped on land are left out;
+- boats at the piers where boats moor (a `mooring` tag, or a floating pier of 40 m or more): one every 3 m on both
+  sides, bow to the pier, a quarter of the berths empty, only where the water is 0.6 m deep or more under the whole
+  boat and nothing else stands: motor boats under a cover (blue, grey or beige) or open with an outboard, and sailing
+  boats with a cabin and a mast, 4.5-8 m long, low-poly, plain colours; the same every build (seeded by the pier's
+  OSM id);
+- meshes in 512 m tiles in `MissionGroup/props/lake`, with collision; piers drawn up to 600 m, boats up to 400 m.
+On v2.7: 23 piers (12 fixed, 11 floating, 954 m), 137 boats, 15,291 triangles and 2.5 MB in 16 shapes. Nothing on
+the Italian side. `render3d.py` knows the colours of the new materials. Checked without the game:
+`verifica/v2.8/lake/`; in the game: `run_lake_screenshots.ps1`. Not done: mooring buoys and the boats at them,
+stone shores, slipways (no data for the first two; the slipways are few).
+
+### Version 2.8 (in progress): gutters, downpipes, aerials, dishes, solar panels
+
+The buildings of the level are the swissBUILDINGS3D roofs and walls (`buildings.py`) with the windows, doors and
+balconies drawn on the façades: no gutter, no downpipe, nothing on the roofs. `patch_house_details.py <in.zip>
+<out.zip> [--report <json>]` adds them from the building meshes of the level and the Federal Register
+(`dati/gwr_area.json.gz`), by rules (no open data has them):
+- gutters along the eaves of every pitched roof: the boundary edges of the roof faces that are level (within 5 cm)
+  and lower than the roof beside them, chained into runs and joined where they run on straight; a channel 12 cm
+  wide and 10 cm deep just outside the wall, zinc grey or (a third of the roofs) copper, the same for a whole roof;
+- downpipes (8 cm square, down to the ground) at both ends of the runs of eaves of 4 m or more, the longest runs
+  first, 4 a roof at most;
+- on the roofs of the houses (GWR residential categories): a TV aerial (a mast and two cross-arms) on the ridge of
+  30 % of those built before 1991, a satellite dish on 20 % (turned to the satellites over the equator at 13 degrees
+  east), solar panels on 20 % of those with a roof face turned within 50 degrees of south of 12 m² or more (a
+  rectangle of panels 0.5 m inside the face, 10 cm over it, a texture drawn here); which house gets what is the same
+  every build (a hash of its EGID);
+- meshes in `MissionGroup/buildings/details`, no collision: gutters, downpipes, aerials and dishes in 512 m tiles
+  drawn up to 450 m, the panels in 1024 m tiles up to 1100 m. The game measures the drawing distance from the centre
+  of a shape, so the draw distance is over the radius of a tile (the details of a house are there when the camera
+  is near it); the tiles are not smaller, so that they add few objects to the level (tried: 256 m tiles, 813
+  objects).
+On v2.7: 7,212 houses; 305 km of gutters, 38,407 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels
+(16,151 m²); 547,354 triangles in 263 shapes. Checked without the game: `verifica/v2.8/houses/`; in the game:
+`run_houses_screenshots.ps1`, with the frame rate and memory (the map is at about 12 GB, #31).
+
+### Version 2.8 (in progress): the railway's overhead line
+
+`railway.py` builds the tracks from swissTLM3D but not the catenary ("its masts are not in the data", issue #21).
+`patch_catenary.py <in.zip> <out.zip> [--report <json>]` adds it on the tracks as the level has them:
+- the axes: the centre of the top of every sleeper box of the railway meshes (the duplicated sleepers of
+  overlapping lines removed), its length telling the gauge (1.90 m FLP, 2.60 m SBB); chained 1 m apart (the
+  released level has a sleeper every metre), the chains joined across the level crossings (no sleepers there) up to
+  30 m; electrified: all the metre gauge, the standard-gauge chains of 400 m or more (the line; the sidings of the
+  industrial zones are shorter);
+- a steel mast every 50 m (30 m in bends under 150 m of radius, 40 m under 400 m), 2.6 m (FLP) or 3.1 m (SBB) from the
+  axis on the outside of the bend or the other side, not on a carriageway, in a building or on a wall, not within 2 m
+  of another track's axis; 7.2 m over the rails, a cantilever to over the track;
+- the contact wire 5.5 m over the rails, staggered ±0.2 m, under a messenger wire from 6.7 m at the masts down to
+  0.35 m over the contact wire mid-span, droppers every 9 m; no wires over a gap of more than 75 m between masts;
+- meshes in 512 m tiles in the railway group: the masts with collision (drawn up to 800 m), the wires without (up to
+  400 m), materials in `art/shapes/railway/catenary.materials.json`.
+On v2.7: 11,504 sleepers, 20 chains, 9.9 km electrified, 201 masts (median span 50 m), 6 gaps without wires.
+Checked without the game: `verifica/v2.8/catenary/`; in the game: `run_catenary_screenshots.ps1`.
+
+### Version 2.8 (in progress): delineators and wooden pole lines
+
+`patch_roadside.py <in.zip> <out.zip> [--report <json>]`, by a rule (no open data), outside the villages of
+`patch_lamps.py` and away from the panoramas' route:
+- **delineators** on the AI roads of drivability ≥ 0.9 (swissTLM3D roads of 6 m and more), on both sides, every 50 m,
+  every 25 m in bends under 300 m of radius and 12.5 m under 100 m; 0.5 m beyond the carriageway edge on ground within
+  0.6 m of its height; not where a guard rail, fence, wall, building or another road is, not within 12 m of another
+  road's axis. The post of props.py (white, black band towards the road, 1 m high), pipeline meshes in 384 m tiles
+  (`art/shapes/props/roadside_*.dae`) drawn up to 300 m, without collision (a plastic post a car knocks over). On v2.7:
+  507;
+- **wooden pole lines** on the roads of drivability 0.5-0.8 (3 and 4 m) with a building within 60 m, on one side,
+  every 45 m, 1.5 m beyond the edge, only lines of 4 poles or more: the game's `electric_pole_wood_old_01.dae`
+  (10.05 m at scale 1, from the cantonal road's poles) at 0.85, with collision; a cable from the top of a pole to the
+  next (0.25 m under the top, sagging by 1.5 % of the span, `mp_cable` in `roadside.materials.json`). The attachment
+  points of the game model are not known without the game: the cable starts at the pole's axis. On v2.7: 628 poles,
+  124 lines, 504 spans.
+
+`render3d.py` draws the game models it cannot load as posts of their known height (`POST_HEIGHT`). Checked without
+the game: `verifica/v2.8/roadside/`; in the game: `run_roadside_screenshots.ps1`.
+
+### Version 2.8 (in progress): undergrowth and a darker forest floor
+
+`patch_understory.py <in.zip> <out.zip> [--report <json>]`:
+- the base textures of ForestFloor and ForestFloor2 (`art/terrains/t_base_forestfloor*_b.png`, the colour measured
+  by `terrain_colors.py` on the forest edges in the panoramas, 102, 98, 67) scaled to `FLOOR` (62, 66, 42), their noise
+  kept; the backfill behind the walls in the woods uses the same textures and follows;
+- a GroundCover `understory` (`groundcover.understory_object`): the bush models the level already uses
+  (`generibush`, `fluffy_bush` of Italy, `tree_beech_bush_c`, `tree_oak_bush_b` of East Coast USA, scaled to
+  0.6-1.5 m) on the two forest floor layers, within 60 m of the camera (fading from 40 m), at most 600 elements of 1-2
+  shrubs, no collision, no shadows;
+- the forest floor vertices of the terrain squares under a face of the road surfaces, walls (with the backfill),
+  buildings or railway, and one square around them, go to new terrain materials `ForestFloorVerge` and
+  `ForestFloor2Verge` (copies of the forest ones, the same textures) without the undergrowth: 980,953 of 26.1
+  million forest floor vertices. Terrain heights unchanged.
+
+No fern among the game models the level already uses (verified in the game); the undergrowth is low bushes.
+Checked without the game: `verifica/v2.8/understory/` (`render3d.py` draws the ground in the median colour of its
+layer's base texture, not the GroundCover). In the game: `run_understory_screenshots.ps1`.
+
+### Version 2.8 (in progress): street lamps in the villages
+
+There are no open data on street lamps: `patch_lamps.py <in.zip> <out.zip> [--village-lights] [--report <json>]`
+places them by a rule. A point of a road of the AI network is in a village where at least 6 existing buildings of the
+Federal Register (`dati/gwr_area.json.gz`, at least 30 m²) stand within 45 m. There a lamp every 30 m, 0.6 m beyond
+the edge of the carriageway (the `mp_road_*` faces), on the side of the previous lamp where it can stand: on a
+pavement, a yard or the ground within 0.6 m of the height of the road edge, not on a carriageway, under a roof or on
+a wall, 1 m clear of furniture, sign poles, guard rails, fences and trunks, 9 m from the axis of another road (a
+junction) and 18 m from any other lamp. None along the panoramas' route (the cantonal road), where the lamps are
+the measured ones. The model is the one of those lamps (`italy_light_single.dae` of the game's Italy level,
+referred to), arm towards the road. On v2.7: 1,779 new lamps; rejected tries are counted in the report (most in the
+old towns: a wall or a building at the edge of the road).
+
+The lights: `props.py` puts a PointLight under every lamp head since v2.4, but the release builds take the cantonal
+road's objects from the v1.1 zip (`carryover.py`), so no release had them. The patch adds them to the 73 lamps of
+v2.7 (the head 1.2 m along the arm and 8.75 m up at scale 1, the median of `dati/lamps.json`), and to the new lamps
+only with `--village-lights`: 1,852 lights in all, whose cost in the game is to be measured
+(`.github/workflows/lamps_test.yml` builds both zips; `run_lamps_screenshots.ps1` takes the views by day and at
+night with the frame rate and the peak memory).
 
 ### Version 2.7: far trees
 

@@ -1,0 +1,102 @@
+[
+ {
+  "name": "tresa",
+  "commune": "Tresa",
+  "centre": [
+   -750.0,
+   -2350.0
+  ],
+  "lamps_in_square": 8,
+  "views": [
+   {
+    "view": "driver",
+    "cam": [
+     -762.49,
+     -2362.24,
+     310.69
+    ],
+    "target": [
+     -710.54,
+     -2364.6,
+     310.19
+    ],
+    "fov": 65.0
+   }
+  ]
+ },
+ {
+  "name": "lema",
+  "commune": "Lema",
+  "centre": [
+   -4250.0,
+   2250.0
+  ],
+  "lamps_in_square": 7,
+  "views": [
+   {
+    "view": "driver",
+    "cam": [
+     -4256.21,
+     2261.34,
+     632.75
+    ],
+    "target": [
+     -4254.45,
+     2209.37,
+     632.25
+    ],
+    "fov": 65.0
+   }
+  ]
+ },
+ {
+  "name": "agno",
+  "commune": "Agno",
+  "centre": [
+   1750.0,
+   50.0
+  ],
+  "lamps_in_square": 8,
+  "views": [
+   {
+    "view": "driver",
+    "cam": [
+     1763.07,
+     47.68,
+     343.96
+    ],
+    "target": [
+     1722.82,
+     80.61,
+     343.46
+    ],
+    "fov": 65.0
+   }
+  ]
+ },
+ {
+  "name": "caslano",
+  "commune": "Caslano",
+  "centre": [
+   1050.0,
+   -2250.0
+  ],
+  "lamps_in_square": 6,
+  "views": [
+   {
+    "view": "driver",
+    "cam": [
+     1070.74,
+     -2256.39,
+     275.84
+    ],
+    "target": [
+     1030.65,
+     -2289.5,
+     275.34
+    ],
+    "fov": 65.0
+   }
+  ]
+ }
+]
