@@ -9,7 +9,7 @@ Up to v2.7 the paved roads, pavements and yards stood on the ground like a slab,
 
 ## Street lamps
 
-Up to v2.7 only the Magliaso–Pura cantonal road had street lamps (68 where the panoramas show them, and 5 more). Now (`patch_lamps.py`) 1,779 more stand along the roads of the villages, about one every 30 m on one side of the road, with the same model: where at least six buildings of the Federal Register stand within 45 m, on the pavement or the verge, never on a carriageway, a wall, a bridge or in a building, clear of junctions, signs, furniture and trees. In the old towns, where the lamps hang on the walls, there are few.
+Up to v2.7 only the Magliaso–Pura cantonal road had street lamps (68 where the panoramas show them, and 5 more). Now (`patch_lamps.py`) 1,785 more stand along the roads of the villages, about one every 30 m on one side of the road, with the same model: where at least six buildings of the Federal Register stand within 45 m, on the pavement or the verge, never on a carriageway, a wall, a bridge or in a building, clear of junctions, signs, furniture and trees. In the old towns, where the lamps hang on the walls, there are few.
 
 **The cantonal road's lamps light at night.** Their lights, described for v2.4, never reached a release (the release builds take the cantonal road's objects from the v1.1 zip, older than the lights); the 73 lamps of v2.7 have them now. The new lamps do not light: what that costs in frame rate is still to be measured.
 
@@ -31,7 +31,7 @@ The 23 piers OpenStreetMap maps on the Swiss shore stand over the water (11 at C
 
 ## The houses
 
-Every pitched roof has its gutters along the eaves, in zinc or copper, and downpipes down the corners; and by a rule, TV aerials on a share of the older houses, satellite dishes turned to the satellites, and solar panels on some roofs facing south: 305 km of gutters, 38,407 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels (`patch_house_details.py`). They have no collision.
+Every pitched roof has its gutters along the eaves, in zinc or copper, and downpipes down the corners; and by a rule, TV aerials on a share of the older houses, satellite dishes turned to the satellites, and solar panels on some roofs facing south: 305 km of gutters, 38,377 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels (`patch_house_details.py`). They have no collision.
 
 ## The woods
 
@@ -39,7 +39,7 @@ The forest floor had the colour measured in the panoramas on the sunlit forest e
 
 ## The ground behind the walls
 
-Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh puts the ground back at its height: 63 ha in all. Up to v2.7 every triangle of that mesh was lit on its own, so the slopes behind the walls showed flat facets and saw teeth beside the smoothly shaded terrain. Now (`patch_wall_fill.py`) the mesh has the normals of the ground it restores: the same shapes, lit smoothly, with the same collision. The game's grass no longer grows through it, nor over walls lower than the grass (200,441 terrain vertices keep their material without grass); at the foot of the taller walls and on the meadows the grass stays.
+Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh puts the ground back at its height: 63 ha in all. Up to v2.7 every triangle of that mesh was lit on its own, so the slopes behind the walls showed flat facets and saw teeth beside the smoothly shaded terrain. Now (`patch_wall_fill.py`) the mesh has the normals of the ground it restores: the same shapes, lit smoothly, with the same collision. The game's grass no longer grows through it, nor over walls lower than the grass (200,444 terrain vertices keep their material without grass); at the foot of the taller walls and on the meadows the grass stays.
 
 ## Checked
 

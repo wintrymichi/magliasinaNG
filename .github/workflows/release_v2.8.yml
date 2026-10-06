@@ -9,14 +9,21 @@
 # - patch_signs_more.py: warning and parking signs nobody mapped;
 # - patch_lake.py: piers and boats;
 # - patch_house_details.py: gutters, downpipes, aerials, dishes, solar panels.
-# The patches read nothing but the zip: no data is downloaded. The same build, with check_level.py and drive_test.py
-# against v2.7, is the "v2.8 build test" workflow (v28_build_test.yml), whose zip is the one tested in the game
-# (beamng/verifica/v2.8/final_test_plan.md). The release contains and downloads no Street View image.
+# The patches read the zip and the files of beamng/dati (OpenStreetMap from the extract kept there): no data is
+# downloaded. The same build, with check_level.py and drive_test.py against v2.7, is the "v2.8 build test"
+# workflow (v28_build_test.yml), whose zip is the one tested in the game (beamng/verifica/v2.8/final_test_plan.md);
+# the digest patch_v2_8.py prints at the end is the same in both logs for the same commit of the patches.
+# The release contains and downloads no Street View image.
 # Started by hand, after the test in the game: Actions > Release v2.8 > Run workflow.
 name: Release v2.8
 
 on:
   workflow_dispatch:
+    inputs:
+      tested_digest:
+        description: "The digest of the zip tested in the game (last line of the v2.8 build test log); empty: no check"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -73,10 +80,24 @@ jobs:
           D="$MAGLIASO_ROOT/dist"
           mkdir -p "$D"
           gh release download v2.7 --pattern 'magliaso_pura_v2.7.zip' --dir "$D"
-          python patch_v2_8.py "$D/magliaso_pura_v2.7.zip" "$D/magliaso_pura_v2.8.zip" --reports "$D/reports"
+          python patch_v2_8.py "$D/magliaso_pura_v2.7.zip" "$D/magliaso_pura_v2.8.zip" --reports "$D/reports" \
+            | tee "$D/patch_v2_8.log"
           rm "$D/magliaso_pura_v2.7.zip"
           ls -la "$D"
           md5sum "$D/magliaso_pura_v2.8.zip"
+
+      - name: Same zip as the one tested
+        if: inputs.tested_digest != ''
+        env:
+          TESTED: ${{ inputs.tested_digest }}
+        run: |
+          built=$(tail -n 1 "$MAGLIASO_ROOT/dist/patch_v2_8.log" | sed -n 's/.*digest \([0-9a-f]*\).*/\1/p')
+          echo "built: $built"
+          echo "tested: $TESTED"
+          if [ "$built" != "$TESTED" ]; then
+            echo "::error::the zip built here is not the one tested in the game (digest $built, tested $TESTED)"
+            exit 1
+          fi
 
       - name: Publish
         run: |
