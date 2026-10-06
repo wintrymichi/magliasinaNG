@@ -463,6 +463,97 @@ def s_curve(right=True, n=256):
     return c.done()
 
 
+def s_double_curve(right_first=True, n=256):
+    """1.03 / 1.04 double curve, the first to the right / left (v2.8): a black road bending to that side,
+    then back."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    s = 1 if right_first else -1
+    w = n * 0.065
+    x0 = n / 2 - s * n * 0.03
+    pts = []
+    for k in range(0, 31):                                 # out to that side and back: up-right, then up-left
+        t = k / 30
+        pts.append((x0 + s * n * 0.10 * math.sin(math.pi * t), top + h * (0.87 - 0.36 * t)))
+    c.line(pts, BLACK, w)
+    (xa, ya), (xb, yb) = pts[-2], pts[-1]
+    d = np.array([xb - xa, yb - ya]); d /= np.linalg.norm(d)
+    q = np.array([d[1], -d[0]])
+    tip = np.array([xb, yb]) + d * w * 1.6
+    c.poly([tuple(tip), tuple(np.array([xb, yb]) + q * w * 1.1), tuple(np.array([xb, yb]) - q * w * 1.1)], BLACK)
+    return c.done()
+
+
+def s_falling_rocks(n=256):
+    """1.13 falling rocks (v2.8): a cliff on the left, stones falling off it to the right."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    b = top + h * 0.86                                     # the inner bottom edge
+    c.poly([(n * 0.30, b), (n * 0.30, top + h * 0.47), (n * 0.40, top + h * 0.40), (n * 0.46, b)], BLACK)
+    for cx_, cy_, r in ((0.52, 0.50, 0.040), (0.58, 0.62, 0.050), (0.55, 0.77, 0.060), (0.66, 0.79, 0.045)):
+        c.circle(n * cx_, top + h * cy_, n * r, BLACK)
+    return c.done()
+
+
+def s_barrier(n=256):
+    """1.15 barriers (v2.8; a level crossing with barriers): a gate of upright bars between two rails."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    x0, x1 = n * 0.31, n * 0.69
+    y0, y1 = top + h * 0.55, top + h * 0.82
+    c.rect(x0, y0 + n * 0.035, x1, y0 + n * 0.065, BLACK)
+    c.rect(x0, y1 - n * 0.065, x1, y1 - n * 0.035, BLACK)
+    for k in range(5):
+        x = x0 + (x1 - x0) * (k + 0.5) / 5
+        c.rect(x - n * 0.018, y0, x + n * 0.018, y1, BLACK)
+        c.poly([(x - n * 0.018, y0), (x + n * 0.018, y0), (x, y0 - n * 0.035)], BLACK)
+    return c.done()
+
+
+def s_locomotive(n=256):
+    """1.16 level crossing without barriers (v2.8): a steam locomotive seen from the side, facing left."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    y = lambda f: top + h * f
+    c.rect(n * 0.30, y(0.62), n * 0.58, y(0.75), BLACK)                       # boiler
+    c.rect(n * 0.56, y(0.50), n * 0.70, y(0.75), BLACK)                       # cab
+    c.rect(n * 0.54, y(0.48), n * 0.72, y(0.52), BLACK)                       # cab roof
+    c.rect(n * 0.34, y(0.53), n * 0.39, y(0.63), BLACK)                       # chimney
+    c.rect(n * 0.32, y(0.51), n * 0.41, y(0.54), BLACK)
+    c.poly([(n * 0.30, y(0.75)), (n * 0.25, y(0.82)), (n * 0.30, y(0.82))], BLACK)  # cowcatcher
+    for fx in (0.36, 0.47, 0.62):
+        c.circle(n * fx, y(0.80), n * 0.045, BLACK)
+    return c.done()
+
+
+def s_children(n=256):
+    """1.23 children (v2.8): two children walking, the smaller one ahead."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    _pedestrian(c, n * 0.43, top + h * 0.66, n * 0.36, BLACK)
+    _pedestrian(c, n * 0.60, top + h * 0.71, n * 0.26, BLACK)
+    return c.done()
+
+
+def s_deer(n=256):
+    """1.24 wild animals (v2.8): a deer leaping to the right."""
+    c = Canvas(n)
+    top, h = _triangle_up(c, n)
+    P = lambda pts: [(n * (0.47 + x), top + h * (0.08 + y)) for x, y in pts]
+    lw = n * 0.032
+    c.poly(P([(-0.16, 0.63), (-0.10, 0.59), (0.04, 0.585), (0.09, 0.60), (0.11, 0.64), (0.06, 0.68),
+              (-0.10, 0.69), (-0.16, 0.67)]), BLACK)                                   # body
+    c.poly(P([(0.05, 0.61), (0.10, 0.53), (0.13, 0.50), (0.18, 0.52), (0.14, 0.545), (0.11, 0.63)]), BLACK)  # neck, head
+    c.line(P([(0.125, 0.505), (0.10, 0.45), (0.08, 0.43)]), BLACK, lw * 0.6)          # antlers
+    c.line(P([(0.11, 0.47), (0.14, 0.44)]), BLACK, lw * 0.6)
+    c.line(P([(0.065, 0.66), (0.13, 0.70), (0.17, 0.665)]), BLACK, lw)                # front legs, folded
+    c.line(P([(0.04, 0.67), (0.10, 0.73), (0.15, 0.715)]), BLACK, lw)
+    c.line(P([(-0.12, 0.67), (-0.19, 0.735), (-0.25, 0.775)]), BLACK, lw)             # hind legs, stretched
+    c.line(P([(-0.09, 0.68), (-0.14, 0.75), (-0.19, 0.80)]), BLACK, lw)
+    c.line(P([(-0.155, 0.625), (-0.185, 0.60)]), BLACK, lw * 0.7)                    # tail
+    return c.done()
+
+
 def s_pointer(text, right=True, main=False, w=512, h=128):
     """4.31 / 4.32 direction sign of a main road (blue, white letters) / a minor road (white, black
     letters): a plate with an arrow point on the side it shows; 'A / B' puts two places on two lines."""
@@ -498,7 +589,14 @@ def _with(fn, *a):
 DRAW = {
     "1.01": (lambda v: s_curve(right=True), "triangle", T90),
     "1.02": (lambda v: s_curve(right=False), "triangle", T90),
+    "1.03": (lambda v: s_double_curve(right_first=True), "triangle", T90),
+    "1.04": (lambda v: s_double_curve(right_first=False), "triangle", T90),
     "1.07": (lambda v: s_narrowing(), "triangle", T90),
+    "1.13": (lambda v: s_falling_rocks(), "triangle", T90),
+    "1.15": (lambda v: s_barrier(), "triangle", T90),
+    "1.16": (lambda v: s_locomotive(), "triangle", T90),
+    "1.23": (lambda v: s_children(), "triangle", T90),
+    "1.24": (lambda v: s_deer(), "triangle", T90),
     "2.01": (lambda v: s_prohibition()[0](), "round", R60),
     "2.02": (lambda v: s_no_entry(), "round", R60),
     "2.03": (lambda v: s_prohibition("car")[0](), "round", R60),
