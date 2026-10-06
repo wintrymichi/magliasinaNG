@@ -51,6 +51,9 @@ MAT_COLORS = [
     ("pier_pile", (0.42, 0.43, 0.44)), ("boat_white", (0.90, 0.90, 0.88)), ("boat_blue", (0.08, 0.16, 0.32)),
     ("boat_grey", (0.50, 0.52, 0.54)), ("boat_beige", (0.72, 0.66, 0.54)), ("boat_dark", (0.08, 0.08, 0.09)),
     ("boat_metal", (0.75, 0.76, 0.77)), ("boat_inside", (0.78, 0.78, 0.76)),
+    # v2.8 house details (patch_house_details.py)
+    ("house_zinc", (0.60, 0.61, 0.60)), ("house_copper", (0.47, 0.30, 0.20)), ("house_metal", (0.70, 0.71, 0.72)),
+    ("house_dish", (0.86, 0.86, 0.84)),
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
 # m, height at scale 1 of the game models drawn as posts (measured on the cantonal road: dati/lamps.json and
