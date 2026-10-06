@@ -1,0 +1,267 @@
+{
+ "piers": 23,
+ "piers_m": 954,
+ "floating": 11,
+ "fixed": 12,
+ "not_over_water": 2,
+ "boats": 137,
+ "source": "magliaso_pura_v2.7.zip",
+ "water_level_m": 270.481,
+ "pier_tiles": 12,
+ "boat_tiles": 4,
+ "built": [
+  {
+   "osm": 1298643594,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": false,
+   "centre": [
+    -704.6,
+    -2754.9
+   ],
+   "length_m": 7.8
+  },
+  {
+   "osm": 1298643595,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": false,
+   "centre": [
+    -703.5,
+    -2752.5
+   ],
+   "length_m": 5.3
+  },
+  {
+   "osm": 71948498,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    -590.9,
+    -2528.5
+   ],
+   "length_m": 117.9
+  },
+  {
+   "osm": 299653065,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    350.2,
+    -2709.7
+   ],
+   "length_m": 56.2
+  },
+  {
+   "osm": 299653066,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    351.8,
+    -2680.8
+   ],
+   "length_m": 56.2
+  },
+  {
+   "osm": 299653067,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    347.8,
+    -2752.2
+   ],
+   "length_m": 53.4
+  },
+  {
+   "osm": 299653068,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    379.1,
+    -2696.1
+   ],
+   "length_m": 43.8
+  },
+  {
+   "osm": 1110580503,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    329.8,
+    -2802.0
+   ],
+   "length_m": 49.1
+  },
+  {
+   "osm": 339625533,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    1440.2,
+    -3022.3
+   ],
+   "length_m": 87.0
+  },
+  {
+   "osm": 339625532,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    1407.4,
+    -2979.1
+   ],
+   "length_m": 71.8
+  },
+  {
+   "osm": 372070491,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    1201.7,
+    -2408.2
+   ],
+   "length_m": 16.8
+  },
+  {
+   "osm": 1298643596,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    1223.8,
+    -2672.6
+   ],
+   "length_m": 76.3
+  },
+  {
+   "osm": 1298643597,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": false,
+   "centre": [
+    1220.5,
+    -2670.3
+   ],
+   "length_m": 4.2
+  },
+  {
+   "osm": 353548388,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2337.3,
+    -2653.6
+   ],
+   "length_m": 27.3
+  },
+  {
+   "osm": 1110536174,
+   "floating": true,
+   "width_m": 2.4,
+   "mooring": true,
+   "centre": [
+    5.0,
+    -2168.1
+   ],
+   "length_m": 9.0
+  },
+  {
+   "osm": 967359237,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2039.6,
+    -1691.6
+   ],
+   "length_m": 12.3
+  },
+  {
+   "osm": 967362916,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2032.9,
+    -1746.3
+   ],
+   "length_m": 22.2
+  },
+  {
+   "osm": 339625529,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2051.3,
+    -1126.1
+   ],
+   "length_m": 43.3
+  },
+  {
+   "osm": 339625530,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2038.7,
+    -1162.3
+   ],
+   "length_m": 76.6
+  },
+  {
+   "osm": 293315960,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2180.3,
+    118.2
+   ],
+   "length_m": 27.7
+  },
+  {
+   "osm": 293315986,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2187.4,
+    104.5
+   ],
+   "length_m": 37.7
+  },
+  {
+   "osm": 1150685633,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2744.9,
+    295.0
+   ],
+   "length_m": 22.0
+  },
+  {
+   "osm": 1150685634,
+   "floating": false,
+   "width_m": 2.0,
+   "mooring": false,
+   "centre": [
+    2724.5,
+    289.9
+   ],
+   "length_m": 29.9
+  }
+ ]
+}
