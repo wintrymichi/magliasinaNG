@@ -1,0 +1,105 @@
+# Release v2.8 of the BeamNG map (Malcantone): the published v2.7 zip passed through the nine v2.8 patch scripts by
+# beamng/pipeline/patch_v2_8.py, in this order (the ground first, then what stands on it):
+# - patch_paved_edges.py: the ground raised to the edges of the paved roads, pavements and yards;
+# - patch_wall_fill.py: the ground behind the retaining walls shaded like the terrain, no grass through it;
+# - patch_understory.py: darker forest floor, its verge without grass, the undergrowth;
+# - patch_lamps.py: street lamps in the villages (without --village-lights: the lights on the 73 lamps of v2.7);
+# - patch_roadside.py: delineators and wooden pole lines between the villages;
+# - patch_catenary.py: the overhead line of the railway;
+# - patch_signs_more.py: warning and parking signs nobody mapped;
+# - patch_lake.py: piers and boats;
+# - patch_house_details.py: gutters, downpipes, aerials, dishes, solar panels.
+# The patches read the zip and the files of beamng/dati (OpenStreetMap from the extract kept there): no data is
+# downloaded. The same build, with check_level.py and drive_test.py against v2.7, is the "v2.8 build test"
+# workflow (v28_build_test.yml), whose zip is the one tested in the game (beamng/verifica/v2.8/final_test_plan.md);
+# the digest patch_v2_8.py prints at the end is the same in both logs for the same commit of the patches.
+# The release contains and downloads no Street View image.
+# Started by hand, after the test in the game: Actions > Release v2.8 > Run workflow.
+name: Release v2.8
+
+on:
+  workflow_dispatch:
+    inputs:
+      tested_digest:
+        description: "The digest of the zip tested in the game (last line of the v2.8 build test log); empty: no check"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ready to release
+        run: |
+          if grep -q '<!-- draft' beamng/RELEASE_v2.8.md; then
+            echo "::error::beamng/RELEASE_v2.8.md is still the draft: write the test in the game in it and remove the draft line (beamng/verifica/v2.8/final_test_plan.md)"
+            exit 1
+          fi
+          if gh release view v2.8 > /dev/null 2>&1; then
+            echo "::error::the release v2.8 exists already"
+            exit 1
+          fi
+
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: v2.7 zip through the nine v2.8 patches
+        working-directory: beamng/pipeline
+        run: |
+          D="$MAGLIASO_ROOT/dist"
+          mkdir -p "$D"
+          gh release download v2.7 --pattern 'magliaso_pura_v2.7.zip' --dir "$D"
+          python patch_v2_8.py "$D/magliaso_pura_v2.7.zip" "$D/magliaso_pura_v2.8.zip" --reports "$D/reports" \
+            | tee "$D/patch_v2_8.log"
+          rm "$D/magliaso_pura_v2.7.zip"
+          ls -la "$D"
+          md5sum "$D/magliaso_pura_v2.8.zip"
+
+      - name: Same zip as the one tested
+        if: inputs.tested_digest != ''
+        env:
+          TESTED: ${{ inputs.tested_digest }}
+        run: |
+          built=$(tail -n 1 "$MAGLIASO_ROOT/dist/patch_v2_8.log" | sed -n 's/.*digest \([0-9a-f]*\).*/\1/p')
+          echo "built: $built"
+          echo "tested: $TESTED"
+          if [ "$built" != "$TESTED" ]; then
+            echo "::error::the zip built here is not the one tested in the game (digest $built, tested $TESTED)"
+            exit 1
+          fi
+
+      - name: Publish
+        run: |
+          gh release create v2.8 "$MAGLIASO_ROOT/dist/magliaso_pura_v2.8.zip" --target "$GITHUB_SHA" \
+            --title "BeamNG.drive map Malcantone v2.8" --notes-file beamng/RELEASE_v2.8.md

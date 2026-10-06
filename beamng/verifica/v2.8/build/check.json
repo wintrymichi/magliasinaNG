@@ -1,0 +1,261 @@
+{
+ "entries": {
+  "v2.7": 2567,
+  "v2.8": 3076,
+  "added": 509,
+  "removed": 0,
+  "changed": 328
+ },
+ "reports": {
+  "paved_edges": {},
+  "wall_fill": {
+   "grass_removed_vertices.GardenGrass -> GardenGrassVerge": [
+    159884,
+    159886
+   ],
+   "grass_removed_vertices.Grass -> GrassVerge": [
+    40557,
+    40558
+   ],
+   "grass_removed_why.over_wall_top": [
+    16552,
+    16555
+   ],
+   "normal_new_vs_old_deg.median": [
+    17.48,
+    17.27
+   ],
+   "normal_new_vs_old_deg.p95": [
+    58.96,
+    58.92
+   ],
+   "normal_vs_face_deg.median": [
+    17.68,
+    17.47
+   ],
+   "normal_vs_face_deg.p95": [
+    59.28,
+    59.24
+   ],
+   "seam_vertices_terrain_normal": [
+    203631,
+    190883
+   ]
+  },
+  "understory": {},
+  "lamps": {
+   "lamps_new": [
+    1779,
+    1785
+   ],
+   "new_by_commune.Agno": [
+    232,
+    234
+   ],
+   "new_by_commune.Cademario": [
+    86,
+    85
+   ],
+   "new_by_commune.Gravesano": [
+    130,
+    131
+   ],
+   "new_by_commune.Lema": [
+    252,
+    255
+   ],
+   "new_by_commune.Tresa": [
+    340,
+    341
+   ],
+   "rejected.building": [
+    1634,
+    1658
+   ],
+   "rejected.carriageway": [
+    581,
+    561
+   ],
+   "rejected.clear": [
+    84,
+    87
+   ],
+   "rejected.gap": [
+    556,
+    577
+   ],
+   "rejected.step": [
+    1184,
+    935
+   ],
+   "rejected.tried": [
+    7783,
+    7565
+   ],
+   "rejected.wall": [
+    1965,
+    1962
+   ]
+  },
+  "roadside": {
+   "rejected.clear": [
+    212,
+    221
+   ],
+   "rejected.short_line": [
+    1585,
+    1584
+   ],
+   "rejected.step": [
+    419,
+    409
+   ],
+   "rejected.tried": [
+    3906,
+    3898
+   ],
+   "rejected.wall": [
+    349,
+    343
+   ]
+  },
+  "catenary": {},
+  "signs_more": {},
+  "lake": {},
+  "house_details": {
+   "downpipes": [
+    38407,
+    38377
+   ],
+   "triangles": [
+    547354,
+    547174
+   ]
+  }
+ },
+ "feet": {
+  "lamp": {
+   "chain": {
+    "n": 1785,
+    "median_m": 0.005,
+    "p05_m": -0.004,
+    "p95_m": 0.254,
+    "under_ground_by_5cm": 0,
+    "under_ground_by_15cm": 0,
+    "over_ground_by_50cm": 40
+   },
+   "alone": {
+    "n": 1779,
+    "median_m": 0.051,
+    "p05_m": -0.21,
+    "p95_m": 0.251,
+    "under_ground_by_5cm": 693,
+    "under_ground_by_15cm": 271,
+    "over_ground_by_50cm": 38
+   }
+  },
+  "delineator": {
+   "chain": {
+    "n": 507,
+    "median_m": 0.066,
+    "p05_m": -0.004,
+    "p95_m": 0.772,
+    "under_ground_by_5cm": 0,
+    "under_ground_by_15cm": 0,
+    "over_ground_by_50cm": 28
+   },
+   "alone": {
+    "n": 507,
+    "median_m": 0.066,
+    "p05_m": -0.128,
+    "p95_m": 0.772,
+    "under_ground_by_5cm": 118,
+    "under_ground_by_15cm": 17,
+    "over_ground_by_50cm": 28
+   }
+  },
+  "wooden_pole": {
+   "chain": {
+    "n": 628,
+    "median_m": 0.001,
+    "p05_m": -0.005,
+    "p95_m": 0.11,
+    "under_ground_by_5cm": 0,
+    "under_ground_by_15cm": 0,
+    "over_ground_by_50cm": 11
+   },
+   "alone": {
+    "n": 628,
+    "median_m": -0.069,
+    "p05_m": -0.234,
+    "p95_m": 0.11,
+    "under_ground_by_5cm": 383,
+    "under_ground_by_15cm": 93,
+    "over_ground_by_50cm": 11
+   }
+  },
+  "sign": {
+   "chain": {
+    "n": 80,
+    "median_m": 0.064,
+    "p05_m": -0.006,
+    "p95_m": 0.155,
+    "under_ground_by_5cm": 1,
+    "under_ground_by_15cm": 0,
+    "over_ground_by_50cm": 3
+   },
+   "alone": {
+    "n": 80,
+    "median_m": 0.064,
+    "p05_m": -0.14,
+    "p95_m": 0.155,
+    "under_ground_by_5cm": 14,
+    "under_ground_by_15cm": 3,
+    "over_ground_by_50cm": 3
+   }
+  },
+  "lamp_v2.7": {
+   "v2.7_terrain": {
+    "n": 73,
+    "median_m": 0.195,
+    "p05_m": -0.066,
+    "p95_m": 1.145,
+    "under_ground_by_5cm": 6,
+    "under_ground_by_15cm": 2,
+    "over_ground_by_50cm": 8
+   },
+   "v2.8_terrain": {
+    "n": 73,
+    "median_m": 0.064,
+    "p05_m": -0.167,
+    "p95_m": 0.885,
+    "under_ground_by_5cm": 17,
+    "under_ground_by_15cm": 7,
+    "over_ground_by_50cm": 6
+   }
+  }
+ },
+ "clearances": {
+  "feet_closer_than_1m.delineator-lamp": 0,
+  "feet_closer_than_1m.delineator-sign": 0,
+  "feet_closer_than_1m.delineator-wooden_pole": 0,
+  "feet_closer_than_1m.lamp-sign": 0,
+  "feet_closer_than_1m.lamp-wooden_pole": 0,
+  "feet_closer_than_1m.sign-wooden_pole": 0,
+  "feet_near_mast_steel_0.5m.lamp": 0,
+  "feet_on_the_ballast.lamp": 3,
+  "feet_near_mast_steel_0.5m.delineator": 0,
+  "feet_on_the_ballast.delineator": 1,
+  "feet_near_mast_steel_0.5m.wooden_pole": 0,
+  "feet_on_the_ballast.wooden_pole": 1,
+  "feet_near_mast_steel_0.5m.sign": 0,
+  "feet_on_the_ballast.sign": 0,
+  "lamp_columns_with_a_cable_within_0.2m": 3,
+  "lamp_columns_with_a_cable_within_0.5m": 8,
+  "lamp_columns_with_a_gutter_or_downpipe_within_0.15m": 17,
+  "lamp_columns_with_a_gutter_or_downpipe_within_0.3m": 25,
+  "cable_points_under_a_roof": 1360,
+  "cable_places_under_a_roof": 18,
+  "cable_points": 373899
+ }
+}

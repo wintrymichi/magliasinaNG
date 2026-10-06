@@ -184,6 +184,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Piers and boats (v2.8, in progress) | `patch_lake.py`, `lake_tour.py`, `run_lake_screenshots.ps1` | the piers OpenStreetMap maps on the Swiss shore (fixed on wooden posts or floating on pontoons, a plank deck drawn here) and low-poly boats at the piers where boats moor; meshes in 512 m tiles in `props/lake`; into a built zip |
 | House details (v2.8, in progress) | `patch_house_details.py`, `houses_tour.py`, `run_houses_screenshots.ps1` | gutters along the eaves of every pitched roof and downpipes at the ends of their runs, from the roof meshes of the level; on the houses of the Federal Register, by a rule, TV aerials, satellite dishes and solar panels; meshes in 512 m tiles (panels 1024 m) in `buildings/details`, no collision; into a built zip |
 | Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
+| The v2.8 zip (in progress) | `patch_v2_8.py`, `v28_tour.py`, `run_v28_screenshots.ps1` | the v2.7 zip through the nine v2.8 patches in their order (the ground first, then what stands on it), as `release_v2.8.yml` and the *v2.8 build test* workflow (`v28_build_test.yml`) run them; the 42 views of the nine checks together, for the test of the whole zip in the game (`verifica/v2.8/final_test_plan.md`) |
 | Optimisation (v2.5) | `optimize_level.py`, `mesh_strips.py` | built level (folder or zip) → lighter mod zip: merged tiles, shared vertices, simpler road strips, detail by distance |
 | Patching a release | `patch_release.py` | applies the v1.1 fixes (roads, terrain, road markings, AI, objects, vegetation) to an already built zip, using only the zip and `dati/` |
 
@@ -194,6 +195,41 @@ The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = do
 ## Technical notes by version
 
 What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
+
+### Version 2.8 (in progress): the build and the release
+
+v2.8 is the v2.7 release zip through the nine v2.8 patch scripts, in this order: `patch_v2_8.py <v2.7 zip> <v2.8 zip>
+[--reports <dir>] [--village-lights]` runs them one after the other (each reads the zip the one before wrote; the
+intermediate zips go to a temporary folder next to the output and are deleted as it goes).
+
+| | Patch | Why there |
+|---|---|---|
+| 1 | `patch_paved_edges.py` | it changes the terrain heights: first, so that everything placed after it stands on the v2.8 ground (placed on the v2.7 ground, 693 of the new lamps and 383 of the wooden poles would stand more than 5 cm under it) |
+| 2 | `patch_wall_fill.py` | the normals of the backfill and the grass over low walls from the terrain heights of 1 |
+| 3 | `patch_understory.py` | the forest floor layers and their verge twins, the undergrowth GroundCover (it refuses a zip that has the forest verge layers already); it could swap with 2 |
+| 4-9 | `patch_lamps.py`, `patch_roadside.py`, `patch_catenary.py`, `patch_signs_more.py`, `patch_lake.py`, `patch_house_details.py` | objects on the ground of 1; the delineators and poles keep clear of the lamps (5 after 4), the downpipes reach the ground of 1 |
+
+The patches read the zip and the files of `dati/`, nothing downloaded: `patch_v2_8.py` sets `MAGLIASO_OSM_PINNED=1`,
+so that `osm.py` reads the extract `dati/osm_area.json.gz` even where `download_osm.py` has fetched a newer one (the
+piers and the signs of OpenStreetMap). `--reports <dir>` writes every patch's report there; the last line printed is a
+digest of the zip's contents: the names, sizes and CRC-32 of its entries, with the persistent ids left out of the
+`.json` entries (`bng.pid` draws them at random) and not the dates. Two builds of the same patches from the v2.7 zip on
+GitHub give the same digest; on Windows a few text plates are drawn in another font (`signs_ch._font`).
+`--village-lights` gives the variant with the lights of the new street lamps (`patch_lamps.py --village-lights`),
+whose frame rate is still to be measured.
+
+What the patches do not yet check against each other, measured on the chained zip by `v28_check.py` (`verifica/v2.8/build/`):
+signs, catenary masts and house details do not see the lamps, delineators and wooden poles placed before them, the
+wooden poles' cables are not tested against lamps and roofs, and lamps and roadside posts do not treat the railway's
+ballast as solid.
+
+- `.github/workflows/v28_build_test.yml` (*v2.8 build test*): builds the zip on a GitHub server, runs `check_level.py`
+  and `drive_test.py` on v2.7 and on v2.8 (with the work data they need, built there) and uploads the zip, the reports,
+  the log with the digest and the four results as an artifact. Nothing is published.
+- `.github/workflows/release_v2.8.yml` (*Release v2.8*): started by hand, only after the test of the whole zip in the game
+  (`verifica/v2.8/final_test_plan.md`, `run_v28_screenshots.ps1`, `v28_tour.py`); it refuses to run while
+  `RELEASE_v2.8.md` is still the draft or if the v2.8 release exists, builds the zip as above, stops if its digest is
+  not the one given as *tested_digest* (the zip tested in the game), and publishes it with `RELEASE_v2.8.md`.
 
 ### Version 2.8 (in progress): the ground behind the walls
 
