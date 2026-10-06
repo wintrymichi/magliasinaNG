@@ -1,0 +1,50 @@
+{
+ "source": "magliaso_pura_v2.7.zip",
+ "materials": [
+  "mp_road_asphalt",
+  "mp_road_sett",
+  "mp_road_cobble",
+  "mp_hard_asphalt",
+  "mp_hard_sett",
+  "mp_hard_cobble",
+  "mp_path_paved",
+  "mp_path_sett",
+  "mp_path_cobble",
+  "mp_road_asphalt_fresh",
+  "mp_sidewalk"
+ ],
+ "edge_drop_m": 0.08,
+ "terrain_under_faces_m": 0.02,
+ "keep_out_m": 2.0,
+ "keep_out_km2": 5.69,
+ "paved_outer_edges_before": {
+  "edges_km": 452.5,
+  "over_terrain_m": {
+   "p10": 0.117,
+   "median": 0.212,
+   "p75": 0.301,
+   "p90": 0.461
+  },
+  "share_over_0.15m": 0.742,
+  "share_over_0.3m": 0.251,
+  "terrain_over_the_faces_inside": {
+   "share": 4e-05,
+   "max_m": 3.315
+  }
+ },
+ "paved_outer_edges_after": {
+  "edges_km": 455.0,
+  "over_terrain_m": {
+   "p10": 0.016,
+   "median": 0.036,
+   "p75": 0.069,
+   "p90": 0.122
+  },
+  "share_over_0.15m": 0.066,
+  "share_over_0.3m": 0.026,
+  "terrain_over_the_faces_inside": {
+   "share": 6e-05,
+   "max_m": 3.315
+  }
+ }
+}
