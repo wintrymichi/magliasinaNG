@@ -103,7 +103,6 @@ def corner_weights(u, v):
 # faces of the whole level, set in main() and in every worker (pool(): Windows spawns the workers)
 UN = ALL = None
 Z0 = MAXH = None
-LIM_EPS = None        # m under every face in the constraints instead of EPS / EPS_PAVED (main(clamp=...), v2.8)
 WORKERS = int(os.environ.get("PATCH_WORKERS", min(os.cpu_count(), 4)))   # each holds the faces of the level (~1.5 GB)
 
 
@@ -144,8 +143,7 @@ def block(args):
     sqm = moved[:-1, :-1] | moved[:-1, 1:] | moved[1:, :-1] | moved[1:, 1:]
     near = np.repeat(np.repeat(sqm, SUB, 0), SUB, 1) & np.isfinite(ha)
     sr, sc = np.nonzero(near)
-    lim = ha[sr, sc] - (np.where(U[sr, sc] & (np.abs(hu[sr, sc] - ha[sr, sc]) < 1e-6), EPS, EPS_PAVED)
-                        if LIM_EPS is None else LIM_EPS)
+    lim = ha[sr, sc] - np.where(U[sr, sc] & (np.abs(hu[sr, sc] - ha[sr, sc]) < 1e-6), EPS, EPS_PAVED)
     qr, qc = sr // SUB, sc // SUB                                 # square of every sample
     u = (sc % SUB + 0.5) / SUB
     v = (sr % SUB + 0.5) / SUB
@@ -205,30 +203,20 @@ def terrain_top(Zt, x, y):
 QT = None             # the patched terrain (uint16): main() and terrain() in the workers
 
 
-def init(files, z0, maxh, lim_eps=None):
-    global UN, ALL, Z0, MAXH, LIM_EPS
+def init(files, z0, maxh):
+    global UN, ALL, Z0, MAXH
     if UN is None:                    # spawned: not a fork of main()
         UN, ALL = (road_mesh.TriSurface(np.load(files[k])) for k in ("un", "al"))
-    Z0, MAXH, LIM_EPS = z0, maxh, lim_eps
+    Z0, MAXH = z0, maxh
 
 
-def pool(tmp, un, al, lim_eps=None):
+def pool(tmp, un, al):
     """Workers with the faces of the whole level: through .npy files in `tmp`, too big for the pipe
     of a spawned worker."""
     files = {k: os.path.join(tmp, k + ".npy") for k in ("un", "al")}
     np.save(files["un"], un)
     np.save(files["al"], al)
-    return ProcessPoolExecutor(max_workers=WORKERS, initializer=init, initargs=(files, Z0, MAXH, lim_eps))
-
-
-class Patched:
-    """A zip with some entries replaced ({name: bytes}), for reading."""
-
-    def __init__(self, zi, entries):
-        self.zi, self.entries, self.NameToInfo = zi, entries, zi.NameToInfo
-
-    def read(self, name):
-        return self.entries[name] if name in self.entries else self.zi.read(name)
+    return ProcessPoolExecutor(max_workers=WORKERS, initializer=init, initargs=(files, Z0, MAXH))
 
 
 def terrain(path):
@@ -244,12 +232,10 @@ def taper(args):
     An edge vertex goes down to EDGE_UP over the terrain where that is at most EDGE_DROP m down, with
     the top of the edge face under it; the vertices of the faces of another surface, and those on
     an edge with a road face beyond it (a seam between two tiles or two polygons), stay.
-    v2.8 (patch_paved_edges.py): args may add the materials (default UNPAVED), the .npy of the sorted
-    keep-out cells (1 m cells, keep_out_cells; an edge vertex there stays) and the deepest drop."""
+    v2.8: args may add the materials (default UNPAVED) and the deepest drop (default EDGE_DROP)."""
     name, text, pos, qpath = args[:4]
     mats = args[4] if len(args) > 4 else UNPAVED
-    keep_out = np.load(args[5]) if len(args) > 5 and args[5] else None
-    edge_drop = args[6] if len(args) > 6 else EDGE_DROP
+    edge_drop = args[5] if len(args) > 5 else EDGE_DROP
     qt = terrain(qpath)
     V, _, _, _, parts, _ = optimize_level.parse(text)
     W = V + pos
@@ -299,8 +285,6 @@ def taper(args):
     X = W[rep[move]]
     drop = X[:, 2] - (terrain_top(qt, X[:, 0], X[:, 1]) + EDGE_UP)
     ok = (drop > 0.002) & (drop <= edge_drop)
-    if keep_out is not None:
-        ok &= ~in_cells(keep_out, X[:, 0], X[:, 1])
     move, drop, X = move[ok], drop[ok], X[ok]
     if not len(move):
         return None
@@ -336,12 +320,11 @@ def in_cells(cells, x, y):
     return (cells[i] == c) if len(cells) else np.zeros(len(c), bool)
 
 
-def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None, more=None, clamp=None):
+def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     """mats: the materials whose surroundings are raised and whose outer edges go down (default UNPAVED);
-    keep_out: sorted 1 m cell ids (cell_ids) where neither happens; more(zi, shapes): other changed entries
-    {name: bytes} that follow the changed shapes {name: bytes}; clamp: after the edges went down, the raised
-    terrain checked again against the faces as they are now, `clamp` m under every face (a lowered edge tilts
-    the last strip of its face over the terrain raised under it) (v2.8, patch_paved_edges.py)."""
+    edge_drop: the deepest an edge goes down (0: the faces stay as they are, only the terrain is raised);
+    keep_out: sorted 1 m cell ids (cell_ids) where no terrain is raised to the faces (v2.8,
+    patch_paved_edges.py)."""
     global UN, ALL, Z0, MAXH, QT
     mats = UNPAVED if mats is None else tuple(mats)
     zi = zipfile.ZipFile(src)
@@ -366,14 +349,10 @@ def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None, more=None, cla
     keys = sorted(set(zip(cr.tolist(), cc.tolist())))
     q0 = q.copy()
     tmp = tempfile.mkdtemp(prefix="patch_unpaved_")
-    kpath = None
-    if keep_out is not None:
-        kpath = os.path.join(tmp, "keep_out.npy")
-        np.save(kpath, np.asarray(keep_out, np.int64))
 
     ex = pool(tmp, un, al)
 
-    def run(qa, tol=0.0):
+    def run(qa):
         jobs = []
         for br, bc in keys:
             r0, c0 = br * BLOCK, bc * BLOCK
@@ -385,7 +364,7 @@ def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None, more=None, cla
         for res in ex.map(block, jobs, chunksize=2):
             if res is not None:
                 rr, cc, z = res
-                qn = np.floor((z - Z0) / MAXH * 65535.0 + tol).astype(np.int64)    # down: never over a face
+                qn = np.floor((z - Z0) / MAXH * 65535.0).astype(np.int64)    # down: never over a face
                 up = qn > q0[rr, cc]
                 out[rr[up], cc[up]] = qn[up].astype(np.uint16)
         return out
@@ -400,13 +379,12 @@ def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None, more=None, cla
     qpath = os.path.join(tmp, "qt.npy")
     np.save(qpath, q)
     jobs = []
-    for o in objs:
+    for o in objs if edge_drop > 0 else ():             # edge_drop 0: the faces stay as they are
         sn = o.get("shapeName", "").lstrip("/")
         if o.get("class") == "TSStatic" and sn in zi.NameToInfo:
             text = zi.read(sn).decode("utf-8")
             if any(f'material="{m}-mat"' in text for m in mats):
-                jobs.append((sn, text, np.asarray(o.get("position", [0, 0, 0]), np.float64), qpath, mats, kpath,
-                             edge_drop))
+                jobs.append((sn, text, np.asarray(o.get("position", [0, 0, 0]), np.float64), qpath, mats, edge_drop))
     shapes, nmove = {}, 0
     with ex:
         for res in ex.map(taper, jobs, chunksize=1):
@@ -414,21 +392,6 @@ def main(src, dst, mats=None, edge_drop=EDGE_DROP, keep_out=None, more=None, cla
                 shapes[res[0]] = res[1].encode("utf-8")
                 nmove += res[2]
     print("edge vertices lowered onto the terrain: %d, in %d shapes" % (nmove, len(shapes)))
-    if clamp is not None and shapes:
-        un, al = top_faces(Patched(zi, shapes), objs, mats)
-        if keep_out is not None:
-            c = un.mean(1)
-            un = un[~in_cells(keep_out, c[:, 0], c[:, 1])]
-        UN, ALL = road_mesh.TriSurface(un), road_mesh.TriSurface(al)
-        raised = q
-        ex = pool(tmp, un, al, clamp)
-        with ex:
-            q = run(raised, 1e-6)   # a height that stays, not a step down by the rounding
-        low = (raised.astype(np.float64) - q) / 65535.0 * MAXH
-        print("terrain vertices lowered again under the faces as they are now: %d, by median %.3f m, at most %.2f m"
-              % ((low > 0).sum(), np.median(low[low > 0]) if (low > 0).any() else 0.0, low.max()))
-    if more is not None:
-        shapes.update(more(zi, shapes))
     new_ter = data[:5] + q.astype("<u2").tobytes() + data[5 + 2 * n * n:]
     with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zo:
         now = time.localtime()[:6]
