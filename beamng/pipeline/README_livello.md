@@ -40,6 +40,7 @@ A 1:1 scale reconstruction of about 52 km² of the Malcantone (Canton Ticino, Sw
 | Vineyards (v2.4) | official survey (vineyards), 10 cm orthophoto (row direction) | rows every 2.2 m (typical spacing, not measured) in vineyards within 150 m of roads and trails |
 | Rivers (v2.4) | official survey (watercourses at least 2.5 m wide), swissALTI3D | water at the height of the lowest bed within 3 m; under bridges too, not on fords |
 | Lake Lugano, distant landscape | swissALTI3D, Copernicus GLO-30 | — |
+| Piers and moored boats (v2.8) | OpenStreetMap (man_made=pier, floating, mooring, width) | the piers where OSM maps them, fixed on posts or floating, at the lake's level; the boats a rule (one every 3 m at the piers where boats moor), drawn here low-poly, not the real boats |
 
 ## 2022 state reproduced on the cantonal road
 

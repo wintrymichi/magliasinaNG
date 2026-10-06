@@ -46,6 +46,11 @@ MAT_COLORS = [
     ("osm_giveway", (0.95, 0.95, 0.95)),
     ("pole", (0.55, 0.56, 0.58)), ("sign", (0.9, 0.9, 0.92)), ("delineator_black", (0.1, 0.1, 0.1)),
     ("delineator", (0.95, 0.95, 0.95)), ("cabinet", (0.6, 0.6, 0.55)), ("backdrop", (0.35, 0.42, 0.28)),
+    # v2.8 lake (patch_lake.py): the colours of its materials
+    ("pier_deck", (0.50, 0.44, 0.36)), ("pier_beam", (0.30, 0.25, 0.19)), ("pier_float", (0.16, 0.17, 0.17)),
+    ("pier_pile", (0.42, 0.43, 0.44)), ("boat_white", (0.90, 0.90, 0.88)), ("boat_blue", (0.08, 0.16, 0.32)),
+    ("boat_grey", (0.50, 0.52, 0.54)), ("boat_beige", (0.72, 0.66, 0.54)), ("boat_dark", (0.08, 0.08, 0.09)),
+    ("boat_metal", (0.75, 0.76, 0.77)), ("boat_inside", (0.78, 0.78, 0.76)),
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
 # m, height at scale 1 of the game models drawn as posts (measured on the cantonal road: dati/lamps.json and
