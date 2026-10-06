@@ -43,7 +43,7 @@ Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a s
 
 ## Checked
 
-- **Without the game:** each change on its own with the pipeline's 3D renderer, before and after at the same views ([`beamng/verifica/v2.8/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8), one folder per change); the automatic checks of the whole level on v2.7 and on v2.8 (*v2.8 build test* workflow): `check_level.py` RESULT_CHECK_LEVEL, `drive_test.py` RESULT_DRIVE_TEST.
+- **Without the game:** each change on its own with the pipeline's 3D renderer, before and after at the same views ([`beamng/verifica/v2.8/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8), one folder per change); the automatic checks of the whole level on v2.7 and on v2.8 (*v2.8 build test* workflow): `check_level.py` without a change, `drive_test.py` with the same or fewer knocks (hard knocks on the main roads 12,284 → 12,110, on the minor roads 142,463 → 142,342); the objects of the changes against each other in [`beamng/verifica/v2.8/build/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8/build).
 - **In the game:** to be written after the test (load time, frame rate and memory against v2.7 at the same views, what was found and fixed).
 
 ## Limits
