@@ -9,6 +9,12 @@ over the ground 4 m beyond the edge, looking along it.
 render: before and after with render3d.py, side by side (compare_<site>_<view>.jpg).
 views: the same views for the in-game tour of run_paved_screenshots.ps1 (bng_lua/magliaso_unpaved.lua), with
 the frame rate of every view.
+    python paved_tour.py keep_sites <zip v2.7> <zip first version>        -> verifica/v2.8/paved_edges/keep_sites.json
+    python paved_tour.py keep_map <zip v2.7> <zip first version> <zip now>  -> verifica/v2.8/paved_edges/render3d/keep_map_*
+keep_sites: within 0.75 m of a fence, a wall and a house, the terrain vertex the first version of the patch (which
+raised the terrain in the keep-out zones too) raised the most between 0.4 and 0.8 m, nearest the spawn points of
+Magliaso, Agno and Caslano. keep_map: around each, the terrain the first version and the patch now raise over v2.7,
+on the outlines of what marks the edge (in a 3D view the walls and the backfill hide the foot of the wall).
 """
 import json, os, sys, zipfile
 import numpy as np
@@ -76,6 +82,91 @@ def sites(zp):
     json.dump(out, open(SITES, "w"), indent=1)
 
 
+KEEP_SITES = os.path.join(OUT_DIR, "keep_sites.json")
+
+
+def keep_sites(z27, zfirst):
+    za, zb = zipfile.ZipFile(z27), zipfile.ZipFile(zfirst)
+    blk = next(o for o in pl.read_items(za, f"{LV}/main/MissionGroup/level_objects/terrain/items.level.json")
+               if o.get("class") == "TerrainBlock")
+    pu.Z0, pu.MAXH = float(blk["position"][2]), float(blk["maxHeight"])
+    qa, qb = (pw.read_ter(z.read(f"{LV}/theTerrain.ter"))[1] for z in (za, zb))
+    rr, cc = np.nonzero(qb != qa)
+    dz = (qb[rr, cc].astype(np.float64) - qa[rr, cc]) / 65535.0 * pu.MAXH
+    x, y = pu.TER_X0 + cc * pu.TER_SQUARE, pu.TER_Y0 + rr * pu.TER_SQUARE
+    road = pl.faces(za, LV, ["roads/surfaces"])
+    rc = np.concatenate([t.mean(1) for t in road.values()])
+    from scipy.spatial import cKDTree
+    rtree = cKDTree(rc[:, :2])
+    spawns = {o["name"]: np.asarray(o["position"]) for o in
+              pl.read_items(za, f"{LV}/main/MissionGroup/PlayerDropPoints/items.level.json")}
+    out = []
+    for (group, label), spawn in zip((("roads/fences", "fence"), ("walls", "wall"), ("buildings", "house")),
+                                     ("spawn_magliaso_paese", "spawn_agno", "spawn_caslano")):
+        keep_groups, keep_r = pp.KEEP_GROUPS, pp.KEEP_OUT
+        pp.KEEP_GROUPS, pp.KEEP_OUT = (group,), 0.75
+        try:
+            near = pu.in_cells(pp.keep_out_cells(za, LV), x, y)
+        finally:
+            pp.KEEP_GROUPS, pp.KEEP_OUT = keep_groups, keep_r
+        k = np.flatnonzero(near & (dz > 0.4) & (dz < 0.8))
+        k = k[np.argsort(np.hypot(x[k] - spawns[spawn][0], y[k] - spawns[spawn][1]))]
+        for i in k[:3000]:
+            p = np.array([x[i], y[i]])
+            d, j = rtree.query(p)
+            if not 0.5 < d < 12.0:
+                continue
+            z0 = pu.Z0 + float(qa[rr[i], cc[i]]) / 65535.0 * pu.MAXH
+            out.append({"name": label, "point": [round(float(v), 2) for v in (*p, z0)], "raised_first_m": round(float(dz[i]), 2)})
+            print(out[-1])
+            break
+    os.makedirs(OUT_DIR, exist_ok=True)
+    json.dump(out, open(KEEP_SITES, "w"), indent=1)
+
+
+def keep_map(z27, zfirst, znow):
+    """Around every keep site (40 x 40 m): the terrain raised by the first version and now, over the outlines of
+    the guard rails, fences, walls, buildings and railway (keep_map_<site>.png)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    za = zipfile.ZipFile(z27)
+    blk = next(o for o in pl.read_items(za, f"{LV}/main/MissionGroup/level_objects/terrain/items.level.json")
+               if o.get("class") == "TerrainBlock")
+    maxh = float(blk["maxHeight"])
+    q = [pw.read_ter(zipfile.ZipFile(z).read(f"{LV}/theTerrain.ter"))[1].astype(np.float64) for z in (z27, zfirst, znow)]
+    outl = []
+    for g in pp.KEEP_GROUPS:
+        for o in pl.read_items(za, f"{LV}/main/MissionGroup/{g}/items.level.json") if f"{LV}/main/MissionGroup/{g}/items.level.json" in za.NameToInfo else []:
+            sn = o.get("shapeName", "").lstrip("/")
+            if o.get("class") == "TSStatic" and sn in za.NameToInfo:
+                import optimize_level
+                V, _, _, _, parts, _ = optimize_level.parse(za.read(sn).decode("utf-8"))
+                W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
+                outl.append(pp.outline_samples(W[np.concatenate([idx[:, 0] for _, idx in parts])].reshape(-1, 3, 3)))
+    outl = np.concatenate(outl)
+    for s in json.load(open(KEEP_SITES)):
+        x0, y0 = s["point"][:2]
+        c0, r0 = int(round((x0 - pu.TER_X0) / pu.TER_SQUARE)), int(round((y0 - pu.TER_Y0) / pu.TER_SQUARE))
+        h = int(20 / pu.TER_SQUARE)
+        ext = (pu.TER_X0 + (c0 - h) * pu.TER_SQUARE, pu.TER_X0 + (c0 + h) * pu.TER_SQUARE,
+               pu.TER_Y0 + (r0 - h) * pu.TER_SQUARE, pu.TER_Y0 + (r0 + h) * pu.TER_SQUARE)
+        m = (outl[:, 0] > ext[0]) & (outl[:, 0] < ext[1]) & (outl[:, 1] > ext[2]) & (outl[:, 1] < ext[3])
+        fig, ax = plt.subplots(1, 2, figsize=(11, 5.2))
+        for k, (a, title) in enumerate(zip(ax, ("first version", "patch_paved_edges.py"))):
+            d = (q[k + 1] - q[0])[r0 - h:r0 + h + 1, c0 - h:c0 + h + 1] / 65535.0 * maxh
+            im = a.imshow(np.ma.masked_less(d, 0.01), origin="lower", extent=ext, cmap="viridis", vmin=0, vmax=0.8)
+            a.plot(outl[m, 0], outl[m, 1], ",", color="red")
+            a.plot([x0], [y0], "o", mfc="none", mec="black", ms=12)
+            a.set_title(f"{title}: terrain raised over v2.7 (m)")
+            a.set_aspect("equal")
+        fig.colorbar(im, ax=ax, shrink=0.8)
+        f = os.path.join(OUT_DIR, "render3d", f"keep_map_{s['name']}.png")
+        fig.savefig(f, dpi=80)
+        plt.close(fig)
+        print(f, flush=True)
+
+
 def render(before, after):
     import render3d
     from PIL import Image, ImageDraw
@@ -112,4 +203,4 @@ def views(zp, tag):
 
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
-    {"sites": sites, "render": render, "views": views}[cmd](*args)
+    {"sites": sites, "render": render, "views": views, "keep_sites": keep_sites, "keep_map": keep_map}[cmd](*args)

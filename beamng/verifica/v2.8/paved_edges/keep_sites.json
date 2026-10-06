@@ -1,0 +1,29 @@
+[
+ {
+  "name": "fence",
+  "point": [
+   799.5,
+   -1072.5,
+   299.71
+  ],
+  "raised_first_m": 0.7
+ },
+ {
+  "name": "wall",
+  "point": [
+   2361.0,
+   702.0,
+   277.53
+  ],
+  "raised_first_m": 0.48
+ },
+ {
+  "name": "house",
+  "point": [
+   1099.5,
+   -2410.5,
+   275.95
+  ],
+  "raised_first_m": 0.57
+ }
+]

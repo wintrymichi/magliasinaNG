@@ -16,7 +16,9 @@ terrain is raised to the paved surfaces with patch_unpaved.main, and the surface
   them, which the raised terrain would change;
 - none of it within KEEP_OUT m of a guard rail, a fence, a wall (and the backfill behind it), a building, the
   railway or a bridge parapet: there the step is the real one (an embankment behind a guard rail, a kerb
-  against a wall, a plinth).
+  against a wall, a plinth). The faces there raise no terrain, and the terrain vertices there stay as they were
+  also where a face farther off would raise them (the first version left them to the fade of the faces up to
+  4.5 m away: the ground rose against walls, fences and houses, up to 1 m).
 The terrain gets the date of the patch; everything else is copied as it is. The report measures the edges
 before and after.
 
@@ -119,6 +121,20 @@ def measure(zp, keep_out):
                                               "max_m": round(float(inside.max()), 3)}}
 
 
+def raised_vertices(src, dst, keep_out):
+    """The terrain vertices dst raised over src: in all, by how much, and in the keep-out (none)."""
+    lv = f"levels/{LEVEL_NAME}"
+    q0, q1 = (pw.read_ter(zipfile.ZipFile(z).read(f"{lv}/theTerrain.ter"))[1] for z in (src, dst))
+    blk = next(o for o in pl.read_items(zipfile.ZipFile(src), f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
+               if o.get("class") == "TerrainBlock")
+    rr, cc = np.nonzero(q1 != q0)
+    dz = (q1[rr, cc].astype(np.float64) - q0[rr, cc]) / 65535.0 * float(blk["maxHeight"])
+    keep = pu.in_cells(keep_out, pu.TER_X0 + cc * pu.TER_SQUARE, pu.TER_Y0 + rr * pu.TER_SQUARE)
+    return {"vertices": len(rr), "median_m": round(float(np.median(dz)), 3) if len(dz) else 0.0,
+            "p95_m": round(float(np.percentile(dz, 95)), 3) if len(dz) else 0.0,
+            "max_m": round(float(dz.max()), 3) if len(dz) else 0.0, "in_keep_out": int(keep.sum())}
+
+
 def main(src, dst, report=None):
     zi = zipfile.ZipFile(src)
     lv = f"levels/{LEVEL_NAME}"
@@ -130,11 +146,14 @@ def main(src, dst, report=None):
     pu.main(src, dst, mats=PAVED, edge_drop=EDGE_DROP, keep_out=keep)
     after = measure(dst, keep)
     print("after:", after, flush=True)
+    raised = raised_vertices(src, dst, keep)
+    print("terrain vertices raised:", raised, flush=True)
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump({"source": os.path.basename(src), "materials": list(PAVED), "edge_drop_m": EDGE_DROP,
                    "terrain_under_faces_m": pu.EPS, "keep_out_m": KEEP_OUT, "keep_out_km2": round(len(keep) / 1e6, 2),
-                   "paved_outer_edges_before": before, "paved_outer_edges_after": after}, open(report, "w"), indent=1)
+                   "paved_outer_edges_before": before, "paved_outer_edges_after": after,
+                   "terrain_vertices_raised": raised}, open(report, "w"), indent=1)
     return 0
 
 
