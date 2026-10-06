@@ -179,7 +179,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Street lamps (v2.8, in progress) | `patch_lamps.py`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
 | Undergrowth (v2.8, in progress) | `patch_understory.py`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; into a built zip |
 | Delineators and pole lines (v2.8, in progress) | `patch_roadside.py`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; into a built zip |
-| Paved edges flush (v2.8, in progress) | `patch_paved_edges.py` (with `patch_unpaved.main`), `paved_tour.py`, `run_paved_screenshots.ps1` | the terrain raised to the outer edges of the asphalt, sett, cobble and pavement meshes and their edges lowered onto it by at most 8 cm, not within 2 m of a guard rail, fence, wall, building, the railway or a bridge parapet; the paint over the lowered faces down with them; into a built zip, before the other v2.8 patches (it changes the terrain heights) |
+| Paved edges flush (v2.8, in progress) | `patch_paved_edges.py` (with `patch_unpaved.main`), `paved_tour.py`, `run_paved_screenshots.ps1` | the terrain raised to 4 cm under the outer edges of the asphalt, sett, cobble and pavement meshes (the meshes unchanged), not within 2 m of a guard rail, fence, wall, building, the railway or a bridge parapet; into a built zip, before the other v2.8 patches (it changes the terrain heights) |
 | Warning and parking signs (v2.8, in progress) | `signs_more.py`, `patch_signs_more.py`, `signs_ch.py` (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24), `signs_more_tour.py`, `run_signs_more_screenshots.ps1` | the signs OpenStreetMap does not map, by the Swiss rules: curve warnings before the unexpected sharp curves of the main roads outside the villages, the warnings of the level crossings, the hazards OSM records on a road, the parking signs at the public car parks; put up as `patch_signs.py` does, into a built zip (after `patch_paved_edges.py`: the poles stand on the ground) |
 | Piers and boats (v2.8, in progress) | `patch_lake.py`, `lake_tour.py`, `run_lake_screenshots.ps1` | the piers OpenStreetMap maps on the Swiss shore (fixed on wooden posts or floating on pontoons, a plank deck drawn here) and low-poly boats at the piers where boats moor; meshes in 512 m tiles in `props/lake`; into a built zip |
 | Railway overhead line (v2.8, in progress) | `patch_catenary.py`, `catenary_tour.py`, `run_catenary_screenshots.ps1` | the axes of the tracks from the sleepers of the railway meshes; masts, cantilevers, messenger and contact wires of the FLP and the SBB line; into a built zip |
@@ -230,33 +230,26 @@ colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall
 
 The build carves the terrain 0.1 m under the lowest road face within one terrain step of every vertex
 (`network_mesh.carve_tile`), so that it stays under the road whatever the grade. Beside a road with nothing at its
-edge this leaves the asphalt standing on the ground like a slab, with a trench beside it: on v2.7 the outer edges of
-the paved meshes (asphalt, setts, cobbles, pavements, paved paths and yards: 991 km of edges) stood 0.24 m over the
-terrain 0.3 m beyond them (median; 0.83 m at the 90th percentile). The dirt and gravel tracks were laid flush in v2.7
-(`patch_unpaved.py`); `patch_paved_edges.py <in.zip> <out.zip> [--report <json>]` does the same for the paved
-surfaces with `patch_unpaved.main` (its materials, deepest drop, keep-out cells and a hook for other entries are
-parameters now; called without them it does what it did in v2.7, checked on the v2.6 zip: the same terrain and road
-shapes as the v2.7 release):
-- the terrain within 1.5 m of a paved top face raised to its height (fading back to the ground at 4.5 m, only where
-  the ground is lower, not where it lies more than 1 m under the road: an embankment or a bridge stays), never over
-  a road face;
-- the outer edges of the paved faces lowered onto it by at most 8 cm (the tracks: 25 cm): on the asphalt the
-  cross-fall of the last strip changes by a few per cent at most, and an edge higher over the ground than that stays
-  (a kerb, a ramp);
-- then the raised terrain checked again against the faces as they are now (`patch_unpaved.main(clamp=...)`, the
-  constraint pass of the solve with the new faces), 2 cm under them: a lowered edge tilts the last strip of its face,
-  and the terrain raised under it to 4 cm under the old face would show through the asphalt (tried without: terrain
-  over the face at 0.46 % of the points 0.15 and 0.5 m inside the edges, against 0.004 % in v2.7);
-- neither within 2 m of a guard rail, a fence, a wall (and the backfill behind it), a building, the railway or a
+edge this leaves the asphalt standing on the ground like a slab, with a trench beside it. The dirt and gravel tracks
+were laid flush in v2.7 (`patch_unpaved.py`); `patch_paved_edges.py <in.zip> <out.zip> [--report <json>]` raises the
+terrain to the paved surfaces (asphalt, setts, cobbles, pavements, yards) with `patch_unpaved.main` (its materials,
+deepest drop and keep-out cells are parameters now; called without them it does what it did in v2.7, checked on the
+v2.6 zip: the same terrain and road shapes as the v2.7 release):
+- the terrain within 1.5 m of a paved top face raised to 4 cm under its height (fading back to the ground at 4.5 m,
+  only where the ground is lower, not where it lies more than 1 m under the road: an embankment or a bridge stays),
+  never over a road face;
+- the faces themselves stay as they are. The first version of the patch also lowered the outer edges onto the
+  raised terrain by up to 8 cm, as `patch_unpaved.py` does for the tracks: `check_level.py` did not change, but
+  `drive_test.py` counted 41 % more hard knocks on the main roads and 64 % more on the minor ones (the last strip of a
+  road tilts, by a different amount at every edge vertex, under the wheels of a car);
+- the paved paths are left out: the drive test runs its car along them with the wheels on the ground beside them;
+- nothing within 2 m of a guard rail, a fence, a wall (and the backfill behind it), a building, the railway or a
   bridge parapet (1 m cells around the outlines of their meshes: 5.7 km² in all): there the step is a real one,
-  an embankment behind a guard rail, a kerb against a wall, a plinth;
-- the road paint (`markings_net.LIFT` over the road) over the faces that went down goes down with them.
-On v2.7: 1.75 million terrain vertices raised (median 0.11 m), 287,085 edge vertices lowered in 323 road shapes, 417,465
-terrain vertices lowered again by the check (median 2 cm), 60,804 paint vertices in 137 shapes lowered with the
-faces. The outer edges out of the keep-out zones (452 of 991 km) stand 3.6 cm over the ground 0.3 m beyond them
-instead of 21 cm (median; 90th percentile 12 instead of 46 cm; over 15 cm: 6.6 % instead of 74 %); the terrain over
-the faces inside the edges as in v2.7 (0.006 % of the points, 0.004 % in v2.7). Nothing is added: the same number of
-vertices and objects, the zip 0.6 MB bigger; the game converts the 460 changed shapes again on the first load.
+  an embankment behind a guard rail, a kerb against a wall, a plinth.
+On v2.7: 1.74 million terrain vertices raised (median 0.11 m), no face changed. The outer edges out of the keep-out
+zones (443 of the 973 km of edges of these surfaces) stand 7 cm over the ground 0.3 m beyond them instead of 21 cm
+(median; 90th percentile 12 instead of 46 cm; over 15 cm: 6.7 % instead of 74 %); the terrain over the faces inside
+the edges as in v2.7 (0.006 % of the points, 0.004 % in v2.7). Nothing is added: only the terrain file changes.
 Checked without the game with `paved_tour.py` (`render3d.py` before and after at three places, a driver on the road
 and a low view along the edge): `verifica/v2.8/paved_edges/`; in the game: `run_paved_screenshots.ps1`.
 
