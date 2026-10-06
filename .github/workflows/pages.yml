@@ -1,7 +1,9 @@
 name: Website
 
-# Publishes web/ (the project website) on GitHub Pages.
-# One-time setup: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+# Publishes web/ (the project website) on GitHub Pages, at https://wintrymichi.ch (web/CNAME).
+# One-time setup in Settings -> Pages: Build and deployment -> Source: GitHub Actions; Custom domain:
+# wintrymichi.ch, then Enforce HTTPS. A site deployed by Actions takes its domain from that setting, not
+# from the CNAME file (copied anyway, so the artifact says which domain it is for). DNS: web/README.md.
 
 on:
   push:
@@ -29,7 +31,7 @@ jobs:
       - name: Copy the site without its build scripts
         run: |
           mkdir _site
-          cp -r web/index.html web/style.css web/map.svg web/img _site/
+          cp -r web/index.html web/style.css web/map.svg web/CNAME web/img _site/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
