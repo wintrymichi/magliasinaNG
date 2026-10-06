@@ -1,102 +1,267 @@
 {
  "source": "magliaso_pura_v2.7.zip",
  "sleepers": 11504,
- "electrified_km": 9.91,
+ "electrified_km": 8.1,
  "chains": [
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 579.7
+   "length_m": 579.7,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 188.0
+   "length_m": 188.0,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 33.4
+   "length_m": 33.4,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 56.7
+   "length_m": 56.7,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 1028.5
+   "length_m": 1028.5,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 1658.6
+   "length_m": 1658.6,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 359.9
+   "length_m": 359.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 752.7
+   "length_m": 752.7,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 135.5
+   "length_m": 135.5,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 116.0
+   "length_m": 116.0,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 9.8
+   "length_m": 9.8,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 1718.5
+   "length_m": 1718.5,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 825.2
+   "length_m": 825.2,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 28.9
+   "length_m": 28.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 1.9,
-   "length_m": 6.2
+   "length_m": 6.2,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 2.6,
-   "length_m": 434.8
+   "length_m": 42.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
   },
   {
    "gauge_sleeper_m": 2.6,
-   "length_m": 407.1
+   "length_m": 239.8,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.87,
+   "electrified": true
   },
   {
    "gauge_sleeper_m": 2.6,
-   "length_m": 586.4
+   "length_m": 142.3,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
   },
   {
    "gauge_sleeper_m": 2.6,
-   "length_m": 510.0
+   "length_m": 183.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.03,
+   "electrified": false
   },
   {
    "gauge_sleeper_m": 2.6,
-   "length_m": 469.1
+   "length_m": 126.2,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 55.0,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 17.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 434.8,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.01,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 407.1,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 386.7,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 586.4,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 510.0,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.03,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 469.1,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 6.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 84.5,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 158.0,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 184.9,
+   "osm_matched": 1.0,
+   "osm_contact_line": 1.0,
+   "electrified": true
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 61.1,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 60.7,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
+  },
+  {
+   "gauge_sleeper_m": 2.6,
+   "length_m": 61.0,
+   "osm_matched": 1.0,
+   "osm_contact_line": 0.0,
+   "electrified": false
   }
  ],
- "masts": 201,
- "skipped_places": 153,
+ "masts": 168,
+ "skipped_places": 115,
  "skipped_why": {
-  "road": 67,
-  "building": 7,
+  "road": 63,
+  "building": 6,
   "wall": 97,
-  "track": 206
+  "track": 120
  },
  "span_m": {
   "median": 50.0,
   "max": 165,
-  "over_max_without_wires": 6
+  "over_max_without_wires": 4
  },
- "mast_tiles": 22,
+ "mast_tiles": 23,
  "wire_tiles": 20
 }

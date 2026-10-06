@@ -8,6 +8,9 @@ render: before and after with render3d.py (masts and wires are pipeline meshes, 
 side (compare_<site>.jpg).
 views: the same views for the in-game tour of run_catenary_screenshots.ps1 (bng_lua/magliaso_unpaved.lua), with
 the frame rate of every view.
+    python catenary_tour.py electrified <zip v2.7> <zip first version> <zip now>  -> verifica/v2.8/catenary/electrified.png
+electrified: the standard-gauge tracks from above (their sleepers, blue where OpenStreetMap tags them
+electrified=contact_line, grey where not) with the masts of the first version and of the patch now.
 """
 import json, os, sys, zipfile
 import numpy as np
@@ -80,6 +83,54 @@ def views(zp, tag):
     print(VIEWS, len(out), "views")
 
 
+def masts(zp):
+    """xy (k, 2) of the catenary masts of a patched zip: the mast tiles' vertices, one point a mast."""
+    import optimize_level
+    from scipy.cluster.hierarchy import fcluster, linkage
+    zi = zipfile.ZipFile(zp)
+    pts = []
+    for o in [json.loads(l) for l in zi.read(f"{LV}/main/MissionGroup/railway/items.level.json").decode().splitlines() if l.strip()]:
+        sn = o.get("shapeName", "").lstrip("/")
+        if "catenary_masts" in sn and sn in zi.NameToInfo:
+            V = optimize_level.parse(zi.read(sn).decode("utf-8"))[0] + np.asarray(o["position"])
+            pts.append(V[V[:, 2] < np.percentile(V[:, 2], 30)][:, :2])     # the feet
+    P = np.unique(np.round(np.concatenate(pts), 1), axis=0)
+    out = []
+    for cell in set(map(tuple, np.floor(P / 200).astype(int))):
+        Q = P[(np.floor(P / 200).astype(int) == cell).all(1)]
+        lab = fcluster(linkage(Q, "single"), 1.0, "distance") if len(Q) > 1 else np.ones(1, int)
+        out += [Q[lab == k].mean(0) for k in np.unique(lab)]
+    return np.array(out)
+
+
+def electrified(z27, zfirst, znow):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    C, Ls = pc.sleepers(zipfile.ZipFile(z27), LV)
+    P = C[Ls >= 2.25]
+    f = pc.osm_contact_line()
+    fig, ax = plt.subplots(figsize=(9, 9))
+    for l in pc.join([P[c] for c in pc.chains(P)]):
+        on = f(l)[1] >= 0.5
+        ax.plot(l[:, 0], l[:, 1], "-", color="tab:blue" if on else "0.6", lw=3 if on else 2)
+    box = (P[:, 0].min() - 50, P[:, 0].max() + 50, P[:, 1].min() - 50, P[:, 1].max() + 50)
+    for zp, mk, label in ((zfirst, "x", "masts, first version"), (znow, "o", "masts now")):
+        M = masts(zp)
+        M = M[(M[:, 0] > box[0]) & (M[:, 0] < box[1]) & (M[:, 1] > box[2]) & (M[:, 1] < box[3])]
+        ax.plot(M[:, 0], M[:, 1], mk, ms=7, mfc="none", color="tab:red" if mk == "x" else "black", label=f"{label} ({len(M)})")
+    ax.plot([], [], "-", color="tab:blue", lw=3, label="standard gauge, OSM electrified=contact_line")
+    ax.plot([], [], "-", color="0.6", lw=2, label="standard gauge, OSM electrified=no")
+    ax.set_aspect("equal")
+    ax.set_xlim(box[:2])
+    ax.set_ylim(box[2:])
+    ax.legend(loc="upper left", fontsize=9)
+    ax.set_title("The standard-gauge tracks of the map and their catenary masts")
+    f_ = os.path.join(OUT_DIR, "electrified.png")
+    fig.savefig(f_, dpi=80)
+    print(f_)
+
+
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
-    {"sites": sites, "render": render, "views": views}[cmd](*args)
+    {"sites": sites, "render": render, "views": views, "electrified": electrified}[cmd](*args)

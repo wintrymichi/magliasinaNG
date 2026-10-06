@@ -6,8 +6,11 @@ data, so a rule places them, on the tracks as the level has them:
 - the axes of the tracks: the sleepers of the railway meshes (the centre of the top of every sleeper box, its
   length telling the gauge: 1.90 m metre gauge, 2.60 m standard gauge), chained where they lie less than
   CHAIN m apart, the chains joined across the gaps of the level crossings (no sleepers there) up to JOIN m;
-  electrified: every metre-gauge chain (the FLP), the standard-gauge ones longer than SBB_MIN m (the SBB line;
-  the shorter ones are sidings of the industrial zones);
+  electrified: a chain whose points lie, for the most part, within OSM_NEAR m of an OpenStreetMap railway
+  tagged electrified=contact_line (osm.py, the extract of dati/); where OSM has no track within OSM_NEAR m of
+  most of it, by its gauge: metre gauge (the FLP) yes, standard gauge no. The first version took every
+  standard-gauge chain longer than 400 m for the SBB line: they are the yards and spurs of the industrial
+  zones, electrified=no in OSM;
 - a mast every SPAN m (closer in the bends: BENDS), MAST_OFF m from the axis on the outside of the bend (or
   the side where it can stand: not on a carriageway, in a building or on a wall, not within MAST_CLEAR m of
   another track's axis; tried again 5 m further on); a steel mast (MAST_W m square) to MAST_TOP m over the rails, a cantilever to over the track;
@@ -29,12 +32,13 @@ import optimize_level
 import patch_lamps as pl
 import patch_roadside as pr
 import patch_wall_fill as pw
+import osm
 import road_mesh
 from config import LEVEL_NAME
 
 CHAIN = 1.5                 # m between neighbouring sleepers of one chain (1 m apart in the level; tracks >= 3.5 m apart)
 JOIN = 30.0                 # m, a gap of a chain (a level crossing) joined up to this
-SBB_MIN = 400.0             # m, a standard-gauge chain this long is the line (cut by the edge of the map), shorter ones sidings
+OSM_NEAR = 4.0              # m from an OSM railway: the same track
 SPAN = 50.0                 # m between two masts on the straight
 BENDS = ((150.0, 30.0), (400.0, 40.0))      # radius under which (m) -> span (m)
 MAST_OFF = {1.90: 2.6, 2.60: 3.1}           # m from the axis, by sleeper length
@@ -118,6 +122,32 @@ def chains(P):
     return out
 
 
+def osm_contact_line():
+    """f(polyline (n, 3)) -> (share of its points every 5 m within OSM_NEAR m of an OSM railway, share of those on
+    one tagged electrified=contact_line)."""
+    pts, flag = [np.zeros((0, 2))], [np.zeros(0, bool)]
+    if osm.available():
+        ways, _ = osm.load()
+        for w in ways:
+            if "railway" not in w["tags"]:
+                continue
+            xy = np.asarray(w["xy"], np.float64)
+            for a, b in zip(xy[:-1], xy[1:]):
+                n = max(int(np.hypot(*(b - a)) / 2.0), 1)
+                pts.append(a + np.linspace(0, 1, n + 1)[:, None] * (b - a))
+                flag.append(np.full(n + 1, w["tags"].get("electrified") == "contact_line"))
+    P, F = np.concatenate(pts), np.concatenate(flag)
+    tree = cKDTree(P) if len(P) else None
+
+    def f(l):
+        if tree is None:
+            return 0.0, 0.0
+        d, j = tree.query(l[::5, :2], distance_upper_bound=OSM_NEAR)
+        m = np.isfinite(d)
+        return float(m.mean()), float(F[j[m]].mean()) if m.any() else 0.0
+    return f
+
+
 def join(lines):
     """Polylines (n, 3) joined end to end across gaps up to JOIN m going on the same way."""
     lines = [l for l in lines]
@@ -184,11 +214,16 @@ def main(src, dst, report=None):
         P = C[kind == k]
         for ch in chains(P):
             raw.append((k, P[ch]))
-    lines = []
+    lines, chain_rep = [], []
+    contact = osm_contact_line()
     for k in (1.90, 2.60):
         for l in join([p for kk, p in raw if kk == k]):
             length = float(np.linalg.norm(np.diff(l[:, :2], axis=0), axis=1).sum())
-            if k == 1.90 or length >= SBB_MIN:
+            matched, share = contact(l)
+            on = share >= 0.5 if matched >= 0.5 else k == 1.90
+            chain_rep.append({"gauge_sleeper_m": k, "length_m": round(length, 1), "osm_matched": round(matched, 2),
+                              "osm_contact_line": round(share, 2), "electrified": bool(on)})
+            if on:
                 lines.append((k, l, length))
     print("electrified track chains: %d, %.1f km (%s)" % (len(lines), sum(x[2] for x in lines) / 1000,
           ", ".join("%.0f m %s" % (x[2], "FLP" if x[0] < 2 else "SBB") for x in sorted(lines, key=lambda x: -x[2])[:8])), flush=True)
@@ -334,7 +369,7 @@ def main(src, dst, report=None):
     print("%s written in %.0f s: %d mast tiles, %d wire tiles" % (dst, time.time() - t0, nt_m, nt_w), flush=True)
     if report:
         res = {"source": os.path.basename(src), "sleepers": int(len(C)), "electrified_km": round(km, 2),
-               "chains": [{"gauge_sleeper_m": k, "length_m": round(length, 1)} for k, _, length in lines],
+               "chains": chain_rep,
                "masts": n_masts, "skipped_places": skipped, "skipped_why": why,
                "span_m": {"median": float(np.median(spans)), "max": int(spans.max()),
                           "over_max_without_wires": int((spans > MAX_SPAN).sum())},

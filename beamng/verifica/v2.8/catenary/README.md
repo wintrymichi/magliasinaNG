@@ -9,12 +9,14 @@ The overhead line of the railway (issue #21). What the patch does and why: [`bea
 | `report.json` | the patch's report on the v2.7 zip: sleepers, track chains and their length, masts, spans, places where no mast could stand and why |
 | `sites.json` | the three views (`catenary_tour.py sites`): the middle of the three longest FLP chains, from 7 m beside the track and 3 m up |
 | `render3d/before_*.jpg`, `after_*.jpg`, `compare_*.jpg` | v2.7 and patched at the same views, and the two side by side |
+| `electrified.png` | the standard-gauge tracks from above, blue where OpenStreetMap tags them electrified, with the masts of the first version and now (`catenary_tour.py electrified`) |
 
 ## Results (3D renderer)
 
-- 9.9 km of track electrified (all of the FLP in the map, two pieces of the SBB line), 201 masts, median span 50 m.
+- 8.1 km of track electrified (all of the FLP in the map, and three standard-gauge tracks of the Vedeggio valley, near Manno and Gravesano, that OpenStreetMap tags electrified=contact_line: 240, 158 and 185 m), 168 masts, median span 50 m.
+- The first version took the standard-gauge chains of 400 m or more for the SBB line (201 masts over 9.9 km): they are five yards and spurs (407-586 m) that OSM tags electrified=no. Found by an audit of the v2.8 patches chained; now OSM decides, chain by chain (`report.json`: `osm_contact_line`). The FLP masts and wires are the same as before (the same 23,380 vertices), so the three views are too.
 - Masts on the outside of the bends, cantilevers over the track, the messenger wire sagging between the masts, droppers, the contact wire staggered.
-- Where no mast can stand for 75 m or more (6 places: a road, a wall or another track beside the line) the wires stop, rather than hang over a span no real line has.
+- Where no mast can stand for 75 m or more (4 places: a road, a wall or another track beside the line) the wires stop, rather than hang over a span no real line has.
 
 ## Test in BeamNG.drive 0.39 (still to do)
 

@@ -378,8 +378,10 @@ On v2.7: 7,212 houses; 305 km of gutters, 38,407 downpipes, 1,903 aerials, 1,483
 - the axes: the centre of the top of every sleeper box of the railway meshes (the duplicated sleepers of
   overlapping lines removed), its length telling the gauge (1.90 m FLP, 2.60 m SBB); chained 1 m apart (the
   released level has a sleeper every metre), the chains joined across the level crossings (no sleepers there) up to
-  30 m; electrified: all the metre gauge, the standard-gauge chains of 400 m or more (the line; the sidings of the
-  industrial zones are shorter);
+  30 m; electrified: a chain most of whose points lie within 4 m of an OpenStreetMap railway tagged
+  electrified=contact_line (the extract in `dati/`); where OSM has no track there, the metre gauge. The first
+  version electrified the standard-gauge chains of 400 m or more as the SBB line: they are yards and spurs of the
+  industrial zones, electrified=no in OSM;
 - a steel mast every 50 m (30 m in bends under 150 m of radius, 40 m under 400 m), 2.6 m (FLP) or 3.1 m (SBB) from the
   axis on the outside of the bend or the other side, not on a carriageway, in a building or on a wall, not within 2 m
   of another track's axis; 7.2 m over the rails, a cantilever to over the track;
@@ -387,7 +389,8 @@ On v2.7: 7,212 houses; 305 km of gutters, 38,407 downpipes, 1,903 aerials, 1,483
   0.35 m over the contact wire mid-span, droppers every 9 m; no wires over a gap of more than 75 m between masts;
 - meshes in 512 m tiles in the railway group: the masts with collision (drawn up to 800 m), the wires without (up to
   400 m), materials in `art/shapes/railway/catenary.materials.json`.
-On v2.7: 11,504 sleepers, 20 chains, 9.9 km electrified, 201 masts (median span 50 m), 6 gaps without wires.
+On v2.7: 11,504 sleepers, 35 chains, 8.1 km electrified (the FLP and 0.6 km of standard gauge), 168 masts (median span 50 m),
+4 gaps without wires.
 Checked without the game: `verifica/v2.8/catenary/`; in the game: `run_catenary_screenshots.ps1`.
 
 ### Version 2.8 (in progress): delineators and wooden pole lines
