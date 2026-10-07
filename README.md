@@ -191,14 +191,309 @@ Each limitation has an issue where the details, the places and the possible fix 
 
 ## Repository layout
 
-| Path | Contents |
-|---|---|
-| [`beamng/pipeline/`](beamng/pipeline) | the pipeline: data download, road network, surfaces, buildings, façades, vegetation, level, checks, patch scripts; `config.py` holds the paths |
-| [`beamng/dati/`](beamng/dati) | small results pinned for the release, so a build doesn't redo the long steps: panorama poses, markings, guardrails, colours, wall materials, GWR and OSM extracts |
-| [`beamng/verifica/`](beamng/verifica) | check results, drive test, road-by-road review, screenshots |
-| [`beamng/RELEASE_v2.7.md`](beamng/RELEASE_v2.7.md) | the notes published with each release (one file per version) |
-| [`.github/workflows/`](.github/workflows) | the release workflows (`release_v2.4.yml` builds the level from scratch, `release_v2.7.yml` patches the v2.6 zip into the current release) |
-| `panoramas.*`, `cameras.json`, `sv_capture.py`, … | the original dataset of the Magliaso–Pura cantonal road (panorama metadata, see [below](#the-panorama-dataset)) |
+Every file of the repository and what it is; the folders of screenshots and renders are one line each (the check folders of `beamng/verifica/v2.8/` also hold a `render3d/` folder with the before/after renders). The folders marked *local only* are not in the repository. The scripts are described in more detail in [`beamng/README.md`](beamng/README.md) (*Script order* and the technical notes by version), the pinned data in [`beamng/dati/`](beamng/dati) and the checks in [`beamng/verifica/`](beamng/verifica).
+
+```
+.
+├── README.md                                 # This file: install, where to drive, how the map is made
+├── CHANGELOG.md                              # What changed in each version of the map, newest first
+├── .gitignore                                # Keeps the local Street View images and Python caches out
+├── panoramas.csv                             # The 366 panoramas: position, date, heading, distance
+├── panoramas.json                            # Metadata of the 366 panoramas used, read by the pipeline
+├── panoramas.geojson                         # Positions of the 366 panoramas as GeoJSON points
+├── panoramas_all_dates.json                  # All 910 panoramas found along the road, 2013 to 2022
+├── cameras.json                              # Poses of the 5856 Street View views: GPS, yaw, pitch, FOV
+├── sv_capture.py                             # Finds and downloads the panoramas, cuts 16 views each
+├── expand.py                                 # Adds linked neighbour panoramas within 15 m of the road
+├── finalize.py                               # Picks 2022 panoramas, older in gaps; writes panoramas.*
+├── download.log                              # Log of sv_capture.py download: 366 panoramas, 5856 views
+├── panorami/                                 # 360° panoramas (local only, not in the repository)
+├── viste/                                    # 16 perspective views per panorama (local only)
+├── storici_2013_2014/                        # Panoramas of 2013/2014 (local only)
+├── .github/                                  # GitHub configuration
+│   └── workflows/                            # GitHub Actions: release builds, test zips, website
+│       ├── catenary_test.yml                 # Test zip of the railway's overhead line (v2.8)
+│       ├── far_trees_test.yml                # Test zip of the far trees on the published v2.6 zip (v2.7)
+│       ├── houses_test.yml                   # Test zip of gutters, aerials and solar panels (v2.8)
+│       ├── lake_test.yml                     # Test zip of the lake piers and moored boats (v2.8)
+│       ├── lamps_test.yml                    # Test zips of village street lamps, lights off and on (v2.8)
+│       ├── pages.yml                         # Publishes web/ on GitHub Pages when web/ changes on main
+│       ├── paved_edges_test.yml              # Paved edges test zip, level and drive checks vs v2.7 (v2.8)
+│       ├── release_v1.1.yml                  # Release build: the v1.0 zip fixed by patch_release.py (v1.1)
+│       ├── release_v2.0.yml                  # Release build from scratch: the whole 51 km² area (v2.0)
+│       ├── release_v2.1.yml                  # Release build from scratch: markings, AI, railway (v2.1)
+│       ├── release_v2.2.yml                  # Release build from scratch: façades, new roads (v2.2)
+│       ├── release_v2.3.yml                  # Release build from scratch: surface fix, fewer trees (v2.3)
+│       ├── release_v2.4.yml                  # Last release built from scratch: houses, OSM surfaces (v2.4)
+│       ├── release_v2.7.yml                  # Release build: the v2.6 zip through four patches (v2.7)
+│       ├── release_v2.8.yml                  # Release build: the v2.7 zip through nine patches (v2.8)
+│       ├── roadside_test.yml                 # Test zip of delineators and wooden pole lines (v2.8)
+│       ├── signs_more_test.yml               # Test zip of unmapped warning and parking signs (v2.8)
+│       ├── understory_test.yml               # Test zip of the undergrowth and darker forest floor (v2.8)
+│       ├── v28_build_test.yml                # Test build of the nine patches, checked against v2.7 (v2.8)
+│       └── wall_fill_test.yml                # Test zip of smooth shading, no grass behind walls (v2.8)
+├── beamng/                                   # The BeamNG.drive map
+│   ├── README.md                             # Pipeline guide: building, script order, notes by version
+│   ├── RELEASE_v*.md                         # Release notes, one per version (v2.0 … v2.8)
+│   ├── pipeline/                             # Python pipeline: from open data to the level zip
+│   │   ├── README_livello.md                 # Player README copied into the level as README.md
+│   │   ├── ai_roads.py                       # Invisible AI DecalRoads that BeamNG builds its navgraph from
+│   │   ├── area.py                           # Playable area polygon: boundary plus road corridors
+│   │   ├── asset_bounds.py                   # Bounding boxes of vanilla DAE shapes read from game zips
+│   │   ├── backdrop.py                       # Distant terrain ring mesh around the block, visual only
+│   │   ├── bld_textures.py                   # Procedural building textures and the openings atlas
+│   │   ├── bng.py                            # Level writers: .ter terrain, scene NDJSON, materials, DAE
+│   │   ├── bridge_report.py                  # Bridge review sheets: profile and three views per bridge
+│   │   ├── bridges.py                        # Bridge decks, parapets and piers on swissTLM3D bridge lines
+│   │   ├── build_level.py                    # Assembles the level: terrain, buildings, roads, props, trees
+│   │   ├── build_rasters.py                  # Resamples swisstopo DTM, DSM and orthophoto to map grids
+│   │   ├── buildings_mesh.py                 # Building meshes from swissBUILDINGS3D LOD2 in 256 m tiles
+│   │   ├── calib_camheight.py                # Street View camera height calibration (camera_height.json)
+│   │   ├── calibrate_attitude.py             # Sign convention of Street View pitch/roll from verticals
+│   │   ├── camera.py                         # Equirectangular panorama camera model and rotations
+│   │   ├── canopy.py                         # Moves trees out of road clearance and solids, onto ground
+│   │   ├── carryover.py                      # Route paint and props carried over from the released level
+│   │   ├── catenary_tour.py                  # Before/after views of the railway overhead line check (v2.8)
+│   │   ├── check_level.py                    # Pre-release checks of roads, obstacles, trees, AI and files
+│   │   ├── clearance.py                      # Keeps vegetation off paved surfaces, AI lines on one surface
+│   │   ├── config.py                         # Shared paths, LV95-to-local coordinates and map extent
+│   │   ├── copy_materials.py                 # Copies vanilla material definitions into the level
+│   │   ├── download_av.py                    # Downloads Ticino cadastral survey layers (MOpublic WFS)
+│   │   ├── download_gwr.py                   # Downloads the Federal Register of Buildings extract (GWR)
+│   │   ├── download_osm.py                   # OSM extract (Overpass): roads, signs, POIs, communes (v2.1)
+│   │   ├── download_swisstopo.py             # Downloader of swisstopo DTM, DSM, orthophoto, 3D buildings
+│   │   ├── download_tlm.py                   # Streamed swissTLM3D extract: roads, railway, streams (v2.0)
+│   │   ├── drive_context.py                  # Drive-test events by site: junction, seam, bridge end (v2.2)
+│   │   ├── drive_test.py                     # Virtual quarter-car drive test of every road and path (v2.2)
+│   │   ├── extract_buildings.py              # Extractor of swissBUILDINGS3D LOD2 walls, roofs and floors
+│   │   ├── facades.py                        # Facades: windows, doors, shops, balconies, roofs (v2.2)
+│   │   ├── far_trees.py                      # Far trees away from roads: drawn models, imposters (v2.7)
+│   │   ├── fences.py                         # Railings and fences on roadside wall crests, from panoramas
+│   │   ├── final_screenshots.py              # Final in-game check views: signs, markings, tracks (v2.7)
+│   │   ├── geo.py                            # Raster helpers: LV95 tile mosaics and the local Grid class
+│   │   ├── groundcover.py                    # GroundCover grass and flowers (v2.6) and shrubs (v2.8)
+│   │   ├── guardrail_mesh.py                 # W-beam guardrail meshes with posts along the measured runs
+│   │   ├── guardrails.py                     # Cantonal road guardrails from LiDAR, checked in panoramas
+│   │   ├── guardrails2.py                    # Cantonal road guardrails by multi-view panorama voting
+│   │   ├── houses_tour.py                    # House details check: sites, renders, game views (v2.8)
+│   │   ├── ingame_screenshots.py             # In-game camera tour for the README screenshots (v2.6)
+│   │   ├── lake_tour.py                      # Piers and boats check: sites, renders, game views (v2.8)
+│   │   ├── lamps.py                          # Cantonal road street lamps triangulated from panoramas
+│   │   ├── lamps_tour.py                     # Village street lamps check: sites, renders, views (v2.8)
+│   │   ├── landcover.py                      # Cadastral survey land cover: 0.5 m raster and local polygons
+│   │   ├── lidar_extract.py                  # Non-vegetation LiDAR points near the cantonal road and walls
+│   │   ├── marking_votes.py                  # Panorama votes on cantonal road marking cells and polygons
+│   │   ├── markings.py                       # Cantonal road lines traced in the straightened orthophoto
+│   │   ├── markings_clean.py                 # Network paint redrawn as Swiss road markings (v2.7)
+│   │   ├── markings_decals.py                # Cantonal road markings as painted mesh strips
+│   │   ├── markings_net.py                   # Network road paint as meshes on the road faces (v2.1)
+│   │   ├── markings_photo.py                 # Cantonal road edge lines by multi-view panorama voting
+│   │   ├── markings_raster.py                # Cantonal road crossings, stop lines, arrows from 10 cm ortho
+│   │   ├── markings_state.py                 # Marking state in the 2022 panoramas: unmarked, red bands
+│   │   ├── mesh_strips.py                    # Simplifies steep road mesh strips within 4 mm (v2.5)
+│   │   ├── missing_buildings.py              # Missing and gone buildings vs swissBUILDINGS3D (v2.2)
+│   │   ├── missing_veg.py                    # Shrubs seen in the panoramas but missing in the game
+│   │   ├── network.py                        # Road and path network from swissTLM3D, in stations (v2.0)
+│   │   ├── network_markings.py               # Road paint of the whole network from the 10 cm ortho (v2.1)
+│   │   ├── network_mesh.py                   # Drivable meshes of the whole road and path network (v2.0)
+│   │   ├── network_surface.py                # Smooth heights, grade and cross slope per station (v2.0)
+│   │   ├── objects.py                        # Benches, bins, hydrants, mailboxes located from Street View
+│   │   ├── ogr_tin.py                        # Reads swissBUILDINGS3D TIN layers via GDAL ctypes (v2.0)
+│   │   ├── optimize_level.py                 # Lighter level: merged tiles, welded meshes, culling (v2.5)
+│   │   ├── ortho.py                          # On-demand reader of the local 10 cm SWISSIMAGE tiles
+│   │   ├── ortho10.py                        # Window reads of the 10 cm SWISSIMAGE cloud GeoTIFFs (v2.1)
+│   │   ├── osm.py                            # OpenStreetMap data of the area in local coordinates (v2.1)
+│   │   ├── osm_surface.py                    # Road and path surface categories from OSM tags (v2.4)
+│   │   ├── package.py                        # Zips the built level as a BeamNG mod into dist/
+│   │   ├── palms.py                          # Windmill palms in lakeside gardens, model drawn here (v2.4)
+│   │   ├── pano_strip.py                     # Straightened road strip coloured from Street View panoramas
+│   │   ├── patch_catenary.py                 # Patch: overhead line masts and wires of the railway (v2.8)
+│   │   ├── patch_far_trees.py                # Patch: far trees from trees.npz into a level zip (v2.7)
+│   │   ├── patch_groundcover.py              # Patch: replaces the GroundCover grass of a level zip (v2.6)
+│   │   ├── patch_house_details.py            # Patch: gutters, downpipes, aerials, dishes, PV panels (v2.8)
+│   │   ├── patch_lake.py                     # Patch: lake piers and boats moored at them, from OSM (v2.8)
+│   │   ├── patch_lamps.py                    # Patch: village street lamps and their lights (v2.8)
+│   │   ├── patch_markings.py                 # Patch: rebuilds the cleaned network road paint (v2.7)
+│   │   ├── patch_paved_edges.py              # Patch: terrain raised flush to paved surface edges (v2.8)
+│   │   ├── patch_release.py                  # Patch: the v1.1 road fixes into the v1.0 zip (v1.1)
+│   │   ├── patch_roadside.py                 # Patch: delineators and wooden pole lines (v2.8)
+│   │   ├── patch_signs.py                    # Patch: Swiss road signs of the whole network (v2.7)
+│   │   ├── patch_signs_more.py               # Patch: warning and parking signs not mapped in OSM (v2.8)
+│   │   ├── patch_understory.py               # Patch: undergrowth and a darker forest floor (v2.8)
+│   │   ├── patch_unpaved.py                  # Patch: terrain flush with dirt and gravel tracks (v2.7)
+│   │   ├── patch_v2_8.py                     # Runs the nine v2.8 patches in order on the v2.7 zip (v2.8)
+│   │   ├── patch_wall_fill.py                # Patch: ground behind walls shaded smooth, no grass (v2.8)
+│   │   ├── paved_tour.py                     # Sites and before/after views of the paved edges check (v2.8)
+│   │   ├── photo_votes.py                    # Multi-view label votes of segmented panoramas at 3D points
+│   │   ├── places.py                         # Villages from swissNAMES3D for the spawn points (v2.0)
+│   │   ├── poles.py                          # Poles, lamps and sign plates located in segmented panoramas
+│   │   ├── prepare_work.py                   # Seeds WORK with the photo results kept in dati (v2.0)
+│   │   ├── props.py                          # Lamps, poles, sign plates and furniture from the photos
+│   │   ├── props_osm.py                      # STOP signs, benches, lamps and bus stops from OSM (v2.1)
+│   │   ├── qa_log.py                         # Writes the visual review log dati/qa_review.json (v2.2)
+│   │   ├── railway.py                        # Railway tracks, ballast and bridges from swissTLM3D (v2.1)
+│   │   ├── refine_poses.py                   # Panorama poses refined against orthophoto and DTM
+│   │   ├── render3d.py                       # Headless three.js screenshots of a built level for review
+│   │   ├── review_map.py                     # Review screenshots of the whole map with render3d (v2.0)
+│   │   ├── review_report.py                  # Writes REVISIONE.md: road-by-road Street View review (v2.2)
+│   │   ├── rivers.py                         # Water meshes and material of the surveyed rivers (v2.4)
+│   │   ├── road_mesh.py                      # Road surface meshes from the cadastral paved polygons
+│   │   ├── road_profile.py                   # Carriageway edges and width along the cantonal road
+│   │   ├── road_strip.py                     # Straightened orthophoto strip of the cantonal road
+│   │   ├── roadheight.py                     # Fitted heights of the paved surfaces (road_surface.npz)
+│   │   ├── roadside_tour.py                  # Sites and before/after views of the roadside check (v2.8)
+│   │   ├── roadside_walls.py                 # Retaining walls along the cantonal road from DTM and photos
+│   │   ├── run_catenary_screenshots.ps1      # In-game screenshots and fps of the catenary check (v2.8)
+│   │   ├── run_final_screenshots.ps1         # Final in-game test of the zip: shots, load time, fps (v2.7)
+│   │   ├── run_houses_screenshots.ps1        # In-game before/after check of the house details (v2.8)
+│   │   ├── run_lake_screenshots.ps1          # In-game before/after check of lake piers and boats (v2.8)
+│   │   ├── run_lamps_screenshots.ps1         # In-game day/night check of the street lamps (v2.8)
+│   │   ├── run_paved_screenshots.ps1         # In-game before/after check of the flush paved edges (v2.8)
+│   │   ├── run_readme_screenshots.ps1        # In-game README screenshots via magliaso_readme (v2.6)
+│   │   ├── run_roadside_screenshots.ps1      # In-game check of delineators and wooden pole lines (v2.8)
+│   │   ├── run_signs_more_screenshots.ps1    # In-game check of the unmapped warning/parking signs (v2.8)
+│   │   ├── run_signs_screenshots.ps1         # In-game road-sign screenshots via magliaso_signs (v2.7)
+│   │   ├── run_understory_screenshots.ps1    # In-game check of undergrowth and darker forest floor (v2.8)
+│   │   ├── run_unpaved_screenshots.ps1       # In-game before/after check of the unpaved tracks (v2.7)
+│   │   ├── run_v28_screenshots.ps1           # Full in-game release test: 9 checks, fps, memory (v2.8)
+│   │   ├── run_validation.ps1                # In-game camera tour at the Street View poses (v1.0)
+│   │   ├── run_wall_fill_screenshots.ps1     # In-game before/after check of the ground behind walls (v2.8)
+│   │   ├── screenshots.py                    # README views rendered with render3d.py, no game (v2.2)
+│   │   ├── segment_views.py                  # Mask2Former segmentation of the Street View views (v1.0)
+│   │   ├── signs_ch.py                       # Swiss road sign plates (OSStr) drawn as textures (v2.7)
+│   │   ├── signs_more.py                     # Placement rules for unmapped warning/parking signs (v2.8)
+│   │   ├── signs_more_tour.py                # Sites, renders and game views of the unmapped signs (v2.8)
+│   │   ├── signs_net.py                      # Road sign positions from OSM tags and Swiss rules (v2.7)
+│   │   ├── signs_screenshots.py              # Camera tour of the in-game road-sign check (v2.7)
+│   │   ├── solve_poses.py                    # Viterbi solve of panorama poses on the orthophoto (v1.0)
+│   │   ├── strade_extra.py                   # Gravesano, Arosio, Caslano roads via swissTLM3D (v2.0, v2.2)
+│   │   ├── surface_fit.py                    # Thin-plate fit of the paved surfaces to the DTM (v1.1)
+│   │   ├── surface_textures.py               # Procedural gravel, earth and stone road textures (v2.4)
+│   │   ├── sv_coverage.py                    # Lists the Street View panoramas covering the area (v2.2)
+│   │   ├── sv_facades.py                     # Facade and shutter colours measured in Street View (v2.2)
+│   │   ├── sv_fetch.py                       # Downloads Street View panoramas about every 20 m (v2.2)
+│   │   ├── sv_guardrails.py                  # Guard rails of the whole network seen in Street View (v2.2)
+│   │   ├── sv_review.py                      # Contact sheets: orthophoto, Street View, map render (v2.2)
+│   │   ├── sv_segment.py                     # Mask2Former segmentation of Street View panoramas (v2.2)
+│   │   ├── sv_walls.py                       # Survey wall materials classified from Street View (v2.2)
+│   │   ├── terrain.py                        # BeamNG terrain builder: heights and material layers
+│   │   ├── terrain_colors.py                 # Terrain material colours measured in orthophoto and photos
+│   │   ├── test_load.ps1                     # Load test in BeamNG: screenshot and beamng.log errors
+│   │   ├── texture_buildings.py              # Facade photo textures near the Cantonale (local build only)
+│   │   ├── texture_walls.py                  # Wall photo textures near the Cantonale (local build only)
+│   │   ├── texturing.py                      # Projective texturing of walls/facades and atlas packing
+│   │   ├── trees.py                          # Tree tops and crowns from the canopy height model
+│   │   ├── understory.py                     # Shrubs and hedges from the 0.6-6 m vegetation height
+│   │   ├── understory_tour.py                # Sites, renders and views of the undergrowth check (v2.8)
+│   │   ├── unpaved_tour.py                   # Sites, views and drives of the unpaved tracks check (v2.7)
+│   │   ├── v28_check.py                      # Check of the chained v2.8 patches against each alone (v2.8)
+│   │   ├── v28_tour.py                       # In-game tour of the views of all nine v2.8 checks (v2.8)
+│   │   ├── validate_metrics.py               # Photo vs game segmentation agreement, IoU per class group
+│   │   ├── validation.py                     # Validation camera tour and photo crops at Street View poses
+│   │   ├── vanilla.py                        # Game-derived files taken from the released level zip (v2.0)
+│   │   ├── vegetation.py                     # Forest items for the measured trees: model choice and scale
+│   │   ├── verify_report.py                  # VERIFICA.md summary and chart of the full validation
+│   │   ├── vineyards.py                      # Vine rows in the survey's vineyards (v2.4)
+│   │   ├── wall_caps.py                      # Wall tops near the road capped where photos see no wall
+│   │   ├── wall_fill_tour.py                 # Sites, renders and views of the wall backfill check (v2.8)
+│   │   ├── walls.py                          # Cadastral walls: meshes, terrain carving and backfill
+│   │   ├── water.py                          # Lake Lugano as water blocks that stop at its shore (v2.0)
+│   │   ├── zone_report.py                    # Zones, road checklist and discrepancy register (v2.1)
+│   │   └── bng_lua/                          # Game extensions for the in-game tours
+│   │       ├── magliaso_readme.lua           # In-game README screenshots from the free camera (v2.6)
+│   │       ├── magliaso_signs.lua            # In-game road-sign screenshot tour with fps log (v2.7)
+│   │       ├── magliaso_unpaved.lua          # In-game unpaved track check: views, drive probe, fps (v2.7)
+│   │       └── magliaso_validate.lua         # In-game validation screenshots at the Street View poses
+│   ├── dati/                                 # Small results pinned for the release builds
+│   │   ├── asset_bounds.json                 # Tree model sizes at scale 1, for builds without the game
+│   │   ├── attitude_convention.json          # Sign convention of the Street View pitch and roll
+│   │   ├── buildings_diff.json               # Added and demolished buildings with their evidence (v2.2)
+│   │   ├── camera_height.json                # Calibrated Street View camera height above the road
+│   │   ├── camera_height_calib.json          # Ground-registration score per panorama and camera height
+│   │   ├── cantonale_gravesano.json          # Magliaso–Gravesano cantonal road line in LV95 (v2.0)
+│   │   ├── facade_colors.json                # Plaster and shutter colours per building, from photos (v2.2)
+│   │   ├── fences.json                       # Railings and fences on Magliaso–Pura walls, from panoramas
+│   │   ├── guardrails_final.json             # Magliaso–Pura guardrails from photo votes and LiDAR
+│   │   ├── guardrails_sv.json                # Guardrails of the whole network seen in Street View (v2.2)
+│   │   ├── gwr_area.json.gz                  # Pinned Federal Register of Buildings (GWR) extract (v2.2)
+│   │   ├── lamps.json                        # Magliaso–Pura street lamps triangulated in the panoramas
+│   │   ├── marking_poly_votes.json           # Photo votes per orthophoto marking polygon of the route
+│   │   ├── marking_votes.npz                 # Lane-marking photo votes on the route's road strip grid
+│   │   ├── markings.json                     # Magliaso–Pura centre and edge lines from the orthophoto
+│   │   ├── markings_photo.json               # Magliaso–Pura edge lines voted in the panoramas
+│   │   ├── markings_raster.json              # Route's crossings, stop lines and arrows from the orthophoto
+│   │   ├── markings_state.json               # Road markings as of Oct 2022: unmarked spans, red bands
+│   │   ├── network_markings.json.gz          # Road paint of the whole network from the orthophoto (v2.1)
+│   │   ├── objects.json                      # Street furniture (benches, bins, hydrants) from panoramas
+│   │   ├── osm_area.json.gz                  # Pinned OpenStreetMap extract of the area (v2.1)
+│   │   ├── osm_communes.json.gz              # Pinned OSM municipality boundaries of the area (v2.1)
+│   │   ├── osm_pois.json.gz                  # Pinned OSM shops, bars and offices for shop fronts (v2.2)
+│   │   ├── photo_shrubs.npz                  # Shrubs seen in the photos but missing in the game
+│   │   ├── poles.json                        # Poles, utility poles and sign plates from the panoramas
+│   │   ├── ponti.json                        # Bridge list with the manual deck corrections (v2.0)
+│   │   ├── poses.json                        # Calibrated poses of the 366 Street View panoramas
+│   │   ├── qa_review.json                    # Log of the photo/map review: findings and actions (v2.2)
+│   │   ├── road_profile.npz                  # Magliaso–Pura carriageway centre, edges and width
+│   │   ├── roadside_walls.json               # Retaining walls along the route missing from the survey
+│   │   ├── signs_panorama.json               # Codes of the cantonal road's panorama sign plates (v2.7)
+│   │   ├── strade_extra_v22.json             # Roads to Arosio, Caslano and the Torrazza in LV95 (v2.2)
+│   │   ├── sv_coverage.json.gz               # Street View coverage metadata of the whole area (v2.2)
+│   │   ├── terrain_colors.json               # Measured base colours of the terrain materials
+│   │   ├── trees.npz                         # Trees of the 4 × 4 km corridor from the canopy model (v1.0)
+│   │   ├── understory.npz                    # Shrubs and hedges along the route from the canopy model
+│   │   ├── vineyard_rows.json                # Vine row directions measured on the orthophoto (v2.4)
+│   │   ├── wall_caps.json                    # Photo-checked crest heights of the walls near the route
+│   │   └── wall_materials.json               # Wall materials (stone, concrete, plaster) from photos (v2.2)
+│   └── verifica/                             # Checks, reviews, screenshots and renders
+│       ├── canopy_v2.0.json                  # Vegetation checks of the v2.0 level, baseline (v2.1)
+│       ├── check_level.json                  # Automatic level checks: problem counts and places (v2.4)
+│       ├── concordanza_percorso.png          # Plot of photo/game agreement along the cantonal road (v1.0)
+│       ├── drive_test.json                   # Virtual drive test: events per road class and place (v2.4)
+│       ├── drive_test_v2.1.json              # Virtual drive test of the v2.1 level, baseline (v2.2)
+│       ├── metrics_final.json                # Per-view segmentation metrics of VERIFICA.md (v1.0)
+│       ├── metrics_full1.json                # Per-view metrics before the last correction round (v1.0)
+│       ├── REGISTRO.md                       # Log of map/reality differences, action, status (v2.1, v2.2)
+│       ├── revisione.json                    # Per-road Street View review data for REVISIONE.md (v2.2)
+│       ├── REVISIONE.md                      # Road-by-road review against Street View (v2.2)
+│       ├── signs_v2.7.json                   # Every road sign placed: position, facing, plates (v2.7)
+│       ├── signs_v2.7.png                    # Contact sheet of the Swiss sign plates drawn (v2.7)
+│       ├── STRADE.md                         # Every road of the network with each check's status (v2.1)
+│       ├── VERIFICA.md                       # Photo vs game segmentation agreement, 1464 views (v1.0)
+│       ├── ZONE.md                           # Per-municipality figures and check status (v2.1)
+│       ├── zone_report.json                  # Data of ZONE.md and STRADE.md, per zone and road (v2.1)
+│       ├── mappa/                            # Render sheets: roads, trails, villages, flagged spots (v2.0)
+│       ├── ponti/                            # Table and profile sheets of every bridge (v2.0)
+│       ├── screenshots/                      # In-game README views (v2.6) and v2.7 check screenshots
+│       │   ├── signs_v2.7/                   # In-game shots of each sign kind, near and far (v2.7)
+│       │   └── v2.7/                         # In-game test of the final zip: views, load time, fps (v2.7)
+│       ├── v2.1/                             # Renders of markings, STOP, railway, Tresa bridge (v2.1)
+│       ├── v2.3/                             # Before/after renders: Magliaso road, thinned woods (v2.3)
+│       ├── v2.4/                             # Before/after renders: road surfaces, houses, river (v2.4)
+│       ├── v2.7/                             # Marking renders, unpaved-track checks, game test plan (v2.7)
+│       │   └── unpaved/                      # Before/after in-game shots and drives, unpaved tracks (v2.7)
+│       └── v2.8/                             # Checks of the nine patches and of the chained build (v2.8)
+│           ├── final_test_plan.md            # In-game test plan of the whole zip before release (v2.8)
+│           ├── build/                        # Chained-build check: digest, object feet, clearances (v2.8)
+│           ├── catenary/                     # Report, before/after renders: railway overhead line (v2.8)
+│           ├── houses/                       # Report, before/after renders: gutters, aerials, PV (v2.8)
+│           ├── lake/                         # Report, before/after renders: lake piers and boats (v2.8)
+│           ├── lamps/                        # Report, before/after renders: village street lamps (v2.8)
+│           ├── paved_edges/                  # Report, before/after renders: paved edges made flush (v2.8)
+│           ├── roadside/                     # Report, map, before/after renders: delineators, poles (v2.8)
+│           ├── signs/                        # Report, before/after renders: warning, parking signs (v2.8)
+│           ├── understory/                   # Report, before/after renders: darker forest floor (v2.8)
+│           └── wall_fill/                    # Report, before/after renders: backfill behind walls (v2.8)
+└── web/                                      # Project website (GitHub Pages)
+    ├── README.md                             # Website files, publishing and DNS setup
+    ├── CNAME                                 # Custom domain of the website on GitHub Pages
+    ├── index.html                            # The website's single page: map, drives, pictures, download
+    ├── map.svg                               # Map of the playable area, roads and spawn villages
+    ├── style.css                             # Website styles: map-paper colours, Swiss sign blue
+    ├── img/                                  # In-game screenshots resized for the site, with thumbnails
+    └── tools/                                # Scripts that draw the site's map and images
+        ├── make_images.py                    # Resizes game screenshots into web/img/, full and small
+        └── make_map.py                       # Draws map.svg from area.polygon() and the OSM extract
+```
 
 ## Where to read more
 
