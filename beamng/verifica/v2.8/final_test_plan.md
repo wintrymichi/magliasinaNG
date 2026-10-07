@@ -2,7 +2,7 @@
 
 Every v2.8 change was checked on its own, on the v2.7 zip, with the 3D renderer of the pipeline (the `README.md` in each folder here); none of them in BeamNG.drive yet. The release is the v2.7 zip through all nine patches (`beamng/pipeline/patch_v2_8.py`, run by `.github/workflows/release_v2.8.yml`), so this test is on that zip, all changes together. The release workflow refuses to run while `beamng/RELEASE_v2.8.md` is still the draft.
 
-1. **The zip:** the `v28-build-test` artifact of the latest *v2.8 build test* run (Actions) on the commit to release. It is built on GitHub exactly as the release will be, and also holds the nine patch reports, `patch_v2_8.log` and `check_level.py` / `drive_test.py` on v2.7 and v2.8. Note the digest on the last line of `patch_v2_8.log`. A zip built on the PC (`python patch_v2_8.py <v2.7 zip> <v2.8 zip>`, about an hour) has the same changes but not the same digest: a few text plates are drawn in Arial instead of DejaVu (`signs_ch._font`), and other versions of Python and its libraries can move a value by a rounding.
+1. **The zip:** the `v28-build-test` artifact of the latest *v2.8 build test* run (Actions) on the commit to release. It is built on GitHub exactly as the release will be, and also holds the nine patch reports, `patch_v2_8.log` and `check_level.py` / `drive_test.py` on v2.7 and v2.8. Note the digest on the last line of `patch_v2_8.log`. The artifact is kept 14 days; the current one, of all the v2.8 changes merged, is in [`build/README.md`](build/README.md). A zip built on the PC (`python patch_v2_8.py <v2.7 zip> <v2.8 zip>`, about an hour) has the same changes but not the same digest: a few text plates are drawn in Arial instead of DejaVu (`signs_ch._font`), and other versions of Python and its libraries can move a value by a rounding.
 2. **The views, the frame rate and the memory**, v2.7 first, then v2.8, both cold (the game's converted copy of the level is deleted before each run), in `beamng/pipeline`:
    ```
    .\run_v28_screenshots.ps1 -Zip D:\beamng_magliaso\dist\magliaso_pura_v2.7.zip -Tag v27
@@ -15,7 +15,7 @@ Every v2.8 change was checked on its own, on the v2.7 zip, with the 3D renderer 
    - the undergrowth in the woods, and the frame rate there;
    - the houses' gutters and panels, the piers and boats, the overhead line, by day;
    - the cantonal road's lamps lighting at night.
-4. **The street lamps' lights** (a choice for michi): the release has them on the 73 lamps of v2.7 only. For the 1,785 new ones, build the variant and run the same views:
+4. **The street lamps' lights** (a choice for michi): the release has them on the 73 lamps of v2.7 only. For the 1,764 new ones, build the variant and run the same views:
    ```
    python patch_v2_8.py D:\beamng_magliaso\dist\magliaso_pura_v2.7.zip D:\beamng_magliaso\dist\magliaso_pura_v2.8_lights.zip --village-lights
    .\run_v28_screenshots.ps1 -Zip D:\beamng_magliaso\dist\magliaso_pura_v2.8_lights.zip -Tag v28lights
