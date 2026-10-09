@@ -41,6 +41,8 @@ The 23 piers OpenStreetMap maps on the Swiss shore stand over the water (11 at C
 
 Every pitched roof has its gutters along the eaves, in zinc or copper, and downpipes down the corners; and by a rule, TV aerials on a share of the older houses, satellite dishes turned to the satellites, and solar panels on some roofs facing south: 305 km of gutters, 38,405 downpipes, 1,903 aerials, 1,483 dishes, 398 roofs with panels (`buildings_mesh.house_details_step`). They have no collision.
 
+No house is see-through from one side any more: up to v2.7 some walls faced inwards (about 5 % of the wall area, in rows of houses, blocks and the survey's open shells) and from that side the game did not draw them. Now every wall, plinth and photo facade is drawn from both sides (`buildings_mesh.WALL_TWO_SIDED`), with fewer triangles than before.
+
 ## The woods
 
 The forest floor had the colour measured in the panoramas on the sunlit forest edges, a light brown that showed between the trunks and, from afar, between the crowns. Now it is a darker olive, the leaf litter in the shade. Low shrubs (0.6–1.5 m, the game's own bush models) grow on it around the camera, within 60 m, never on roads, paths, walls, buildings or the railway: the game places them as it goes, nothing is stored per shrub and they have no collision (`understory.understory_step`).

@@ -63,7 +63,7 @@ The October 2022 photos are more recent than the orthophoto and the official sur
 
 ## Version 2.4
 
-- **Houses visible from every side:** the walls that faced inwards (L- and U-shaped buildings, courtyard buildings, rows of houses) and were missing from outside now face outwards; where the facing can't be decided the wall is double-sided; there are soffits under the eaves.
+- **Houses visible from every side:** the walls that faced inwards (L- and U-shaped buildings, courtyard buildings, rows of houses) and were missing from outside now face outwards; since v2.8 every wall is drawn from both sides, so no house is see-through from any side; there are soffits under the eaves.
 - **Magliaso roundabout, the climb towards Pura:** removed the block that stuck out 16 cm from the asphalt at the junction (the top of a retaining wall covered by the road) and the piece of kerb left in the middle of the carriageway from the traffic island removed in 2022.
 - **Dirt, gravel and paving** where OpenStreetMap indicates them (otherwise according to swissTLM3D), with drawn textures and the right ground type for grip: gravel, dirt, setts, cobblestones.
 - **Grass and flowers** on the meadows and in the gardens around the camera; **palms** in the gardens near the lake; **rows** in the vineyards; **water** in the rivers; ambient occlusion in the building materials; street lamp light at night; a little more haze over the lake.

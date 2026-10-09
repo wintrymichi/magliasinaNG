@@ -586,12 +586,13 @@ spawns. With other programs open (Discord, a browser, ...) the PC is still at it
 
 ### Version 2.4: houses from every side, Magliaso roundabout, OSM surfaces and more realism
 
-- **Wall facing** (`buildings_mesh.py`: `orient`, `undecided_walls`, `soffits`): the game draws only one
+- **Wall facing** (`buildings_mesh.py`: `orient`, `soffits`): the game draws only one
   side. The facing of each wall is decided with two nearly horizontal rays starting just in front of
   the wall: if they cross the building's surfaces an odd number of times the wall faces inwards and is
   flipped (previously the building centre was used, which is wrong for L- and U-shaped buildings,
   courtyard buildings and rows of houses). Where the rays can't decide (open shells of the 3D survey) the
-  wall is double-sided. Under every roof pitch that overhangs the footprint there is a soffit, 3 cm below the pitch.
+  wall is double-sided (v2.8: every wall, plinth and photo facade is drawn from both sides by its material,
+  `WALL_TWO_SIDED`, and `undecided_walls` is gone). Under every roof pitch that overhangs the footprint there is a soffit, 3 cm below the pitch.
   `bng.MeshBuilder.orient_closed` turns the solids of walls, fences, guardrails, poles and tracks outwards.
   `render3d.py` draws a single side like the game (double only for `doubleSided` materials).
   New check `building_walls_inward_share` in `check_level.py`: a point 0.3 m in front of the wall

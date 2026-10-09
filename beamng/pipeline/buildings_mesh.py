@@ -115,13 +115,20 @@ def _votes(walls, surf):
     return votes
 
 
+# v2.8: the walls (plaster, stone, plinth, photo facades) are drawn from both sides, a back face lit like the
+# front (no extra triangle): a wall the ray test turns inwards no longer leaves the house see-through
+WALL_TWO_SIDED = {"doubleSided": True, "invertBackFaceNormals": True}
+
+
 def orient(b):
     """Walls facing out of the building, roofs facing up (the game draws a face from its front only).
     v2.4: a wall faces in when a horizontal ray from just in front of it crosses the building's own
     surface an odd number of times (it starts inside); two slightly turned rays must agree, otherwise
-    the old test decides (away from the building's centre) and the wall is drawn from both sides
-    (undecided_walls). That test alone turned the walls of L- and U-shaped buildings, courtyards and
-    rows of houses inwards (9 % of the wall area), and from those sides the houses were see-through."""
+    the old test decides (away from the building's centre). That test alone turned the walls of L- and U-shaped buildings, courtyards and
+    rows of houses inwards (9 % of the wall area), and from those sides the houses were see-through.
+    v2.8: the walls are drawn from both sides anyway (WALL_TWO_SIDED): the survey's open shells, rows of
+    houses and blocks still had walls the rays turned the wrong way, and from that side the house was
+    see-through."""
     walls, roofs = b["walls"].copy(), b["roofs"].copy()
     if len(roofs):
         n = np.cross(roofs[:, 1] - roofs[:, 0], roofs[:, 2] - roofs[:, 0])
@@ -191,30 +198,6 @@ def soffits(b, roofs, drop=0.03):
     up = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])[:, 2] > 0
     tris[up] = tris[up][:, ::-1]
     return tris
-
-
-def open_shell(surf):
-    """Whether the building's surface has edges used by one triangle only (holes, gaps of the survey)."""
-    E = np.round(np.concatenate([surf[:, [0, 1]], surf[:, [1, 2]], surf[:, [2, 0]]]), 2)
-    E = np.sort(E, axis=1).reshape(len(E), 6)
-    _, cnt = np.unique(E, axis=0, return_counts=True)
-    return bool((cnt == 1).any())
-
-
-def undecided_walls(tris, b):
-    """The wall triangles drawn from both sides: those whose side the rays cannot tell, and on an open
-    shell (most of the survey's buildings) those where the rays and the old test disagree."""
-    if not len(tris):
-        return np.zeros(0, bool)
-    surf = _surface(b)
-    both = _votes(tris, surf) == 0
-    if open_shell(surf):
-        n = np.cross(tris[:, 1] - tris[:, 0], tris[:, 2] - tris[:, 0])
-        ctr = np.concatenate([b["walls"].reshape(-1, 3), b["roofs"].reshape(-1, 3)]).mean(0)
-        o = tris.mean(1) - ctr
-        o[:, 2] = 0
-        both |= (n * o).sum(1) < 0
-    return both
 
 
 def roof_colors(blds):
@@ -667,18 +650,13 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 groups = [(np.r_[sel, np.zeros(len(shell), bool)], pst) for sel, pst in groups]
                 groups[0][0][-len(shell):] = True               # the passage's ceiling and sides: the first house
                 n_pass += 1
-            # v2.4: the walls whose side the rays cannot tell (open shells of the survey) get a back face
-            both = np.zeros(len(rest), bool)
-            n_own = len(rest) - len(shell)
-            if n_own > 0:
-                both[:n_own] = undecided_walls(rest[:n_own], b)
-            stats["two_sided"] = stats.get("two_sided", 0) + int(both.sum())
+            # v2.8: the walls are drawn from both sides by their materials (WALL_TWO_SIDED); up to v2.7 only the
+            # walls whose side the rays could not tell got a back face (undecided_walls), a copy of each triangle
             z_foot = float(rest[:, :, 2].min()) if len(rest) else 0.0
             for sel, pst in groups:
                 if not sel.any():
                     continue
                 part = rest[sel]
-                part = np.concatenate([part, part[both[sel]][:, ::-1]])
                 V = part.reshape(-1, 3)
                 # v2.4: darker towards the foot of the wall (ambient occlusion and splashes), in the colour of
                 # the vertices: GROUND_AO at the ground, none from GROUND_AO_H m up
@@ -750,11 +728,11 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
         out.append((f"/levels/{level_name}/{rel}", origin, mb.triangle_count()))
     T = lambda n, k: f"{L}/{n}_{k}"
     mats = [bng.material("bld_plaster", T("t_bld_plaster", "b.color.png"), T("t_bld_plaster", "nm.normal.png"),
-                         T("t_bld_plaster", "r.data.png"), T("t_bld_plaster", "ao.data.png"), vert_color=True),
+                         T("t_bld_plaster", "r.data.png"), T("t_bld_plaster", "ao.data.png"), vert_color=True, extra=WALL_TWO_SIDED),
             bng.material("bld_stone", T("t_bld_stone", "b.color.png"), T("t_bld_stone", "nm.normal.png"),
-                         T("t_bld_stone", "r.data.png"), T("t_bld_stone", "ao.data.png"), vert_color=True),
+                         T("t_bld_stone", "r.data.png"), T("t_bld_stone", "ao.data.png"), vert_color=True, extra=WALL_TWO_SIDED),
             bng.material("bld_plinth", T("t_bld_plinth", "b.color.png"), T("t_bld_plinth", "nm.normal.png"),
-                         T("t_bld_plinth", "r.data.png"), T("t_bld_plinth", "ao.data.png"), vert_color=True),
+                         T("t_bld_plinth", "r.data.png"), T("t_bld_plinth", "ao.data.png"), vert_color=True, extra=WALL_TWO_SIDED),
             bng.material("bld_openings", T("t_bld_openings", "b.color.png"), T("t_bld_openings", "nm.normal.png"),
                          T("t_bld_openings", "r.data.png"), T("t_bld_openings", "ao.data.png"), alpha_test=110,
                          detail={"opacityMap": T("t_bld_openings", "o.data.png")}),
@@ -773,7 +751,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
     for i, page in enumerate(atlas.pages if n_photo else []):     # no empty page without photo facades
         rel = f"art/shapes/buildings/bld_photo_{i}.jpg"
         cv2.imwrite(os.path.join(level_dir, rel), cv2.cvtColor(page, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 90])
-        mats.append(bng.material(f"mp_bld_photo_{i}", f"/levels/{level_name}/{rel}", roughness=0.85))
+        mats.append(bng.material(f"mp_bld_photo_{i}", f"/levels/{level_name}/{rel}", roughness=0.85, extra=WALL_TWO_SIDED))
     bng.write_materials(os.path.join(shp_dir, "main.materials.json"), mats)
     # the atlas index and the texture means are for this build only (not level files)
     for fn in ("bld_openings.json", "bld_textures.json"):
