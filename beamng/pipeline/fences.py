@@ -155,19 +155,21 @@ def build(level_dir, level_name, scene):
                      alpha_test=40, double_sided=True, metallic=0.6, ground_type="METAL",
                      detail={"opacityMap": f"{CH}_o.data.dds"}),
         bng.material("mp_fence_post", base_color=[0.55, 0.56, 0.55, 1], roughness=0.6, metallic=0.4,
-                     ground_type="METAL")])                # rails reuse the guardrail materials
+                     ground_type="METAL")])
     CHK = 128.0
-    builders = {}
+    builders, rails = {}, []
     for it in items:
         P = np.array(it["pts"])
+        if it["kind"] == "rail":
+            # W-beam of an upper road: the rail faces away from the wall edge (towards the upper road); v2.8: the
+            # guard rail modules of the game's Italy level, as the other guard rails (guardrail_mesh.py)
+            rails += guardrail_mesh.modules(P, side=1)
+            continue
         c = P[len(P) // 2, :2]
         key = (int(np.floor(c[0] / CHK)), int(np.floor(c[1] / CHK)))
-        mb = builders.setdefault(key, bng.MeshBuilder())
-        if it["kind"] == "rail":
-            # W-beam of an upper road: the rail faces away from the wall edge (towards the upper road)
-            guardrail_mesh.rail(mb, np.column_stack([P, np.full(len(P), 0.75)]), side=1)
-        else:
-            fence_mesh(mb, P)
+        fence_mesh(builders.setdefault(key, bng.MeshBuilder()), P)
+    if rails:
+        print("rails of the fences:", guardrail_mesh.write_forest(level_dir, rails, append=True))
     for (tx, ty), mb in sorted(builders.items()):
         rel = f"art/shapes/fences/fence_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CHK, (ty + 0.5) * CHK, 0.0])

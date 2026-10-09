@@ -1,4 +1,4 @@
-# The in-game check of the overhead line of the railway (patch_catenary.py, v2.8) on one level zip: installs it
+# The in-game check of the overhead line of the railway (railway.catenary_step, v2.8) on one level zip: installs it
 # alone in <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the end), runs the
 # views of catenary_tour.py with the magliaso_unpaved extension (with the frame rate of every view), converts
 # the shots to beamng/verifica/v2.8/catenary/game/<tag>_<site>.jpg and writes the frame rates, the load time and

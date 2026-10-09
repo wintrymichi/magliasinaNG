@@ -302,7 +302,8 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
             items.setdefault(key, []).extend(lst)
     fdir = os.path.join(level_dir, "forest")
     os.makedirs(fdir, exist_ok=True)
-    managed = {}
+    md = os.path.join(level_dir, "art", "forest", "managedItemData.json")
+    managed = json.load(open(md)) if os.path.exists(md) else {}       # v2.8: the guard rails are forest items too
     for (name, p), lst in items.items():
         managed[name] = {"name": name, "internalName": name, "class": "TSForestItemData", "persistentId": bng.pid(),
                          "radius": 0.5, "shapeFile": p}

@@ -3,10 +3,32 @@
 Development files of the validation tour are left out. The archive goes into the user's
 mods folder (or is installed from the zip).
 """
-import os, sys, zipfile
+import hashlib, os, re, sys, zipfile
 from config import LEVEL_DIR, LEVEL_NAME, ROOT
 
 SKIP = {"validation_views.json", "validation_route.json"}
+
+
+UUID = re.compile(rb"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+
+
+def digest(path):
+    """(entries, sha256 of the sorted lines "name size crc"): for a .json entry the size and CRC-32 of its
+    text with every uuid (the persistentIds and the keys made of them, random at every build) replaced. Two
+    builds of the same commit on the same system give the same digest (PYTHONHASHSEED=0, MAGLIASO_OSM_PINNED=1):
+    the zip of the build test and the one of the release can be compared."""
+    rows = []
+    with zipfile.ZipFile(path) as z:
+        for i in z.infolist():
+            if i.filename.endswith(".json"):
+                b = UUID.sub(b"<id>", z.read(i))
+                rows.append((i.filename, len(b), zipfile.crc32(b)))
+            else:
+                rows.append((i.filename, i.file_size, i.CRC))
+    h = hashlib.sha256()
+    for name, size, crc in sorted(rows):
+        h.update(f"{name}\t{size}\t{crc:08x}\n".encode("utf-8"))
+    return len(rows), h.hexdigest()
 
 
 def main(name):
@@ -26,6 +48,7 @@ def main(name):
                 z.write(src, arc, compress_type=ctype)
                 n += 1; size += os.path.getsize(src)
     print(out, n, "files, %.0f MB level -> %.0f MB zip" % (size / 2**20, os.path.getsize(out) / 2**20))
+    print("%s: %d entries, digest %s" % ((os.path.basename(out),) + digest(out)), flush=True)
 
 
 if __name__ == "__main__":

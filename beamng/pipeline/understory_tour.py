@@ -1,4 +1,4 @@
-"""The views of the check of patch_understory.py (v2.8): a darker forest floor, undergrowth in the woods.
+"""The views of the check of understory.understory_step (v2.8): a darker forest floor, undergrowth in the woods.
     python understory_tour.py sites <zip before>                  -> verifica/v2.8/understory/sites.json
     python understory_tour.py render <level before> <level after>  -> verifica/v2.8/understory/render3d/
     python understory_tour.py views <zip> <tag>                    -> <user>/magliaso_unpaved_views.json
@@ -12,8 +12,8 @@ with the frame rate of every view.
 """
 import json, os, sys, zipfile
 import numpy as np
-import patch_lamps as pl
-import patch_wall_fill as pw
+import lamps as pl
+import walls as pw
 from config import BEAMNG_USER, LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -81,7 +81,7 @@ def render(before, after):
         ims = [Image.open(os.path.join(out, f"{t}_{s['name']}.jpg")) for t in ("before", "after")]
         w, h = ims[0].size
         im = Image.new("RGB", (2 * w + 8, h), "white")
-        for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_understory.py"))):
+        for k, (a, label) in enumerate(zip(ims, ("v2.7", "understory.understory_step"))):
             im.paste(a, (k * (w + 8), 0))
             ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28, stroke_width=2,
                                     stroke_fill="black")

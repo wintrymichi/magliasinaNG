@@ -1,5 +1,5 @@
-"""The places and views of the check of patch_lamps.py (v2.8): street lamps along the roads of the villages.
-    python lamps_tour.py sites <zip before> <report of patch_lamps.py>  -> verifica/v2.8/lamps/sites.json
+"""The places and views of the check of lamps.lamps_step (v2.8): street lamps along the roads of the villages.
+    python lamps_tour.py sites <zip before> <report of lamps.lamps_step>  -> verifica/v2.8/lamps/sites.json
     python lamps_tour.py render <level before> <level after>            -> verifica/v2.8/lamps/render3d/
     python lamps_tour.py views <zip> <tag>                              -> <user>/magliaso_unpaved_views.json
 sites: in the villages of the communes with the most new lamps (Tresa, Lema, Agno, Caslano), the 100 m
@@ -13,7 +13,7 @@ by day and at night.
 """
 import json, os, sys, zipfile
 import numpy as np
-import patch_lamps as pl
+import lamps as pl
 from config import BEAMNG_USER, LEVEL_NAME
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -95,7 +95,7 @@ def render(before, after):
             ims = [Image.open(os.path.join(out, f"{t}_{s['name']}_{v}.jpg")) for t in ("before", "after")]
             w, h = ims[0].size
             im = Image.new("RGB", (2 * w + 8, h), "white")
-            for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_lamps.py"))):
+            for k, (a, label) in enumerate(zip(ims, ("v2.7", "lamps.lamps_step"))):
                 im.paste(a, (k * (w + 8), 0))
                 ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28 if v != "top" else 40,
                                         stroke_width=2, stroke_fill="black")

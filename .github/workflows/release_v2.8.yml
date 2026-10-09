@@ -1,19 +1,12 @@
-# Release v2.8 of the BeamNG map (Malcantone): the published v2.7 zip passed through the nine v2.8 patch scripts by
-# beamng/pipeline/patch_v2_8.py, in this order (the ground first, then what stands on it):
-# - patch_paved_edges.py: the ground raised to the edges of the paved roads, pavements and yards;
-# - patch_wall_fill.py: the ground behind the retaining walls shaded like the terrain, no grass through it;
-# - patch_understory.py: darker forest floor, its verge without grass, the undergrowth;
-# - patch_lamps.py: street lamps in the villages (without --village-lights: the lights on the 73 lamps of v2.7);
-# - patch_roadside.py: delineators and wooden pole lines between the villages;
-# - patch_catenary.py: the overhead line of the railway;
-# - patch_signs_more.py: warning and parking signs nobody mapped;
-# - patch_lake.py: piers and boats;
-# - patch_house_details.py: gutters, downpipes, aerials, dishes, solar panels.
-# The patches read the zip and the files of beamng/dati (OpenStreetMap from the extract kept there): no data is
-# downloaded. The same build, with check_level.py and drive_test.py against v2.7, is the "v2.8 build test"
-# workflow (v28_build_test.yml), whose zip is the one tested in the game (beamng/verifica/v2.8/final_test_plan.md);
-# the digest patch_v2_8.py prints at the end is the same in both logs for the same commit of the patches.
-# The release contains and downloads no Street View image.
+# Release v2.8 of the BeamNG map (Malcantone): the level built from scratch by build_level.py with the same open data
+# as the earlier releases (swisstopo, the official survey, the building register, OpenStreetMap from the extract in
+# beamng/dati, the numbers of the panoramas and the orthophoto kept in beamng/dati), with every step of v2.5 to v2.8
+# inside the build (build_level.FINISH): optimize, grass, unpaved roads, markings, far trees, signs, paved edges,
+# wall fill, understory, street lamps (lit at night), roadside, catenary, more signs, lake, house details; the guard
+# rails are the models of the game's Italy level, the windows of the houses are lit at night.
+# The same build, with the checks, is the "v2.8 build test" workflow (v28_build_test.yml), whose zip is the one
+# tested in the game (beamng/verifica/v2.8/final_test_plan.md); the digest package.py prints is the same in both
+# logs for the same commit. The release contains and downloads no Street View image.
 # Started by hand, after the test in the game: Actions > Release v2.8 > Run workflow.
 name: Release v2.8
 
@@ -21,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       tested_digest:
-        description: "The digest of the zip tested in the game (last line of the v2.8 build test log); empty: no check"
+        description: "The digest of the zip tested in the game (last line of the package step of the v2.8 build test); empty: no check"
         required: false
         default: ""
 
@@ -31,7 +24,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-24.04
-    timeout-minutes: 300
+    timeout-minutes: 360
     defaults:
       run:
         shell: bash
@@ -43,6 +36,9 @@ jobs:
       MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
       MAGLIASO_BEAMNG_GAME: /nonexistent
       MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
       PATCH_WORKERS: "2"
       PYTHONUNBUFFERED: "1"
     steps:
@@ -74,24 +70,61 @@ jobs:
             scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
             matplotlib==3.11.2 pyogrio==0.13.0
 
-      - name: v2.7 zip through the nine v2.8 patches
+      - name: Release v1.1 (objects of the original route, neutral textures)
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+
+      - name: Download
         working-directory: beamng/pipeline
         run: |
-          D="$MAGLIASO_ROOT/dist"
-          mkdir -p "$D"
-          gh release download v2.7 --pattern 'magliaso_pura_v2.7.zip' --dir "$D"
-          python patch_v2_8.py "$D/magliaso_pura_v2.7.zip" "$D/magliaso_pura_v2.8.zip" --reports "$D/reports" \
-            | tee "$D/patch_v2_8.log"
-          rm "$D/magliaso_pura_v2.7.zip"
-          ls -la "$D"
-          md5sum "$D/magliaso_pura_v2.8.zip"
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: Road network
+        working-directory: beamng/pipeline
+        run: |
+          python network.py
+          python network_surface.py
+
+      - name: Level (build_level.py, with the finishing steps of v2.5 to v2.8)
+        working-directory: beamng/pipeline
+        run: |
+          python build_level.py | tee "$MAGLIASO_ROOT/build_level.log"
+          df -h .
+
+      - name: Checks
+        working-directory: beamng/pipeline
+        run: |
+          python check_level.py
+          python drive_test.py
+
+      - name: Package
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          mkdir -p "$O"
+          python package.py magliaso_pura_v2.8 | tee "$O/package.log"
+          md5sum "$MAGLIASO_ROOT/dist/magliaso_pura_v2.8.zip"
 
       - name: Same zip as the one tested
         if: inputs.tested_digest != ''
         env:
           TESTED: ${{ inputs.tested_digest }}
         run: |
-          built=$(tail -n 1 "$MAGLIASO_ROOT/dist/patch_v2_8.log" | sed -n 's/.*digest \([0-9a-f]*\).*/\1/p')
+          built=$(tail -n 1 out/package.log | sed -n 's/.*digest \([0-9a-f]*\).*/\1/p')
           echo "built: $built"
           echo "tested: $TESTED"
           if [ "$built" != "$TESTED" ]; then

@@ -1,4 +1,4 @@
--- Dirt and gravel tracks flush with the ground (v2.7, patch_unpaved.py): the in-game check.
+-- Dirt and gravel tracks flush with the ground (v2.7, network_mesh.unpaved_step): the in-game check.
 -- Loaded with:  BeamNG.drive.x64.exe -level magliaso_pura -onLevelLoad_ext magliaso_unpaved
 -- Reads <user>/magliaso_unpaved_views.json (unpaved_tour.py): a list of
 --   {kind = "view", name, cam = {x, y, z}, target = {x, y, z}, fov, wait, tod}  -> screenshot <name>.png

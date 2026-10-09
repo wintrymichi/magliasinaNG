@@ -1,4 +1,4 @@
-# The in-game check of the unpaved tracks (patch_unpaved.py, v2.7) on one level zip: installs it alone in
+# The in-game check of the unpaved tracks (network_mesh.unpaved_step, v2.7) on one level zip: installs it alone in
 # <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the end), with the road
 # shapes converted again (their cache in <user>/temp is moved aside and put back), runs the
 # magliaso_unpaved extension on the tour of unpaved_tour.py and converts the shots to

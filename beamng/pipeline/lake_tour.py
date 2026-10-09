@@ -1,9 +1,9 @@
-"""The views of the check of patch_lake.py (v2.8): the piers of the lake and the boats moored at them.
+"""The views of the check of water.lake_step (v2.8): the piers of the lake and the boats moored at them.
     python lake_tour.py sites <zip before> <report>        -> verifica/v2.8/lake/sites.json
     python lake_tour.py render <level before> <level after>  -> verifica/v2.8/lake/render3d/
     python lake_tour.py views <zip> <tag>                    -> <user>/magliaso_unpaved_views.json
 sites: the longest pier where boats moor, the longest fixed pier and the longest pier OSM maps as a mooring (the
-report of patch_lake.py), seen from the lake 28 m beside the pier and 3 m over the water, looking at its middle
+report of water.lake_step), seen from the lake 28 m beside the pier and 3 m over the water, looking at its middle
 (else from the shore behind its land end).
 render: before and after with render3d.py (textured), side by side (compare_<site>.jpg).
 views: the same views for the in-game tour of run_lake_screenshots.ps1 (bng_lua/magliaso_unpaved.lua), with the
@@ -12,7 +12,7 @@ frame rate of every view.
 import json, os, sys, zipfile
 import numpy as np
 import osm
-import patch_lake as pk
+import water as pk
 import wall_fill_tour as wft
 from config import BEAMNG_USER, LEVEL_NAME
 
@@ -77,7 +77,7 @@ def render(before, after):
         ims = [Image.open(os.path.join(out, f"{t}_{s['name']}.jpg")) for t in ("before", "after")]
         w, h = ims[0].size
         im = Image.new("RGB", (2 * w + 8, h), "white")
-        for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_lake.py"))):
+        for k, (a, label) in enumerate(zip(ims, ("v2.7", "water.lake_step"))):
             im.paste(a, (k * (w + 8), 0))
             ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28, stroke_width=2,
                                     stroke_fill="black")

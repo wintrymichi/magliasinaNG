@@ -1,6 +1,6 @@
 """The camera tour of the v2.7 road-sign check in the game (run_signs_screenshots.ps1, bng_lua/magliaso_signs.lua).
 Picks, closest to the Caslano / Magliaso boundary on the cantonal road, one sign of each kind to check:
-from the report of patch_signs.py a roundabout entry (2.41.1 over 3.02), a zebra crossing 4.11, a 30 zone
+from the report of signs_net.signs_step a roundabout entry (2.41.1 over 3.02), a zebra crossing 4.11, a 30 zone
 entry, the two closest place signs and a no-entry 2.02; from the zip itself (props_osm.dae) a STOP, a
 give-way and a bus stop plate of v2.6, turned in v2.7. Every sign is seen from the side it faces, 15 m
 and 7 m away, the STOP also from behind (grey back expected). Heights are absolute (the game's probe from
@@ -11,7 +11,7 @@ Writes <user>/magliaso_signs_views.json.
 import json, math, os, sys, zipfile
 import numpy as np
 from config import BEAMNG_USER, wgs_to_local
-from patch_signs import read_dae, LEVEL
+from signs_net import read_dae, LEVEL
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ZIP = r"D:\beamng_magliaso\dist\magliaso_pura_v2.7.zip"

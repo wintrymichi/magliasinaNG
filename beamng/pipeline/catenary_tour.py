@@ -1,8 +1,8 @@
-"""The views of the check of patch_catenary.py (v2.8): the overhead line of the railway.
+"""The views of the check of railway.catenary_step (v2.8): the overhead line of the railway.
     python catenary_tour.py sites <zip before>                    -> verifica/v2.8/catenary/sites.json
     python catenary_tour.py render <level before> <level after>  -> verifica/v2.8/catenary/render3d/
     python catenary_tour.py views <zip> <tag>                    -> <user>/magliaso_unpaved_views.json
-sites: the middle of the three longest metre-gauge track chains (patch_catenary.chains/join): a view from 7 m
+sites: the middle of the three longest metre-gauge track chains (railway.chains/join): a view from 7 m
 beside the track (the side with no roof or wall top in the way) and 3 m up, 30 m back, looking 70 m along it.
 render: before and after with render3d.py (masts and wires are pipeline meshes, drawn as they are), side by
 side (compare_<site>.jpg).
@@ -14,7 +14,7 @@ electrified=contact_line, grey where not) with the masts of the first version an
 """
 import json, os, sys, zipfile
 import numpy as np
-import patch_catenary as pc
+import railway as pc
 import wall_fill_tour as wft
 from config import BEAMNG_USER, LEVEL_NAME
 
@@ -66,7 +66,7 @@ def render(before, after):
         ims = [Image.open(os.path.join(out, f"{t}_{s['name']}.jpg")) for t in ("before", "after")]
         w, h = ims[0].size
         im = Image.new("RGB", (2 * w + 8, h), "white")
-        for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_catenary.py"))):
+        for k, (a, label) in enumerate(zip(ims, ("v2.7", "railway.catenary_step"))):
             im.paste(a, (k * (w + 8), 0))
             ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28, stroke_width=2,
                                     stroke_fill="black")

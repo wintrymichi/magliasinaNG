@@ -1,4 +1,4 @@
-"""The places and views of the check of patch_wall_fill.py (v2.8): the ground behind the retaining walls
+"""The places and views of the check of walls.wall_fill_step (v2.8): the ground behind the retaining walls
 shaded like the terrain, and no game grass under it or over the walls.
     python wall_fill_tour.py sites <zip before the patch>        -> verifica/v2.8/wall_fill/sites.json
     python wall_fill_tour.py render <level before> <level after>  -> verifica/v2.8/wall_fill/render3d/
@@ -19,8 +19,8 @@ views: the same views for the in-game tour of run_wall_fill_screenshots.ps1 (bng
 import json, os, sys, zipfile
 import numpy as np
 import optimize_level
-import patch_unpaved as pu
-import patch_wall_fill as pw
+import network_mesh as pu
+import walls as pw
 import road_mesh
 from config import BEAMNG_USER, LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
 
@@ -195,7 +195,7 @@ def render(before, after):
             ims = [Image.open(os.path.join(out, f"{t}_{s['name']}_{v['view']}.jpg")) for t in ("before", "after")]
             w, h = ims[0].size
             im = Image.new("RGB", (2 * w + 8, h), "white")
-            for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_wall_fill.py"))):
+            for k, (a, label) in enumerate(zip(ims, ("v2.7", "walls.wall_fill_step"))):
                 im.paste(a, (k * (w + 8), 0))
                 ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28,
                                         stroke_width=2, stroke_fill="black")

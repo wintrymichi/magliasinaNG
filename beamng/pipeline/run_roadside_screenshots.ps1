@@ -1,4 +1,4 @@
-# The in-game check of the delineators and the wooden pole lines (patch_roadside.py, v2.8) on one level zip:
+# The in-game check of the delineators and the wooden pole lines (poles.roadside_step, v2.8) on one level zip:
 # installs it alone in <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the
 # end), runs the views of roadside_tour.py with the magliaso_unpaved extension (with the frame rate of every
 # view), converts the shots to beamng/verifica/v2.8/roadside/game/<tag>_<site>.jpg and writes the frame rates,

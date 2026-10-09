@@ -171,6 +171,11 @@ def solid_meshes(lv):
                     t = Vw[idx[:, 0].reshape(-1, 3)].astype(np.float32)
                     tris.append(t)
                     grp.append(np.full(len(t), gi, np.int8))
+    import guardrail_mesh
+    gr = guardrail_mesh.module_faces(lv)                # v2.8: the guard rails are forest items
+    if len(gr):
+        tris.append(gr.astype(np.float32))
+        grp.append(np.full(len(gr), OBST_GROUPS.index("roads/guardrails"), np.int8))
     if not tris:
         return np.zeros((0, 3, 3), np.float32), np.zeros(0, np.int8)
     return np.concatenate(tris), np.concatenate(grp)
@@ -460,6 +465,8 @@ def main(lv=None):
     items = []
     for f in glob.glob(os.path.join(lv, "forest", "*.forest4.json")):
         name = os.path.basename(f).replace(".forest4.json", "")
+        if name.startswith("italy_guardrails"):             # v2.8: the guard rails, not plants
+            continue
         shrub = "bush" in name or "hedge" in name
         for o in pr.items(f):
             items.append((o["pos"][0], o["pos"][1], o["pos"][2], shrub))

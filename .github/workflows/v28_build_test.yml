@@ -1,17 +1,21 @@
-# Test of the v2.8 build before its release: the published v2.7 zip through the nine v2.8 patch scripts in the
-# order of release_v2.8.yml (beamng/pipeline/patch_v2_8.py), and the automatic checks of the level (check_level.py,
-# drive_test.py) on both the v2.7 zip and the v2.8 one, with the work data they need (the downloads, the rasters,
-# the road network and its profile) built here as in the release workflows. The v2.8 zip (the one to test in the
-# game: beamng/verifica/v2.8/final_test_plan.md), the reports of the nine patches and the four check results are
-# uploaded as an artifact of the run; the comparison and the zip's digest are printed in the log. Nothing is
-# published as a release; no Street View image is downloaded.
+# Test of the v2.8 build before its release: the level built from scratch by build_level.py, as the release does
+# (release_v2.8.yml), with every step of v2.5 to v2.8 inside the build (build_level.FINISH: optimize, grass,
+# unpaved roads, markings, far trees, signs, paved edges, wall fill, understory, lamps, roadside, catenary, more
+# signs, lake, house details), then the automatic checks of the level (check_level.py, drive_test.py) and the
+# package. The zip (the one to test in the game: beamng/verifica/v2.8/final_test_plan.md), the reports of the
+# finishing steps and the check results are uploaded as an artifact of the run; the zip's digest is the last line
+# of the log of the package step. Nothing is published as a release; no Street View image is downloaded.
 name: v2.8 build test
 
 on:
   workflow_dispatch:
   push:
-    branches: [claude/v2.8-release-workflow]
-    paths: [.github/workflows/v28_build_test.yml, beamng/pipeline/patch_v2_8.py]
+    branches: [claude/v2.8-guardrail-terreno-luci-x1873f]
+    paths: [.github/workflows/v28_build_test.yml, beamng/pipeline/**, beamng/dati/**]
+
+concurrency:
+  group: v28-build-test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   v28-build:
@@ -28,6 +32,9 @@ jobs:
       MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
       MAGLIASO_BEAMNG_GAME: /nonexistent
       MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
       PATCH_WORKERS: "2"
       PYTHONUNBUFFERED: "1"
     steps:
@@ -48,20 +55,12 @@ jobs:
             scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
             matplotlib==3.11.2 pyogrio==0.13.0
 
-      - name: v2.7 zip through the nine v2.8 patches
-        working-directory: beamng/pipeline
+      - name: Release v1.1 (objects of the original route, neutral textures)
         run: |
-          D="$MAGLIASO_ROOT/dist"
-          O="$GITHUB_WORKSPACE/out"
-          mkdir -p "$D" "$O"
-          gh release download v2.7 --pattern 'magliaso_pura_v2.7.zip' --dir "$D"
-          python patch_v2_8.py "$D/magliaso_pura_v2.7.zip" "$O/magliaso_pura_v2.8.zip" --reports "$O/reports" \
-            | tee "$O/patch_v2_8.log"
-          ls -la "$O"
-          md5sum "$O/magliaso_pura_v2.8.zip"
-          df -h .
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
 
-      - name: Work data for the checks
+      - name: Download
         working-directory: beamng/pipeline
         run: |
           python prepare_work.py
@@ -69,50 +68,49 @@ jobs:
           python download_av.py
           python download_tlm.py
           python download_gwr.py
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
           python build_rasters.py
           python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: Road network
+        working-directory: beamng/pipeline
+        run: |
           python network.py
           python network_surface.py
 
-      - name: check_level.py and drive_test.py on v2.7 and on v2.8
+      - name: Level (build_level.py, with the finishing steps of v2.5 to v2.8)
+        working-directory: beamng/pipeline
+        run: |
+          python build_level.py | tee "$MAGLIASO_ROOT/build_level.log"
+          df -h .
+
+      - name: Checks
         working-directory: beamng/pipeline
         run: |
           O="$GITHUB_WORKSPACE/out"
-          for tag in v27 v28; do
-            z="$MAGLIASO_ROOT/dist/magliaso_pura_v2.7.zip"
-            [ "$tag" = v28 ] && z="$O/magliaso_pura_v2.8.zip"
-            rm -rf "$MAGLIASO_ROOT/lv_$tag" && mkdir -p "$MAGLIASO_ROOT/lv_$tag"
-            unzip -q "$z" -d "$MAGLIASO_ROOT/lv_$tag"
-            python check_level.py "$MAGLIASO_ROOT/lv_$tag/levels/magliaso_pura" || true
-            cp ../verifica/check_level.json "$O/check_level_$tag.json"
-            python drive_test.py "$MAGLIASO_ROOT/lv_$tag/levels/magliaso_pura" || true
-            cp ../verifica/drive_test.json "$O/drive_test_$tag.json"
-            rm -rf "$MAGLIASO_ROOT/lv_$tag"
-          done
+          mkdir -p "$O"
+          python check_level.py || true
+          cp ../verifica/check_level.json "$O/check_level.json"
+          python drive_test.py || true
+          cp ../verifica/drive_test.json "$O/drive_test.json"
           git checkout -- ../verifica/check_level.json ../verifica/drive_test.json
 
-      - name: Comparison
+      - name: Package
+        working-directory: beamng/pipeline
         run: |
-          python - <<'EOF'
-          import json
-          O = "out"
-          def flat(d, p=""):
-              out = {}
-              for k, v in d.items():
-                  if isinstance(v, dict):
-                      out.update(flat(v, p + k + "."))
-                  elif isinstance(v, (int, float)) and not isinstance(v, bool):
-                      out[p + k] = v
-              return out
-          for name in ("check_level", "drive_test"):
-              a = flat(json.load(open(f"{O}/{name}_v27.json")))
-              b = flat(json.load(open(f"{O}/{name}_v28.json")))
-              print(f"== {name}: v2.7 -> v2.8 (changed values only)")
-              for k in sorted(set(a) | set(b)):
-                  if a.get(k) != b.get(k):
-                      print(f"{k}: {a.get(k)} -> {b.get(k)}")
-          EOF
-          tail -n 1 out/patch_v2_8.log
+          O="$GITHUB_WORKSPACE/out"
+          python package.py magliaso_pura_v2.8 | tee "$O/package.log"
+          mv "$MAGLIASO_ROOT/dist/magliaso_pura_v2.8.zip" "$O/"
+          cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
+          cp "$MAGLIASO_ROOT/build_level.log" "$O/"
+          ls -la "$O"
+          md5sum "$O/magliaso_pura_v2.8.zip"
 
       - uses: actions/upload-artifact@v4
         with:

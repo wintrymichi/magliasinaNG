@@ -3,9 +3,15 @@
 Stages (each reads work/ products and writes into the level folder):
   terrain, sky/sun/water/level info, buildings, roads (+ markings, AI roads),
   walls, props (poles/signs/guardrails), vegetation, spawn points.
-Run: python build_level.py [--reuse-roads] [stage ...]   (default: all)
+Then the steps that finish the level as written (FINISH, in this order; they read the level folder and
+rewrite it in place): lighter shapes (v2.5), the game's grass (v2.6), tracks flush with the ground, the
+network's road paint, the far trees and the road signs (v2.7), paved edges flush with the ground, the ground
+behind the walls, the undergrowth, street lamps, roadside posts and poles, the catenary, more signs, piers and
+boats, house details (v2.8). Each writes its report to work/reports/<step>.json.
+Run: python build_level.py [--reuse-roads] [stage ...]   (default: all stages, then the FINISH steps)
   --reuse-roads: the road meshes of the previous build stay and stage_roads only reloads what the
   later stages need (work/roads_state.npz), to build the other stages again quickly.
+  --finish [step ...]: only the FINISH steps (all, or the ones named) on the level folder as it is.
 """
 import json, math, os, shutil, sys, time
 import numpy as np
@@ -691,7 +697,7 @@ def stage_buildings(scene, ctx):
     tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways, net=net)
     for shape, origin, ntri in tiles:
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
-                                                          annotation="BUILDINGS"))
+                                                          annotation="BUILDINGS", **buildings_mesh.NIGHT))
     print("building tiles", len(tiles), "triangles", sum(t[2] for t in tiles))
 
 
@@ -895,7 +901,49 @@ STAGES = ["roads", "walls", "water", "terrain", "railway", "sky", "backdrop", "b
           "markings", "ai", "props", "vegetation", "groundcover", "spawns"]
 
 
+# (name, module, function, keyword arguments): the steps that finish the level, in this order
+FINISH = [
+    ("optimize", "optimize_level", "level_step", {}),            # v2.5: fewer, lighter shapes
+    ("grass", "groundcover", "grass_step", {}),                  # v2.6: the game's grass
+    ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
+    ("markings", "markings_net", "markings_step", {}),           # v2.7: the network's road paint redrawn
+    ("far_trees", "far_trees", "far_trees_step", {}),            # v2.7: far trees
+    ("signs", "signs_net", "signs_step", {"report": True}),      # v2.7: road signs
+    ("paved_edges", "network_mesh", "paved_edges_step", {"report": True}),   # v2.8: the ground first
+    ("wall_fill", "walls", "wall_fill_step", {"report": True}),
+    ("understory", "understory", "understory_step", {"report": True}),
+    ("lamps", "lamps", "lamps_step", {"report": True}),           # then what stands on it
+    ("roadside", "poles", "roadside_step", {"report": True}),
+    ("catenary", "railway", "catenary_step", {"report": True}),
+    ("signs_more", "signs_more", "signs_more_step", {"report": True}),
+    ("lake", "water", "lake_step", {"report": True}),
+    ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+]
+
+
+def finish(names=None):
+    """The FINISH steps (all, or those named) on the level folder."""
+    import importlib
+    root = os.path.dirname(os.path.dirname(LEVEL_DIR))       # the folder that holds levels/<name>/
+    rdir = os.path.join(WORK, "reports")
+    os.makedirs(rdir, exist_ok=True)
+    os.environ.setdefault("MAGLIASO_OSM_PINNED", "1")        # OpenStreetMap from the extract in beamng/dati
+    for name, mod, fn, kw in FINISH:
+        if names and name not in names:
+            continue
+        kw = dict(kw)
+        if kw.get("report"):
+            kw["report"] = os.path.join(rdir, f"{name}.json")
+        t0 = time.time()
+        print(f"== finish: {name} ({mod}.{fn})", flush=True)
+        getattr(importlib.import_module(mod), fn)(root, **kw)
+        print(f"[finish {name}: {time.time() - t0:.0f} s]", flush=True)
+
+
 def main():
+    if "--finish" in sys.argv[1:]:
+        finish([a for a in sys.argv[1:] if not a.startswith("--")])
+        return
     reuse = "--reuse-roads" in sys.argv[1:]
     stages = [a for a in sys.argv[1:] if not a.startswith("--")] or STAGES
     if set(stages) == set(STAGES) and os.path.exists(LEVEL_DIR):
@@ -928,6 +976,8 @@ def main():
                                  "rivers", "vineyards") if k in ctx}
     if stats:
         json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
+    if set(stages) == set(STAGES):
+        finish()
     print("level written to", LEVEL_DIR)
 
 

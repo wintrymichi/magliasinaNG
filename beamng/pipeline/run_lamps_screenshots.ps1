@@ -1,4 +1,4 @@
-# The in-game check of the street lamps (patch_lamps.py, v2.8) on one level zip: installs it alone in
+# The in-game check of the street lamps (lamps.lamps_step, v2.8) on one level zip: installs it alone in
 # <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the end), runs the views
 # of lamps_tour.py with the magliaso_unpaved extension (by day and at night, with the frame rate of every
 # view), converts the shots to beamng/verifica/v2.8/lamps/game/<tag>_<site>_<view>.jpg and writes the frame
