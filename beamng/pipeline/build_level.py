@@ -62,7 +62,7 @@ def stage_terrain(scene, ctx):
         img = np.clip(c[None, None, :] * (1 + 0.08 * n[..., None]), 0, 255).astype(np.uint8)
         rel = f"art/terrains/t_base_{m.lower()}_b.png"
         save_png(level_path(*rel.split("/")), img)
-        base_tex[m] = {"b": f"{L}/{rel}", "size": 256}
+        base_tex[m] = {"b": f"{L}/{rel}", "size": 256, "rgb": [float(v) for v in c]}
     override = ctx.get("terrain_override")
     posts = []
     if "wall_feet" in ctx:
@@ -748,9 +748,8 @@ def stage_backfill(scene, ctx, H, base_tex):
     import roadheight
     from geo import Grid
     xs, ys = terrain.vertex_coords()
-    bng.write_materials(level_path("art", "shapes", "walls", "backfill.materials.json"), [
-        bng.material("mp_fill_" + m.lower(), base_tex[m]["b"], f"{det}_nm.png", ground_type=gm)
-        for m, (gm, det, mac, dsize, msize) in terrain.TERRAIN_MATS.items()])
+    bng.write_materials(level_path("art", "shapes", "walls", "backfill.materials.json"),
+                        [walls.fill_material(m, base_tex[m]["rgb"]) for m in terrain.TERRAIN_MATS])
     drv = [g for g, _, _ in roadheight.paved_polygons()]
     net = ctx.get("network")
     if net is not None:

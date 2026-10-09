@@ -527,6 +527,29 @@ def carve_terrain(feet, xs, ys, H, rec=None):
 BACKFILL_LIFT = 0.03   # m, the backfill over a lowered vertex stays this much over the ground it restores
 
 
+FILL_MAX_OFF = 0.4     # m, a backfill vertex inside a terrain square stays this close to the ground before the carve
+FILL_MIN_NZ = 0.25     # the backfill drops its triangles steeper than this (normal z): spikes, not ground
+
+
+def srgb_to_linear(c):
+    c = np.asarray(c, np.float64)
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def fill_material(layer, rgb):
+    """The material of the backfill on the terrain layer `layer` (v2.8): the terrain's look near the camera, the
+    game's detail colour map of the layer at the terrain's detail size (texture coordinates of build_backfill)
+    tinted to the base colour of the layer (rgb, sRGB 0-255; the map is grey around terrain.DETAIL_MEAN), its
+    detail normal and ambient occlusion maps, fully rough like the ground. Up to v2.8 it was the flat base colour
+    with no roughness: a pale, shiny sheet beside the terrain."""
+    import terrain
+    gm, det, mac, dsize, msize = terrain.TERRAIN_MATS[layer]
+    mean = terrain.DETAIL_MEAN.get(det.rsplit("/", 1)[-1], 0.5)
+    k = srgb_to_linear(np.asarray(rgb, np.float64) / 255.0) / srgb_to_linear(mean)
+    return bng.material("mp_fill_" + layer.lower(), f"{det}_b.png", f"{det}_nm.png", None, f"{det}_ao.png",
+                        base_color=list(np.clip(k, 0, 1)) + [1.0], roughness=1.0, ground_type=gm)
+
+
 ON_WALL = 0.03         # m, a backfill vertex this close to the outline of a wall lies on it
 
 
@@ -583,7 +606,7 @@ def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable,
     dtree = shapely.STRtree(drivable) if drivable else None
     names = list(terrain.TERRAIN_MATS)
     builders = {}
-    n_tri = 0
+    n_tri = n_steep = 0
     for r, c in cells:
         X0, Y0 = xs[c], ys[r]
         cell = shapely.box(X0, Y0, X0 + sq, Y0 + sq)
@@ -626,14 +649,27 @@ def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable,
                                  for g in pieces for t in shapely.constrained_delaunay_triangles(g).geoms])
         fx, fy = np.clip((V2[:, 0] - X0) / sq, 0, 1), np.clip((V2[:, 1] - Y0) / sq, 0, 1)
         Z = (z[0] * (1 - fx) * (1 - fy) + z[1] * fx * (1 - fy) + z[2] * (1 - fx) * fy + z[3] * fx * fy)
+        # v2.8: inside the square (not on its edges, which the terrain beside shares) no vertex far from the ground
+        # as it was: a corner under a taller wall (stacked walls, a road in a cut) tilted whole pieces upright
+        inner = np.flatnonzero((fx > 1e-6) & (fx < 1 - 1e-6) & (fy > 1e-6) & (fy < 1 - 1e-6))
+        if len(inner):
+            g = ground(V2[inner, 0], V2[inner, 1])
+            Z[inner] = np.clip(Z[inner], g - FILL_MAX_OFF, g + FILL_MAX_OFF)
         if len(walls_here):
             # v2.8: the vertices where the square is cut at a wall take the wall top there (the nearest vertex of
             # its outline), not the mix of the corners: no saw teeth between the wall top and the meadow
             Z = wall_top_at(V2, Z, [fp[i] for i in walls_here], [vt[i] for i in walls_here],
                             [feet[i][3] for i in walls_here])
         V = np.column_stack([V2, Z]).reshape(-1, 3, 3)
-        up = np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0])[:, 2] < 0
+        nrm = np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0])
+        up = nrm[:, 2] < 0
         V[up] = V[up][:, ::-1]                           # counter-clockwise from above
+        steep = np.abs(nrm[:, 2]) < FILL_MIN_NZ * np.maximum(np.linalg.norm(nrm, axis=1), 1e-12)
+        if steep.any():
+            n_steep += int(steep.sum())
+            V = V[~steep]
+            if not len(V):
+                continue
         mat = "mp_fill_" + names[int(layers[r, c])].lower()
         key = (int(np.floor(X0 / CHUNK)), int(np.floor(Y0 / CHUNK)))
         mb = builders.setdefault(key, {}).setdefault(mat, [])
@@ -643,13 +679,15 @@ def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable,
         mb = bng.MeshBuilder()
         for mat, parts in mats.items():
             T = np.concatenate(parts)
-            mb.add(mat, T, uvs=T[:, :2] / 4.0, normals=bng.flat_normals_soup(T))
+            dsize = terrain.TERRAIN_MATS[names[[n.lower() for n in names].index(mat[len("mp_fill_"):])]][3]
+            mb.add(mat, T, uvs=T[:, :2] / dsize, normals=bng.flat_normals_soup(T))     # v2.8: the detail size
         rel = f"art/shapes/walls/backfill_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CHUNK, (ty + 0.5) * CHUNK, 0.0])
         mb.write_dae(os.path.join(level_dir, rel), name="backfill", origin=origin)
         scene.add("MissionGroup/walls", bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=True,
                                                      decal=False))
-    print("backfill behind the walls: %d squares, %d triangles, %d chunks" % (len(cells), n_tri, len(builders)))
+    print("backfill behind the walls: %d squares, %d triangles, %d chunks, %d steep triangles left out"
+          % (len(cells), n_tri, len(builders), n_steep))
     return n_tri
 
 

@@ -52,6 +52,13 @@ LC_TO_MAT = {
 }
 
 
+# v2.8: mean sRGB of the game's terrain detail colour maps (measured in the game's terrain.zip on michi's PC,
+# 2026-10-09): near-neutral grey, the detail modulates the base colour. The backfill behind the walls uses the
+# detail map as its colour map with the base colour divided by this mean (walls.fill_material).
+DETAIL_MEAN = {"t_grass_01": 0.486, "t_dirt_vegetation": 0.512, "t_forest_ground": 0.555,
+               "t_forest_ground_02": 0.460, "t_asphalt_02": 0.498, "t_concrete_damaged": 0.498,
+               "t_gravel": 0.514, "t_dirt_rocky": 0.475, "t_mud": 0.498, "t_moss": 0.498}
+
 # pixel size of the base textures (the TerrainMaterialTextureSet baseTexSize). 1024 since v2.5:
 # 13 materials x 5 maps at 2048 took about 1 GB of the game's memory, for smooth colour noise
 # that is only seen from afar (the detail textures cover it near the camera)
