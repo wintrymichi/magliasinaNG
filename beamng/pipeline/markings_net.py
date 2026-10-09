@@ -1,5 +1,6 @@
 """Road paint of the network (network_markings.py) as painted meshes on the road surfaces (v2.1),
-redrawn as Swiss road markings by markings_clean.py (v2.7).
+redrawn as Swiss road markings by markings_clean.py (v2.7) and laid from the standard pieces along the
+road axis by markings_std.py (v2.8).
 
 Lines: quad strips of their painted width along every painted run; the other paint (crossings,
 stop and give-way lines, arrows, hatched areas, text): its polygons triangulated. Heights: the top
@@ -123,6 +124,18 @@ def cleaned(d, carriage_tops, painted=None):
     return out
 
 
+def standard(d, roads, carriage_tops):
+    """The cleaned paint laid from the standard pieces along the AI roads `roads` (markings_std.py, v2.8)."""
+    import markings_clean
+    import markings_std
+    import osm
+    ways = osm.load()[0] if osm.available() else None
+    out = markings_std.standard(d, markings_std.Roads(roads),
+                                markings_clean.Carriage(carriage_tops) if len(carriage_tops) else None, ways, osm.DRIVE)
+    print("network paint laid from the standard pieces:", out["standard"])
+    return out
+
+
 def sv_paint_points(level_dir):
     """Points (n, 2) of the paint of the Street View route (art/shapes/roads/markings.dae), if built."""
     f = os.path.join(level_dir, "art", "shapes", "roads", "markings.dae")
@@ -132,12 +145,14 @@ def sv_paint_points(level_dir):
     return pr.read_dae(f)[0][:, :2]
 
 
-def build(level_dir, scene, net=None, tops=None, hint=None, carriage_tops=None, painted=None, clean=True):
+def build(level_dir, scene, net=None, tops=None, hint=None, carriage_tops=None, painted=None, clean=True, roads=None):
     """Paint meshes of work/network_markings.json on the road meshes of the level. tops: the top
     faces (k, 3, 3) of the road meshes (default: read from the level's road meshes); hint: heights
     (n,) at points (n, 2) near the road the paint lies on, where faces overlap (default: the profile
     of the network `net`); carriage_tops: the carriageways (default: the road meshes of the level
-    with the materials CARRIAGE_MATS); painted: see cleaned(); clean: redraw the paint (v2.7)."""
+    with the materials CARRIAGE_MATS); painted: see cleaned(); clean: redraw the paint (v2.7); roads: the AI
+    roads of the level (DecalRoad objects): the paint laid from the standard pieces along them (v2.8,
+    markings_std.py)."""
     d = load()
     if d is None:
         print("no network markings (network_markings.py): the network stays without paint")
@@ -150,6 +165,8 @@ def build(level_dir, scene, net=None, tops=None, hint=None, carriage_tops=None, 
         if painted is None:
             painted = sv_paint_points(level_dir)
         d = cleaned(d, carriage_tops, painted)
+        if roads:
+            d = standard(d, roads, carriage_tops)
     # the profile of the network as the height hint where a road passes under a bridge
     if hint is None and net is not None:
         from scipy.spatial import cKDTree
@@ -290,7 +307,9 @@ def markings_step(root):
     tmp = tempfile.mkdtemp(prefix="magliaso_mk_")
     try:
         col = Collector()
-        build(tmp, col, tops=tops, hint=hint, carriage_tops=carriage, painted=sv_pts[:, :2])
+        ai = f"{lv}/main/MissionGroup/AIRoads/items.level.json"
+        roads = read_items(zi, ai) if ai in zi.NameToInfo else None
+        build(tmp, col, tops=tops, hint=hint, carriage_tops=carriage, painted=sv_pts[:, :2], roads=roads)
         new_files = {}
         for path, o in col.objs:
             rel = o["shapeName"].split(f"/levels/{LEVEL_NAME}/", 1)[1]

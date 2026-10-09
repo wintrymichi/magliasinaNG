@@ -25,6 +25,10 @@ The guard rails are now the models of the game's own Italy level (the W-beam rai
 
 White delineator posts with the black band stand on both sides of the main roads (6 m and wider) outside the villages, every 50 m on the straight and closer in the bends (499), except where a guard rail, a wall or a building already marks the edge; they have no collision, like the plastic posts a car knocks over. Lines of the game's wooden poles, one every 45 m with a cable between them, follow the country roads past the scattered houses (543 poles in 110 lines; a line ends where its cable would pass a street lamp or a house); a pole stops a car (`poles.roadside_step`).
 
+## Road markings
+
+The paint of the roads is laid from standard pieces along the road instead of following the orthophoto's tracing: lines parallel to the road on its lane lines or at one distance from its edge, dashes of one length and rhythm, yellow crossings and stop lines square to the road, regular hatched areas, and the six Swiss direction arrows of a small dataset (`beamng/dati/road_marking_templates.json`). Letters and shapeless blobs of the tracing are left out (`markings_std.py`). The cantonal road Magliaso–Pura keeps its paint checked in the panoramas.
+
 ## Signs
 
 v2.7 put up the signs OpenStreetMap maps and those its rules imply. Now (`signs_more.signs_more_step`) also, by the Swiss rules: a curve warning 150 m before the sharp curves of the main roads outside the villages that come after a straight (a double curve where several follow), the warnings of the level crossings (with or without barriers), falling rocks where OSM records them, and the blue P at the entrance of the public car parks: 80 signs, drawn after the Swiss standard like the others. Not every bend of a mountain road gets one, only the unexpected ones.

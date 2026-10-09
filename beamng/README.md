@@ -281,6 +281,21 @@ Also in v2.8, in the stages of the build:
   `RELEASE_v2.8.md` is still the draft or if the v2.8 release exists, builds the zip as above, stops if its digest is
   not the one given as *tested_digest* (the zip tested in the game), and publishes it with `RELEASE_v2.8.md`.
 
+### Version 2.8 (in progress): road markings from standard pieces
+
+- `markings_std.py`, called by `markings_net.build` in the finishing step `markings` with the AI roads of the level:
+  the cleaned paint of `markings_clean.py` only tells what is painted where. Every line is located on the AI road it
+  follows (station s, offset t); on one road the lines of one colour at the same offset are one line, placed on a lane
+  line (lanes from OSM `lanes`, else the count of 1-4 that explains the traced lines best) or at one inset from the
+  edge (it follows the width), other paint inside the road is left out. Dashed stretches: one dash and period of the
+  dataset and one phase; solid ones joined across 4 m. Crossings: the standard yellow crossing square to the road
+  across the carriageway. Bars: stop and give-way lines square to the road, hatched areas (three bars at least) at
+  one angle, length and spacing; bars along a laid line are dropped. Arrows: the arrow of the dataset (six, scaled
+  to 3 / 5 / 7.5 m, either way) with the best overlap (IoU ≥ 0.42) with the traced blob, in the middle of its lane;
+  letters, convex blobs and fragments are left out.
+- The dataset `dati/road_marking_templates.json` is written by `python markings_std.py --templates`.
+- `check_level.py`: walls of a `doubleSided` building material are not counted as turned inwards.
+
 ### Version 2.8 (in progress): the ground behind the walls
 
 The terrain is a 1.5 m grid and cannot hold a step inside a 0.3 m wall: `walls.carve_terrain` lowers every terrain

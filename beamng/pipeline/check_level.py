@@ -415,6 +415,9 @@ def inward_walls(lv, places):
             sh = o.get("shapeName", "")
             if "/art/shapes/buildings/bld_" in sh:
                 origin[os.path.basename(sh)] = np.array(o.get("position", [0, 0, 0]), np.float64)
+    # v2.8: walls of a doubleSided material are drawn from both sides whichever way they face
+    mf = os.path.join(lv, "art", "shapes", "buildings", "main.materials.json")
+    two = {k for k, m in (json.load(open(mf)) if os.path.exists(mf) else {}).items() if m.get("doubleSided")}
     tin = tout = 0.0
     xs, ys, zs, aa = [], [], [], []
     for f in sorted(glob.glob(os.path.join(lv, "art", "shapes", "buildings", "bld_*.dae"))):
@@ -422,7 +425,7 @@ def inward_walls(lv, places):
             continue
         V, N, T, C, parts = pr.read_dae(f)
         V = V + origin[os.path.basename(f)]
-        T3 = np.concatenate([V[idx[:, 0]].reshape(-1, 3, 3) for mat, idx in parts if mat in WALL_MATS] or
+        T3 = np.concatenate([V[idx[:, 0]].reshape(-1, 3, 3) for mat, idx in parts if mat in WALL_MATS and mat not in two] or
                             [np.zeros((0, 3, 3))])
         if not len(T3):
             continue
