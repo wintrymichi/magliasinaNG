@@ -536,18 +536,17 @@ def srgb_to_linear(c):
     return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
 
-def fill_material(layer, rgb):
-    """The material of the backfill on the terrain layer `layer` (v2.8): the terrain's look near the camera, the
-    game's detail colour map of the layer at the terrain's detail size (texture coordinates of build_backfill)
-    tinted to the base colour of the layer (rgb, sRGB 0-255; the map is grey around terrain.DETAIL_MEAN), its
-    detail normal and ambient occlusion maps, fully rough like the ground. Up to v2.8 it was the flat base colour
-    with no roughness: a pale, shiny sheet beside the terrain."""
+def fill_material(layer, base):
+    """The material of the backfill on the terrain layer `layer` (v2.8): the colour of the terrain itself, its base
+    colour texture (base: the base_tex entry of build_level, "b" its path) at the terrain's detail size (texture
+    coordinates of build_backfill), with the game's detail normal and ambient occlusion maps of the layer, fully
+    rough like the ground. Up to v2.8 it was the flat base colour with no roughness, a pale, shiny sheet; the
+    detail colour map tinted to the base colour came out brighter and greener than the terrain in the game
+    (the terrain blends its detail at 45 %): lime green beside the walls."""
     import terrain
     gm, det, mac, dsize, msize = terrain.TERRAIN_MATS[layer]
-    mean = terrain.DETAIL_MEAN.get(det.rsplit("/", 1)[-1], 0.5)
-    k = srgb_to_linear(np.asarray(rgb, np.float64) / 255.0) / srgb_to_linear(mean)
-    return bng.material("mp_fill_" + layer.lower(), f"{det}_b.png", f"{det}_nm.png", None, f"{det}_ao.png",
-                        base_color=list(np.clip(k, 0, 1)) + [1.0], roughness=1.0, ground_type=gm)
+    return bng.material("mp_fill_" + layer.lower(), base["b"], f"{det}_nm.png", None, f"{det}_ao.png",
+                        roughness=1.0, ground_type=gm)
 
 
 ON_WALL = 0.03         # m, a backfill vertex this close to the outline of a wall lies on it

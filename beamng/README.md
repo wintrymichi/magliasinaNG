@@ -262,8 +262,9 @@ Also in v2.8, in the stages of the build:
   light after sunset and to black by day. No light source is added.
 - **Backfill without saw teeth** (`walls.wall_top_at`): where a terrain square of the backfill is cut at a wall, the
   vertices on the wall take the wall top there instead of a mix of the square's corners. In the game the backfill was
-  a pale, shiny sheet: its material is now the game's detail map of the terrain layer at the terrain's detail size,
-  tinted to the layer's colour, fully rough (`walls.fill_material`); vertices inside a square stay within 0.4 m of the
+  a pale, shiny sheet: its material is now the terrain layer's own base colour texture with the game's detail
+  normal and AO maps at the terrain's detail size, fully rough (`walls.fill_material`; the detail colour map tinted
+  to the layer's colour came out lime green in the game); vertices inside a square stay within 0.4 m of the
   ground before the carve, and near-vertical triangles (spikes at stacked walls and road cuts) are left out.
   The backfill now also goes under the roads, paths and yards on the high side of a wall: the carve lowered the terrain
   under their edges and they hung over a hole (on the v2.8 chain zip, at the start of the cantonal road in Magliaso,
