@@ -261,7 +261,14 @@ Also in v2.8, in the stages of the build:
   (`instanceEmissive`), and the building TSStatics have `nightEmissive`: the game sets their instance colour to a warm
   light after sunset and to black by day. No light source is added.
 - **Backfill without saw teeth** (`walls.wall_top_at`): where a terrain square of the backfill is cut at a wall, the
-  vertices on the wall take the wall top there instead of a mix of the square's corners.
+  vertices on the wall take the wall top there instead of a mix of the square's corners. In the game the backfill was
+  a pale, shiny sheet: its material is now the game's detail map of the terrain layer at the terrain's detail size,
+  tinted to the layer's colour, fully rough (`walls.fill_material`); vertices inside a square stay within 0.4 m of the
+  ground before the carve, and near-vertical triangles (spikes at stacked walls and road cuts) are left out.
+- **River water cut at the banks** (`rivers.write`): the water is written once the terrain is final, on a 1.5 m mesh,
+  and cut to where it stands more than 6 cm over the terrain. Along the Magliasina a fifth of the water was under the
+  banks and much of the rest within centimetres of the ground, so it showed through the terrain in triangles; on the
+  v2.8 chain zip the cut leaves 22.9 of 30.1 ha of river water.
 - `.github/workflows/v28_build_test.yml` (*v2.8 build test*): builds the level from scratch on a GitHub server, runs
   `check_level.py` and `drive_test.py`, packages it and uploads the zip, the reports of the finishing steps, the build
   log, the digest and the check results as an artifact. Nothing is published.

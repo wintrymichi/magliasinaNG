@@ -21,6 +21,8 @@ What changed in each version of the map, newest first. The release notes that go
 - **Lit windows at night.** After sunset about a third of the windows whose glass shows, and most shop windows, glow in the warm light of a lit room (an emissive map on the glass that the game switches on at night: no light source, one 1024 × 512 texture).
 - **Guard rails from the game.** The guard rails are the models of the game's Italy level, with their posts, end pieces and the game's own collision, one 3 m module after the other along the measured runs: the pipeline's guard rail meshes had broken collisions.
 - **No saw teeth where the ground behind a wall meets the wall.** The edge of the backfill now runs along the wall top instead of zig-zagging between the wall top and the meadow.
+- **No more water triangles along the Magliasina.** The river water ran in and out of the banks of the torrents in triangles (a fifth of it under the ground, much of the rest a few centimetres over it): it is now cut where the terrain stands over it, on a finer mesh.
+- **The ground behind the walls looks like the terrain.** It was a pale, shiny mint sheet: it now has the terrain's own detail texture and colour, fully matt, and no more upright shards at stacked walls and road cuts.
 - **Built from scratch again.** Everything that came after v2.4 as a patch script on the previous zip (v2.5 to v2.8) is now a finishing step of the build itself (`build_level.py`, `build_level.FINISH`); the release workflow builds the level from the open data, as up to v2.4.
 
 ## v2.7

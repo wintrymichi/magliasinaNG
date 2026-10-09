@@ -97,6 +97,10 @@ def stage_terrain(scene, ctx):
     json.dump(mats, open(level_path("art", "terrains", "main.materials.json"), "w"), indent=1)
     if ctx.get("wall_rec"):
         stage_backfill(scene, ctx, H, base_tex)
+    if ctx.get("river_meshes"):                          # v2.8: the river water cut where the terrain is over it
+        import rivers
+        xs, ys = terrain.vertex_coords()
+        rivers.write(LEVEL_DIR, LEVEL_NAME, scene, ctx["river_meshes"], H, xs, ys)
     scene.add("MissionGroup/level_objects/terrain", {
         "name": "theTerrain", "class": "TerrainBlock", "persistentId": bng.pid(),
         "position": [TER_X0, TER_Y0, z0], "maxHeight": maxh, "squareSize": TER_SQUARE,
@@ -680,7 +684,7 @@ def stage_water(scene, ctx):
         crossings = [f for _, f in getattr(net, "deck_feet", [])] + [g for g, _, _ in roadheight.paved_polygons()]
         fn = ctx.get("road_mesh_fn")
         road_z = (lambda x, y: fn(x, y)) if fn is not None else (lambda x, y: np.full(len(x), np.nan))
-        ctx["rivers"], ctx["river_polys"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade,
+        ctx["rivers"], ctx["river_polys"], ctx["river_meshes"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade,
                                                          crossings, road_z)
         print("rivers:", ctx["rivers"], flush=True)
 
