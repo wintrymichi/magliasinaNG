@@ -606,7 +606,7 @@ def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable,
     dtree = shapely.STRtree(drivable) if drivable else None
     names = list(terrain.TERRAIN_MATS)
     builders = {}
-    n_tri = n_steep = 0
+    n_tri = n_steep = n_road = 0
     for r, c in cells:
         X0, Y0 = xs[c], ys[r]
         cell = shapely.box(X0, Y0, X0 + sq, Y0 + sq)
@@ -618,63 +618,78 @@ def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable,
         cut = cell
         if len(walls_here):
             cut = cut.difference(shapely.union_all([fp[i] for i in walls_here]))
+        # v2.8: also under the roads, paths and yards beside the wall, where the carve dug under their edges and
+        # left them hanging over a hole (map-wide: about one triangle in ten of the roads within 2 m of a
+        # wall); there the backfill stays under the surface (no corner above the restored ground)
+        under = shapely.Polygon()
         if dtree is not None:
             roads_here = dtree.query(cell, predicate="intersects")
             if len(roads_here):
-                cut = cut.difference(shapely.union_all([drivable[i] for i in roads_here]).buffer(0.02))
-        if cut.is_empty or cut.area < 0.01:
-            continue
-        pieces = [g for g in getattr(cut, "geoms", [cut]) if g.geom_type == "Polygon" and g.area >= 0.01]
-        if len(walls_here):                              # only the pieces on the high side of the wall
-            keep = []
-            for g in pieces:
-                q = g.representative_point()
-                best, zm = np.inf, None
-                for i in walls_here:
-                    d, j = vt[i].query([q.x, q.y])
-                    if d < best:
-                        best, zm = d, zmid[i][j]
-                if ground(np.array([q.x]), np.array([q.y]))[0] > zm:
-                    keep.append(g)
-            pieces = keep
-        if not pieces:
-            continue
-        if len(pieces) == 1 and pieces[0].equals(cell):
-            # the terrain square itself, split along the diagonal of the terrain (Torque: alternating)
-            P = np.array([[X0, Y0], [X0 + sq, Y0], [X0, Y0 + sq], [X0 + sq, Y0 + sq]])
-            tri = [(0, 1, 3), (0, 3, 2)] if (r ^ c) & 1 == 0 else [(0, 1, 2), (1, 3, 2)]
-            V2 = np.concatenate([P[list(t)] for t in tri])
-        else:
-            V2 = np.concatenate([np.asarray(t.exterior.coords)[:3]
-                                 for g in pieces for t in shapely.constrained_delaunay_triangles(g).geoms])
-        fx, fy = np.clip((V2[:, 0] - X0) / sq, 0, 1), np.clip((V2[:, 1] - Y0) / sq, 0, 1)
-        Z = (z[0] * (1 - fx) * (1 - fy) + z[1] * fx * (1 - fy) + z[2] * (1 - fx) * fy + z[3] * fx * fy)
-        # v2.8: inside the square (not on its edges, which the terrain beside shares) no vertex far from the ground
-        # as it was: a corner under a taller wall (stacked walls, a road in a cut) tilted whole pieces upright
-        inner = np.flatnonzero((fx > 1e-6) & (fx < 1 - 1e-6) & (fy > 1e-6) & (fy < 1 - 1e-6))
-        if len(inner):
-            g = ground(V2[inner, 0], V2[inner, 1])
-            Z[inner] = np.clip(Z[inner], g - FILL_MAX_OFF, g + FILL_MAX_OFF)
-        if len(walls_here):
-            # v2.8: the vertices where the square is cut at a wall take the wall top there (the nearest vertex of
-            # its outline), not the mix of the corners: no saw teeth between the wall top and the meadow
-            Z = wall_top_at(V2, Z, [fp[i] for i in walls_here], [vt[i] for i in walls_here],
-                            [feet[i][3] for i in walls_here])
-        V = np.column_stack([V2, Z]).reshape(-1, 3, 3)
-        nrm = np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0])
-        up = nrm[:, 2] < 0
-        V[up] = V[up][:, ::-1]                           # counter-clockwise from above
-        steep = np.abs(nrm[:, 2]) < FILL_MIN_NZ * np.maximum(np.linalg.norm(nrm, axis=1), 1e-12)
-        if steep.any():
-            n_steep += int(steep.sum())
-            V = V[~steep]
-            if not len(V):
+                road_u = shapely.union_all([drivable[i] for i in roads_here]).buffer(0.02)
+                under = cut.intersection(road_u)
+                cut = cut.difference(road_u)
+        zb = [B[k] for k in corner if k in B]
+        sets = [(cut, False)] + ([(under, True)] if zb and not under.is_empty else [])
+        for geom, on_road in sets:
+            if geom.is_empty or geom.area < 0.01:
                 continue
-        mat = "mp_fill_" + names[int(layers[r, c])].lower()
-        key = (int(np.floor(X0 / CHUNK)), int(np.floor(Y0 / CHUNK)))
-        mb = builders.setdefault(key, {}).setdefault(mat, [])
-        mb.append(V.reshape(-1, 3))
-        n_tri += len(V)
+            pieces = [g for g in getattr(geom, "geoms", [geom]) if g.geom_type == "Polygon" and g.area >= 0.01]
+            if len(walls_here):                          # only the pieces on the high side of the wall
+                keep = []
+                for g in pieces:
+                    q = g.representative_point()
+                    best, zm = np.inf, None
+                    for i in walls_here:
+                        d, j = vt[i].query([q.x, q.y])
+                        if d < best:
+                            best, zm = d, zmid[i][j]
+                    if ground(np.array([q.x]), np.array([q.y]))[0] > zm:
+                        keep.append(g)
+                pieces = keep
+            if not pieces:
+                continue
+            if len(pieces) == 1 and pieces[0].equals(cell):
+                # the terrain square itself, split along the diagonal of the terrain (Torque: alternating)
+                P = np.array([[X0, Y0], [X0 + sq, Y0], [X0, Y0 + sq], [X0 + sq, Y0 + sq]])
+                tri = [(0, 1, 3), (0, 3, 2)] if (r ^ c) & 1 == 0 else [(0, 1, 2), (1, 3, 2)]
+                V2 = np.concatenate([P[list(t)] for t in tri])
+            else:
+                V2 = np.concatenate([np.asarray(t.exterior.coords)[:3]
+                                     for g in pieces for t in shapely.constrained_delaunay_triangles(g).geoms])
+            fx, fy = np.clip((V2[:, 0] - X0) / sq, 0, 1), np.clip((V2[:, 1] - Y0) / sq, 0, 1)
+            Z = (z[0] * (1 - fx) * (1 - fy) + z[1] * fx * (1 - fy) + z[2] * (1 - fx) * fy + z[3] * fx * fy)
+            if on_road:
+                # under a road: never over the restored ground of the square's corners (that ground is the road's
+                # own carve, 10 cm under its surface), not up to the wall top
+                Z = np.minimum(Z, max(zb))
+            else:
+                # v2.8: inside the square (not on its edges, which the terrain beside shares) no vertex far from
+                # the ground as it was: a corner under a taller wall (stacked walls, a road in a cut) tilted whole
+                # pieces upright
+                inner = np.flatnonzero((fx > 1e-6) & (fx < 1 - 1e-6) & (fy > 1e-6) & (fy < 1 - 1e-6))
+                if len(inner):
+                    g = ground(V2[inner, 0], V2[inner, 1])
+                    Z[inner] = np.clip(Z[inner], g - FILL_MAX_OFF, g + FILL_MAX_OFF)
+                if len(walls_here):
+                    # v2.8: the vertices where the square is cut at a wall take the wall top there (the nearest
+                    # vertex of its outline), not the mix of the corners: no saw teeth between wall top and meadow
+                    Z = wall_top_at(V2, Z, [fp[i] for i in walls_here], [vt[i] for i in walls_here],
+                                    [feet[i][3] for i in walls_here])
+            V = np.column_stack([V2, Z]).reshape(-1, 3, 3)
+            nrm = np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0])
+            up = nrm[:, 2] < 0
+            V[up] = V[up][:, ::-1]                       # counter-clockwise from above
+            steep = np.abs(nrm[:, 2]) < FILL_MIN_NZ * np.maximum(np.linalg.norm(nrm, axis=1), 1e-12)
+            if steep.any():
+                n_steep += int(steep.sum())
+                V = V[~steep]
+                if not len(V):
+                    continue
+            n_road += len(V) if on_road else 0
+            mat = "mp_fill_" + names[int(layers[r, c])].lower()
+            key = (int(np.floor(X0 / CHUNK)), int(np.floor(Y0 / CHUNK)))
+            builders.setdefault(key, {}).setdefault(mat, []).append(V.reshape(-1, 3))
+            n_tri += len(V)
     for (tx, ty), mats in sorted(builders.items()):
         mb = bng.MeshBuilder()
         for mat, parts in mats.items():
@@ -686,8 +701,8 @@ def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable,
         mb.write_dae(os.path.join(level_dir, rel), name="backfill", origin=origin)
         scene.add("MissionGroup/walls", bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=True,
                                                      decal=False))
-    print("backfill behind the walls: %d squares, %d triangles, %d chunks, %d steep triangles left out"
-          % (len(cells), n_tri, len(builders), n_steep))
+    print("backfill behind the walls: %d squares, %d triangles (%d under roads), %d chunks, %d steep triangles left out"
+          % (len(cells), n_tri, n_road, len(builders), n_steep))
     return n_tri
 
 

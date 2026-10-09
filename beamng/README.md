@@ -265,6 +265,10 @@ Also in v2.8, in the stages of the build:
   a pale, shiny sheet: its material is now the game's detail map of the terrain layer at the terrain's detail size,
   tinted to the layer's colour, fully rough (`walls.fill_material`); vertices inside a square stay within 0.4 m of the
   ground before the carve, and near-vertical triangles (spikes at stacked walls and road cuts) are left out.
+  The backfill now also goes under the roads, paths and yards on the high side of a wall: the carve lowered the terrain
+  under their edges and they hung over a hole (on the v2.8 chain zip, at the start of the cantonal road in Magliaso,
+  one road triangle in nine stood more than 1 m over the terrain, all within 4 m of a wall); there it stays at the
+  restored ground of the square's corners, the road's own carve 10 cm under its surface.
 - **River water cut at the banks** (`rivers.write`): the water is written once the terrain is final, on a 1.5 m mesh,
   and cut to where it stands more than 6 cm over the terrain. Along the Magliasina a fifth of the water was under the
   banks and much of the rest within centimetres of the ground, so it showed through the terrain in triangles; on the
