@@ -9,6 +9,9 @@
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-56%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
+[![Website](https://img.shields.io/badge/website-wintrymichi.ch-00549b)](https://wintrymichi.ch)
+
+**[wintrymichi.ch](https://wintrymichi.ch)** · [Download v2.8](https://github.com/wintrymichi/magliasinaNG/releases/latest)
 
 ![Novaggio, Miglieglia and the Alto Malcantone in v2.8](beamng/verifica/screenshots/v2.8/overview-novaggio-miglieglia-malcantone.jpg)
 
