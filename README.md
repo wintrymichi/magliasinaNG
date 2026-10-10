@@ -10,7 +10,7 @@
 ![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
 
-![Magliaso and Lake Lugano](beamng/verifica/screenshots/v2.8/overview-magliaso-lake.jpg)
+![Novaggio, Miglieglia and the Alto Malcantone](beamng/verifica/screenshots/v2.8/overview-novaggio-miglieglia-malcantone.jpg)
 
 </div>
 
