@@ -1,0 +1,25 @@
+# Updates the notes of a published release from its beamng/RELEASE_<tag>.md on main (for example after the
+# screenshots of the test are added). Started by hand; the zip of the release is not touched.
+name: Release notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v2.8"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update the notes
+        run: gh release edit "$TAG" --notes-file "beamng/RELEASE_$TAG.md"

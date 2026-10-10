@@ -223,6 +223,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   └── workflows/                            # GitHub Actions: release builds, the v2.8 test build, website
 │       ├── final_build_test.yml              # Final v2.8 build from scratch, checks, doubles and the zip (v2.8)
 │       ├── pages.yml                         # Publishes web/ on GitHub Pages when web/ changes on main
+│       ├── release_notes.yml                 # Updates the notes of a published release from beamng/RELEASE_<tag>.md
 │       ├── release_v1.1.yml                  # Release build: the v1.0 zip fixed by patch_release.py (v1.1)
 │       ├── release_v2.0.yml                  # Release build from scratch: the whole 51 km² area (v2.0)
 │       ├── release_v2.1.yml                  # Release build from scratch: markings, AI, railway (v2.1)
