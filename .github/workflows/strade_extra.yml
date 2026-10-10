@@ -5,7 +5,7 @@
 # workflow runs on; the full build (final build test) then reads them like every other file of beamng/dati.
 #
 # It runs on demand (workflow_dispatch) or when this file changes on the branch of the Arosio - Miglieglia road.
-# run stamp: 1
+# run stamp: 2
 name: strade extra
 
 on:

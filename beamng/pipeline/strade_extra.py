@@ -20,6 +20,7 @@ Output: dati/strade_extra_v22.json (the lines in LV95); area.py joins a corridor
 around them to the area.
     python strade_extra.py               (both files)
     python strade_extra.py --corridors   (only dati/strade_extra_v22.json)
+The roads already in dati/strade_extra_v22.json are kept; --again computes them all again.
 """
 import collections, heapq, json, os, sys
 import numpy as np
@@ -139,11 +140,19 @@ def waypoint(w):
     return np.asarray(lv95_to_local(*w), np.float64).ravel()
 
 
-def corridors():
-    """v2.2: the lines of CORRIDORS -> dati/strade_extra_v22.json."""
+def corridors(again=False):
+    """v2.2: the lines of CORRIDORS -> dati/strade_extra_v22.json. A road already in the file is kept as it is
+    (newer swissTLM3D or swissNAMES3D would move the area of the released versions), unless `again`."""
     lines = road_lines()
+    kept = {}
+    if not again and os.path.exists(OUT_V22):
+        kept = {r["key"]: r for r in json.load(open(OUT_V22, encoding="utf-8"))["roads"]}
     roads = []
     for key, name, wps in CORRIDORS:
+        if key in kept:
+            roads.append(kept[key])
+            print("%s: kept, %.0f m" % (key, kept[key]["length_m"]))
+            continue
         pts = [waypoint(w) for w in wps]
         way = []
         for a, b in zip(pts[:-1], pts[1:]):
@@ -169,4 +178,4 @@ def corridors():
 if __name__ == "__main__":
     if "--corridors" not in sys.argv:
         main()
-    corridors()
+    corridors(again="--again" in sys.argv)
