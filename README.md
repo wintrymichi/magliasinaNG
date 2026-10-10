@@ -82,6 +82,19 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ## Gallery
 
+### New in v2.8
+
+> In-game screenshots of the released v2.8 zip (BeamNG.drive 0.39, native Linux, RTX 4070): from the driver's seat, behind the car and from the air, on the cantonal road with the game's guard rails and on the new road Arosio – Mugena – Vezio – Breno – Miglieglia – Novaggio. All 15 in [`beamng/verifica/screenshots/v2.8/`](beamng/verifica/screenshots/v2.8), the test in [`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md).
+
+| | |
+|---|---|
+| ![Driver's view: the cantonal road Magliaso–Pura with its guard rail](beamng/verifica/screenshots/v2.8/driver-cantonale-magliaso-pura-1.jpg)<br>*Driver's view: the cantonal road Magliaso–Pura with its guard rail* | ![Driver's view: the cantonal road, guard rail along the bend](beamng/verifica/screenshots/v2.8/driver-cantonale-magliaso-pura-2.jpg)<br>*Driver's view: the cantonal road, guard rail along the bend* |
+| ![Driver's view: the new road Miglieglia–Novaggio, stone wall](beamng/verifica/screenshots/v2.8/driver-miglieglia-novaggio-stone-wall.jpg)<br>*Driver's view: the new road Miglieglia–Novaggio, stone wall* | ![The cantonal road near Pura, guard rail whole](beamng/verifica/screenshots/v2.8/chase-cantonale-near-pura.jpg)<br>*The cantonal road near Pura, guard rail whole* |
+| ![New road: Mugena–Vezio](beamng/verifica/screenshots/v2.8/chase-mugena-vezio-stone-wall.jpg)<br>*New road: Mugena–Vezio* | ![New road: the climb from Vezio to Breno](beamng/verifica/screenshots/v2.8/chase-vezio-breno-village-climb.jpg)<br>*New road: the climb from Vezio to Breno* |
+| ![New road: hairpin above Breno](beamng/verifica/screenshots/v2.8/chase-breno-hairpin-valley-view.jpg)<br>*New road: hairpin above Breno* | ![New road: down from Miglieglia to Novaggio](beamng/verifica/screenshots/v2.8/chase-miglieglia-novaggio-tree-lined.jpg)<br>*New road: down from Miglieglia to Novaggio* |
+| ![Magliaso and the lake](beamng/verifica/screenshots/v2.8/overview-magliaso-lake.jpg)<br>*Magliaso and the lake* | ![Novaggio, Miglieglia and the Alto Malcantone](beamng/verifica/screenshots/v2.8/overview-novaggio-miglieglia-malcantone.jpg)<br>*Novaggio, Miglieglia and the Alto Malcantone* |
+| ![Agno and the Vedeggio plain](beamng/verifica/screenshots/v2.8/overview-agno-plain.jpg)<br>*Agno and the Vedeggio plain* | ![The Magliasina valley](beamng/verifica/screenshots/v2.8/overview-valle-magliasina.jpg)<br>*The Magliasina valley* |
+
 ### New in v2.7
 
 > In-game screenshots of the v2.7 level (BeamNG.drive 0.39, driver's eye height): Swiss road signs, markings redrawn to the Swiss standard, dirt tracks flush with the ground, wooded slopes. More in [`beamng/verifica/screenshots/v2.7/`](beamng/verifica/screenshots/v2.7).
@@ -159,7 +172,7 @@ How to run the pipeline yourself, the environment variables, the coordinate syst
 - **Automatic checks over the whole map** (`check_level.py`, results in [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terrain above the roads, holes, steps, seams between blocks, obstacles on the carriageway searched along every road and trail, trees in the clearance envelope, the AI network, missing files and, since v2.4, building walls facing inwards.
 - **Virtual drive test** (`drive_test.py`, [`beamng/verifica/drive_test.json`](beamng/verifica/drive_test.json)): a simulated car (a quarter-car model on all four wheels) drives every road in both directions and every trail, 670 km, on the level's surfaces as written. On the same roads as v2.1 it counts 66 % fewer steps on minor roads (1695 → 570) and 20 % fewer on main roads (74 → 59); wheels lifting off the road drop by 57 % on minor roads and 58 % on main roads, hard hits by 25 % and sharp twists by 61 % on minor roads.
 - **Street View review** ([`beamng/verifica/REVISIONE.md`](beamng/verifica/REVISIONE.md)): for every road, the panorama coverage, the measured buildings, the guardrails and walls seen, the drive-test events before and after, and the places compared photo/map from the same camera, with the problems found and the fixes.
-- **In the game** (since v2.5): loading time, memory and frame rate measured in BeamNG.drive 0.39 at the spawn points, for v2.6 on meadows and gardens, for v2.7 at the test views of the signs, markings, tracks and slopes, with every kind of sign checked from the traffic ([`beamng/verifica/screenshots/v2.7/test.json`](beamng/verifica/screenshots/v2.7/test.json)), and for v2.8 the released zip driven by hand on the new roads, guard rails and bridges.
+- **In the game** (since v2.5): loading time, memory and frame rate measured in BeamNG.drive 0.39 at the spawn points, for v2.6 on meadows and gardens, for v2.7 at the test views of the signs, markings, tracks and slopes, with every kind of sign checked from the traffic ([`beamng/verifica/screenshots/v2.7/test.json`](beamng/verifica/screenshots/v2.7/test.json)), and for v2.8 the released zip driven on the new roads, guard rails and bridges ([`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md)).
 
 ## Known limitations
 
@@ -182,7 +195,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | Tunnels are not built: roads and the railway stop at the portals. | [#19](https://github.com/wintrymichi/magliasinaNG/issues/19) |
 | One-way streets only where OpenStreetMap records them. | [#20](https://github.com/wintrymichi/magliasinaNG/issues/20) |
 | Road signs only where OpenStreetMap maps them or records the rule that needs them: warning, direction and parking signs nobody mapped are missing; 35 plates of the cantonal road keep a single colour; no railway overhead line. | [#21](https://github.com/wintrymichi/magliasinaNG/issues/21) |
-| v2.8: pale jagged bands on some stone wall caps (cantonal road hairpins, road from Arosio), pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, one "keep right" sign standing twice near the Magliaso roundabout; the AI driver gets stuck at a few spots (Mugena, Vezio, Miglieglia, Pura). | — |
+| v2.8: pale jagged bands on some stone wall caps (cantonal road hairpins, road from Arosio), pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, one "keep right" sign standing twice near the Magliaso roundabout; the AI driver gets stuck at a few spots (Mugena, Vezio, Miglieglia, Pura). Details in [`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md). | — |
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
 
 ## Repository layout
@@ -436,7 +449,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │       ├── zone_report.json                  # Data of ZONE.md and STRADE.md, per zone and road (v2.1)
 │       ├── mappa/                            # Render sheets: roads, trails, villages, flagged spots (v2.0)
 │       ├── ponti/                            # Table and profile sheets of every bridge (v2.0)
-│       ├── screenshots/                      # In-game README views (v2.6) and v2.7 check screenshots
+│       ├── screenshots/                      # In-game README views (v2.6), v2.7 checks and v2.8 driver/chase/aerial shots
 │       │   ├── signs_v2.7/                   # In-game shots of each sign kind, near and far (v2.7)
 │       │   └── v2.7/                         # In-game test of the final zip: views, load time, fps (v2.7)
 │       ├── v2.1/                             # Renders of markings, STOP, railway, Tresa bridge (v2.1)
