@@ -7,7 +7,7 @@
 #
 # It runs on demand (workflow_dispatch) or when this file changes on the v2.8 branch: to rebuild after merging the
 # fixes, bump the build stamp below.
-# build stamp: 2
+# build stamp: 3
 name: final build test
 
 on:

@@ -32,7 +32,7 @@ from scipy.spatial import cKDTree
 from config import WORK, NO_PHOTO
 from geo import Grid
 import bng
-import argparse, json, os, re, struct, sys, time, zipfile
+import argparse, json, os, re, struct, sys, tempfile, time, zipfile
 import groundcover
 import optimize_level
 from config import LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
