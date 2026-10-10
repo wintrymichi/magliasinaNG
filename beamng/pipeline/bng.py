@@ -448,6 +448,19 @@ def flat_normals_soup(V):
     return np.repeat(fn / n, 3, 0)
 
 
+def box_uvs_soup(V, tile):
+    """For triangle soups: texture coordinates (k*3, 2) projected along each face's main axis, `tile` m
+    per repeat: (x, y) on faces that look up or down, (y, z) or (x, z) on the others. The (x + y, z) of
+    the walls gives a face lying flat (the underside of a bridge deck, a parapet top) or one running
+    along x = -y a single texture row stretched into stripes."""
+    V = np.asarray(V, np.float64).reshape(-1, 3, 3)
+    fn = np.abs(np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0]))
+    ax = np.argmax(fn, axis=1)                   # 0: faces x, 1: faces y, 2: faces z
+    u = np.where(ax == 0, V[:, :, 1].T, V[:, :, 0].T).T
+    v = np.where(ax == 2, V[:, :, 1].T, V[:, :, 2].T).T
+    return np.column_stack([u.reshape(-1), v.reshape(-1)]) / tile
+
+
 # ------------------------------------------------------------------ the built level, file by file
 class LevelInfo:
     """One file of a built level, named as in the mod's zip (levels/<name>/...)."""

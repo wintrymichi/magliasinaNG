@@ -1,0 +1,123 @@
+# Final build test of v2.8: the complete level built from scratch exactly as "v2.8 build test" does (build_level.py
+# with every finishing step inside), after the terrain geometry fix, the removal of duplicate signs, guard rails and
+# walls, and the guard rails that showed only their posts. Then the automatic checks (check_level.py, drive_test.py)
+# and the package. The zip to test in the game, the reports, the check results and the build log are uploaded as the
+# artifact "final-build-test" of the run; the zip's md5 is the last line of the Package step. Nothing is published
+# as a release (release_v2.8.yml does that, only with michi's ok).
+#
+# It runs on demand (workflow_dispatch) or when this file changes on the v2.8 branch: to rebuild after merging the
+# fixes, bump the build stamp below.
+# build stamp: 1
+name: final build test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/v2.8-guardrail-terreno-luci-x1873f]
+    paths: [.github/workflows/final_build_test.yml]
+
+concurrency:
+  group: final-build-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  final-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: Release v1.1 (objects of the original route, neutral textures)
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: Road network
+        working-directory: beamng/pipeline
+        run: |
+          python network.py
+          python network_surface.py
+
+      - name: Level (build_level.py, with the finishing steps of v2.5 to v2.8)
+        working-directory: beamng/pipeline
+        run: |
+          python build_level.py | tee "$MAGLIASO_ROOT/build_level.log"
+          df -h .
+
+      - name: Checks
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          mkdir -p "$O"
+          python check_level.py || true
+          cp ../verifica/check_level.json "$O/check_level.json"
+          python drive_test.py || true
+          cp ../verifica/drive_test.json "$O/drive_test.json"
+          git checkout -- ../verifica/check_level.json ../verifica/drive_test.json
+
+      - name: Package
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          python package.py magliaso_pura_v2.8 | tee "$O/package.log"
+          mv "$MAGLIASO_ROOT/dist/magliaso_pura_v2.8.zip" "$O/"
+          cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
+          cp "$MAGLIASO_ROOT/build_level.log" "$O/"
+          ls -la "$O"
+          md5sum "$O/magliaso_pura_v2.8.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: final-build-test
+          path: out/
+          retention-days: 30
+          compression-level: 0

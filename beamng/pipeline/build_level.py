@@ -257,11 +257,9 @@ def stage_roads(scene, ctx):
         if tops is not None:
             tops.append(V[T])
         kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S_, ground_))
-        mb.add(mat, kerb, uvs=np.column_stack([kerb[:, 0] + kerb[:, 1], kerb[:, 2]]) / uvt,
-               normals=bng.flat_normals_soup(kerb))
+        mb.add(mat, kerb, uvs=bng.box_uvs_soup(kerb, uvt), normals=bng.flat_normals_soup(kerb))
         if len(wall):
-            mb.add("mp_road_wall", wall, uvs=np.column_stack([wall[:, 0] + wall[:, 1], wall[:, 2]]) / 1.6,
-                   normals=bng.flat_normals_soup(wall))
+            mb.add("mp_road_wall", wall, uvs=bng.box_uvs_soup(wall, 1.6), normals=bng.flat_normals_soup(wall))
             stats["stone faces"] += len(wall) // 6
 
     tops = []
@@ -340,7 +338,9 @@ def stage_roads(scene, ctx):
         tx, ty = int(np.floor(x / CHUNK)), int(np.floor(y / CHUNK))
         mb = builders.setdefault((tx, ty), bng.MeshBuilder())
         V = soup.reshape(-1, 3)
-        uv = V[:, :2] / uvt if kind == "top" else np.column_stack([V[:, 0] + V[:, 1], V[:, 2]]) / uvt
+        # sides, underside, parapets and piers projected face by face (v2.8: the underside and the
+        # parapet tops had one texture row stretched across them)
+        uv = V[:, :2] / uvt if kind == "top" else bng.box_uvs_soup(V, uvt)
         mb.add(mat, V, uvs=uv, normals=bng.flat_normals_soup(V))
 
     def on_cap(r, c, z):
@@ -826,7 +826,8 @@ def write_info(ctx):
                         "la rete, circa %d 000 alberi, traffico IA. La Strada "
                         "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
                         "ci sono anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano, il passo sopra "
-                        "Gravesano fino ad Arosio, la cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
+                        "Gravesano fino ad Arosio, la strada Arosio - Mugena - Breno - Miglieglia - Novaggio, la "
+                        "cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
                         "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
                         "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
                         "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "
