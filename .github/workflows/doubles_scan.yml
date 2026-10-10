@@ -1,0 +1,30 @@
+# Temporary: what the zip of a v2.8 build test has twice (doubles.py), on the artifact of a run.
+name: doubles scan
+
+on:
+  push:
+    branches: [claude/v2.8-dedupe-g1ph6k]
+    paths: [.github/workflows/doubles_scan.yml, beamng/pipeline/doubles.py]
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy==2.4.6 scipy==1.17.1
+      - name: Zip of the v2.8 build test
+        run: gh run download 37931803289 -n v28-build-test -D art && ls -la art
+      - name: Scan
+        working-directory: beamng/pipeline
+        run: |
+          python doubles.py ../../art/magliaso_pura_v2.8.zip ../../doubles.json
+          cat ../../doubles.json
