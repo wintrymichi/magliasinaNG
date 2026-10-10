@@ -2,19 +2,19 @@
 
 # Malcantone · BeamNG.drive
 
-**The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 52 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano and Arosio.**
+**The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 56 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano, Arosio and Novaggio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
 ![Version](https://img.shields.io/badge/version-2.8-blue)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
-![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
+![Area](https://img.shields.io/badge/area-56%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
 
 ![Novaggio, Miglieglia and the Alto Malcantone in v2.8](beamng/verifica/screenshots/v2.8/overview-novaggio-miglieglia-malcantone.jpg)
 
 </div>
 
-The Malcantone is the hilly corner of Ticino west of Lugano, between Lake Lugano and the Italian border. This mod turns about 52 km² of it into a drivable BeamNG.drive map: every real road and trail, every building, the woods and the lake, all at their real position and height.
+The Malcantone is the hilly corner of Ticino west of Lugano, between Lake Lugano and the Italian border. This mod turns about 56 km² of it into a drivable BeamNG.drive map: every real road and trail, every building, the woods and the lake, all at their real position and height.
 
 Nothing is modelled by hand. A Python pipeline builds the whole map from open data: swisstopo (terrain, roads, buildings, aerial photos), the official cadastral survey of Canton Ticino, the Federal Register of Buildings and OpenStreetMap. Google Street View panoramas are used only as a **visual reference** (poses, measurements, comparisons). No Street View image is in the repository or in the map: everything you see in the photos (façades, shutters, signs, guardrails, walls) is redrawn with original textures.
 
@@ -33,6 +33,8 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 
 ## Where to drive
 
+![Map of the playable area: roads, trails and villages](web/map.svg)
+
 The map has 30 spawn points. Pick one in the game's spawn menu once the level is loaded.
 
 | Spawn point | Where it puts you |
@@ -47,6 +49,7 @@ A few drives to start with:
 - **Magliaso → Pura**, the Strada Cantonale (3.7 km). This is where the project began, and the most detailed road on the map: markings, signs, street lamps and walls placed from the panoramas.
 - **Along the lake**, from Magliaso on the Strada Regina to Agno, then through Bioggio and Manno to Gravesano (8.8 km).
 - **The Penudria**, the hairpin pass from Gravesano up to Arosio (Stradón da Rós).
+- **The Alto Malcantone loop** (new in v2.8): from Arosio over Mugena, Vezio, Fescoggia and Breno down to Miglieglia and Novaggio (9.6 km), then back down to the lake.
 - **Caslano and Via Torrazza**, the narrow lakeside road to the Torrazza, and the border bridge at Ponte Tresa.
 - **Off the asphalt:** every trail, mule track, forest road and stairway in the area has a solid surface. Since v2.4 gravel, dirt, setts and cobblestones also change the grip.
 
@@ -69,7 +72,7 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 | | |
 |---|---|
-| **Area** | about 52 km², a 12.3 × 12.3 km terrain at 1.5 m (swissALTI3D LiDAR) |
+| **Area** | about 56 km² (52 km² up to v2.7), a 12.3 × 12.3 km terrain at 1.5 m (swissALTI3D LiDAR) |
 | **Roads and trails** | 228 km of roads and 337 km of trails, mule tracks and stairways, all drivable; 167 bridges; since v2.2 also the pass above Gravesano to Arosio, the Ponte Tresa–Caslano cantonal road and Via Torrazza; since v2.4 asphalt, gravel, dirt, setts and cobblestones according to OpenStreetMap; since v2.7 dirt and gravel tracks flush with the ground |
 | **Buildings** | 12,792 buildings (swissBUILDINGS3D and the official survey) with façades, windows, shutters, doors, shop windows, plinths and chimneys |
 | **Guardrails** | 2.0 km on the Magliaso–Pura cantonal road and, since v2.2, another 9.7 km on the rest of the network, wherever the panoramas show them |

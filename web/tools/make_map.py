@@ -1,6 +1,6 @@
 """Draws web/map.svg, the map on the website: the playable area (area.polygon(), the same polygon
 the level is built in), the road and trail network of OpenStreetMap (beamng/dati/osm_area.json.gz)
-and the villages with a spawn point, labelled at their bus stops.
+and its villages, labelled at their bus stops.
 
 Needs shapely and pyproj (as the pipeline). Run from anywhere: python web/tools/make_map.py
 """
@@ -30,6 +30,8 @@ VILLAGES = {
     "Manno": "Manno Paese", "Miglieglia": "Miglieglia", "Molinazzo": "Molinazzo di Monteggio",
     "Monteggio": "Monteggio", "Neggio": "Neggio Paese", "Novaggio": "Novaggio", "Ponte Tresa": "Ponte Tresa",
     "Pura": "Pura", "Purasca": "Purasca", "Sessa": "Sessa", "Vernate": "Vernate Paese",
+    # v2.8: the villages of the road Arosio - Miglieglia
+    "Mugena": "Mugena", "Vezio": "Vezio", "Fescoggia": "Fescoggia",
 }
 LAKE = (45.979, 8.906)                         # a point on the water of the gulf of Agno, for the label
 BIG = {"Agno", "Bioggio", "Caslano", "Magliaso", "Ponte Tresa", "Pura", "Gravesano", "Novaggio"}
@@ -99,8 +101,8 @@ def main():
     # scale bar: 2 km
     sb = 2000 * s
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
-           f'role="img" aria-labelledby="t"><title id="t">Map of the playable area: roads, trails and the 27 '
-           f'villages with a spawn point</title>',
+           f'role="img" aria-labelledby="t"><title id="t">Map of the playable area: roads, trails and the {len(VILLAGES)} '
+           f'villages</title>',
            '<style>.o{fill:none;stroke:#b9b3a4}.i{fill:none;stroke:#2a2b27}.t{stroke-dasharray:3 2}'
            '.l{font:600 13px Archivo,system-ui,sans-serif;fill:#1c1d1a;paint-order:stroke;stroke:#f3f0e8;'
            'stroke-width:4px;stroke-linejoin:round}.l.b{font-size:15px;font-weight:700}'
