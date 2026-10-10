@@ -14,11 +14,14 @@ v2.2: the roads the user found missing, each a chain of shortest ways (as above)
 - the cantonal road from Ponte Tresa along the lake through Caslano to Magliaso;
 - from the station of Caslano through the village to the road along the lake to the Torrazza
   (Via Torrazza), opposite Ponte Tresa.
+v2.8: the cantonal road from Arosio through Mugena, Vezio, Fescoggia and Breno down to Miglieglia and
+Novaggio, so that from Arosio the round over the Alto Malcantone closes back to Novaggio.
 Output: dati/strade_extra_v22.json (the lines in LV95); area.py joins a corridor of EXTRA_CORRIDOR m
 around them to the area.
-    python strade_extra.py            (both files)
+    python strade_extra.py               (both files)
+    python strade_extra.py --corridors   (only dati/strade_extra_v22.json)
 """
-import collections, heapq, json, os
+import collections, heapq, json, os, sys
 import numpy as np
 import shapely
 from scipy.spatial import cKDTree
@@ -35,6 +38,8 @@ CORRIDORS = [
     ("cantonale_caslano", "Strada cantonale Ponte Tresa - Caslano - Magliaso", ["Ponte Tresa", "Magliaso"]),
     ("caslano_torrazza", "Caslano: dalla stazione alla Torrazza (Via Torrazza)",
      [(2711420.0, 1092813.0), "Caslano", (2711080.0, 1090964.0)]),       # station, village, Torrazza
+    ("arosio_miglieglia", "Strada cantonale Arosio - Mugena - Vezio - Fescoggia - Breno - Miglieglia - Novaggio",
+     ["Arosio", "Mugena", "Breno", "Miglieglia", "Novaggio"]),
 ]
 MOTORWAY = {"Autobahn", "Autostrasse", "Ausfahrt", "Einfahrt", "Raststaette"}
 OTHER = 4.0              # weight of a road the canton does not own, per metre
@@ -162,5 +167,6 @@ def corridors():
 
 
 if __name__ == "__main__":
-    main()
+    if "--corridors" not in sys.argv:
+        main()
     corridors()

@@ -1,0 +1,71 @@
+# The roads added beyond the boundary drawn by michi (beamng/dati/strade_extra_v22.json, strade_extra.py), computed
+# again from swissTLM3D and swissNAMES3D, and the pinned extract of the building register
+# (beamng/dati/gwr_area.json.gz, download_gwr.py --pin) taken again over the area they widen. v2.8: the cantonal road
+# Arosio - Mugena - Vezio - Fescoggia - Breno - Miglieglia - Novaggio. Both files are committed to the branch the
+# workflow runs on; the full build (final build test) then reads them like every other file of beamng/dati.
+#
+# It runs on demand (workflow_dispatch) or when this file changes on the branch of the Arosio - Miglieglia road.
+# run stamp: 1
+name: strade extra
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/v2.8-arosio-miglieglia-epcik7]
+    paths: [.github/workflows/strade_extra.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: strade-extra-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  corridors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 requests==2.33.1
+
+      - name: swissNAMES3D and swissTLM3D
+        working-directory: beamng/pipeline
+        run: |
+          python download_swisstopo.py --names
+          python download_tlm.py
+
+      - name: Roads (strade_extra.py --corridors)
+        working-directory: beamng/pipeline
+        run: |
+          python strade_extra.py --corridors
+          python -c "import area; print(area.check())"
+
+      - name: Building register over the new area (download_gwr.py --pin)
+        working-directory: beamng/pipeline
+        run: python download_gwr.py --pin
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/dati/strade_extra_v22.json beamng/dati/gwr_area.json.gz
+          git diff --cached --stat
+          if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
+          git commit -m "Roads beyond the boundary: Arosio - Mugena - Breno - Miglieglia - Novaggio (strade_extra.py)"
+          git push origin HEAD:${{ github.ref_name }}

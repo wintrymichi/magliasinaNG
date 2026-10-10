@@ -6,7 +6,8 @@ it and the side P1-P2 of the boundary, so no bare slope is left between the map 
 v2.2: joined with a corridor of EXTRA_CORRIDOR m around the roads of dati/strade_extra_v22.json
 (strade_extra.py): the pass above Gravesano to Arosio (Stradón da Rós, the "Penudria"), the cantonal
 road from Ponte Tresa through Caslano to Magliaso and the road from Caslano along the lake to the
-Torrazza (Via Torrazza). Up to v2.1 they left the map: only the terrain, no road.
+Torrazza (Via Torrazza). Up to v2.1 they left the map: only the terrain, no road. v2.8: also the cantonal
+road from Arosio through Mugena, Vezio, Fescoggia and Breno to Miglieglia and Novaggio.
 
 Everything that is generated only where it can be seen or driven (roads, buildings, trees, raster
 data at 0.5 m) uses this polygon; the terrain block (config.TER_*) is a square around it and the
