@@ -297,6 +297,8 @@ def wall_geometry(ctx=None):
             # fine vertex spacing where the walls are seen from the road, coarse far away
             step = (0.5 if ctx.get("near") is None else STEP_FINE) if fine else STEP_COARSE
             poly = shapely.segmentize(shapely.geometry.polygon.orient(poly, 1.0), step)
+            if poly.geom_type != "Polygon":                  # never one here, kept safe: its largest piece
+                poly = max(polygons(poly), key=lambda q: q.area)
             rings = [np.asarray(poly.exterior.coords)[:-1]] + [np.asarray(r.coords)[:-1] for r in poly.interiors]
             allv = np.concatenate(rings)
             dmin, dmax = local(poly)
