@@ -4,7 +4,7 @@ What changed in each version of the map, newest first. The release notes that go
 
 ## v2.8 (10 October 2026)
 
-- **Tested in the game:** the released zip (the *final build test* workflow's) in BeamNG.drive 0.39, native Linux build, RTX 4070: loads in 130 s, 6.4 GB of memory at its peak, no crash. Guard rails whole, roundabout signs, the road Arosio – Mugena – Vezio – Breno – Miglieglia – Novaggio drivable end to end (9.6 km), the underside of the Magliaso bridge clean.
+- **Tested in the game:** the released zip (the *final build test* workflow's) in BeamNG.drive 0.39, native Linux build, RTX 4070: loads in 130 s, 6.4 GB of memory at its peak, no crash. Guard rails whole, roundabout signs, the road Arosio – Mugena – Vezio – Breno – Miglieglia – Novaggio drivable end to end (9.6 km), the underside of the Magliaso bridge clean ([`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md), screenshots in [`beamng/verifica/screenshots/v2.8/`](beamng/verifica/screenshots/v2.8)).
 - **Fixed after the first tests:** the large triangles of the terrain across the map; guard rails standing as posts only; signs, guard rails and wall faces drawn twice (guard rails 0 of 4,304 doubled, signs 1 of 591, wall faces 2,692 m² instead of 13,800 m²: `doubles.py`); the chequered mesh under the Magliaso bridge by the roundabout.
 - **Known, still to fix:** pale jagged bands on some stone wall caps, pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, one "keep right" sign twice, the AI driver stuck at a few spots (Mugena, Vezio, Miglieglia, Pura).
 
