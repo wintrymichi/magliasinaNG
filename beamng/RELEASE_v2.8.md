@@ -53,11 +53,7 @@ The forest floor had the colour measured in the panoramas on the sunlit forest e
 
 ## The ground behind the walls
 
-Behind every retaining wall the terrain is lowered (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh puts the ground back at its height: 63 ha in all. Up to v2.7 every triangle of that mesh was lit on its own, so the slopes behind the walls showed flat facets and saw teeth beside the smoothly shaded terrain. Now (`walls.wall_fill_step`) the mesh has the normals of the ground it restores: the same shapes, lit smoothly, with the same collision. The game's grass no longer grows through it, nor over walls lower than the grass (200,441 terrain vertices keep their material without grass); at the foot of the taller walls and on the meadows the grass stays.
-
-## The triangles behind the walls
-
-Where the backfill behind a wall meets the wall, its edge now runs along the wall top instead of zig-zagging between the wall top and the meadow.
+Behind every retaining wall the terrain used to be lowered to the foot of the wall (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh in the colours of the terrain put the ground back: 1.1 million triangles on 78 ha, which in the game showed as flat, pale facets with stepped edges, holes and loose pieces beside the walls. That mesh is gone. The terrain behind a wall keeps the ground; it is lowered only on the low side of the wall and rises across the wall within one terrain step, inside the wall and as a short bank of earth at its foot (`walls.carve_terrain`). The game's grass does not grow over walls lower than the grass (`walls.wall_fill_step`).
 
 ## Checked
 

@@ -18,10 +18,10 @@ swissTLM3D lines do not always agree, and a wall drawn across a street would clo
 v2.4: the walls the panoramas see as flat paving, with level ground around (markings_state.py
 removed_walls: taken away when the street was rebuilt) are left out.
 Output meshes: prism sides + triangulated top, per 128 m chunk.
-Also returns the footprints for the terrain: carve_terrain lowers every terrain vertex whose
-triangles touch a wall to the wall base, so no terrain triangle spans a wall and pokes out of its
-face (a 1.5 m terrain grid cannot hold a step inside a 0.3 m wall), and build_backfill covers the
-trench this leaves behind a retaining wall with the ground as it was (a mesh on the terrain grid).
+Also returns the footprints for the terrain: carve_terrain lowers the terrain vertices whose
+triangles touch a wall on its low side to the foot of the wall; on the high side the terrain keeps the
+ground (a 1.5 m terrain grid cannot hold a step inside a 0.3 m wall: it rises across the wall within
+one terrain step).
 """
 import os, pickle
 import numpy as np
@@ -32,7 +32,7 @@ from scipy.spatial import cKDTree
 from config import WORK, NO_PHOTO
 from geo import Grid
 import bng
-import argparse, json, os, re, struct, sys, tempfile, time, zipfile
+import argparse, json, os, re, struct, sys, time, zipfile
 import groundcover
 import optimize_level
 from config import LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
@@ -313,7 +313,7 @@ def wall_geometry(ctx=None):
                 zp = np.where(np.isfinite(zr_all), zr_all, zhi) if zr_all is not None else zhi
                 ztop = np.maximum(np.minimum(ztop, zp - 0.02), zbot + 0.05)
             return dict(key=key, poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
-                        zbot=zbot, samp=samp, dmax=dmax)
+                        zbot=zbot, zhi=zhi, samp=samp, dmax=dmax)
 
         for pj, poly in enumerate(polygons(g)):
             if poly.area < 0.05:
@@ -426,7 +426,7 @@ def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
             tmat = "mp_wall_concrete_top" if wmat == "mp_wall_plaster" else wmat + "_top"
             mb.add(tmat, top, uvs=top[:, :2] / WALL_TILE.get(tmat, 1.6), normals=bng.flat_normals_soup(top))
         carve.append(np.column_stack([allv, zlo, ztop]))
-        feet.append((poly, allv, zlo, ztop))
+        feet.append((poly, allv, zlo, ztop, np.minimum(w["zhi"], ztop)))
         nwall += 1
     ntri = 0
     for (tx, ty), mb in sorted(builders.items()):
@@ -468,21 +468,34 @@ def near_vertices(samples, xs, ys, radius):
     return flat[m], pts[m], j[m]
 
 
-def carve_terrain(feet, xs, ys, H, rec=None):
-    """Terrain vertices around the cadastral walls (feet: (footprint, vertices, base, top) of every
-    wall, from build): every vertex whose terrain triangles reach a face of a wall (the square of
-    one terrain step around it meets the outline) drops 2 cm under the base of the wall there. No
-    terrain triangle then spans a wall, so none rises across it and pokes out of the face on its
-    low side; inside a wide footprint (a platform) the ground under its top stays.
-    Behind a retaining wall this leaves a trench: rec (dict) collects the vertices lowered, their
-    height before, whether they lie on the high side and the wall top, for build_backfill."""
+LOW_SIDE = 0.25        # a vertex lower than this fraction of the wall height over the wall foot is on its low side
+
+
+def carve_terrain(feet, xs, ys, H):
+    """Terrain vertices around the cadastral walls (feet: (footprint, vertices, foot, top, ground behind)
+    of every wall, from build), those whose terrain triangles reach a face of a wall (the square of one
+    terrain step around them meets the outline):
+    - on the low side of the wall, or inside its footprint: 2 cm under the foot of the wall there (the
+      lowest ground beside it);
+    - on the high side: at least 5 cm under the ground behind the wall there (the highest ground beside
+      it, not over the top): the DTM smears the walls into slopes, which left a dip behind them.
+    The terrain square across a retaining wall then rises from its foot to the ground behind it within
+    one terrain step: inside the wall, and as a short bank of earth at its foot. A vertex on the low side
+    of one wall and the high side of another goes down.
+    v2.8: up to here the vertices on the high side dropped to the foot too, so that no terrain triangle
+    rose across the wall, and a mesh in the colours of the terrain (build_backfill, about 1.1 million
+    triangles on 78 ha) covered the trench this left behind every retaining wall: in the game it showed
+    as flat, pale facets with stepped edges, holes and loose pieces beside the walls, unlike the terrain
+    around it. Now the ground behind a wall is the terrain itself, and nothing covers it."""
     if not feet:
         return H
     sq = xs[1] - xs[0]
     nx = len(xs)
     Hf = H.reshape(-1)
-    flat_l, h0_l, high_l, in_l, top_l = [], [], [], [], []
-    for poly, allv, zlo, ztop in feet:
+    H0 = Hf.copy()                                       # the ground as it was: one wall's carve is not another's side
+    lo = np.full(Hf.shape, np.inf)
+    hi = np.full(Hf.shape, -np.inf)
+    for poly, allv, zlo, ztop, zgr in feet:
         x0, y0, x1, y1 = poly.bounds
         c0, c1 = max(int(np.floor((x0 - sq - xs[0]) / sq)), 0), min(int(np.ceil((x1 + sq - xs[0]) / sq)), nx - 1)
         r0, r1 = max(int(np.floor((y0 - sq - ys[0]) / sq)), 0), min(int(np.ceil((y1 + sq - ys[0]) / sq)), len(ys) - 1)
@@ -496,213 +509,21 @@ def carve_terrain(feet, xs, ys, H, rec=None):
             continue
         C, R, X, Y = C[hit], R[hit], X[hit], Y[hit]
         j = cKDTree(allv).query(np.column_stack([X, Y]))[1]
-        zl, zt = zlo[j], ztop[j]
+        zl, zt, zg = zlo[j], ztop[j], zgr[j]
         flat = R * nx + C
-        h0 = Hf[flat].copy()
+        h0 = H0[flat]
         # a wall base far under the terrain is no measurement (a wall at the edge of the DTM)
-        ok = np.isfinite(zl) & np.isfinite(zt) & (zl > h0 - 30.0)
-        if not ok.all():
-            C, R, X, Y, zl, zt, flat, h0 = C[ok], R[ok], X[ok], Y[ok], zl[ok], zt[ok], flat[ok], h0[ok]
-            if not len(flat):
-                continue
+        ok = np.isfinite(zl) & np.isfinite(zt) & np.isfinite(zg) & (zl > h0 - 30.0)
         inside = shapely.contains_xy(poly, X, Y)
-        flat_l.append(flat); h0_l.append(h0); in_l.append(inside); top_l.append(zt)
-        high_l.append((h0 > 0.5 * (zl + zt)) & ~inside)
-        Hf[flat] = np.minimum(Hf[flat], zl - 0.02)
-    if rec is not None and flat_l:
-        flat = np.concatenate(flat_l)
-        order = np.argsort(flat, kind="stable")                  # first record: the height before any wall
-        flat, h0, high, inside, top = (flat[order], np.concatenate(h0_l)[order], np.concatenate(high_l)[order],
-                                       np.concatenate(in_l)[order], np.concatenate(top_l)[order])
-        first = np.r_[True, flat[1:] != flat[:-1]]
-        grp = np.cumsum(first) - 1
-        n = int(first.sum())
-        any_high = np.zeros(n, bool); np.logical_or.at(any_high, grp, high)
-        any_in = np.zeros(n, bool); np.logical_or.at(any_in, grp, inside)
-        top_max = np.full(n, -np.inf); np.maximum.at(top_max, grp, top)
-        rec.update(flat=flat[first], h0=h0[first], high=any_high & ~any_in, top=top_max)
+        low = (h0 < zl + LOW_SIDE * np.maximum(zt - zl, 0.0)) | inside
+        d, u = ok & low, ok & ~low
+        np.minimum.at(lo, flat[d], zl[d] - 0.02)
+        np.maximum.at(hi, flat[u], zg[u] - 0.05)
+    down = np.isfinite(lo)
+    Hf[down] = np.minimum(Hf[down], lo[down])
+    up = np.isfinite(hi) & ~down
+    Hf[up] = np.maximum(Hf[up], hi[up])
     return Hf.reshape(H.shape)
-
-
-BACKFILL_LIFT = 0.03   # m, the backfill over a lowered vertex stays this much over the ground it restores
-
-
-FILL_MAX_OFF = 0.4     # m, a backfill vertex inside a terrain square stays this close to the ground before the carve
-FILL_MIN_NZ = 0.25     # the backfill drops its triangles steeper than this (normal z): spikes, not ground
-
-
-def srgb_to_linear(c):
-    c = np.asarray(c, np.float64)
-    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
-
-
-def fill_material(layer, base):
-    """The material of the backfill on the terrain layer `layer` (v2.8): the colour of the terrain itself, its base
-    colour texture (base: the base_tex entry of build_level, "b" its path) at the terrain's detail size (texture
-    coordinates of build_backfill), with the game's detail normal and ambient occlusion maps of the layer, fully
-    rough like the ground. Up to v2.8 it was the flat base colour with no roughness, a pale, shiny sheet; the
-    detail colour map tinted to the base colour came out brighter and greener than the terrain in the game
-    (the terrain blends its detail at 45 %): lime green beside the walls."""
-    import terrain
-    gm, det, mac, dsize, msize = terrain.TERRAIN_MATS[layer]
-    return bng.material("mp_fill_" + layer.lower(), base["b"], f"{det}_nm.png", None, f"{det}_ao.png",
-                        roughness=1.0, ground_type=gm)
-
-
-ON_WALL = 0.03         # m, a backfill vertex this close to the outline of a wall lies on it
-
-
-def wall_top_at(V2, Z, polys, trees, tops):
-    """The heights Z of the vertices V2 (k, 2), with those on the outline of one of the walls (polys, cKDTree of
-    the outline vertices, the top at each) at the top of that wall there."""
-    Z = Z.copy()
-    for poly, tree, top in zip(polys, trees, tops):
-        d = shapely.distance(poly.boundary, shapely.points(V2))
-        on = np.flatnonzero(d < ON_WALL)
-        if len(on):
-            t = top[tree.query(V2[on])[1]]
-            ok = np.isfinite(t)
-            Z[on[ok]] = t[ok]
-    return Z
-
-
-def build_backfill(level_dir, level_name, scene, rec, H, xs, ys, feet, drivable, layers, ground):
-    """Mesh restoring the ground behind the retaining walls where carve_terrain lowered it: the
-    terrain squares around every vertex lowered on the high side of a wall, cut at the walls and at
-    the drivable surfaces (drivable: polygons), with the heights of the ground before the carve at
-    those vertices, the wall top at the vertices under or in front of the wall and the terrain as
-    built at the others, so the mesh meets the terrain along the edges of the squares. The material
-    of every square is that of its terrain layer (mp_fill_<layer>); layers: terrain layer per vertex,
-    ground(x, y): the bare ground (to tell the high side of a wall from the low one)."""
-    import terrain
-    if not rec or not len(rec.get("flat", [])):
-        return 0
-    sq = xs[1] - xs[0]
-    nx, ny = len(xs), len(ys)
-    Hf = H.reshape(-1)
-    flat, h0, high, top = rec["flat"], rec["h0"], rec["high"], rec["top"]
-    sunk = high & (h0 - Hf[flat] > 0.02)
-    B, Tw = {}, {}          # vertex -> backfill height on the high side / wall top under or before a wall
-    for f, a, hg, t, sk in zip(flat.tolist(), h0.tolist(), high.tolist(), top.tolist(), sunk.tolist()):
-        if hg:
-            B[f] = a + BACKFILL_LIFT if sk else a
-        else:
-            Tw[f] = t
-    r_s, c_s = np.divmod(flat[sunk], nx)
-    cells = set()
-    for dr in (-1, 0):
-        for dc in (-1, 0):
-            rr, cc = r_s + dr, c_s + dc
-            ok = (rr >= 0) & (rr < ny - 1) & (cc >= 0) & (cc < nx - 1)
-            cells.update(zip(rr[ok].tolist(), cc[ok].tolist()))
-    if not cells:
-        return 0
-    cells = sorted(cells)
-    fp = [f[0] for f in feet]
-    ftree = shapely.STRtree(fp)
-    zmid = [0.5 * (f[2] + f[3]) for f in feet]
-    vt = [cKDTree(f[1]) for f in feet]
-    dtree = shapely.STRtree(drivable) if drivable else None
-    names = list(terrain.TERRAIN_MATS)
-    builders = {}
-    n_tri = n_steep = n_road = 0
-    for r, c in cells:
-        X0, Y0 = xs[c], ys[r]
-        cell = shapely.box(X0, Y0, X0 + sq, Y0 + sq)
-        corner = [r * nx + c, r * nx + c + 1, (r + 1) * nx + c, (r + 1) * nx + c + 1]    # 00, 10, 01, 11
-        walls_here = ftree.query(cell, predicate="intersects")
-        # a corner under or before the wall: the wall top where the square is cut at the wall (the
-        # backfill meets the top), the terrain past the end of a wall
-        z = np.array([B[k] if k in B else (Tw[k] if (k in Tw and len(walls_here)) else Hf[k]) for k in corner])
-        cut = cell
-        if len(walls_here):
-            cut = cut.difference(shapely.union_all([fp[i] for i in walls_here]))
-        # v2.8: also under the roads, paths and yards beside the wall, where the carve dug under their edges and
-        # left them hanging over a hole (map-wide: about one triangle in ten of the roads within 2 m of a
-        # wall); there the backfill stays under the surface (no corner above the restored ground)
-        under = shapely.Polygon()
-        if dtree is not None:
-            roads_here = dtree.query(cell, predicate="intersects")
-            if len(roads_here):
-                road_u = shapely.union_all([drivable[i] for i in roads_here]).buffer(0.02)
-                under = cut.intersection(road_u)
-                cut = cut.difference(road_u)
-        zb = [B[k] for k in corner if k in B]
-        sets = [(cut, False)] + ([(under, True)] if zb and not under.is_empty else [])
-        for geom, on_road in sets:
-            if geom.is_empty or geom.area < 0.01:
-                continue
-            pieces = [g for g in getattr(geom, "geoms", [geom]) if g.geom_type == "Polygon" and g.area >= 0.01]
-            if len(walls_here):                          # only the pieces on the high side of the wall
-                keep = []
-                for g in pieces:
-                    q = g.representative_point()
-                    best, zm = np.inf, None
-                    for i in walls_here:
-                        d, j = vt[i].query([q.x, q.y])
-                        if d < best:
-                            best, zm = d, zmid[i][j]
-                    if ground(np.array([q.x]), np.array([q.y]))[0] > zm:
-                        keep.append(g)
-                pieces = keep
-            if not pieces:
-                continue
-            if len(pieces) == 1 and pieces[0].equals(cell):
-                # the terrain square itself, split along the diagonal of the terrain (Torque: alternating)
-                P = np.array([[X0, Y0], [X0 + sq, Y0], [X0, Y0 + sq], [X0 + sq, Y0 + sq]])
-                tri = [(0, 1, 3), (0, 3, 2)] if (r ^ c) & 1 == 0 else [(0, 1, 2), (1, 3, 2)]
-                V2 = np.concatenate([P[list(t)] for t in tri])
-            else:
-                V2 = np.concatenate([np.asarray(t.exterior.coords)[:3]
-                                     for g in pieces for t in shapely.constrained_delaunay_triangles(g).geoms])
-            fx, fy = np.clip((V2[:, 0] - X0) / sq, 0, 1), np.clip((V2[:, 1] - Y0) / sq, 0, 1)
-            Z = (z[0] * (1 - fx) * (1 - fy) + z[1] * fx * (1 - fy) + z[2] * (1 - fx) * fy + z[3] * fx * fy)
-            if on_road:
-                # under a road: never over the restored ground of the square's corners (that ground is the road's
-                # own carve, 10 cm under its surface), not up to the wall top
-                Z = np.minimum(Z, max(zb))
-            else:
-                # v2.8: inside the square (not on its edges, which the terrain beside shares) no vertex far from
-                # the ground as it was: a corner under a taller wall (stacked walls, a road in a cut) tilted whole
-                # pieces upright
-                inner = np.flatnonzero((fx > 1e-6) & (fx < 1 - 1e-6) & (fy > 1e-6) & (fy < 1 - 1e-6))
-                if len(inner):
-                    g = ground(V2[inner, 0], V2[inner, 1])
-                    Z[inner] = np.clip(Z[inner], g - FILL_MAX_OFF, g + FILL_MAX_OFF)
-                if len(walls_here):
-                    # v2.8: the vertices where the square is cut at a wall take the wall top there (the nearest
-                    # vertex of its outline), not the mix of the corners: no saw teeth between wall top and meadow
-                    Z = wall_top_at(V2, Z, [fp[i] for i in walls_here], [vt[i] for i in walls_here],
-                                    [feet[i][3] for i in walls_here])
-            V = np.column_stack([V2, Z]).reshape(-1, 3, 3)
-            nrm = np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0])
-            up = nrm[:, 2] < 0
-            V[up] = V[up][:, ::-1]                       # counter-clockwise from above
-            steep = np.abs(nrm[:, 2]) < FILL_MIN_NZ * np.maximum(np.linalg.norm(nrm, axis=1), 1e-12)
-            if steep.any():
-                n_steep += int(steep.sum())
-                V = V[~steep]
-                if not len(V):
-                    continue
-            n_road += len(V) if on_road else 0
-            mat = "mp_fill_" + names[int(layers[r, c])].lower()
-            key = (int(np.floor(X0 / CHUNK)), int(np.floor(Y0 / CHUNK)))
-            builders.setdefault(key, {}).setdefault(mat, []).append(V.reshape(-1, 3))
-            n_tri += len(V)
-    for (tx, ty), mats in sorted(builders.items()):
-        mb = bng.MeshBuilder()
-        for mat, parts in mats.items():
-            T = np.concatenate(parts)
-            dsize = terrain.TERRAIN_MATS[names[[n.lower() for n in names].index(mat[len("mp_fill_"):])]][3]
-            mb.add(mat, T, uvs=T[:, :2] / dsize, normals=bng.flat_normals_soup(T))     # v2.8: the detail size
-        rel = f"art/shapes/walls/backfill_{tx:+03d}_{ty:+03d}.dae"
-        origin = np.array([(tx + 0.5) * CHUNK, (ty + 0.5) * CHUNK, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name="backfill", origin=origin)
-        scene.add("MissionGroup/walls", bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=True,
-                                                     decal=False))
-    print("backfill behind the walls: %d squares, %d triangles (%d under roads), %d chunks, %d steep triangles left out"
-          % (len(cells), n_tri, n_road, len(builders), n_steep))
-    return n_tri
 
 
 def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick=1.75, photo=True):
@@ -807,46 +628,23 @@ def adjust_terrain_roadside(samples, xs, ys, H, behind=3.4, front=1.6, hidden=1.
 
 
 # --------------------------------------------------------------------------------------------------
-# The ground behind the retaining walls shaded like the terrain, and no game grass under it or along the
-# walls (v2.8), in the built level.
+# No game grass over the top of the walls (v2.8), in the built level.
 #
-# The terrain is a 1.5 m grid and cannot hold a step inside a 0.3 m wall: walls.carve_terrain lowers every
-# terrain vertex whose triangles touch a wall to the foot of the wall, and walls.build_backfill covers the
-# trench this leaves on the high side with a mesh at the height of the ground as it was (about 784,000
-# triangles, 63 ha in v2.7, in art/shapes/walls/backfill_*.dae). Two things showed it in the game:
-# - the backfill had one normal per triangle (bng.flat_normals_soup): every triangle lit on its own, flat
-#   facets and saw teeth where its corners alternate between the wall top and the meadow, beside a terrain
-#   that is shaded smoothly;
-# - the grass of groundcover.py grows on the terrain layers Grass and GardenGrass, also on the vertices
-#   lowered under the backfill: 29 % of them are less than 0.8 m under it, and the grass clumps (0.15 to
-#   0.8 m) stand through the mesh; along the walls they grow on the vertices dropped to the foot of the
-#   wall, and over the top of the walls lower than the grass.
-#
-# Here, with the geometry as it is (positions, triangles and texture coordinates of every mesh, terrain
-# heights; checked at the end):
-# - normals (A): every backfill vertex takes the normal of the ground it restores, as the terrain computes
-#   its own (central differences over one terrain step): the heights of the backfill on the terrain
-#   vertices, of the terrain elsewhere; the vertices under a wall or lowered beside it and not covered
-#   (their height is the foot of the wall) are left out and the difference is taken on the other side.
-#   Where the backfill meets the visible terrain its edge takes the normal the terrain has there, so the
-#   light does not jump at the seam. Vertices between the terrain vertices (where a square is cut at a
-#   wall or a road) interpolate the normals of the corners of their square that the backfill covers (on
-#   the edge of a square with none: the normal of the nearest backfill terrain vertex). The vertices are
-#   welded again (bng.weld_corners): with one normal per position the mesh has about 40 % fewer vertices.
-# - grass (C): the terrain vertices of the squares under the backfill, and those of the squares a wall
-#   passes through from which the tallest grass (GRASS_TALL) would reach over the wall top there, go from
-#   the layers Grass and GardenGrass to their twins GrassVerge and GardenGrassVerge (terrain.VERGE): the
-#   same material, without the grass of groundcover.py, as along the roads since v2.4. At the foot of a
-#   wall taller than the grass, and on the rest of the meadows (maxSlope 45 degrees), the grass stays.
-# The changed files get the date of the build step (the game converts the shapes again instead of taking its
-# cached ones); everything else is copied as it is.
+# The grass of groundcover.py grows on the terrain layers Grass and GardenGrass, also on the vertices
+# walls.carve_terrain drops to the foot of a wall: from there clumps up to GRASS_TALL m stand over the top of
+# the walls lower than that. The terrain vertices of the squares a wall passes through from which the tallest
+# grass would reach over the wall top there go from Grass and GardenGrass to their twins GrassVerge and
+# GardenGrassVerge (terrain.VERGE): the same material, without the grass, as along the roads since v2.4. At the
+# foot of a wall taller than the grass, and on the rest of the meadows (maxSlope 45 degrees), the grass stays.
+# Up to the v2.8 build test this step also smoothed the normals of the backfill mesh behind the walls; there is
+# no backfill any more (carve_terrain).
+# The heights of the terrain are not changed; the terrain gets the date of the build step (the game converts it
+# again instead of taking its cached copy); everything else is copied as it is.
 #
 # A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish wall_fill
 # --------------------------------------------------------------------------------------------------
 
 GRASS_TALL = max(t["sizeMax"] for c in groundcover.COVERS.values() for t in c[6])   # m, the tallest grass clump
-ON_NODE = 2e-3        # m, a vertex this close to a terrain vertex (in x and y) is on it
-SEAM_TOL = 0.02       # m, a backfill vertex this close to the terrain height on a terrain vertex lies on the terrain
 SAMPLE = 0.25         # m between the samples along the edges of the wall triangles
 LEVEL_README = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README_livello.md")
 
@@ -867,27 +665,6 @@ def read_ter(data):
         names.append(data[o + 5:o + 5 + k].decode("utf-8"))
         o += 1 + k
     return n, q, lay, names
-
-
-def canonical(V, UV, idx):
-    """The non-degenerate triangles of a part, for the check that the geometry did not change: positions
-    in mm and texture coordinates in 1e-4 of their corners, every triangle starting at its smallest
-    corner (keeping its winding), sorted."""
-    P = np.round(V[idx[:, 0]] * 1000).astype(np.int64).reshape(-1, 3, 3)
-    U = np.round(UV[idx[:, 2]] * 1e4).astype(np.int64).reshape(-1, 3, 2)
-    ok = ~((P[:, 0] == P[:, 1]).all(1) | (P[:, 1] == P[:, 2]).all(1) | (P[:, 0] == P[:, 2]).all(1))
-    P, U = P[ok], U[ok]
-    corner = np.concatenate([P, U], 2)                                   # (k, 3, 5)
-    # rank of every corner within its triangle, lexicographic over its 5 numbers
-    flat = corner.reshape(-1, 5)
-    order = np.lexsort(flat.T[::-1])
-    rank = np.empty(len(flat), np.int64)
-    rank[order] = np.arange(len(flat))
-    s = np.argmin(rank.reshape(-1, 3), 1)
-    ar = np.arange(len(corner))
-    rot = np.stack([corner[ar, (s + j) % 3] for j in range(3)], 1)          # (k, 3, 5)
-    rot = np.concatenate([rot[:, :, :3].reshape(len(rot), 9), rot[:, :, 3:].reshape(len(rot), 6)], 1)
-    return rot[np.lexsort(rot.T[::-1])]                                     # 9 coordinates, then 6 texture
 
 
 def wall_cells(zi, objs, n):
@@ -939,172 +716,32 @@ def wall_fill_step(root, report=None):
     ter_name = f"{lv}/theTerrain.ter"
     data = zi.read(ter_name)
     n, q, lay, names = read_ter(data)
-    sq = TER_SQUARE
     Ht = (Z0 + q.astype(np.float64) / 65535.0 * MAXH)
     objs = read_items(zi, f"{lv}/main/MissionGroup/walls/items.level.json")
+    fills = sum(1 for o in objs if "/art/shapes/walls/backfill" in o.get("shapeName", ""))
+    assert not fills, "%d backfill shapes: walls.carve_terrain leaves no trench to fill any more" % fills
 
-    # ---- the backfill shapes: vertices on the terrain vertices, squares covered
-    shapes = []
-    fill_cells = np.zeros((n - 1, n - 1), bool)
-    node_z = np.full(n * n, -np.inf)
-    for o in objs:
-        sn = o.get("shapeName", "")
-        if o.get("class") != "TSStatic" or "/art/shapes/walls/backfill" not in sn:
-            continue
-        name = sn.lstrip("/")
-        text = zi.read(name).decode("utf-8")
-        V, N, UV, C, parts, node = optimize_level.parse(text)
-        W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
-        cf, rf = (W[:, 0] - TER_X0) / sq, (W[:, 1] - TER_Y0) / sq
-        ci, ri = np.round(cf).astype(np.int64), np.round(rf).astype(np.int64)
-        on = (np.abs(cf - ci) * sq < ON_NODE) & (np.abs(rf - ri) * sq < ON_NODE)
-        flat = np.where(on, ri * n + ci, -1)
-        np.maximum.at(node_z, flat[on], W[on, 2])
-        for _, idx in parts:
-            m = W[idx[:, 0]].reshape(-1, 3, 3).mean(1)
-            fill_cells[np.floor((m[:, 1] - TER_Y0) / sq).astype(np.int64),
-                       np.floor((m[:, 0] - TER_X0) / sq).astype(np.int64)] = True
-        shapes.append(dict(name=name, V=V, N=N, UV=UV, C=C, parts=parts, node=node, W=W, flat=flat,
-                           cf=cf, rf=rf))
-    print("backfill: %d shapes, %d triangles, %d vertices, %d squares"
-          % (len(shapes), sum(len(i) // 3 for s in shapes for _, i in s["parts"]), sum(len(s["V"]) for s in shapes),
-             fill_cells.sum()), flush=True)
-
-    # ---- (A) normals at the terrain vertices of the backfill
-    is_fill = np.isfinite(node_z).reshape(n, n)
-    covered = corners_of(fill_cells)
-    valid = ~covered | is_fill                   # a height of the ground: the backfill's or the visible terrain's
-    G = Ht.copy()
-    G[is_fill] = node_z.reshape(n, n)[is_fill]
-    nodes = np.flatnonzero(is_fill)
-    r, c = np.divmod(nodes, n)
-    rm, rp, cm, cp = np.maximum(r - 1, 0), np.minimum(r + 1, n - 1), np.maximum(c - 1, 0), np.minimum(c + 1, n - 1)
-
-    def diff(ra, ca, rb, cb):
-        va, vb = valid[ra, ca], valid[rb, cb]
-        ga, gb, g0 = G[ra, ca], G[rb, cb], G[r, c]
-        return np.where(va & vb, (gb - ga) / (2 * sq), np.where(vb, (gb - g0) / sq, np.where(va, (g0 - ga) / sq, 0.0)))
-    nr = np.column_stack([-diff(r, cm, r, cp), -diff(rm, c, rp, c), np.ones(len(nodes))])
-    # the terrain's own normal (the heights as they are, the lowered vertices too): at the seam
-    nt = np.column_stack([-(Ht[r, cp] - Ht[r, cm]) / (2 * sq), -(Ht[rp, c] - Ht[rm, c]) / (2 * sq), np.ones(len(nodes))])
-    open_cell = np.ones((n + 1, n + 1), bool)    # squares around a vertex, padded: True where no backfill
-    open_cell[1:-1, 1:-1] = ~fill_cells
-    seam = open_cell[r, c] | open_cell[r, c + 1] | open_cell[r + 1, c] | open_cell[r + 1, c + 1]
-    seam &= np.abs(G[r, c] - Ht[r, c]) < SEAM_TOL
-    nn = np.where(seam[:, None], nt, nr)
-    nn /= np.linalg.norm(nn, axis=1, keepdims=True)
-    print("normals: %d terrain vertices of the backfill, %d of them on the seam with the terrain"
-          % (len(nodes), int(seam.sum())), flush=True)
-
-    def node_normal(flat):
-        """Normals of terrain vertices (flat indices, all backfill vertices); NaN for the others."""
-        j = np.searchsorted(nodes, flat)
-        j = np.clip(j, 0, len(nodes) - 1)
-        hit = nodes[j] == flat
-        out = np.full((len(flat), 3), np.nan)
-        out[hit] = nn[j[hit]]
-        return out
-
-    # ---- new DAEs: the same triangles with the new normals, welded again
-    new_dae = {}
-    st = dict(vertices_before=0, vertices_after=0, triangles=0, by_corner_interp=0, by_nearest_node=0)
-    from scipy.spatial import cKDTree
-    node_tree = cKDTree(np.column_stack([TER_X0 + c * sq, TER_Y0 + r * sq]))
-    dev_face, dev_old = [], []
-    tmp = tempfile.mkdtemp(prefix="wall_fill_")
-    for s in shapes:
-        V, W, flat = s["V"], s["W"], s["flat"]
-        Nn = np.full((len(V), 3), np.nan)
-        on = flat >= 0
-        Nn[on] = node_normal(flat[on])
-        # vertices between the terrain vertices: the corners of their square, weighted bilinearly
-        off = np.flatnonzero(np.isnan(Nn[:, 0]))
-        if len(off):
-            c0 = np.floor(s["cf"][off]).astype(np.int64)
-            r0 = np.floor(s["rf"][off]).astype(np.int64)
-            fx, fy = s["cf"][off] - c0, s["rf"][off] - r0
-            acc, wsum = np.zeros((len(off), 3)), np.zeros(len(off))
-            for dr, dc, w in ((0, 0, (1 - fx) * (1 - fy)), (0, 1, fx * (1 - fy)), (1, 0, (1 - fx) * fy), (1, 1, fx * fy)):
-                k = node_normal((r0 + dr) * n + (c0 + dc))
-                ok = np.isfinite(k[:, 0]) & (w > 1e-9)
-                acc[ok] += w[ok, None] * k[ok]
-                wsum[ok] += w[ok]
-            good = wsum > 1e-6
-            Nn[off[good]] = acc[good] / wsum[good, None]
-            st["by_corner_interp"] += int(good.sum())
-            rest = off[~good]
-            if len(rest):                         # no corner of its square on the backfill (a vertex on the
-                Nn[rest] = nn[node_tree.query(W[rest, :2])[1]]      # edge of the next one): the nearest one's
-                st["by_nearest_node"] += len(rest)
-        Nn /= np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
-        mb = bng.MeshBuilder()
-        for mat, idx in s["parts"]:
-            vi, ni, ti = idx[:, 0], idx[:, 1], idx[:, 2]
-            col = s["C"][idx[:, 3]] if s["C"] is not None and idx.shape[1] > 3 else None
-            mb.add(mat, V[vi], uvs=s["UV"][ti], normals=Nn[vi], colors=col)
-            P = W[vi].reshape(-1, 3, 3)
-            fn = np.cross(P[:, 1] - P[:, 0], P[:, 2] - P[:, 0])
-            a = np.linalg.norm(fn, axis=1)
-            fn = fn[a > 1e-9] / a[a > 1e-9, None]
-            nv = Nn[vi].reshape(-1, 3, 3)[a > 1e-9]
-            no = s["N"][ni].reshape(-1, 3, 3)[a > 1e-9]
-            dev_face.append(np.degrees(np.arccos(np.clip((nv * fn[:, None]).sum(2), -1, 1))).ravel())
-            dev_old.append(np.degrees(np.arccos(np.clip((nv * no).sum(2), -1, 1))).ravel())
-            st["triangles"] += len(idx) // 3
-        base, detail = re.match(r"(.*)_a(\d+)$", s["node"]).groups()
-        path = os.path.join(tmp, "s.dae")
-        mb.write_dae(path, name=base, origin=(0, 0, 0), detail=int(detail))
-        out = open(path, encoding="utf-8").read()
-        # the check: the same triangles (positions, texture coordinates), material by material; the
-        # writer may move all the texture coordinates of a shape by whole tiles (bng.MeshBuilder.write_dae:
-        # their mean changes with the welded vertices), which draws the same
-        V2, N2, UV2, C2, parts2, node2 = optimize_level.parse(out)
-        assert node2 == s["node"], (s["name"], node2)
-        p1, p2 = dict(s["parts"]), dict(parts2)
-        assert sorted(p1) == sorted(p2), s["name"]
-        shifts = set()
-        for mat in p1:
-            a, b = canonical(V, s["UV"], p1[mat]), canonical(V2, UV2, p2[mat])
-            assert a.shape == b.shape and (a[:, :9] == b[:, :9]).all(), (s["name"], mat)
-            d = b[:, 9:] - a[:, 9:]
-            assert (d == np.tile(d[:1, :2], 3)).all() and not (d[:1] % 10000).any(), (s["name"], mat)
-            shifts.add(tuple(d[0, :2].tolist()) if len(d) else None)
-        assert len(shifts - {None}) <= 1, s["name"]
-        st["vertices_before"] += len(V)
-        st["vertices_after"] += len(V2)
-        new_dae[s["name"]] = out.encode("utf-8")
-    os.remove(os.path.join(tmp, "s.dae"))
-    os.rmdir(tmp)
-    dev_face, dev_old = np.concatenate(dev_face), np.concatenate(dev_old)
-    print("backfill shapes rewritten: %d, the same triangles; vertices %d -> %d" %
-          (len(new_dae), st["vertices_before"], st["vertices_after"]), flush=True)
-    print("normal against the face: median %.1f, 95th percentile %.1f degrees (before: flat); new against old: "
-          "median %.1f, 95th percentile %.1f degrees" % (np.median(dev_face), np.percentile(dev_face, 95),
-                                                         np.median(dev_old), np.percentile(dev_old, 95)), flush=True)
-
-    # ---- (C) no game grass under the backfill, nor where it would stand over the top of a wall: on the
-    # vertices of the squares a wall passes through (lowered to its foot by walls.carve_terrain) less than
-    # the tallest grass under the wall top there
+    # no game grass where it would stand over the top of a wall: on the vertices of the squares a wall passes
+    # through (lowered to its foot by walls.carve_terrain) less than the tallest grass under the wall top there
     wtop = wall_cells(zi, objs, n)
     wcells = np.isfinite(wtop)
     pad = np.full((n + 1, n + 1), -np.inf, np.float32)
     pad[1:-1, 1:-1] = wtop
     near_top = np.maximum(np.maximum(pad[:-1, :-1], pad[:-1, 1:]), np.maximum(pad[1:, :-1], pad[1:, 1:]))
     del pad, wtop
-    under = corners_of(fill_cells)
-    over = corners_of(wcells) & (Ht > near_top - GRASS_TALL) & ~under
+    over = corners_of(wcells) & (Ht > near_top - GRASS_TALL)
     del near_top
     grassy = np.isin(lay, [names.index(a) for a in VERGE])
     new_lay = lay.copy()
     changed = {}
     for a, b in VERGE.items():
         ia, ib = names.index(a), names.index(b)
-        m = (under | over) & (lay == ia)
+        m = over & (lay == ia)
         new_lay[m] = ib
         changed[f"{a} -> {b}"] = int(m.sum())
-    why = {"under_backfill": int((under & grassy).sum()), "over_wall_top": int((over & grassy).sum())}
-    print("terrain vertices without game grass: %s, %s (squares under the backfill %d, crossed by a wall %d)"
-          % (changed, why, int(fill_cells.sum()), int(wcells.sum())), flush=True)
+    why = {"over_wall_top": int((over & grassy).sum())}
+    print("terrain vertices without game grass: %s, %s (squares crossed by a wall %d)"
+          % (changed, why, int(wcells.sum())), flush=True)
     assert set(np.unique(lay[new_lay != lay])) <= {names.index(a) for a in VERGE}
     new_ter = data[:5 + 2 * n * n] + new_lay.tobytes() + data[5 + 3 * n * n:]
     assert len(new_ter) == len(data) and new_ter[:5 + 2 * n * n] == data[:5 + 2 * n * n]     # heights as they were
@@ -1113,29 +750,19 @@ def wall_fill_step(root, report=None):
         now = time.localtime()[:6]
         for i in zi.infolist():
             nm = i.filename
-            if nm == ter_name or nm in new_dae:
-                # a new date: the game converts the shapes again instead of taking its cached ones
+            if nm == ter_name:
+                # a new date: the game converts the terrain again instead of taking its cached one
                 ni = zipfile.ZipInfo(nm, now)
                 ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
-                zo.writestr(ni, new_ter if nm == ter_name else new_dae[nm])
+                zo.writestr(ni, new_ter)
             elif re.fullmatch(r"levels/[^/]+/README\.md", nm) and os.path.exists(LEVEL_README):
                 zo.writestr(i, open(LEVEL_README, "rb").read(), compress_type=i.compress_type)
             else:
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
     print("written in %.0f s" % (time.time() - t0), flush=True)
     if report:
-        res = {"backfill_shapes": len(new_dae), "backfill_triangles": st["triangles"],
-               "backfill_squares": int(fill_cells.sum()), "backfill_area_ha": round(float(fill_cells.sum()) * sq * sq / 1e4, 1),
-               "vertices_before": st["vertices_before"], "vertices_after": st["vertices_after"],
-               "terrain_vertices_with_normal": int(len(nodes)), "seam_vertices_terrain_normal": int(seam.sum()),
-               "vertices_interpolated_in_square": st["by_corner_interp"], "vertices_nearest_node": st["by_nearest_node"],
-               "normal_vs_face_deg": {"median": round(float(np.median(dev_face)), 2),
-                                      "p95": round(float(np.percentile(dev_face, 95)), 2)},
-               "normal_new_vs_old_deg": {"median": round(float(np.median(dev_old)), 2),
-                                         "p95": round(float(np.percentile(dev_old, 95)), 2)},
-               "wall_squares": int(wcells.sum()), "grass_tall_m": GRASS_TALL, "grass_removed_vertices": changed,
-               "grass_removed_why": why,
-               "geometry_unchanged": True, "terrain_heights_unchanged": True}
+        res = {"backfill_shapes": 0, "wall_squares": int(wcells.sum()), "grass_tall_m": GRASS_TALL,
+               "grass_removed_vertices": changed, "grass_removed_why": why, "terrain_heights_unchanged": True}
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)
     return 0
