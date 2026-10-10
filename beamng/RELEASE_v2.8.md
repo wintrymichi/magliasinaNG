@@ -1,4 +1,3 @@
-<!-- draft: the release workflow refuses to run while this line is here. Remove it once "Checked in the game" below holds the test of the whole zip in BeamNG.drive (beamng/verifica/v2.8/final_test_plan.md) and the table of screenshots is at the top. -->
 BeamNG.drive (0.39) map of the **Malcantone**, version 2.8: the [v2.7](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.7) map with the asphalt flush with the ground, street lamps in the villages, delineators and wooden pole lines between them, the railway's overhead line, piers and boats on the lake, gutters, aerials and solar panels on the houses, the warning and parking signs nobody mapped, undergrowth in the woods and the ground behind the walls shaded like the terrain. Same area, roads and buildings.
 
 **Installation:** copy `magliaso_pura_v2.8.zip` to `Documents/BeamNG.drive/current/mods/` (or install it from the mod manager) and remove the previous versions: the level is still called `magliaso_pura`.
@@ -55,12 +54,27 @@ The forest floor had the colour measured in the panoramas on the sunlit forest e
 
 Behind every retaining wall the terrain used to be lowered to the foot of the wall (a 1.5 m grid cannot hold a step inside a 0.3 m wall) and a mesh in the colours of the terrain put the ground back: 1.1 million triangles on 78 ha, which in the game showed as flat, pale facets with stepped edges, holes and loose pieces beside the walls. That mesh is gone. The terrain behind a wall keeps the ground; it is lowered only on the low side of the wall and rises across the wall within one terrain step, inside the wall and as a short bank of earth at its foot (`walls.carve_terrain`). The game's grass does not grow over walls lower than the grass (`walls.wall_fill_step`).
 
+## Fixed after the first tests
+
+- **Terrain:** the large triangles of the terrain mesh, visible across the whole map, are gone.
+- **Guard rails:** every guard rail has its rail; before, many new ones stood as posts only.
+- **Nothing twice:** guard rails (0 of 4,304 doubled), signs (1 of 591) and wall faces (2,692 m² instead of 13,800 m²) drawn twice are removed (`doubles.py` checks the zip).
+- **Arosio – Novaggio:** the missing piece of road between Arosio and Miglieglia is in: from Arosio you can drive the loop over Mugena, Vezio and Breno down to Novaggio.
+- **Magliaso bridge:** the underside of the bridge by the roundabout, before the climb to the Magliasina, is a clean surface instead of a chequered mesh.
+
 ## Checked
 
 - **Without the game:** each change on its own with the pipeline's 3D renderer, before and after at the same views ([`beamng/verifica/v2.8/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8), one folder per change); the automatic checks of the whole level (*v2.8 build test* workflow): `check_level.py` without a change, `drive_test.py` with the same or fewer knocks (hard knocks on the main roads 12,284 → 12,150, on the minor roads 142,463 → 142,383); no object of one change standing in one of another (lamps, delineators, wooden poles and their cables, signs, catenary masts, gutters, the railway), in [`beamng/verifica/v2.8/build/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8/build).
-- **In the game:** to be written after the test (load time, frame rate and memory against v2.7 at the same views, what was found and fixed).
+- **In the game:** the zip of the *final build test* workflow, the one published here, in BeamNG.drive 0.39 (native Linux build, RTX 4070): the level loads in 130 s with a peak of 6.4 GB of memory, without a crash. Driven by hand: the guard rails whole along the Magliaso–Pura road and the mountain roads, the roundabout signs, the road from Arosio over Mugena, Vezio, Breno and Miglieglia to Novaggio (9.6 km, drivable end to end), under the Magliaso bridge by the roundabout.
 
 ## Limits
+
+Known, to fix in a next version:
+
+- Some stone wall caps show pale jagged bands (the cantonal road's hairpins, the road from Arosio).
+- Pale slabs on the abutments of the Magliasina bridge; pale patches in the grass at Agno.
+- One "keep right" sign still stands twice (Magliaso, near the roundabout).
+- The game's AI driver gets stuck at a few spots (Mugena, Vezio, Miglieglia, Pura); driving by hand is fine.
 
 - Street lamps, delineators, wooden poles, catenary masts, aerials, dishes and solar panels stand where a rule puts them, not where they really are: no open data has them.
 - The boats do not move with the waves; the undergrowth, the house details and the delineators have no collision.
@@ -69,7 +83,7 @@ Behind every retaining wall the terrain used to be lowered to the foot of the wa
 
 ## How it is made
 
-The level is built from scratch, like v2.4, by the `release_v2.8.yml` workflow on a GitHub server; everything that came after v2.4 as a patch on the previous zip (v2.5 to v2.8) is now a finishing step of the build itself, the ground first and then what stands on it:
+The level is built from scratch, like v2.4, by the *final build test* workflow (`final_build_test.yml`) on a GitHub server, and that zip, tested in the game, is the one published (`release_v2.8_tested.yml`); everything that came after v2.4 as a patch on the previous zip (v2.5 to v2.8) is now a finishing step of the build itself, the ground first and then what stands on it:
 
 ```bash
 python build_level.py                       # the level, then its finishing steps (build_level.FINISH):
