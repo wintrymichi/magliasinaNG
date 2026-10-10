@@ -130,11 +130,12 @@ def wall_footprints(av, skip_polys, taken=None):
 
 
 def polygons(g):
-    if isinstance(g, Polygon):
+    """The polygons of a geometry, also inside nested collections (a cut wall can be one)."""
+    if g is None or g.is_empty:
+        return []
+    if g.geom_type == "Polygon":
         return [g]
-    if isinstance(g, MultiPolygon):
-        return list(g.geoms)
-    return [x for x in getattr(g, "geoms", []) if isinstance(x, Polygon)]
+    return [p for x in getattr(g, "geoms", []) for p in polygons(x)]
 
 
 def _context():
