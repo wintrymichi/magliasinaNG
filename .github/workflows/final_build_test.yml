@@ -1,13 +1,13 @@
 # Final build test of v2.8: the complete level built from scratch exactly as "v2.8 build test" does (build_level.py
 # with every finishing step inside), after the terrain geometry fix, the removal of duplicate signs, guard rails and
-# walls, and the guard rails that showed only their posts. Then the automatic checks (check_level.py, drive_test.py)
-# and the package. The zip to test in the game, the reports, the check results and the build log are uploaded as the
+# walls, and the guard rails that showed only their posts. Then the automatic checks (check_level.py, drive_test.py),
+# the package and the count of what the level still has twice (doubles.py, doubles.json). The zip to test in the game, the reports, the check results and the build log are uploaded as the
 # artifact "final-build-test" of the run; the zip's md5 is the last line of the Package step. Nothing is published
 # as a release (release_v2.8.yml does that, only with michi's ok).
 #
 # It runs on demand (workflow_dispatch) or when this file changes on the v2.8 branch: to rebuild after merging the
 # fixes, bump the build stamp below.
-# build stamp: 1
+# build stamp: 2
 name: final build test
 
 on:
@@ -114,6 +114,12 @@ jobs:
           cp "$MAGLIASO_ROOT/build_level.log" "$O/"
           ls -la "$O"
           md5sum "$O/magliaso_pura_v2.8.zip"
+
+      - name: What the level has twice (doubles.py)
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          python doubles.py "$O/magliaso_pura_v2.8.zip" "$O/doubles.json" || true
 
       - uses: actions/upload-artifact@v4
         with:

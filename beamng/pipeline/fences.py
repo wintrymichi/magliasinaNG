@@ -158,12 +158,18 @@ def build(level_dir, level_name, scene):
                      ground_type="METAL")])
     CHK = 128.0
     builders, rails = {}, []
+    # W-beam of an upper road: the rail faces away from the wall edge (towards the upper road); v2.8: the
+    # guard rail modules of the game's Italy level, as the other guard rails (guardrail_mesh.py), none where
+    # a guard rail of the roads (or another of these) lies already
+    runs, gone = guardrail_mesh.drop_doubles([{"pts": np.array(it["pts"], float)} for it in items if it["kind"] == "rail"],
+                                             guardrail_mesh.module_segments(level_dir))
+    for r in runs:
+        rails += guardrail_mesh.modules(r["pts"], side=1)
+    if gone:
+        print(f"rails of the fences on a guard rail already laid, left out: {gone:.0f} m")
     for it in items:
         P = np.array(it["pts"])
         if it["kind"] == "rail":
-            # W-beam of an upper road: the rail faces away from the wall edge (towards the upper road); v2.8: the
-            # guard rail modules of the game's Italy level, as the other guard rails (guardrail_mesh.py)
-            rails += guardrail_mesh.modules(P, side=1)
             continue
         c = P[len(P) // 2, :2]
         key = (int(np.floor(c[0] / CHK)), int(np.floor(c[1] / CHK)))

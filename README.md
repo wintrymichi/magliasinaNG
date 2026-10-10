@@ -366,7 +366,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── vineyards.py                      # Vine rows in the survey's vineyards (v2.4)
 │   │   ├── wall_caps.py                      # Wall tops near the road capped where photos see no wall
 │   │   ├── wall_fill_tour.py                 # Sites, renders and views of the wall backfill check (v2.8)
-│   │   ├── walls.py                          # Cadastral walls: meshes, terrain carving, backfill, its shading
+│   │   ├── walls.py                          # Cadastral walls: meshes, terrain carving beside them
 │   │   ├── water.py                          # Lake Lugano as water blocks that stop at its shore (v2.0)
 │   │   ├── zone_report.py                    # Zones, road checklist and discrepancy register (v2.1)
 │   │   └── bng_lua/                          # Game extensions for the in-game tours

@@ -198,7 +198,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Road markings, cleaned (v2.7) | `markings_clean.py`, `markings_net.markings_step` | the paint traced by `network_markings.py` redrawn as Swiss markings (smooth lines, regular dashes, standard crossings, no blobs); a finishing step of the build |
 | Unpaved surfaces flush (v2.7) | `network_mesh.unpaved_step` | the terrain raised to the edges of the dirt and gravel meshes (no trench beside them, never over a road face) and their outer edges lowered onto it: 1-2 cm between track and ground instead of about 0.3 m; into a built zip, before `markings_net.markings_step` (the paint follows the faces) |
 | Far trees (v2.7) | `far_trees.py`, `far_trees.far_trees_step` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; a finishing step of the build |
-| Ground behind the walls (v2.8, in progress) | `walls.wall_fill_step`, `wall_fill_tour.py`, `run_wall_fill_screenshots.ps1` | the backfill behind the retaining walls with the normals of the ground it restores (smooth, like the terrain) instead of one per triangle, and no game grass under it or over walls lower than the grass; geometry and terrain heights unchanged (checked by the script); into a built zip, first on the v2.7 zip; the places and views of its check, rendered with `render3d.py` or in the game |
+| Ground behind the walls (v2.8, in progress) | `walls.carve_terrain`, `walls.wall_fill_step` | the terrain keeps the ground behind the retaining walls, no backfill mesh; no game grass over walls lower than the grass |
 | Street lamps (v2.8, in progress) | `lamps.lamps_step`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
 | Undergrowth (v2.8, in progress) | `understory.understory_step`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; a finishing step of the build |
 | Delineators and pole lines (v2.8, in progress) | `poles.roadside_step`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; a finishing step of the build |
@@ -230,7 +230,8 @@ that way too, and are now functions of the modules they belong to. Their order:
 |---|---|---|
 | 1-6 | `optimize`, `grass`, `unpaved`, `markings`, `far_trees`, `signs` | the steps of v2.5 to v2.7, in the order of their releases (the paint follows the flattened dirt tracks) |
 | 7 | `paved_edges` | it changes the terrain heights: first of the v2.8 steps, so that everything placed after it stands on the v2.8 ground (placed on the v2.7 ground, 693 of the new lamps and 383 of the wooden poles would stand more than 5 cm under it) |
-| 8 | `wall_fill` | the normals of the backfill and the grass over low walls from the terrain heights of 7 |
+| 8 | `wall_fill` | the grass over low walls from the terrain heights of 7 |
+| 8b | `wall_doubles` | no wall face drawn twice (`walls.double_faces_step`): a stone face of a road mesh in the plane of a wall, a wall face in the plane of another, goes; before the objects that keep clear of the walls |
 | 9 | `understory` | the forest floor layers and their verge twins, the undergrowth GroundCover; it could swap with 8 |
 | 10-15 | `lamps`, `roadside`, `catenary`, `signs_more`, `lake`, `house_details` | objects on the ground of 7; the delineators and poles keep clear of the lamps (11 after 10), the downpipes reach the ground of 7 |
 
@@ -260,16 +261,13 @@ Also in v2.8, in the stages of the build:
   (35 %, shops 70 %, ribbon windows 25 %, chosen by their position) is in the material `bld_openings_lit`
   (`instanceEmissive`), and the building TSStatics have `nightEmissive`: the game sets their instance colour to a warm
   light after sunset and to black by day. No light source is added.
-- **Backfill without saw teeth** (`walls.wall_top_at`): where a terrain square of the backfill is cut at a wall, the
-  vertices on the wall take the wall top there instead of a mix of the square's corners. In the game the backfill was
-  a pale, shiny sheet: its material is now the terrain layer's own base colour texture with the game's detail
-  normal and AO maps at the terrain's detail size, fully rough (`walls.fill_material`; the detail colour map tinted
-  to the layer's colour came out lime green in the game); vertices inside a square stay within 0.4 m of the
-  ground before the carve, and near-vertical triangles (spikes at stacked walls and road cuts) are left out.
-  The backfill now also goes under the roads, paths and yards on the high side of a wall: the carve lowered the terrain
-  under their edges and they hung over a hole (on the v2.8 chain zip, at the start of the cantonal road in Magliaso,
-  one road triangle in nine stood more than 1 m over the terrain, all within 4 m of a wall); there it stays at the
-  restored ground of the square's corners, the road's own carve 10 cm under its surface.
+- **No backfill behind the walls** (`walls.carve_terrain`): the terrain vertices around a wall drop to its foot only on
+  its low side and inside its footprint; on the high side they keep the ground (raised to 5 cm under the highest ground
+  beside the wall, which the DTM smears into a slope). The terrain square across a retaining wall rises within one
+  terrain step, inside the wall and as a short bank of earth at its foot. The mesh that covered the trench behind
+  every retaining wall (`build_backfill`, 1.1 million triangles on 78 ha in the build test of fe1e5c6) is gone: in the
+  game it showed as flat, pale facets with stepped edges, holes and loose pieces whatever its normals and material.
+  Beside a road the road's carve still keeps the terrain under the asphalt (`build_terrain`: nothing raises it there).
 - **River water cut at the banks** (`rivers.write`): the water is written once the terrain is final, on a 1.5 m mesh,
   and cut to where it stands more than 6 cm over the terrain. Along the Magliasina a fifth of the water was under the
   banks and much of the rest within centimetres of the ground, so it showed through the terrain in triangles; on the
@@ -299,35 +297,12 @@ Also in v2.8, in the stages of the build:
 
 ### Version 2.8 (in progress): the ground behind the walls
 
-The terrain is a 1.5 m grid and cannot hold a step inside a 0.3 m wall: `walls.carve_terrain` lowers every terrain
-vertex whose triangles touch a wall to the foot of the wall, and `walls.build_backfill` covers the trench this leaves on
-the high side with a mesh at the height of the ground as it was (784,035 triangles, 63 ha in v2.7). That mesh had one
-normal per triangle (`bng.flat_normals_soup`): in the game every triangle was lit on its own, flat facets and saw teeth
-beside a smoothly shaded terrain. And the game's grass grew on the terrain lowered under it (29 % of those vertices are
-less than 0.8 m under the backfill, the grass clumps up to 0.8 m tall) and over the walls lower than the grass.
-
-`build_level.py --finish wall_fill` (`walls.wall_fill_step`) changes neither the geometry nor the terrain heights (the
-script checks every backfill triangle, position and texture coordinate, and the heights of the `.ter`):
-- **normals**: every backfill vertex takes the normal of the ground it restores, computed like the terrain's own
-  (central differences over one terrain step) on the heights of the backfill at the terrain vertices and of the
-  terrain elsewhere; the vertices lowered to the foot of a wall and not covered are left out (one-sided differences).
-  On the edge where the backfill meets the visible terrain it takes the terrain's own normal, so the light does not
-  jump at the seam (tried the other way, with the ground's normal on the edge too: in the renders the outline of the
-  backfill shows as a line of light). The cut vertices inside a terrain square interpolate the normals of its corners.
-  Welded again, the backfill has 896,120 vertices instead of 1,551,036;
-- **grass**: the terrain vertices of the squares under the backfill, and those of the squares a wall passes through
-  from which the tallest grass (`groundcover.py`, 0.8 m) would reach over the wall top, go to the verge twins of their
-  layer (`terrain.VERGE`: the same material without grass, as along the roads since v2.4): 200,441 vertices
-  (183,889 under the backfill, 16,552 over low walls), 0.3 % of the terrain. At the foot of the taller walls and on
-  the rest of the meadows the grass stays.
-
-Not changed: the saw teeth themselves (the corners of the backfill alternate between the wall top and the meadow), the
-crests of the walls along noisy heights, and the colour of the backfill (the terrain's base texture without its detail
-textures). Those need the geometry rebuilt (`walls.build_backfill` with smoothed heights, a full build).
-
-Checked without the game with `wall_fill_tour.py` (`render3d.py` with the DAE normals, `dae_normals=True`, and the
-colours of the terrain layers where there is no orthophoto): `verifica/v2.8/wall_fill/`. The same views in the game:
-`run_wall_fill_screenshots.ps1 -Zip <zip> -Tag before|after`.
+The terrain is a 1.5 m grid and cannot hold a step inside a 0.3 m wall. Up to the build test of fe1e5c6
+`walls.carve_terrain` lowered every terrain vertex whose triangles touch a wall to its foot and `walls.build_backfill`
+covered the trench behind the retaining walls with a mesh; now the vertices on the high side keep the ground and there
+is no backfill (above). `build_level.py --finish wall_fill` (`walls.wall_fill_step`) only takes the game's grass off the
+terrain vertices of the squares a wall passes through from which the tallest grass (`groundcover.py`, 0.8 m) would
+reach over the wall top (`terrain.VERGE`: the same material without grass, as along the roads since v2.4).
 
 ### Version 2.8 (in progress): paved edges flush with the ground
 
