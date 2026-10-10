@@ -9,6 +9,7 @@
   swissNAMES3D: the names of the villages (places.py)
 Optional: SWISSIMAGE 10 cm and swissSURFACE3D LiDAR within CORRIDOR m of the Street View route
 (--route-extras; only the photo-based steps of the original route use them).
+--names: only swissNAMES3D (strade_extra.py needs only the names and swissTLM3D).
 Re-runnable: finished files are skipped.
 """
 import os, sys, time, zipfile
@@ -81,7 +82,7 @@ def unzip_gdb(path):
             z.extractall(out)
 
 
-def main(route_extras=False):
+def main(route_extras=False, names_only=False):
     ax0, ay0, ax1, ay1 = area.bounds(200.0)
     ae = [local_to_lv95(x, y) for x in (ax0, ax1) for y in (ay0, ay1)]
     e_rng = (min(p[0] for p in ae), max(p[0] for p in ae))
@@ -113,26 +114,27 @@ def main(route_extras=False):
         print(f"{coll} {suffix}: {n} files", flush=True)
 
     rect = (e_rng[0], n_rng[0], e_rng[1], n_rng[1])
-    add("ch.swisstopo.swissalti3d", "_0.5_2056_5728.tif", "swissalti3d_05", rect, area_tiles)
-    add("ch.swisstopo.swisssurface3d-raster", "_0.5_2056_5728.tif", "dsm_05", rect, area_tiles)
-    add("ch.swisstopo.swissbuildings3d_3_0", ".gdb.zip", "buildings3d", rect)
-    blk = (min(p[0] for p in te), min(p[1] for p in te), max(p[0] for p in te), max(p[1] for p in te))
-    add("ch.swisstopo.swissimage-dop10", "_2_2056.tif", "swissimage_2", blk, block_tiles)
-    add("ch.swisstopo.swissalti3d", "_2_2056_5728.tif", "swissalti3d_2", far, far_tiles)
-    if route_extras:
-        import json
-        from config import DATASET, wgs_to_lv95
-        panos = json.load(open(os.path.join(DATASET, "panoramas.json")))
-        route = np.array([wgs_to_lv95(p["lat"], p["lon"]) for p in panos])
+    if not names_only:
+        add("ch.swisstopo.swissalti3d", "_0.5_2056_5728.tif", "swissalti3d_05", rect, area_tiles)
+        add("ch.swisstopo.swisssurface3d-raster", "_0.5_2056_5728.tif", "dsm_05", rect, area_tiles)
+        add("ch.swisstopo.swissbuildings3d_3_0", ".gdb.zip", "buildings3d", rect)
+        blk = (min(p[0] for p in te), min(p[1] for p in te), max(p[0] for p in te), max(p[1] for p in te))
+        add("ch.swisstopo.swissimage-dop10", "_2_2056.tif", "swissimage_2", blk, block_tiles)
+        add("ch.swisstopo.swissalti3d", "_2_2056_5728.tif", "swissalti3d_2", far, far_tiles)
+        if route_extras:
+            import json
+            from config import DATASET, wgs_to_lv95
+            panos = json.load(open(os.path.join(DATASET, "panoramas.json")))
+            route = np.array([wgs_to_lv95(p["lat"], p["lon"]) for p in panos])
 
-        def near_route(tile):
-            e, n = (int(v) * 1000 for v in tile.split("-"))
-            cx = np.clip(route[:, 0], e, e + 1000)
-            cy = np.clip(route[:, 1], n, n + 1000)
-            return np.hypot(route[:, 0] - cx, route[:, 1] - cy).min() < CORRIDOR
-        near = {t for t in area_tiles if near_route(t)}
-        add("ch.swisstopo.swissimage-dop10", "_0.1_2056.tif", "swissimage_010", rect, near)
-        add("ch.swisstopo.swisssurface3d", ".las.zip", "lidar", rect, near)
+            def near_route(tile):
+                e, n = (int(v) * 1000 for v in tile.split("-"))
+                cx = np.clip(route[:, 0], e, e + 1000)
+                cy = np.clip(route[:, 1], n, n + 1000)
+                return np.hypot(route[:, 0] - cx, route[:, 1] - cy).min() < CORRIDOR
+            near = {t for t in area_tiles if near_route(t)}
+            add("ch.swisstopo.swissimage-dop10", "_0.1_2056.tif", "swissimage_010", rect, near)
+            add("ch.swisstopo.swisssurface3d", ".las.zip", "lidar", rect, near)
     # swissNAMES3D: names of the villages (spawn points, places.py); one national CSV package
     items = stac_items("ch.swisstopo.swissnames3d", *rect)
     latest = sorted(items, key=lambda f: f["id"])[-1] if items else None
@@ -141,7 +143,7 @@ def main(route_extras=False):
             if name.endswith("_2056.csv.zip"):
                 jobs.append((a["href"], os.path.join(DATA, "names", name)))
     # Copernicus GLO-30 (covers the Italian side for the terrain margins and the backdrop)
-    for lat in (45, 46):
+    for lat in (45, 46) if not names_only else ():
         for lon in (8, 9):
             name = f"Copernicus_DSM_COG_10_N{lat:02d}_00_E{lon:03d}_00_DEM"
             jobs.append((f"https://copernicus-dem-30m.s3.amazonaws.com/{name}/{name}.tif",
@@ -160,4 +162,4 @@ def main(route_extras=False):
 
 
 if __name__ == "__main__":
-    main(route_extras="--route-extras" in sys.argv)
+    main(route_extras="--route-extras" in sys.argv, names_only="--names" in sys.argv)

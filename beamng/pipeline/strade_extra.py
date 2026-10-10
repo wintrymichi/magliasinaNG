@@ -14,11 +14,15 @@ v2.2: the roads the user found missing, each a chain of shortest ways (as above)
 - the cantonal road from Ponte Tresa along the lake through Caslano to Magliaso;
 - from the station of Caslano through the village to the road along the lake to the Torrazza
   (Via Torrazza), opposite Ponte Tresa.
+v2.8: the cantonal road from Arosio through Mugena, Vezio, Fescoggia and Breno down to Miglieglia and
+Novaggio, so that from Arosio the round over the Alto Malcantone closes back to Novaggio.
 Output: dati/strade_extra_v22.json (the lines in LV95); area.py joins a corridor of EXTRA_CORRIDOR m
 around them to the area.
-    python strade_extra.py            (both files)
+    python strade_extra.py               (both files)
+    python strade_extra.py --corridors   (only dati/strade_extra_v22.json)
+The roads already in dati/strade_extra_v22.json are kept; --again computes them all again.
 """
-import collections, heapq, json, os
+import collections, heapq, json, os, sys
 import numpy as np
 import shapely
 from scipy.spatial import cKDTree
@@ -35,6 +39,8 @@ CORRIDORS = [
     ("cantonale_caslano", "Strada cantonale Ponte Tresa - Caslano - Magliaso", ["Ponte Tresa", "Magliaso"]),
     ("caslano_torrazza", "Caslano: dalla stazione alla Torrazza (Via Torrazza)",
      [(2711420.0, 1092813.0), "Caslano", (2711080.0, 1090964.0)]),       # station, village, Torrazza
+    ("arosio_miglieglia", "Strada cantonale Arosio - Mugena - Vezio - Fescoggia - Breno - Miglieglia - Novaggio",
+     ["Arosio", "Mugena", "Breno", "Miglieglia", "Novaggio"]),
 ]
 MOTORWAY = {"Autobahn", "Autostrasse", "Ausfahrt", "Einfahrt", "Raststaette"}
 OTHER = 4.0              # weight of a road the canton does not own, per metre
@@ -134,11 +140,19 @@ def waypoint(w):
     return np.asarray(lv95_to_local(*w), np.float64).ravel()
 
 
-def corridors():
-    """v2.2: the lines of CORRIDORS -> dati/strade_extra_v22.json."""
+def corridors(again=False):
+    """v2.2: the lines of CORRIDORS -> dati/strade_extra_v22.json. A road already in the file is kept as it is
+    (newer swissTLM3D or swissNAMES3D would move the area of the released versions), unless `again`."""
     lines = road_lines()
+    kept = {}
+    if not again and os.path.exists(OUT_V22):
+        kept = {r["key"]: r for r in json.load(open(OUT_V22, encoding="utf-8"))["roads"]}
     roads = []
     for key, name, wps in CORRIDORS:
+        if key in kept:
+            roads.append(kept[key])
+            print("%s: kept, %.0f m" % (key, kept[key]["length_m"]))
+            continue
         pts = [waypoint(w) for w in wps]
         way = []
         for a, b in zip(pts[:-1], pts[1:]):
@@ -162,5 +176,6 @@ def corridors():
 
 
 if __name__ == "__main__":
-    main()
-    corridors()
+    if "--corridors" not in sys.argv:
+        main()
+    corridors(again="--again" in sys.argv)

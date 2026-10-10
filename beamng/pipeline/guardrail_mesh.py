@@ -283,6 +283,11 @@ def modules(P, side):
     Returns [(type, position (3,), rotationMatrix (9,))]: the modules every MODULE_STEP m (the last one ending
     at the end of the line), pitched along the chord they span, then the two end pieces, level."""
     P = np.asarray(P, np.float64)[:, :3]
+    if side < 0:
+        # road to the left of travel: the same rail walked the other way (road to the right). With the line as
+        # given, X along it and Y away from the road would make Z = X x Y point down: the module upside down,
+        # its beam under the ground and only the buried part of the posts standing out of it
+        P, side = P[::-1], 1
     d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P[:, :2], axis=0), axis=1))]
     L = d[-1]
     if L < MIN_RUN:
@@ -343,6 +348,8 @@ def write_forest(level_dir, items, append=False):
     managed = json.load(open(md)) if os.path.exists(md) else {}
     by_type = {}
     for t, p, R in items:
+        if R[8] <= 0:
+            raise ValueError(f"guard rail module {t} at {np.round(p, 1)} upside down (local z {np.round(R[6:], 3)})")
         by_type.setdefault(t, []).append((p, R))
     for t, lst in by_type.items():
         managed[t] = {"name": t, "internalName": t, "class": "TSForestItemData", "persistentId": bng.pid(),
