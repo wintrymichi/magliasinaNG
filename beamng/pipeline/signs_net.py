@@ -221,6 +221,10 @@ def explicit(nodes, net):
         kind = "+".join(c for c, _ in plates)
         # the mapped point is the sign itself where it stands off the road axis
         mapped = float(np.hypot(*(p - q))) > 1.5
+        if mapped and len(dirs) == 2 and d is None:
+            # one sign mapped beside a two-way road, no direction: it is read by the traffic it stands on the
+            # right of (up to v2.8 it went up twice, back to back, one plate for each direction)
+            dirs = [u for u in dirs if float(np.dot(p - q, [u[1], -u[0]])) > 0] or dirs[:1]
         for u in dirs:
             out.append(Sign(p[0] if mapped else q[0], p[1] if mapped else q[1], u, plates, "osm", n["id"], kind,
                             lim, big, mapped))
@@ -514,6 +518,7 @@ POLE_R = 0.030            # m, 60 mm steel tube
 REPLACE = 8.0             # m: a mapped sign takes the place of a panorama sign this close
 REPLACE_RULE = 5.0        # m: a sign the rules imply, of a panorama sign this close
 CLEAR = 0.45              # m: no new pole this close to an existing one
+SAME_SIGN = 25.0          # m: a plate of the same signal for the same traffic this close is the same sign (v2.8)
 ROAD_MATS = ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_road_gravel", "mp_road_dirt", "mp_road_sett",
              "mp_road_cobble")
 GREY_BACK = (150, 152, 154)
@@ -648,6 +653,65 @@ def existing_props(z):
                     plates.append((mat, c, n2))
     P = np.concatenate(poles) if poles else np.zeros((0, 2))
     return P, osm_plates, pano_plates
+
+
+def pano_signal(mat, pano=None):
+    """The signal key (slug) a panorama plate (mp_sign_NNN_k) is read as, None when it is no known signal."""
+    if pano is None:
+        pano = json.load(open(PANO_SIGNS, encoding="utf-8")) if os.path.exists(PANO_SIGNS) else {}
+    info = pano.get(mat[3:])
+    if info is None or not signs_ch.known(info["code"], info.get("value")):
+        return None
+    return slug(info["code"], info.get("value"))
+
+
+def signal_of(mat, pano=None):
+    """The signal key of a plate material: mp_ch_* (signs_net, signs_more), mp_osm_stop / mp_osm_giveway
+    (props_osm.py: 3.01 and 3.02), the panorama plates mp_sign_NNN_k as signs_panorama.json reads them."""
+    if mat == "mp_osm_stop":
+        return slug("3.01", None)
+    if mat == "mp_osm_giveway":
+        return slug("3.02", None)
+    if mat.startswith("mp_ch_") and not mat.endswith("_back") and mat != "mp_ch_pole":
+        return mat[3:]
+    if re.match(r"mp_sign_\d", mat):
+        return pano_signal(mat, pano)
+    return None
+
+
+def level_plates(z, shapes=("props_poles", "props_osm", "props_signs", "props_signs_v28")):
+    """[(signal key, centre (3,), normal (2,), shape)] of the sign plates in the props shapes of the level."""
+    pano = json.load(open(PANO_SIGNS, encoding="utf-8")) if os.path.exists(PANO_SIGNS) else {}
+    out = []
+    for name in shapes:
+        f = f"{LEVEL}/art/shapes/props/{name}.dae"
+        if f not in z.namelist():
+            continue
+        V, N, T, C, parts = read_dae(z.read(f))
+        for mat, idx in parts:
+            key = signal_of(mat, pano)
+            if key is None:
+                continue
+            t = V[idx[:, 0].reshape(-1, 3)]
+            nrm = N[idx[:, 1]].reshape(-1, 3, 3).mean(1)
+            tri_c = t.mean(1)
+            for k in range(0, len(t) - 1, 2):
+                n2 = nrm[k][:2] / max(np.hypot(*nrm[k][:2]), 1e-9)
+                out.append((key, (tri_c[k] + tri_c[k + 1]) / 2, n2, name))
+    return out
+
+
+def shown(plates, x, y, u, keys, dist=SAME_SIGN):
+    """Whether every signal of `keys` is on a plate of `plates` [(key, centre, normal, ...)] within dist m of
+    (x, y), facing the traffic going u."""
+    keys = set(keys)
+    if not keys:
+        return False
+    got = set()
+    for p in plates:
+        if p[0] in keys and float(np.hypot(p[1][0] - x, p[1][1] - y)) < dist and float(np.dot(p[2], u)) < -0.5:
+            got.add(p[0])
+    return got == keys
 
 
 # ------------------------------------------------------------------ geometry
@@ -810,6 +874,11 @@ def build(z, signs):
         return f"mp_{key}", made[key]
 
     mats.append(bng.material("mp_ch_pole", base_color=[0.62, 0.63, 0.64, 1], roughness=0.45, metallic=0.6))
+    # the signals up already (the STOP and give-way of props_osm.py, the panorama plates read as a signal) and
+    # those put up here: a sign whose signals one of them shows for the same traffic within SAME_SIGN m is
+    # the same sign (OSM maps some twice, a rule implies one the panoramas have a little farther on)
+    up = level_plates(z, ("props_poles", "props_osm"))
+    rep["left_out_double"] = Counter()
     for s in signs:
         c = None
         # a mapped sign that the panoramas measured: in its measured place, instead of the plain plates
@@ -827,6 +896,18 @@ def build(z, signs):
                     c = pc
                     rep["replaced_panorama"] += 1
                     break
+        if c is None:
+            # the signals of it already up for this traffic go (the give-way of props_osm.py under a roundabout
+            # sign); the sign goes when none of its own is left (the plates under a signal go with it)
+            have = [code != "text" and not code.startswith("5.") and shown(up, s.x, s.y, s.u, [slug(code, val)])
+                    for code, val in s.plates]
+            if any(have):
+                left = [pl for pl, h in zip(s.plates, have) if not h]
+                if not any(code != "text" and not code.startswith("5.") for code, _ in left):
+                    rep["left_out_double"][s.kind] += 1
+                    continue
+                rep["left_out_double"]["plate_" + "+".join(c_ for (c_, _), h in zip(s.plates, have) if h)] += 1
+                s = s._replace(plates=left)
         if c is None:
             p = np.array([s.x, s.y])
             ring = p + np.array([[r * math.cos(a), r * math.sin(a)] for r in (0, 1, 2, 4, 6)
@@ -868,6 +949,7 @@ def build(z, signs):
             mb.add(mat, F, uvs=uv, normals=np.repeat(np.r_[nrm, 0][None], 6, 0))
             Bk = F[::-1] - np.r_[nrm * 0.006, 0]
             mb.add(mat + "_back", Bk, uvs=uv[::-1], normals=np.repeat(np.r_[-nrm, 0][None], 6, 0))
+            up.append((mat[3:], np.r_[c, zc], nrm, "props_signs"))
         pole_xy.append((float(c[0]), float(c[1])))
         tree = cKDTree(np.array(pole_xy))
         rep["placed"][s.kind] += 1
@@ -892,6 +974,9 @@ def build(z, signs):
             rep["panorama"]["kept_" + info["code"]] += 1     # backs, bus stops, boards: as measured
             continue
         drop_pano.add(mat)
+        if shown([q for q in up if q[3] == "props_osm"], cc[0], cc[1], -n2, [slug(info["code"], info.get("value"))], 10.0):
+            rep["panorama"]["double_of_osm_" + info["code"]] += 1     # the STOP or give-way of props_osm.py
+            continue
         rep["panorama"]["drawn_" + info["code"]] += 1
         pc = cc[:2] - n2 * PANO_OFF
         for q in poles:
@@ -1035,7 +1120,7 @@ def signs_step(root, report=None):
             zo.writestr(zipfile.ZipInfo(n, date_time=time.localtime()[:6]), data,
                         compress_type=zipfile.ZIP_STORED if n.endswith(".png") else zipfile.ZIP_DEFLATED)
     out = {"placed": dict(rep["placed"]), "left_out": dict(rep["left_out"]), "outside_map": dict(rep["outside"]),
-           "outside_map_total": sum(rep["outside"].values()),
+           "outside_map_total": sum(rep["outside"].values()), "left_out_double": dict(rep["left_out_double"]),
            "replaced_panorama": rep["replaced_panorama"], "old_plate_triangles_turned": rep["flipped_triangles"], "panorama_plates_removed": len(drop),
            "old_textures_resized": rep.get("textures_resized", 0),
            "panorama_plates": dict(rep["panorama"]), "panorama_opacity_maps": rep.get("panorama_opacity", 0),

@@ -73,7 +73,7 @@ The level is built from scratch, like v2.4, by the `release_v2.8.yml` workflow o
 
 ```bash
 python build_level.py                       # the level, then its finishing steps (build_level.FINISH):
-# optimize, grass, unpaved, markings, far_trees, signs, paved_edges, wall_fill, understory,
+# optimize, grass, unpaved, markings, far_trees, signs, paved_edges, wall_fill, wall_doubles, understory,
 # lamps, roadside, catenary, signs_more, lake, house_details
 python package.py magliaso_pura_v2.8
 ```

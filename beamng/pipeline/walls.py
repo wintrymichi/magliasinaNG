@@ -82,24 +82,60 @@ def removed():
     return out
 
 
-def wall_footprints(av, skip_polys):
-    out = []
-    for g, p in av["SOSF"].get("muro", []):
-        out.append((g, "poly", p))
-    for g, p in av["SOLI"].get("muro", []):
-        out.append((g.buffer(0.15, cap_style="flat", join_style="mitre"), "line", p))
+MIN_PIECE_AREA = 0.25     # m^2, smaller pieces left over by that are dropped
+MIN_PIECE_WIDTH = 0.08    # m, half the least width of a piece kept
+
+
+def wall_footprints(av, skip_polys, taken=None):
+    """[(footprint, kind, properties)]: the surface walls of the survey, then the line walls (0.30 m), each
+    without the ground a footprint before it covers (and `taken`: the roadside walls of the panoramas); a wall
+    mostly inside one that swissBUILDINGS3D models (skip_polys) is left out. The survey has some walls twice (a
+    line on a surface, two surfaces overlapping) and the game had two walls, one in the other: up to v2.8 the
+    line was kept whole beside the surface, and a wall half along a roadside wall whole beside it."""
+    src = [(g, "poly", p) for g, p in av["SOSF"].get("muro", [])] + \
+          [(g.buffer(0.15, cap_style="flat", join_style="mitre"), "line", p) for g, p in av["SOLI"].get("muro", [])]
     if skip_polys:
         sk = shapely.union_all(skip_polys)
-        out = [(g, k, p) for g, k, p in out if g.intersection(sk).area < 0.5 * g.area]
+        src = [(g, k, p) for g, k, p in src if g.intersection(sk).area < 0.5 * g.area]
+    cell = 32.0
+    grid = {}
+
+    def cells(g):
+        x0, y0, x1, y1 = g.bounds
+        return [(i, j) for i in range(int(np.floor(x0 / cell)), int(np.floor(x1 / cell)) + 1)
+                for j in range(int(np.floor(y0 / cell)), int(np.floor(y1 / cell)) + 1)]
+
+    def add(g):
+        for c in cells(g):
+            grid.setdefault(c, []).append(g)
+    if taken is not None and not taken.is_empty:
+        for q in polygons(taken):
+            add(q)
+    out = []
+    for g, k, p in src:
+        g = shapely.make_valid(g)
+        if g.is_empty or g.area <= 0:
+            continue
+        near = {id(h): h for c in cells(g) for h in grid.get(c, ()) if h.intersects(g)}
+        if near:
+            rest = g.difference(shapely.union_all(list(near.values())))
+            # what is left: the pieces wide and big enough to be a wall (not the sliver of a line beside a surface)
+            rest = [q for q in polygons(rest) if q.area >= MIN_PIECE_AREA and not q.buffer(-MIN_PIECE_WIDTH).is_empty]
+            if not rest:
+                continue
+            g = rest[0] if len(rest) == 1 else MultiPolygon(rest)
+        out.append((g, k, p))
+        add(g)
     return out
 
 
 def polygons(g):
-    if isinstance(g, Polygon):
+    """The polygons of a geometry, also inside nested collections (a cut wall can be one)."""
+    if g is None or g.is_empty:
+        return []
+    if g.geom_type == "Polygon":
         return [g]
-    if isinstance(g, MultiPolygon):
-        return list(g.geoms)
-    return [x for x in getattr(g, "geoms", []) if isinstance(x, Polygon)]
+    return [p for x in getattr(g, "geoms", []) for p in polygons(x)]
 
 
 def _context():
@@ -238,7 +274,7 @@ def wall_geometry(ctx=None):
     seen = removed()
     gone_tree = shapely.STRtree(seen["remove"]) if seen["remove"] else None
     flush_tree = shapely.STRtree(seen["flush"]) if seen["flush"] else None
-    for wi, (g, kind, props) in enumerate(wall_footprints(ctx["av"], ctx["mauer"])):
+    for wi, (g, kind, props) in enumerate(wall_footprints(ctx["av"], ctx["mauer"], ctx["rw_zone"])):
         if not on_dtm.contains(g):
             continue
         if gone_tree is not None and len(gone_tree.query(g, predicate="dwithin", distance=0.05)):
@@ -261,6 +297,8 @@ def wall_geometry(ctx=None):
             # fine vertex spacing where the walls are seen from the road, coarse far away
             step = (0.5 if ctx.get("near") is None else STEP_FINE) if fine else STEP_COARSE
             poly = shapely.segmentize(shapely.geometry.polygon.orient(poly, 1.0), step)
+            if poly.geom_type != "Polygon":                  # never one here, kept safe: its largest piece
+                poly = max(polygons(poly), key=lambda q: q.area)
             rings = [np.asarray(poly.exterior.coords)[:-1]] + [np.asarray(r.coords)[:-1] for r in poly.interiors]
             allv = np.concatenate(rings)
             dmin, dmax = local(poly)
@@ -318,8 +356,6 @@ def wall_geometry(ctx=None):
         for pj, poly in enumerate(polygons(g)):
             if poly.area < 0.05:
                 continue
-            if ctx["rw_zone"] is not None and poly.intersection(ctx["rw_zone"]).area > 0.5 * poly.area:
-                continue                                  # replaced by a photo-verified roadside wall
             w = measure(poly, f"w{wi}_{pj}")
             # no wall standing on the way of a car: the parts on a drivable way that rise above it are cut
             # away, the rest measured again
@@ -766,3 +802,247 @@ def wall_fill_step(root, report=None):
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)
     return 0
+
+
+# --------------------------------------------------------------------------------------------------
+# v2.8: no wall face twice. A finishing step of build_level.py (FINISH, after wall_fill), on the built level.
+#
+# Two meshes drew some wall faces in the same plane, and the game showed them flickering into each other: the
+# stone faces of the road meshes (mp_road_wall, the side of a paved edge high above the ground,
+# build_level.stage_roads) in front of a retaining wall at the edge of the road (5,400 m2 on the v2.8 build
+# test), and walls of the survey overlapping (7,800 m2, wall_footprints cuts them now). A steep triangle that
+# lies whole in the face of others (every sample of it within FACE_D m of their plane, inside them, the same
+# way out) goes: first the road faces in front of a wall, then the wall faces in front of a road face, then
+# a wall face in front of an earlier one.
+# --------------------------------------------------------------------------------------------------
+
+FACE_D = 0.06          # m from the plane of the other face
+FACE_IN = 0.01         # m, how far outside the other triangle a sample may be
+FACE_CELL = 1.0        # m, the grid of the lookup
+FACE_MATS = re.compile(r"^mp_(wall_|rwall_photo)")
+ROAD_FACE = "mp_road_wall"
+
+
+def _steep(W, idx):
+    t = W[idx[:, 0]].reshape(-1, 3, 3)
+    n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+    a = np.linalg.norm(n, axis=1)
+    n = n / np.maximum(a, 1e-12)[:, None]
+    return t, n, (np.abs(n[:, 2]) < 0.5) & (a > 1e-6)
+
+
+class FaceSet:
+    """Steep triangles with a lookup by the grid cells their footprint covers."""
+
+    def __init__(self, T, Nn):
+        self.T, self.N = T, Nn
+        self.alive = np.ones(len(T), bool)
+        lo = np.floor((T[:, :, :2].min(1) - FACE_D) / FACE_CELL).astype(np.int64)
+        hi = np.floor((T[:, :, :2].max(1) + FACE_D) / FACE_CELL).astype(np.int64)
+        self.grid = {}
+        for k in range(len(T)):
+            for i in range(lo[k, 0], hi[k, 0] + 1):
+                for j in range(lo[k, 1], hi[k, 1] + 1):
+                    self.grid.setdefault((i, j), []).append(k)
+
+    def near(self, p):
+        return self.grid.get((int(np.floor(p[0] / FACE_CELL)), int(np.floor(p[1] / FACE_CELL))), ())
+
+
+def _samples(t):
+    """Corners and edge middles pulled 3 cm towards the centre, and the centre."""
+    c = t.mean(0)
+    pts = list(t) + [(t[0] + t[1]) / 2, (t[1] + t[2]) / 2, (t[2] + t[0]) / 2]
+    out = [c]
+    for p in pts:
+        d = c - p
+        L = np.linalg.norm(d)
+        out.append(p + d * min(0.03 / max(L, 1e-9), 1.0))
+    return np.array(out)
+
+
+def _inside(p, n, fs, cand):
+    """Whether p (with the face normal n) lies in one of the triangles cand of the FaceSet fs."""
+    if not len(cand):
+        return False
+    cand = np.asarray(cand)
+    cand = cand[fs.alive[cand]]
+    if not len(cand):
+        return False
+    Nb = fs.N[cand]
+    ok = Nb @ n > 0.95
+    if not ok.any():
+        return False
+    cand, Nb = cand[ok], Nb[ok]
+    Tb = fs.T[cand]
+    dist = np.einsum("ij,ij->i", p[None] - Tb[:, 0], Nb)
+    ok = np.abs(dist) < FACE_D
+    if not ok.any():
+        return False
+    Tb, Nb, dist = Tb[ok], Nb[ok], dist[ok]
+    q = p[None] - dist[:, None] * Nb                     # p on the plane of each triangle
+    # distance of q inside every edge (positive inside), in metres
+    inside = np.ones(len(Tb), bool)
+    for a, b in ((0, 1), (1, 2), (2, 0)):
+        e = Tb[:, b] - Tb[:, a]
+        out = np.cross(e, Nb)                            # in the plane, away from the inside (counter-clockwise)
+        out /= np.maximum(np.linalg.norm(out, axis=1, keepdims=True), 1e-12)
+        s = np.einsum("ij,ij->i", q - Tb[:, a], out)
+        c3 = Tb[:, 3 - a - b]
+        side = np.sign(np.einsum("ij,ij->i", c3 - Tb[:, a], out))       # the inside, whatever the winding
+        inside &= s * side >= -FACE_IN
+    return bool(inside.any())
+
+
+def covered(T, Nn, fs, before=None):
+    """Mask of the triangles T (k, 3, 3), normals Nn, lying whole in faces of fs; before: for each triangle the
+    number of first triangles of fs it may lie in (a set against itself: only earlier ones, still there)."""
+    out = np.zeros(len(T), bool)
+    for k in range(len(T)):
+        ok = True
+        for p in _samples(T[k]):
+            cand = fs.near(p)
+            if before is not None:
+                cand = [j for j in cand if j < before[k]]
+            if not _inside(p, Nn[k], fs, cand):
+                ok = False
+                break
+        out[k] = ok
+        if before is not None and ok:
+            fs.alive[before[k]] = False                  # the set against itself: this one is gone
+    return out
+
+
+def double_faces_step(root, report=None):
+    t0 = time.time()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    shapes = []
+    for group, kind in (("walls", "wall"), ("roads/surfaces", "road")):
+        f = f"{lv}/main/MissionGroup/{group}/items.level.json"
+        if f not in zi.NameToInfo:
+            continue
+        for o in read_items(zi, f):
+            sn = o.get("shapeName", "")
+            if o.get("class") != "TSStatic" or not sn.endswith(".dae") or "backfill" in sn:
+                continue
+            text = zi.read(sn.lstrip("/")).decode("utf-8")
+            if "<triangles" not in text:
+                continue
+            V, N, UV, C, parts, node = optimize_level.parse(text)
+            shapes.append(dict(name=sn.lstrip("/"), kind=kind, V=V, N=N, UV=UV, C=C, parts=parts, node=node,
+                               W=V + np.asarray(o.get("position", [0, 0, 0]), np.float64)))
+    # every steep face triangle: (shape, part, triangle) and its corners
+    keys, tris, nrms = {"wall": [], "road": []}, {"wall": [], "road": []}, {"wall": [], "road": []}
+    for si, s in enumerate(shapes):
+        for pi, (mat, idx) in enumerate(s["parts"]):
+            want = ROAD_FACE if s["kind"] == "road" else None
+            if (want and mat != want) or (not want and not FACE_MATS.match(mat)):
+                continue
+            t, n, st = _steep(s["W"], idx)
+            k = np.flatnonzero(st)
+            keys[s["kind"]].append(np.column_stack([np.full(len(k), si), np.full(len(k), pi), k]))
+            tris[s["kind"]].append(t[k])
+            nrms[s["kind"]].append(n[k])
+    K = {g: np.concatenate(keys[g]) if keys[g] else np.zeros((0, 3), np.int64) for g in keys}
+    Tw, Nw = (np.concatenate(tris["wall"]), np.concatenate(nrms["wall"])) if tris["wall"] else (np.zeros((0, 3, 3)), np.zeros((0, 3)))
+    Tr, Nr = (np.concatenate(tris["road"]), np.concatenate(nrms["road"])) if tris["road"] else (np.zeros((0, 3, 3)), np.zeros((0, 3)))
+    del keys, tris, nrms
+    print("steep faces: %d of walls, %d of roads" % (len(Tw), len(Tr)), flush=True)
+    drop = set()
+    res = {"road_faces": len(Tr), "wall_faces": len(Tw)}
+
+    def area(T):
+        return float(0.5 * np.linalg.norm(np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0]), axis=1).sum()) if len(T) else 0.0
+
+    if len(Tw) and len(Tr):
+        # (1) the road faces in front of a wall
+        fw = FaceSet(Tw, Nw)
+        # only the triangles with a wall face near their centre are tested
+        near = [k for k in range(len(Tr)) if fw.near(Tr[k].mean(0))]
+        m = covered(Tr[near], Nr[near], fw)
+        gone_r = [near[k] for k in np.flatnonzero(m)]
+        drop |= {tuple(K["road"][k]) for k in gone_r}
+        res["road_faces_in_a_wall"], res["road_faces_in_a_wall_m2"] = len(gone_r), round(area(Tr[gone_r]))
+        # (2) the wall faces in front of the road faces left
+        keep_r = np.setdiff1d(np.arange(len(Tr)), gone_r)
+        fr = FaceSet(Tr[keep_r], Nr[keep_r])
+        near = [k for k in range(len(Tw)) if fr.near(Tw[k].mean(0))]
+        m = covered(Tw[near], Nw[near], fr)
+        gone_w = [near[k] for k in np.flatnonzero(m)]
+        drop |= {tuple(K["wall"][k]) for k in gone_w}
+        res["wall_faces_in_a_road_face"], res["wall_faces_in_a_road_face_m2"] = len(gone_w), round(area(Tw[gone_w]))
+    if len(Tw):
+        # (3) a wall face in an earlier one (two walls of the survey in one place)
+        left = np.array([k for k in range(len(Tw)) if tuple(K["wall"][k]) not in drop], np.int64)
+        fs = FaceSet(Tw[left], Nw[left])
+        # only those with an earlier face in their plane near their centre, no corner shared (not the next
+        # triangle of the same face) are tested
+        C = Tw[left].mean(1)
+        pr = cKDTree(C).query_pairs(1.0, output_type="ndarray")
+        cand = set()
+        for q in np.array_split(pr, max(1, len(pr) // 1000000)):
+            a, b = q[:, 0], q[:, 1]
+            ia, ib = left[a], left[b]
+            ok = (np.einsum("ij,ij->i", Nw[ia], Nw[ib]) > 0.95) & \
+                 (np.abs(np.einsum("ij,ij->i", C[b] - C[a], Nw[ia])) < FACE_D)
+            Ta, Tb = Tw[ia[ok]], Tw[ib[ok]]
+            shared = (np.abs(Ta[:, :, None, :] - Tb[:, None, :, :]).max(-1) < 1e-3).any(2).sum(1)
+            cand |= set(np.maximum(a[ok], b[ok])[shared == 0].tolist())
+        near = sorted(cand)
+        m = covered(Tw[left[near]], Nw[left[near]], fs, before=np.array(near, np.int64))
+        gone = [int(left[near[k]]) for k in np.flatnonzero(m)]
+        drop |= {tuple(K["wall"][k]) for k in gone}
+        res["wall_faces_in_a_wall"], res["wall_faces_in_a_wall_m2"] = len(gone), round(area(Tw[gone]))
+    print(res, flush=True)
+    new_dae = {}
+    tmp = tempfile.mkdtemp()
+    touched = {int(d[0]) for d in drop}
+    drop = {tuple(int(v) for v in d) for d in drop}
+    for si, s in enumerate(shapes):
+        if si not in touched:
+            continue
+        mb = bng.MeshBuilder()
+        for pi, (mat, idx) in enumerate(s["parts"]):
+            tris = np.arange(len(idx)).reshape(-1, 3)
+            gone = [k for k in range(len(tris)) if (si, pi, k) in drop]
+            if gone:
+                tris = np.delete(tris, gone, axis=0)
+            col = s["C"][idx[:, 3]] if s["C"] is not None and idx.shape[1] > 3 else None
+            mb.add(mat, s["V"][idx[:, 0]], uvs=s["UV"][idx[:, 2]], normals=s["N"][idx[:, 1]], tris=tris, colors=col)
+        if mb.empty():                                   # nothing left of it: the shape and its object go
+            new_dae[s["name"]] = None
+            continue
+        base, detail = re.match(r"(.*)_a(\d+)$", s["node"]).groups()
+        path = os.path.join(tmp, "s.dae")
+        mb.write_dae(path, name=base, origin=(0, 0, 0), detail=int(detail))
+        new_dae[s["name"]] = open(path, "rb").read()
+        os.remove(path)
+    os.rmdir(tmp)
+    gone_shapes = {"/" + n for n, d in new_dae.items() if d is None}
+    with zi.writer() as zo:
+        now = time.localtime()[:6]
+        for i in zi.infolist():
+            nm = i.filename
+            if nm in new_dae and new_dae[nm] is None:
+                continue
+            if gone_shapes and nm.endswith("items.level.json") and "/main/MissionGroup/" in nm:
+                data = zi.read(i)
+                lines = [l for l in data.decode("utf-8").splitlines()
+                         if l.strip() and json.loads(l).get("shapeName") not in gone_shapes]
+                if len(lines) < len([l for l in data.decode("utf-8").splitlines() if l.strip()]):
+                    data = ("\n".join(lines) + "\n").encode("utf-8")
+                zo.writestr(i, data, compress_type=i.compress_type)
+                continue
+            if nm in new_dae:
+                ni = zipfile.ZipInfo(nm, now)          # a new date: the game converts the shape again
+                ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
+                zo.writestr(ni, new_dae[nm])
+            else:
+                zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+    res["shapes_rewritten"] = len(new_dae)
+    print("shapes rewritten: %d, written in %.0f s" % (len(new_dae), time.time() - t0), flush=True)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(res, open(report, "w"), indent=1)
+    return res
