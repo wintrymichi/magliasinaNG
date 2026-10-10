@@ -1,6 +1,6 @@
-"""The check of the chained v2.8 build (patch_v2_8.py): the nine patches together, against each other and against
+"""The check of the chained v2.8 build (build_level.py --finish): the nine patches together, against each other and against
 the same patches run alone on the v2.7 zip.
-    python v28_check.py <v2.7 zip> <v2.8 zip> <reports dir of patch_v2_8.py>   -> verifica/v2.8/build/check.json
+    python v28_check.py <v2.7 zip> <v2.8 zip> <reports dir of build_level.py --finish>   -> verifica/v2.8/build/check.json
 - reports: the numbers of every patch's report that differ between the chain and alone
   (beamng/verifica/v2.8/<topic>/report.json);
 - entries: the entries of the zip added and changed against v2.7;
@@ -15,10 +15,10 @@ import json, os, sys, zipfile
 import numpy as np
 from scipy.spatial import cKDTree
 import optimize_level
-import patch_catenary as pc
-import patch_lamps as pl
-import patch_unpaved as pu
-import patch_wall_fill as pw
+import railway as pc
+import lamps as pl
+import network_mesh as pu
+import walls as pw
 import road_mesh
 from config import LEVEL_NAME
 

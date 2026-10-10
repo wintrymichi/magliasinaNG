@@ -5,7 +5,7 @@
 **The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 52 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano and Arosio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
-![Version](https://img.shields.io/badge/version-2.7-blue)
+![Version](https://img.shields.io/badge/version-2.8-blue)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-52%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
@@ -22,14 +22,14 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 
 ## Quick start
 
-1. **Download** `magliaso_pura_v2.7.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
+1. **Download** `magliaso_pura_v2.8.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
 2. **Install it:** copy the zip, without unpacking it, to `Documents/BeamNG.drive/current/mods/` (or add it from the game's mod manager).
 3. **Remove older versions** of the map from the same folder (`magliaso_pura_v2.x.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
 4. **Play:** in the game choose *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*. You start at the Magliaso junction, at the foot of the cantonal road to Pura.
 
-**What you need:** BeamNG.drive 0.39. v2.7 was measured on BeamNG.drive 0.39 with 16 GB of RAM and an RTX 4070 at 2560 × 1440: 74–131 fps at the test views. The game uses about 12 GB of memory at its peak, so 16 GB is the practical minimum.
+**What you need:** BeamNG.drive 0.39 and 16 GB of RAM. v2.8 was tested on BeamNG.drive 0.39 (native Linux build) with an RTX 4070: the game used 6.4 GB of memory at its peak. Under Windows with DirectX 12 it needs much more (v2.7 measured about 12 GB): if the game stalls, start it with DirectX 11 (`-gfx dx11`).
 
-**Loading time:** the first time takes about 155 s, because the game converts the map's shapes and tree pictures and keeps them in its cache. After that it loads in about 70 s.
+**Loading time:** v2.8 loaded in about 130 s in the test. The first time is the slowest, because the game converts the map's shapes and tree pictures and keeps them in its cache.
 
 ## Where to drive
 
@@ -58,7 +58,7 @@ AI traffic works on the whole road network, with one-way streets, roundabouts an
 |---|---|
 | The game stalls after loading, or the whole PC lags | The map needs about 12 GB at its peak. Close the browser, Discord and other programs before loading it. |
 | The level is missing from the Freeroam list, or loads the wrong version | Check that only one `magliaso_pura_v*.zip` is in the `mods` folder and that it is still zipped. |
-| The first load is slow | That is normal: the game converts the shapes once (about 155 s), then loads in about 70 s. |
+| The first load is slow | That is normal: the game converts the shapes once (v2.8 about 130 s in the test), then loads faster. |
 | After updating, parts of the map still look like the old version | The game may still show shapes it converted for the old zip. Delete the `temp/levels/magliaso_pura/` folder in the game's user folder (the one that holds `mods`) and load the level again. |
 | Low frame rate in meadows and gardens | The grass is the game's own groundcover: lower the vegetation quality in the game's graphics settings. |
 | A road ends in the middle of nowhere | Some roads leave the modelled area and stop at its edge; beyond it there is only terrain. See [Known limitations](#known-limitations). |
@@ -118,7 +118,7 @@ The map is rebuilt from scratch from the data every time: there is no hand-edite
 4. **Add everything else:** buildings with drawn façades, walls, bridges, guardrails, road markings detected in the 10 cm aerial photo, trees from the surface model, grass, rivers and the lake, the railway, signs and bus stops.
 5. **Write the BeamNG level** with spawn points and the AI road network.
 6. **Check it automatically** (`check_level.py`, `drive_test.py`). If the checks fail, no release is published.
-7. **Make it lighter for the game** (`optimize_level.py`, since v2.5), **add the game's grass** (`patch_groundcover.py`, since v2.6), then **lay the tracks flush, redraw the markings, bring back the far trees and add the road signs** (the four v2.7 patch scripts).
+7. **Finish it** (`build_level.FINISH`, since v2.8 all inside the build): make it lighter for the game (`optimize_level.py`), add the game's grass, lay the tracks and the paved edges flush, redraw the markings, bring back the far trees, put up the road signs, shade the ground behind the walls, add the undergrowth, the street lamps (lit at night), delineators and pole lines, the railway's overhead line, the piers and boats, and the gutters, aerials and solar panels of the houses.
 
 ```mermaid
 flowchart LR
@@ -136,23 +136,18 @@ flowchart LR
     D & C & E & F --> H[Buildings and façades<br/>facades.py]
     G -. colours, shutters, guardrails, walls .-> H
     M & H --> L[BeamNG level<br/>build_level.py]
-    L --> Q[Checks<br/>check_level.py, drive_test.py]
-    Q --> Z[v2.4 zip]
-    Z --> O[Lighter level<br/>optimize_level.py → v2.5]
-    O --> P[Game grass<br/>patch_groundcover.py → v2.6]
-    P --> S[Tracks, markings, far trees, signs<br/>patch_unpaved.py, patch_markings.py,<br/>patch_far_trees.py, patch_signs.py → v2.7]
+    L --> O[Finishing steps<br/>build_level.FINISH:<br/>lighter level, grass, tracks, markings,<br/>far trees, signs, lamps, railway line, lake]
+    O --> Q
+    Q --> Z[v2.8 zip<br/>package.py]
 ```
 
-**How a release is built.** The [`release_v2.4.yml`](.github/workflows/release_v2.4.yml) workflow builds the level from scratch on a GitHub server, in about an hour (*Actions* → *Release v2.4* → *Run workflow*): it downloads the data, builds the level, runs the checks and publishes the zip. v2.5, v2.6 and v2.7 do not rebuild the level: they are patch scripts that run on the previous zip ([`release_v2.7.yml`](.github/workflows/release_v2.7.yml) runs the four v2.7 scripts on the v2.6 zip and publishes it).
+**How a release is built.** The [`release_v2.8.yml`](.github/workflows/release_v2.8.yml) workflow builds the level from scratch on a GitHub server (*Actions* → *Release v2.8* → *Run workflow*): it downloads the data, builds the level with every finishing step, runs the checks and publishes the zip. Up to v2.8 the versions after v2.4 were patch scripts run on the previous zip; since v2.8 those steps are part of the build itself (`build_level.FINISH`), and [`v28_build_test.yml`](.github/workflows/v28_build_test.yml) makes the same zip for the test in the game. v2.8 itself is the zip of the [`final_build_test.yml`](.github/workflows/final_build_test.yml) workflow, tested in the game and published unchanged by [`release_v2.8_tested.yml`](.github/workflows/release_v2.8_tested.yml).
 
 ```bash
 cd beamng/pipeline
-python optimize_level.py magliaso_pura_v2.4.zip magliaso_pura_v2.5.zip      # same geometry, lighter for the game
-python patch_groundcover.py magliaso_pura_v2.5.zip magliaso_pura_v2.6.zip   # the game's grass and flowers
-python patch_unpaved.py magliaso_pura_v2.6.zip v26u.zip                       # dirt and gravel tracks flush with the ground
-python patch_markings.py v26u.zip v26m.zip                                    # markings redrawn to the Swiss standard
-python patch_far_trees.py v26m.zip v26t.zip trees_area.npz                    # every measured tree back on the slopes
-python patch_signs.py v26t.zip magliaso_pura_v2.7.zip --report ../verifica/signs_v2.7.json   # Swiss road signs
+python build_level.py                          # the whole level, with the finishing steps
+python build_level.py --finish lamps signs     # only some finishing steps, again, on the built level
+python package.py magliaso_pura_v2.8           # the mod zip and its digest
 ```
 
 How to run the pipeline yourself, the environment variables, the coordinate system and the role of every script are in [`beamng/README.md`](beamng/README.md).
@@ -164,7 +159,7 @@ How to run the pipeline yourself, the environment variables, the coordinate syst
 - **Automatic checks over the whole map** (`check_level.py`, results in [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terrain above the roads, holes, steps, seams between blocks, obstacles on the carriageway searched along every road and trail, trees in the clearance envelope, the AI network, missing files and, since v2.4, building walls facing inwards.
 - **Virtual drive test** (`drive_test.py`, [`beamng/verifica/drive_test.json`](beamng/verifica/drive_test.json)): a simulated car (a quarter-car model on all four wheels) drives every road in both directions and every trail, 670 km, on the level's surfaces as written. On the same roads as v2.1 it counts 66 % fewer steps on minor roads (1695 → 570) and 20 % fewer on main roads (74 → 59); wheels lifting off the road drop by 57 % on minor roads and 58 % on main roads, hard hits by 25 % and sharp twists by 61 % on minor roads.
 - **Street View review** ([`beamng/verifica/REVISIONE.md`](beamng/verifica/REVISIONE.md)): for every road, the panorama coverage, the measured buildings, the guardrails and walls seen, the drive-test events before and after, and the places compared photo/map from the same camera, with the problems found and the fixes.
-- **In the game** (since v2.5): loading time, memory and frame rate measured in BeamNG.drive 0.39 at the spawn points, for v2.6 on meadows and gardens, and for v2.7 at the test views of the signs, markings, tracks and slopes, with every kind of sign checked from the traffic ([`beamng/verifica/screenshots/v2.7/test.json`](beamng/verifica/screenshots/v2.7/test.json)).
+- **In the game** (since v2.5): loading time, memory and frame rate measured in BeamNG.drive 0.39 at the spawn points, for v2.6 on meadows and gardens, for v2.7 at the test views of the signs, markings, tracks and slopes, with every kind of sign checked from the traffic ([`beamng/verifica/screenshots/v2.7/test.json`](beamng/verifica/screenshots/v2.7/test.json)), and for v2.8 the released zip driven by hand on the new roads, guard rails and bridges.
 
 ## Known limitations
 
@@ -187,6 +182,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | Tunnels are not built: roads and the railway stop at the portals. | [#19](https://github.com/wintrymichi/magliasinaNG/issues/19) |
 | One-way streets only where OpenStreetMap records them. | [#20](https://github.com/wintrymichi/magliasinaNG/issues/20) |
 | Road signs only where OpenStreetMap maps them or records the rule that needs them: warning, direction and parking signs nobody mapped are missing; 35 plates of the cantonal road keep a single colour; no railway overhead line. | [#21](https://github.com/wintrymichi/magliasinaNG/issues/21) |
+| v2.8: pale jagged bands on some stone wall caps (cantonal road hairpins, road from Arosio), pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, one "keep right" sign standing twice near the Magliaso roundabout; the AI driver gets stuck at a few spots (Mugena, Vezio, Miglieglia, Pura). | — |
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
 
 ## Repository layout
@@ -211,27 +207,19 @@ Every file of the repository and what it is; the folders of screenshots and rend
 ├── viste/                                    # 16 perspective views per panorama (local only)
 ├── storici_2013_2014/                        # Panoramas of 2013/2014 (local only)
 ├── .github/                                  # GitHub configuration
-│   └── workflows/                            # GitHub Actions: release builds, test zips, website
-│       ├── catenary_test.yml                 # Test zip of the railway's overhead line (v2.8)
-│       ├── far_trees_test.yml                # Test zip of the far trees on the published v2.6 zip (v2.7)
-│       ├── houses_test.yml                   # Test zip of gutters, aerials and solar panels (v2.8)
-│       ├── lake_test.yml                     # Test zip of the lake piers and moored boats (v2.8)
-│       ├── lamps_test.yml                    # Test zips of village street lamps, lights off and on (v2.8)
+│   └── workflows/                            # GitHub Actions: release builds, the v2.8 test build, website
+│       ├── final_build_test.yml              # Final v2.8 build from scratch, checks, doubles and the zip (v2.8)
 │       ├── pages.yml                         # Publishes web/ on GitHub Pages when web/ changes on main
-│       ├── paved_edges_test.yml              # Paved edges test zip, level and drive checks vs v2.7 (v2.8)
 │       ├── release_v1.1.yml                  # Release build: the v1.0 zip fixed by patch_release.py (v1.1)
 │       ├── release_v2.0.yml                  # Release build from scratch: the whole 51 km² area (v2.0)
 │       ├── release_v2.1.yml                  # Release build from scratch: markings, AI, railway (v2.1)
 │       ├── release_v2.2.yml                  # Release build from scratch: façades, new roads (v2.2)
 │       ├── release_v2.3.yml                  # Release build from scratch: surface fix, fewer trees (v2.3)
-│       ├── release_v2.4.yml                  # Last release built from scratch: houses, OSM surfaces (v2.4)
+│       ├── release_v2.4.yml                  # Release build from scratch: houses, OSM surfaces (v2.4)
 │       ├── release_v2.7.yml                  # Release build: the v2.6 zip through four patches (v2.7)
-│       ├── release_v2.8.yml                  # Release build: the v2.7 zip through nine patches (v2.8)
-│       ├── roadside_test.yml                 # Test zip of delineators and wooden pole lines (v2.8)
-│       ├── signs_more_test.yml               # Test zip of unmapped warning and parking signs (v2.8)
-│       ├── understory_test.yml               # Test zip of the undergrowth and darker forest floor (v2.8)
-│       ├── v28_build_test.yml                # Test build of the nine patches, checked against v2.7 (v2.8)
-│       └── wall_fill_test.yml                # Test zip of smooth shading, no grass behind walls (v2.8)
+│       ├── release_v2.8.yml                  # Release build from scratch, finishing steps inside (v2.8)
+│       ├── release_v2.8_tested.yml           # Release v2.8: publishes the final build test zip tested in the game
+│       └── v28_build_test.yml                # Test build from scratch, checks and the zip to test (v2.8)
 ├── beamng/                                   # The BeamNG.drive map
 │   ├── README.md                             # Pipeline guide: building, script order, notes by version
 │   ├── RELEASE_v*.md                         # Release notes, one per version (v2.0 … v2.8)
@@ -245,7 +233,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── bng.py                            # Level writers: .ter terrain, scene NDJSON, materials, DAE
 │   │   ├── bridge_report.py                  # Bridge review sheets: profile and three views per bridge
 │   │   ├── bridges.py                        # Bridge decks, parapets and piers on swissTLM3D bridge lines
-│   │   ├── build_level.py                    # Assembles the level: terrain, buildings, roads, props, trees
+│   │   ├── build_level.py                    # Assembles the level and runs its finishing steps (FINISH)
 │   │   ├── build_rasters.py                  # Resamples swisstopo DTM, DSM and orthophoto to map grids
 │   │   ├── buildings_mesh.py                 # Building meshes from swissBUILDINGS3D LOD2 in 256 m tiles
 │   │   ├── calib_camheight.py                # Street View camera height calibration (camera_height.json)
@@ -272,13 +260,13 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── final_screenshots.py              # Final in-game check views: signs, markings, tracks (v2.7)
 │   │   ├── geo.py                            # Raster helpers: LV95 tile mosaics and the local Grid class
 │   │   ├── groundcover.py                    # GroundCover grass and flowers (v2.6) and shrubs (v2.8)
-│   │   ├── guardrail_mesh.py                 # W-beam guardrail meshes with posts along the measured runs
+│   │   ├── guardrail_mesh.py                 # Guard rails from the game's Italy models along the runs (v2.8)
 │   │   ├── guardrails.py                     # Cantonal road guardrails from LiDAR, checked in panoramas
 │   │   ├── guardrails2.py                    # Cantonal road guardrails by multi-view panorama voting
 │   │   ├── houses_tour.py                    # House details check: sites, renders, game views (v2.8)
 │   │   ├── ingame_screenshots.py             # In-game camera tour for the README screenshots (v2.6)
 │   │   ├── lake_tour.py                      # Piers and boats check: sites, renders, game views (v2.8)
-│   │   ├── lamps.py                          # Cantonal road street lamps triangulated from panoramas
+│   │   ├── lamps.py                          # Street lamps: cantonal road (panoramas), villages (v2.8)
 │   │   ├── lamps_tour.py                     # Village street lamps check: sites, renders, views (v2.8)
 │   │   ├── landcover.py                      # Cadastral survey land cover: 0.5 m raster and local polygons
 │   │   ├── lidar_extract.py                  # Non-vegetation LiDAR points near the cantonal road and walls
@@ -304,25 +292,10 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── ortho10.py                        # Window reads of the 10 cm SWISSIMAGE cloud GeoTIFFs (v2.1)
 │   │   ├── osm.py                            # OpenStreetMap data of the area in local coordinates (v2.1)
 │   │   ├── osm_surface.py                    # Road and path surface categories from OSM tags (v2.4)
-│   │   ├── package.py                        # Zips the built level as a BeamNG mod into dist/
+│   │   ├── package.py                        # Zips the built level as a BeamNG mod into dist/, its digest
 │   │   ├── palms.py                          # Windmill palms in lakeside gardens, model drawn here (v2.4)
 │   │   ├── pano_strip.py                     # Straightened road strip coloured from Street View panoramas
-│   │   ├── patch_catenary.py                 # Patch: overhead line masts and wires of the railway (v2.8)
-│   │   ├── patch_far_trees.py                # Patch: far trees from trees.npz into a level zip (v2.7)
-│   │   ├── patch_groundcover.py              # Patch: replaces the GroundCover grass of a level zip (v2.6)
-│   │   ├── patch_house_details.py            # Patch: gutters, downpipes, aerials, dishes, PV panels (v2.8)
-│   │   ├── patch_lake.py                     # Patch: lake piers and boats moored at them, from OSM (v2.8)
-│   │   ├── patch_lamps.py                    # Patch: village street lamps and their lights (v2.8)
-│   │   ├── patch_markings.py                 # Patch: rebuilds the cleaned network road paint (v2.7)
-│   │   ├── patch_paved_edges.py              # Patch: terrain raised flush to paved surface edges (v2.8)
 │   │   ├── patch_release.py                  # Patch: the v1.1 road fixes into the v1.0 zip (v1.1)
-│   │   ├── patch_roadside.py                 # Patch: delineators and wooden pole lines (v2.8)
-│   │   ├── patch_signs.py                    # Patch: Swiss road signs of the whole network (v2.7)
-│   │   ├── patch_signs_more.py               # Patch: warning and parking signs not mapped in OSM (v2.8)
-│   │   ├── patch_understory.py               # Patch: undergrowth and a darker forest floor (v2.8)
-│   │   ├── patch_unpaved.py                  # Patch: terrain flush with dirt and gravel tracks (v2.7)
-│   │   ├── patch_v2_8.py                     # Runs the nine v2.8 patches in order on the v2.7 zip (v2.8)
-│   │   ├── patch_wall_fill.py                # Patch: ground behind walls shaded smooth, no grass (v2.8)
 │   │   ├── paved_tour.py                     # Sites and before/after views of the paved edges check (v2.8)
 │   │   ├── photo_votes.py                    # Multi-view label votes of segmented panoramas at 3D points
 │   │   ├── places.py                         # Villages from swissNAMES3D for the spawn points (v2.0)
@@ -396,7 +369,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── vineyards.py                      # Vine rows in the survey's vineyards (v2.4)
 │   │   ├── wall_caps.py                      # Wall tops near the road capped where photos see no wall
 │   │   ├── wall_fill_tour.py                 # Sites, renders and views of the wall backfill check (v2.8)
-│   │   ├── walls.py                          # Cadastral walls: meshes, terrain carving and backfill
+│   │   ├── walls.py                          # Cadastral walls: meshes, terrain carving beside them
 │   │   ├── water.py                          # Lake Lugano as water blocks that stop at its shore (v2.0)
 │   │   ├── zone_report.py                    # Zones, road checklist and discrepancy register (v2.1)
 │   │   └── bng_lua/                          # Game extensions for the in-game tours

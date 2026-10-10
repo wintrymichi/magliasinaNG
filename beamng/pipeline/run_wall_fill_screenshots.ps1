@@ -1,4 +1,4 @@
-# The in-game check of the ground behind the walls (patch_wall_fill.py, v2.8) on one level zip: installs it
+# The in-game check of the ground behind the walls (walls.wall_fill_step, v2.8) on one level zip: installs it
 # alone in <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the end), with
 # the wall shapes converted again (their cache in <user>/temp is moved aside and put back), runs the views of
 # wall_fill_tour.py with the magliaso_unpaved extension (its "view" entries: camera, target, field of view)

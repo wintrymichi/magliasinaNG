@@ -1,4 +1,4 @@
-"""The views of the check of patch_house_details.py (v2.8): gutters, downpipes, aerials, dishes, solar panels.
+"""The views of the check of buildings_mesh.house_details_step (v2.8): gutters, downpipes, aerials, dishes, solar panels.
     python houses_tour.py sites <zip after>                     -> verifica/v2.8/houses/sites.json
     python houses_tour.py render <level before> <level after>  -> verifica/v2.8/houses/render3d/
     python houses_tour.py views <zip> <tag>                    -> <user>/magliaso_unpaved_views.json
@@ -13,7 +13,7 @@ frame rate of every view.
 import json, os, sys, zipfile
 import numpy as np
 import optimize_level
-import patch_lamps as pl
+import lamps as pl
 import wall_fill_tour as wft
 from config import BEAMNG_USER, LEVEL_NAME
 
@@ -112,7 +112,7 @@ def render(before, after):
         ims = [Image.open(os.path.join(out, f"{t}_{s['name']}.jpg")) for t in ("before", "after")]
         w, h = ims[0].size
         im = Image.new("RGB", (2 * w + 8, h), "white")
-        for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_house_details.py"))):
+        for k, (a, label) in enumerate(zip(ims, ("v2.7", "buildings_mesh.house_details_step"))):
             im.paste(a, (k * (w + 8), 0))
             ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28, stroke_width=2,
                                     stroke_fill="black")

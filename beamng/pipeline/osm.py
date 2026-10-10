@@ -24,7 +24,7 @@ _cache = {}
 
 def source(path=PATH, pinned=PINNED):
     """The file to read: the download, else the extract kept in the repository; None without both. With
-    MAGLIASO_OSM_PINNED=1 (patch_v2_8.py) always the extract: a release patched on the PC is the one patched
+    MAGLIASO_OSM_PINNED=1 (build_level.py, the v2.8 workflows) always the extract: a level built on the PC is the one built
     on GitHub."""
     if os.environ.get("MAGLIASO_OSM_PINNED") == "1":
         return pinned if os.path.exists(pinned) else None

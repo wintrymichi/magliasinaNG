@@ -100,6 +100,7 @@ class Canvas:
         self.rough = np.full((self.H, self.W), 0.85, np.float32)
         self.alpha = np.zeros((self.H, self.W), np.float32)
         self.metal = np.zeros((self.H, self.W), np.float32)
+        self.lit = np.zeros((self.H, self.W), np.float32)      # v2.8: the glass a light behind it shows through
         ys = (self.H - 1 - np.arange(self.H) + 0.5) / PPM
         xs = (np.arange(self.W) + 0.5) / PPM
         self.X, self.Y = np.meshgrid(xs, ys)
@@ -107,7 +108,7 @@ class Canvas:
     def box(self, x0, y0, x1, y1):
         return (self.X >= x0) & (self.X < x1) & (self.Y >= y0) & (self.Y < y1)
 
-    def paint(self, m, color, height=None, rough=None, alpha=1.0, metal=None, add_height=None):
+    def paint(self, m, color, height=None, rough=None, alpha=1.0, metal=None, add_height=None, lit=0.0):
         c = np.asarray(color, np.float32)
         if c.ndim == 1:
             self.col[m] = c
@@ -122,6 +123,7 @@ class Canvas:
         if metal is not None:
             self.metal[m] = metal
         self.alpha[m] = alpha
+        self.lit[m] = lit
 
     # textures of materials over the whole canvas (sampled where painted)
     def wood(self, color, vertical=True, amp=0.10):
@@ -196,7 +198,7 @@ def casement(cv, x0, y0, x1, y1, frame_col, leaves=2, panes=2, curtain=0.0, bar=
         gx0, gx1 = lx0 + bar / 2, lx1 - bar / 2
         gy0, gy1 = y0 + bar, y1 - bar
         g = cv.box(gx0, gy0, gx1, gy1)
-        cv.paint(g, cv.glass(gx0, gy0, gx1, gy1, curtain), height=-0.02, rough=0.06)
+        cv.paint(g, cv.glass(gx0, gy0, gx1, gy1, curtain), height=-0.02, rough=0.06, lit=1.0)
         for p in range(1, panes):
             yp = gy0 + p * (gy1 - gy0) / panes
             cv.paint(cv.box(gx0, yp - muntin / 2, gx1, yp + muntin / 2), fr, height=0.0, rough=0.55)
@@ -319,7 +321,7 @@ def m_door(rng, color, kind="wood", frame="plaster", ww=1.05, wh=2.15):
     if kind == "modern":
         cv.paint(m, cv.painted(ALU, 0.02), height=0.01, rough=0.4, metal=0.5)
         gx0, gx1, gy0, gy1 = ox + 0.12, ox + ww - 0.12, y0 + 0.25, y0 + wh - 0.15
-        cv.paint(cv.box(gx0, gy0, gx1, gy1), cv.glass(gx0, gy0, gx1, gy1, 0.0), height=-0.01, rough=0.06)
+        cv.paint(cv.box(gx0, gy0, gx1, gy1), cv.glass(gx0, gy0, gx1, gy1, 0.0), height=-0.01, rough=0.06, lit=0.7)
         cv.paint(cv.box(ox + ww - 0.2, y0 + 0.8, ox + ww - 0.17, y0 + 1.4), np.array([0.75, 0.75, 0.76]),
                  height=0.03, rough=0.3, metal=0.9)
         return cv
@@ -382,7 +384,7 @@ def m_shop(rng, fascia=(0.30, 0.32, 0.33), ww=3.0, wh=2.6):
         # something of the shop behind the glass: shelves and light
         shelves = 0.85 + 0.15 * (((cv.Y - y0) / 0.45) % 1.0 > 0.9)
         glass = glass * shelves[..., None]
-        cv.paint(g, glass, height=-0.02, rough=0.06)
+        cv.paint(g, glass, height=-0.02, rough=0.06, lit=1.0)
     cv.paint(cv.box(door_x + 0.12, 1.0, door_x + 0.15, 1.6), np.array([0.75, 0.75, 0.76]), height=0.03, rough=0.3,
              metal=0.9)
     return cv
@@ -397,7 +399,7 @@ def m_ribbon(rng, ww=3.0, wh=1.2, frame_col=(0.55, 0.57, 0.58)):
         a, b = 0.05 + k * ww / 3, (k + 1) * ww / 3 - 0.02
         for (y0, y1) in ((0.08, 0.08 + 0.35), (0.08 + 0.39, wh + 0.03)):
             g = cv.box(a, y0, b, y1)
-            cv.paint(g, cv.glass(a, y0, b, y1, 0.0) * 1.25, height=-0.015, rough=0.05)
+            cv.paint(g, cv.glass(a, y0, b, y1, 0.0) * 1.25, height=-0.015, rough=0.05, lit=1.0)
     return cv
 
 
@@ -555,6 +557,21 @@ def pack(mods, size=ATLAS, pad=4):
     return rects
 
 
+WINDOW_LIGHT = (1.0, 0.80, 0.55)   # sRGB, the warm light of a room seen through its window (v2.8)
+EMISSIVE_DOWN = 4                  # the emissive atlas at a quarter of the size: the glow of a pane, no detail
+
+
+def emissive(glow):
+    """The emissive map of the openings (v2.8): the glass of the windows, shop windows and glazed doors in the
+    warm light of a room, brighter towards the middle of every pane, black elsewhere. The game shows it only on
+    the lit windows (bld_openings_lit) and only at night (buildings_mesh.NIGHT)."""
+    g = gaussian_filter(glow, 2.0)
+    h, w = glow.shape
+    im = Image.fromarray(to8(g)).resize((w // EMISSIVE_DOWN, h // EMISSIVE_DOWN), Image.BILINEAR)
+    g = np.asarray(im, np.float32) / 255.0
+    return to8(g[..., None] * np.asarray(WINDOW_LIGHT, np.float32)[None, None])
+
+
 def openings_atlas(dst):
     rng = np.random.default_rng(SEED)
     mods = modules(rng)
@@ -565,16 +582,18 @@ def openings_atlas(dst):
     hgt = np.zeros((AH, AW), np.float32)
     rough = np.full((AH, AW), 0.85, np.float32)
     alpha = np.zeros((AH, AW), np.float32)
+    glow = np.zeros((AH, AW), np.float32)
     index = {}
     for k, (x, y, w, h) in rects.items():
         cv = mods[k]
+        glow[y:y + h, x:x + w] = cv.lit
         col[y:y + h, x:x + w] = cv.col
         hgt[y:y + h, x:x + w] = cv.hgt
         rough[y:y + h, x:x + w] = cv.rough
         alpha[y:y + h, x:x + w] = cv.alpha
         # uv rectangle (texture coordinates: t up the image) and the size in metres
         index[k] = {"uv": [x / AW, 1 - (y + h) / AH, (x + w) / AW, 1 - y / AH], "w": round(cv.w, 4),
-                    "h": round(cv.h, 4)}
+                    "h": round(cv.h, 4), "glow": round(float((cv.lit > 0).mean()), 4)}
     # colour bleeds a little outside the opaque pixels (mip maps of the cut-out stay clean)
     a = alpha > 0.5
     if (~a).any():
@@ -586,6 +605,7 @@ def openings_atlas(dst):
     save(os.path.join(dst, "t_bld_openings_nm.normal.png"), normal_map(hgt * PPM, 1.2, wrap=False))
     save(os.path.join(dst, "t_bld_openings_r.data.png"), to8(rough))
     save(os.path.join(dst, "t_bld_openings_ao.data.png"), ao)
+    save(os.path.join(dst, "t_bld_openings_e.color.png"), emissive(glow))
     json.dump({"ppm": PPM, "size": list(ATLAS), "modules": index}, open(os.path.join(dst, "bld_openings.json"), "w"), indent=1)
     return index
 

@@ -409,12 +409,28 @@ def top_profile(F, us):
     return out
 
 
+# v2.8: the share of the windows with the light on at night, by kind of opening (the others stay dark)
+LIT_SHARE = (("shop", 0.7), ("ribbon", 0.25), ("bal_", 0.45), ("french_", 0.45), ("door_", 0.3), ("", 0.35))
+
+
+def lit_window(name, m, p):
+    """Whether the opening `name` (atlas entry m) at the point p has the light on at night: only openings with
+    glass that shows (not closed shutters, boards or a roller shutter let down), a share of them by kind, chosen
+    by the position (the same windows at every build)."""
+    if m.get("glow", 0.0) < 0.02:
+        return False
+    share = next(s for k, s in LIT_SHARE if name.startswith(k))
+    h = (int(np.floor(p[0] * 4)) * 73856093) ^ (int(np.floor(p[1] * 4)) * 19349663) ^ (int(np.floor(p[2] * 4)) * 83492791)
+    return (h & 0xFFFF) / 65536.0 < share
+
+
 class Emitter:
     """Collects the quads of the openings and of the plinth bands."""
 
     def __init__(self, index):
         self.index = index
         self.V, self.UV = [], []                # openings: triangles (k, 3, 3), uvs (k, 3, 2)
+        self.LV, self.LUV = [], []              # v2.8: the openings with the light on at night
         self.PV, self.PUV, self.PC = [], [], []  # plinth
         self.BV, self.BC = [], []                # balcony slabs (k, 2, 3, 3), colour of each
 
@@ -429,8 +445,12 @@ class Emitter:
     def opening(self, name, o, a, n, uc, zb):
         m = self.index[name]
         V, T = self.quad(o, a, n, uc - m["w"] / 2, uc + m["w"] / 2, zb, zb + m["h"], m["uv"], OFFSET)
-        self.V.append(V)
-        self.UV.append(T)
+        if lit_window(name, m, o + uc * a + np.array([0.0, 0.0, zb])):
+            self.LV.append(V)
+            self.LUV.append(T)
+        else:
+            self.V.append(V)
+            self.UV.append(T)
 
     def balcony(self, o, a, n, u0, u1, zf, depth, rail, color):
         """A balcony on the facade plane (o, a along it, n out): a slab with its top at zf, depth m out from

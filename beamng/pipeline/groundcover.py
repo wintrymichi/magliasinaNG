@@ -17,6 +17,7 @@ would stand through the road meshes).
 """
 import os
 import bng
+import json, os, re, sys, zipfile
 
 F = "/assets/materials/foliage"
 # material -> (colour, the other maps' texture set, alphaRef)
@@ -72,7 +73,7 @@ COVERS = {
 }
 
 
-# v2.8 (patch_understory.py): the undergrowth of the woods, low shrubs of the game's own models (the bushes the
+# v2.8 (understory.understory_step): the undergrowth of the woods, low shrubs of the game's own models (the bushes the
 # level already uses, verified in the game) on the forest floor layers, only around the camera: a GroundCover
 # places them as it goes, without collision, nothing stored per shrub, culled beyond the radius.
 # (model, probability, scale min, max): about 0.6-1.5 m tall
@@ -138,3 +139,43 @@ def build(level_dir, level_name, scene, group="MissionGroup/level_objects/vegeta
         scene.add(group, o)
     return {"covers": len(COVERS), "max_elements": sum(c[4] for c in COVERS.values()),
             "radius_m": max(c[1] for c in COVERS.values()), "triangles_per_clump": 2}
+
+
+# --------------------------------------------------------------------------------------------------
+# Put the grass of groundcover.py into the built level (v2.6), a finishing step of build_level.py.
+#
+# The GroundCover objects of the vegetation group are replaced with groundcover.objects(), the
+# materials of art/shapes/groundcover with groundcover.materials(); the textures drawn by the
+# v2.4-v2.5 pipeline (gc_atlas_*) are left out, and the level's README.md is the pipeline's
+# README_livello.md. Everything else is copied as it is (same entries,
+# same dates: the game keeps its converted shapes).
+#
+# A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish grass
+# --------------------------------------------------------------------------------------------------
+
+LEVEL_README = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README_livello.md")
+
+
+def grass_step(root):
+    """The grass of groundcover.py in the built level (root: the folder that holds levels/<name>/)."""
+    zi = bng.LevelFiles(root)
+    with zi.writer() as zo:
+        for i in zi.infolist():
+            n = i.filename
+            if "/art/shapes/groundcover/gc_atlas" in n:
+                continue
+            data = zi.read(i)
+            if re.fullmatch(r"levels/[^/]+/README\.md", n):
+                data = open(LEVEL_README, "rb").read()
+            elif n.endswith("/art/shapes/groundcover/main.materials.json"):
+                data = json.dumps({m["name"]: m for m in materials()}, indent=1).encode("utf-8")
+            elif n.endswith("level_objects/vegetation/items.level.json"):
+                objs = [json.loads(l) for l in data.decode("utf-8").splitlines() if l.strip()]
+                parent = next((o["__parent"] for o in objs if o.get("class") == "GroundCover"), "vegetation")
+                objs = [o for o in objs if o.get("class") != "GroundCover"]
+                for o in objects():
+                    o["__parent"] = parent
+                    objs.append(o)
+                data = ("\n".join(json.dumps(o, separators=(",", ":")) for o in objs) + "\n").encode("utf-8")
+            zo.writestr(i, data, compress_type=i.compress_type)
+    print("groundcover: GroundCover objects and materials written")

@@ -1,11 +1,16 @@
-"""Procedural W-beam guardrails along the measured polylines (work/guardrails_final.json).
+"""Guardrails along the measured polylines (work/guardrails_final.json) and the ones seen in the panoramas.
 
-Cross-section of the rail (A-profile, 0.31 m high, 0.08 m deep) swept along the path
-with its face towards the carriageway, top at the measured height; C-posts every 2 m
-behind the rail, 0.3 m into the ground. Galvanised-steel material. Collision on.
-The foot of the rail is re-based on the road surface of roadheight.py as guardrails2.py
-does: the ground, but never lower than the road edge next to it minus 0.1 m (rails on
-valley-side walls and on the bridge stand at road level).
+v2.8: the rails are the guard rail modules of the game's own Italy level (italy_guardrails_basic: a 3 m W-beam
+on its posts, with its collision mesh), as Italy places them: forest items every MODULE_STEP m along the line,
+the beam towards the carriageway, pitched with the road, an end piece flared away from the road at both ends of
+a run (italy_guardrails_basic_end_cw before the first module, _end_ccw after the last). The models are referred
+to in /levels/italy/, not copied; the definitions of their materials that only Italy has are copied into the
+level (dati/italy_guardrail_materials.json). Up to v2.7 the rails were drawn here (the A-profile swept along the
+line, C-posts every 2 m) with the visible mesh as collision: a car caught on the thin beam and its posts.
+rail() still draws the rails of the fences (fences.py).
+The foot of the rail is re-based on the road surface of roadheight.py as guardrails2.py does: the ground, but
+never lower than the road edge next to it minus 0.1 m (rails on valley-side walls and on the bridge stand at
+road level).
 """
 import json, os
 import numpy as np
@@ -93,7 +98,8 @@ SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def sv_runs(existing):
     """Guard rails of the rest of the network seen in the Street View panoramas (sv_guardrails.py, v2.2):
     [{pts: [[x, y, z of the road edge, top height]], side}], without the ones along the rails of the
-    original route (existing runs, within 1.5 m)."""
+    original route (existing runs, within 1.5 m): a run is cut there into the pieces before and after (up to
+    v2.8 the points left were joined, and the rail went on across the stretch along the existing one)."""
     if not os.path.exists(SV_RUNS):
         return []
     import shapely
@@ -104,13 +110,86 @@ def sv_runs(existing):
         P = np.array(r["pts"], float)
         if len(P) < 2:
             continue
-        if old is not None:
-            keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1])
-            if keep.sum() < 3:
-                continue
-            P = P[keep]
-        out.append({"pts": P, "side": r["side"], "seg": r.get("seg", -1)})
+        keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1]) if old is not None else np.ones(len(P), bool)
+        for piece in pieces(keep):
+            if len(piece) >= 3:
+                out.append({"pts": P[piece], "side": r["side"], "seg": r.get("seg", -1), "votes": r.get("votes", 0)})
     return out
+
+
+def pieces(keep):
+    """The runs of consecutive True of a mask, as index arrays."""
+    idx = np.flatnonzero(keep)
+    return np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1) if len(idx) else []
+
+
+DOUBLE = 1.0             # m: a rail this close to one already laid, and running along it, is the same rail
+STEP_DOUBLE = 0.5        # m between the points tested
+
+
+def length(P):
+    return float(np.linalg.norm(np.diff(np.asarray(P)[:, :2], axis=0), axis=1).sum()) if len(P) > 1 else 0.0
+
+
+def drop_doubles(runs, laid=()):
+    """The runs (in the order of trust: the first kept whole) without the stretches that lie along a rail
+    already laid (laid: (k, 2, 2) segments, e.g. the modules in the level) or along a run kept before them:
+    every point within DOUBLE m of such a rail, its direction within 35 degrees, goes and the run is cut there;
+    pieces shorter than MIN_PIECE m are dropped. Two sources (the measured rails of the cantonal road, the
+    panoramas of the rest of the network, the rails on the walls of fences.py) saw some rails twice, and the
+    game had two rows of modules on one line. Returns (runs, metres dropped)."""
+    import shapely
+    lines = [shapely.LineString(np.asarray(s, np.float64)) for s in laid]
+    tree = shapely.STRtree(lines) if lines else None
+    out, dropped = [], 0.0
+    for r in runs:
+        P = np.asarray(r["pts"], np.float64)
+        if len(P) < 2:
+            continue
+        d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P[:, :2], axis=0), axis=1))]
+        st = np.unique(np.r_[np.arange(0, d[-1], STEP_DOUBLE), d[-1]])
+        P = np.column_stack([np.interp(st, d, P[:, k]) for k in range(P.shape[1])])
+        if len(P) < 2:
+            continue
+        keep = np.ones(len(P), bool)
+        if tree is not None:
+            T = np.gradient(P[:, :2], axis=0)
+            T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+            pts = shapely.points(P[:, :2])
+            ii, jj = tree.query(pts, predicate="dwithin", distance=DOUBLE)
+            for i, j in zip(ii, jj):
+                if not keep[i]:
+                    continue
+                g = lines[j]
+                s = g.project(pts[i])
+                a, b = g.interpolate(max(s - 0.5, 0.0)), g.interpolate(min(s + 0.5, g.length))
+                dv = np.array([b.x - a.x, b.y - a.y])
+                if abs(float(dv @ T[i])) > 0.82 * max(np.linalg.norm(dv), 1e-9):
+                    keep[i] = False
+        dropped += length(P) - sum(length(P[q]) for q in pieces(keep))
+        new = []
+        for q in pieces(keep):
+            Q = P[q]
+            if len(Q) >= 2 and length(Q) >= MIN_PIECE:
+                new.append({**r, "pts": Q})
+            else:
+                dropped += length(Q)
+        out += new
+        if new:
+            # the runs kept so far are rails laid for the ones after them
+            lines += [shapely.LineString(n_["pts"][:, :2]) for n_ in new]
+            tree = shapely.STRtree(lines)
+    return out, dropped
+
+
+def module_segments(src):
+    """(k, 2, 2) the beam of every module of a level (folder or zip), end to end."""
+    P, R, T = read_modules(src)
+    keep = [t == MODULE for t in T]
+    if not any(keep):
+        return np.zeros((0, 2, 2))
+    P, R = P[keep], R[keep]
+    return np.stack([P[:, :2] - 1.5 * R[:, 0, :2], P[:, :2] + 1.5 * R[:, 0, :2]], 1)
 
 
 def open_crossings(runs, gap=GAP_CROSS):
@@ -187,24 +266,177 @@ def to_edge(P, side, road_fn, ground):
     return np.column_stack([Q, g])
 
 
+ITALY = "/levels/italy/art/shapes/buildings/"
+MODULE = "italy_guardrails_basic"           # 3 m along local x (-1.5..1.5), the beam on local -y, origin on the ground
+END_START, END_END = "italy_guardrails_basic_end_cw", "italy_guardrails_basic_end_ccw"
+MODULE_LEN, MODULE_STEP = 3.0, 2.8          # m: Italy lays them 2.8 m apart (0.2 m overlap)
+FACE_OUT = 0.02                              # m, the origin this far towards the road from the back of the old rail
+MIN_RUN = 1.0                                # m, shorter pieces get no rail
+MIN_STEP = 2.0                               # m, the least step of two modules (1 m over each other)
+BOX = (-1.5, 1.5, -0.07, 0.15, 0.0, 0.9)     # m, the beam and its posts over the ground, local x, y, z (module_faces)
+ITALY_MATERIALS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati",
+                               "italy_guardrail_materials.json")
+
+
+def modules(P, side):
+    """The Italy modules along a rail: P (n, >= 3) x, y and foot z of the back of the rail, side as rail().
+    Returns [(type, position (3,), rotationMatrix (9,))]: the modules every MODULE_STEP m (the last one ending
+    at the end of the line), pitched along the chord they span, then the two end pieces, level."""
+    P = np.asarray(P, np.float64)[:, :3]
+    if side < 0:
+        # road to the left of travel: the same rail walked the other way (road to the right). With the line as
+        # given, X along it and Y away from the road would make Z = X x Y point down: the module upside down,
+        # its beam under the ground and only the buried part of the posts standing out of it
+        P, side = P[::-1], 1
+    d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P[:, :2], axis=0), axis=1))]
+    L = d[-1]
+    if L < MIN_RUN:
+        return []
+    at = lambda t: np.array([np.interp(t, d, P[:, k]) for k in range(3)])
+    if L <= MODULE_LEN:
+        spans = [(0.5 * L - 0.5 * MODULE_LEN, 0.5 * L + 0.5 * MODULE_LEN)]
+    else:
+        # the modules evenly along the line, at most MODULE_STEP apart; where that would lay two of them more
+        # than 1 m over each other (up to v2.8 the last one went back to end at the end of the line, over the
+        # one before it: a double beam), one fewer at MODULE_STEP, centred (the line a little longer than them)
+        n = int(np.ceil((L - MODULE_LEN) / MODULE_STEP - 1e-9)) + 1
+        step = (L - MODULE_LEN) / (n - 1)
+        if step < MIN_STEP:
+            n -= 1
+            step = MODULE_STEP
+        a0 = 0.5 * (L - (MODULE_LEN + step * (n - 1)))
+        spans = [(a0 + k * step, a0 + k * step + MODULE_LEN) for k in range(n)]
+
+    def frame(p0, p1, level=False):
+        X = p1 - p0
+        if level:
+            X[2] = 0.0
+        X /= max(np.linalg.norm(X), 1e-9)
+        Y = side * np.array([-X[1], X[0], 0.0])               # away from the road, horizontal
+        Y /= max(np.linalg.norm(Y), 1e-9)
+        Z = np.cross(X, Y)
+        return X, Y, Z
+    out = []
+    for t0, t1 in spans:
+        p0, p1 = at(np.clip(t0, 0, L)), at(np.clip(t1, 0, L))
+        if t1 - t0 > (np.clip(t1, 0, L) - np.clip(t0, 0, L)) + 1e-6:     # a short run: the chord of the line
+            m, X = 0.5 * (p0 + p1), None
+            X, Y, Z = frame(at(0.0), at(L))
+            c = m
+        else:
+            X, Y, Z = frame(p0, p1)
+            c = 0.5 * (p0 + p1)
+        c = c - FACE_OUT * Y
+        out.append((MODULE, c, np.r_[X, Y, Z]))
+    for name, t, t_in in ((END_START, spans[0][0], spans[0][0] + MODULE_LEN),
+                          (END_END, spans[-1][1], spans[-1][1] - MODULE_LEN)):
+        tc = float(np.clip(t, 0, L))
+        X, Y, Z = frame(at(float(np.clip(min(t, t_in), 0, L))), at(float(np.clip(max(t, t_in), 0, L))), level=True)
+        p = at(tc)
+        if t < 0 or t > L:                                   # the module overhangs the line (a short run)
+            p = p + X * (t - tc)
+        out.append((name, p - FACE_OUT * Y, np.r_[X, Y, Z]))
+    return out
+
+
+def write_forest(level_dir, items, append=False):
+    """The guard rail modules as forest items (forest/<type>.forest4.json, art/forest/managedItemData.json: the
+    other types of the level are kept); append: after the modules already written (the rails of fences.py)."""
+    fdir = os.path.join(level_dir, "forest")
+    os.makedirs(fdir, exist_ok=True)
+    md = os.path.join(level_dir, "art", "forest", "managedItemData.json")
+    managed = json.load(open(md)) if os.path.exists(md) else {}
+    by_type = {}
+    for t, p, R in items:
+        if R[8] <= 0:
+            raise ValueError(f"guard rail module {t} at {np.round(p, 1)} upside down (local z {np.round(R[6:], 3)})")
+        by_type.setdefault(t, []).append((p, R))
+    for t, lst in by_type.items():
+        managed[t] = {"name": t, "internalName": t, "class": "TSForestItemData", "persistentId": bng.pid(),
+                      "annotation": "GUARD_RAIL", "radius": 0.9, "shapeFile": f"{ITALY}{t}.dae"}
+        with open(os.path.join(fdir, f"{t}.forest4.json"), "a" if append else "w") as f:
+            for p, R in lst:
+                f.write(json.dumps({"ctxid": 1, "pos": [round(float(v), 3) for v in p],
+                                    "rotationMatrix": [round(float(v), 6) for v in R], "scale": 1, "type": t},
+                                   separators=(",", ":")) + "\n")
+    os.makedirs(os.path.dirname(md), exist_ok=True)
+    json.dump(managed, open(md, "w"), indent=1)
+    # the materials of the models that only Italy defines (their textures are in the game's Italy level)
+    mats = json.load(open(ITALY_MATERIALS))
+    bng.write_materials(os.path.join(level_dir, "art", "shapes", "guardrails", "italy.materials.json"),
+                        list(mats.values()))
+    return {t: len(v) for t, v in by_type.items()}
+
+
+def is_module(name):
+    """A forest type (or file name) of the guard rail modules."""
+    return os.path.basename(name).startswith("italy_guardrails")
+
+
+def read_modules(src):
+    """The guard rail modules of a level: (positions (k, 3), rotation matrices (k, 3, 3), types). src: a
+    bng.LevelFiles, a zipfile.ZipFile of the mod or a level folder (levels/<name>)."""
+    rows = []
+    if isinstance(src, str):
+        files = [(f, open(os.path.join(src, "forest", f)).read()) for f in sorted(os.listdir(os.path.join(src, "forest")))
+                 if is_module(f) and f.endswith(".forest4.json")] if os.path.isdir(os.path.join(src, "forest")) else []
+    else:
+        files = [(n, src.read(n).decode("utf-8")) for n in src.namelist()
+                 if "/forest/" in n and is_module(n) and n.endswith(".forest4.json")]
+    for _, text in files:
+        for l in text.splitlines():
+            if l.strip():
+                o = json.loads(l)
+                rows.append((o["pos"], o["rotationMatrix"], o["type"]))
+    if not rows:
+        return np.zeros((0, 3)), np.zeros((0, 3, 3)), []
+    return (np.array([r[0] for r in rows], np.float64), np.array([r[1] for r in rows], np.float64).reshape(-1, 3, 3),
+            [r[2] for r in rows])
+
+
+def module_faces(src):
+    """Triangles (k, 3, 3) of a box around the beam and posts of every module (BOX; the end pieces: their 0.5 m),
+    for what keeps clear of a guard rail (trunks, lamps, posts, the raised ground beside the roads)."""
+    P, R, T = read_modules(src)
+    if not len(P):
+        return np.zeros((0, 3, 3))
+    x0, x1, y0, y1, z0, z1 = BOX
+    C = np.array([[x, y, z] for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)])     # 8 corners, index 4x+2y+z
+    Q = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
+    tri = np.array([[q[0], q[1], q[2]] for q in Q] + [[q[0], q[2], q[3]] for q in Q])
+    out = []
+    for p, r, t in zip(P, R, T):
+        c = C.copy()
+        if t != MODULE:                                    # the end pieces: half a metre
+            c[:, 0] *= 0.5 / 3.0
+            c[:, 0] += -0.18 if t == END_START else 0.18
+        W = p + c @ r                                     # rows of r: the local axes in the world
+        out.append(W[tri])
+    return np.concatenate(out)
+
+
+def module_points(src, step=0.25):
+    """xy every `step` m along the beam of every module (what a lamp or a post keeps clear of)."""
+    P, R, T = read_modules(src)
+    if not len(P):
+        return np.zeros((0, 2))
+    u = np.arange(-1.5, 1.5 + 1e-6, step)
+    return np.concatenate([p[None, :2] + u[:, None] * r[0, :2] for p, r in zip(P, R)])
+
+
 def build(level_dir, level_name, scene, road_fn=None):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
     foot = foot_fn()
-    # galvanised steel looks light grey under the overcast sky of the photos; a high metallic
-    # factor made the rails mirror the (blue) sky cubemap and read dark from a distance
-    mats = [bng.material("mp_guardrail", base_color=[0.80, 0.81, 0.82, 1], roughness=0.55, metallic=0.25,
-                         double_sided=True, ground_type="METAL"),
-            bng.material("mp_guardrail_post", base_color=[0.72, 0.73, 0.74, 1], roughness=0.6, metallic=0.25,
-                         ground_type="METAL")]
-    bng.write_materials(os.path.join(level_dir, "art", "shapes", "guardrails", "main.materials.json"), mats)
-    CH = 128.0
-    builders = {}
+    items = []
+    measured = []
     for r in runs:
         P = np.array(r["pts"])
         P[:, 2] = foot(P[:, 0], P[:, 1])
-        c = P[len(P) // 2, :2]
-        key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
-        rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
+        measured.append({**r, "pts": P})
+    # the rails of the cantonal road, measured: a stretch measured twice is laid once
+    measured, gone = drop_doubles(measured)
+    for r in measured:
+        items += modules(r["pts"], r["side"])
     # the rest of the network: the rails seen in the panoramas, on the edge of the road as built
     extra = sv_runs(runs)
     if road_fn is not None and extra:
@@ -213,18 +445,16 @@ def build(level_dir, level_name, scene, road_fn=None):
         for r in extra:
             r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
     extra = open_crossings(extra)
+    # where a panorama run lies along a rail laid already (on the edge of the road as built, two runs can
+    # come onto one line): only the first; the runs with more votes first
+    extra.sort(key=lambda r: -np.ravel(r.get("votes", 0))[0])
+    extra, gone2 = drop_doubles(extra, [r["pts"][:, :2] for r in measured])
+    print(f"guard rails laid twice, left out: {gone + gone2:.0f} m")
     for r in extra:
-        P = r["pts"]
-        c = P[len(P) // 2, :2]
-        key = (int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH)))
-        rail(builders.setdefault(key, bng.MeshBuilder()), P, r["side"])
+        items += modules(r["pts"], r["side"])
     if extra:
         print("guard rails seen in the panoramas:", len(extra), "runs,",
               round(sum(np.linalg.norm(np.diff(r["pts"][:, :2], axis=0), axis=1).sum() for r in extra) / 1000, 2), "km")
-    for (tx, ty), mb in sorted(builders.items()):
-        rel = f"art/shapes/guardrails/gr_{tx:+03d}_{ty:+03d}.dae"
-        origin = np.array([(tx + 0.5) * CH, (ty + 0.5) * CH, 0.0])
-        mb.write_dae(os.path.join(level_dir, rel), name="guardrail", origin=origin, orient=True)
-        scene.add("MissionGroup/roads/guardrails", bng.tsstatic(f"/levels/{level_name}/{rel}", origin,
-                                                                 collision=True, decal=False))
-    print("guardrails", len(runs), "runs in", len(builders), "chunks")
+    counts = write_forest(level_dir, items)
+    print("guardrails", len(runs) + len(extra), "runs:", counts)
+    return counts

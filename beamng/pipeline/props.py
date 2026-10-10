@@ -26,6 +26,16 @@ LAMP_BRIGHTNESS = 1.2
 LAMP_LUMEN = 6000.0         # a street light of a village road
 
 
+def lamp_light(x, y, z):
+    """The PointLight of a street lamp at (x, y, z): warm, without shadows (cheap). v2.8: nightLight, as the game's
+    own levels have it (core_environment switches every light with it on at dusk and off at dawn), so by day the
+    lamps cost nothing."""
+    return {"class": "PointLight", "persistentId": bng.pid(), "position": [float(x), float(y), float(z)],
+            "radius": LAMP_RADIUS, "intensity": LAMP_LUMEN, "intensityUnit": "lm",
+            "brightness": LAMP_BRIGHTNESS,        # the older field, as a fallback
+            "color": [1.0, 0.82, 0.58, 1.0], "castShadows": False, "isEnabled": False, "nightLight": "1"}
+
+
 def tube(c, z0, z1, r=0.045, n=10):
     a = np.linspace(0, 2 * np.pi, n + 1)
     ring = np.column_stack([np.cos(a), np.sin(a)]) * r + c
@@ -101,13 +111,8 @@ def build(level_dir, level_name, scene, hfn):
                                                           rot=bng.rot_local_x_to(theta), scale=(1, 1, hs),
                                                           collision=True))
             counts["street_light"] += 1
-            # v2.4: the light of the lamp, under its head: warm, no shadows (cheap); seen at night
-            scene.add(g + "/street_lights", {"class": "PointLight", "persistentId": bng.pid(),
-                                              "position": [float(hx), float(hy), float(hz) - 0.35],
-                                              "radius": LAMP_RADIUS, "intensity": LAMP_LUMEN, "intensityUnit": "lm",
-                                              "brightness": LAMP_BRIGHTNESS,        # the older field, as a fallback
-                                              "color": [1.0, 0.82, 0.58, 1.0], "castShadows": False,
-                                              "isEnabled": True})
+            # v2.4: the light of the lamp, under its head: warm, no shadows (cheap); v2.8: on at night only
+            scene.add(g + "/street_lights", lamp_light(hx, hy, hz - 0.35))
             counts["lamp_light"] = counts.get("lamp_light", 0) + 1
     # gather raw sign observations again to rebuild plate crops (poles.py kept the best per plate)
     for j, p in enumerate(poles):

@@ -1,4 +1,4 @@
-"""The places and views of the check of patch_paved_edges.py (v2.8): paved edges flush with the ground.
+"""The places and views of the check of network_mesh.paved_edges_step (v2.8): paved edges flush with the ground.
     python paved_tour.py sites <zip before>                    -> verifica/v2.8/paved_edges/sites.json
     python paved_tour.py render <level before> <level after>  -> verifica/v2.8/paved_edges/render3d/
     python paved_tour.py views <zip> <tag>                    -> <user>/magliaso_unpaved_views.json
@@ -18,10 +18,10 @@ on the outlines of what marks the edge (in a 3D view the walls and the backfill 
 """
 import json, os, sys, zipfile
 import numpy as np
-import patch_lamps as pl
-import patch_paved_edges as pp
-import patch_unpaved as pu
-import patch_wall_fill as pw
+import lamps as pl
+import network_mesh as pp
+import network_mesh as pu
+import walls as pw
 import road_mesh
 import unpaved_tour
 from config import BEAMNG_USER, LEVEL_NAME
@@ -153,7 +153,7 @@ def keep_map(z27, zfirst, znow):
                pu.TER_Y0 + (r0 - h) * pu.TER_SQUARE, pu.TER_Y0 + (r0 + h) * pu.TER_SQUARE)
         m = (outl[:, 0] > ext[0]) & (outl[:, 0] < ext[1]) & (outl[:, 1] > ext[2]) & (outl[:, 1] < ext[3])
         fig, ax = plt.subplots(1, 2, figsize=(11, 5.2))
-        for k, (a, title) in enumerate(zip(ax, ("first version", "patch_paved_edges.py"))):
+        for k, (a, title) in enumerate(zip(ax, ("first version", "network_mesh.paved_edges_step"))):
             d = (q[k + 1] - q[0])[r0 - h:r0 + h + 1, c0 - h:c0 + h + 1] / 65535.0 * maxh
             im = a.imshow(np.ma.masked_less(d, 0.01), origin="lower", extent=ext, cmap="viridis", vmin=0, vmax=0.8)
             a.plot(outl[m, 0], outl[m, 1], ",", color="red")
@@ -184,7 +184,7 @@ def render(before, after):
             ims = [Image.open(os.path.join(out, f"{t}_{s['name']}_{v['view']}.jpg")) for t in ("before", "after")]
             w, h = ims[0].size
             im = Image.new("RGB", (2 * w + 8, h), "white")
-            for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_paved_edges.py"))):
+            for k, (a, label) in enumerate(zip(ims, ("v2.7", "network_mesh.paved_edges_step"))):
                 im.paste(a, (k * (w + 8), 0))
                 ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28, stroke_width=2,
                                         stroke_fill="black")

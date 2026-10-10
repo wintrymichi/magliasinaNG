@@ -1,4 +1,4 @@
-# The in-game check of the warning and parking signs nobody mapped (patch_signs_more.py, v2.8) on one level zip:
+# The in-game check of the warning and parking signs nobody mapped (signs_more.signs_more_step, v2.8) on one level zip:
 # installs it alone in <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the end),
 # runs the views of signs_more_tour.py with the magliaso_unpaved extension (with the frame rate of every view),
 # converts the shots to beamng/verifica/v2.8/signs/game/<tag>_<kind>.jpg and writes the frame rates, the load time

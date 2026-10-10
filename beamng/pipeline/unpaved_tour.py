@@ -1,4 +1,4 @@
-"""The camera tour and the drives of the in-game check of the unpaved tracks (patch_unpaved.py, v2.7;
+"""The camera tour and the drives of the in-game check of the unpaved tracks (network_mesh.unpaved_step, v2.7;
 run_unpaved_screenshots.ps1, bng_lua/magliaso_unpaved.lua).
     python unpaved_tour.py sites <zip before the patch>         -> verifica/v2.7/unpaved/sites.json
     python unpaved_tour.py views <zip> <tag>                     -> <user>/magliaso_unpaved_views.json
@@ -11,7 +11,7 @@ at 35 degrees; heights from the zip itself (track or terrain under the camera).
 """
 import json, math, os, sys, zipfile
 import numpy as np
-import patch_unpaved as pu
+import network_mesh as pu
 import road_mesh
 from config import BEAMNG_USER, LEVEL_NAME
 

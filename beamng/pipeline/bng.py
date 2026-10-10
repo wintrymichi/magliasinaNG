@@ -446,3 +446,122 @@ def flat_normals_soup(V):
     n = np.linalg.norm(fn, axis=1, keepdims=True)
     n[n == 0] = 1
     return np.repeat(fn / n, 3, 0)
+
+
+def box_uvs_soup(V, tile):
+    """For triangle soups: texture coordinates (k*3, 2) projected along each face's main axis, `tile` m
+    per repeat: (x, y) on faces that look up or down, (y, z) or (x, z) on the others. The (x + y, z) of
+    the walls gives a face lying flat (the underside of a bridge deck, a parapet top) or one running
+    along x = -y a single texture row stretched into stripes."""
+    V = np.asarray(V, np.float64).reshape(-1, 3, 3)
+    fn = np.abs(np.cross(V[:, 1] - V[:, 0], V[:, 2] - V[:, 0]))
+    ax = np.argmax(fn, axis=1)                   # 0: faces x, 1: faces y, 2: faces z
+    u = np.where(ax == 0, V[:, :, 1].T, V[:, :, 0].T).T
+    v = np.where(ax == 2, V[:, :, 1].T, V[:, :, 2].T).T
+    return np.column_stack([u.reshape(-1), v.reshape(-1)]) / tile
+
+
+# ------------------------------------------------------------------ the built level, file by file
+class LevelInfo:
+    """One file of a built level, named as in the mod's zip (levels/<name>/...)."""
+
+    def __init__(self, filename, date_time=None, file_size=0):
+        self.filename = filename
+        self.date_time = date_time
+        self.file_size = file_size
+        self.compress_type = 0
+        self.external_attr = 0
+
+    def is_dir(self):
+        return False
+
+
+class LevelFiles:
+    """The level folder of the build (root: the folder that holds levels/<name>/) read and rewritten by
+    the steps that finish the level after build_level.py has written it (optimize_level, groundcover, the
+    road paint, the signs, the lamps...): read(name), namelist(), infolist(), NameToInfo as on the zip of
+    the mod, and writer(): every file the step keeps is written to it (writestr, as into a new zip); at
+    the end the files written with other contents are replaced, the new ones added and those not written
+    removed. A file written with the contents it had keeps its date (the game keeps its converted shape)."""
+
+    def __init__(self, root):
+        self.root = os.path.abspath(root)
+        self.NameToInfo = {}
+        for dp, _, fs in os.walk(os.path.join(self.root, "levels")):
+            for f in fs:
+                p = os.path.join(dp, f)
+                n = os.path.relpath(p, self.root).replace(os.sep, "/")
+                self.NameToInfo[n] = LevelInfo(n, file_size=os.path.getsize(p))
+        self.NameToInfo = dict(sorted(self.NameToInfo.items()))
+
+    def path(self, name):
+        return os.path.join(self.root, *name.split("/"))
+
+    def namelist(self):
+        return list(self.NameToInfo)
+
+    def infolist(self):
+        return list(self.NameToInfo.values())
+
+    def read(self, name):
+        name = getattr(name, "filename", name)
+        if name not in self.NameToInfo:
+            raise KeyError(name)
+        with open(self.path(name), "rb") as f:
+            return f.read()
+
+    def writer(self):
+        return LevelWriter(self)
+
+
+class LevelWriter:
+    """See LevelFiles: the new contents wait in a folder beside the level until close()."""
+
+    def __init__(self, files):
+        import tempfile
+        self.files = files
+        self.stage = tempfile.mkdtemp(prefix=".level_step_", dir=files.root)
+        self.kept, self.new = set(), set()
+
+    def writestr(self, info, data, compress_type=None):
+        name = getattr(info, "filename", info)
+        if name.endswith("/"):                   # a directory entry of a zip: the folders follow their files
+            return
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        if name in self.files.NameToInfo and self.files.NameToInfo[name].file_size == len(data) \
+                and self.files.read(name) == data:
+            self.kept.add(name)
+            return
+        p = os.path.join(self.stage, *name.split("/"))
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "wb") as f:
+            f.write(data)
+        self.new.add(name)
+
+    def close(self):
+        import shutil
+        for name in list(self.files.NameToInfo):
+            if name not in self.kept and name not in self.new:
+                os.remove(self.files.path(name))
+                del self.files.NameToInfo[name]
+        for name in sorted(self.new):
+            dst = self.files.path(name)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.replace(os.path.join(self.stage, *name.split("/")), dst)
+            self.files.NameToInfo[name] = LevelInfo(name, file_size=os.path.getsize(dst))
+        shutil.rmtree(self.stage, ignore_errors=True)
+        for dp, ds, fs in os.walk(os.path.join(self.files.root, "levels"), topdown=False):
+            if not ds and not fs:
+                os.rmdir(dp)
+        self.files.NameToInfo = dict(sorted(self.files.NameToInfo.items()))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self.close()
+        else:
+            import shutil
+            shutil.rmtree(self.stage, ignore_errors=True)

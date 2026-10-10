@@ -1,4 +1,4 @@
-# The in-game check of the paved edges flush with the ground (patch_paved_edges.py, v2.8) on one level zip: installs
+# The in-game check of the paved edges flush with the ground (network_mesh.paved_edges_step, v2.8) on one level zip: installs
 # it alone in <user>/mods (the other magliaso_pura zips go to <user>/mods_aside and come back at the end), runs the
 # views of paved_tour.py with the magliaso_unpaved extension (a driver on the road and a low view along the edge
 # at three places), converts the shots to beamng/verifica/v2.8/paved_edges/game/<tag>_<site>_<view>.jpg and

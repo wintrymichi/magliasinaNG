@@ -35,6 +35,7 @@ import shapely
 from rasterio import features
 from rasterio.transform import Affine
 from scipy.spatial import cKDTree
+import guardrail_mesh
 import osm_surface
 import patch_release as pr
 from road_mesh import TriSurface
@@ -133,6 +134,8 @@ class Forest:
         self.managed = json.load(open(md)) if os.path.exists(md) else {}
         self.objs = {}
         for f in sorted(glob.glob(os.path.join(lv, "forest", "*.forest4.json"))):
+            if guardrail_mesh.is_module(f):                 # v2.8: the guard rails, not plants
+                continue
             self.objs[os.path.basename(f)[:-len(".forest4.json")]] = pr.items(f)
         self.types = sorted(self.objs)
         rows = []
@@ -241,6 +244,10 @@ def level_faces(lv):
                 else:
                     solid.append(t)
                     sgrp.append(np.full(len(t), gi + 1, np.int8))
+    gr = guardrail_mesh.module_faces(lv)                # v2.8: the guard rails are forest items
+    if len(gr):
+        solid.append(gr)
+        sgrp.append(np.full(len(gr), SOLID_GROUPS.index("roads/guardrails") + 1, np.int8))
     cat = lambda L: np.concatenate(L) if L else np.zeros((0, 3, 3))
     solid_all = cat(solid)
     return (cat(tops), np.concatenate(cls) if cls else np.zeros(0, np.int8),

@@ -2,7 +2,7 @@
 bng_lua/magliaso_signs.lua (run_final_screenshots.ps1). From a driver's or a low point of view:
 - signs: zone 30, roundabout, the 50 "generale" with the village name, a crossing sign, STOP and the redrawn
   plates of the cantonal road (2.33, zone 30 with 16 t, the 4.32 pointer to Caslano / Pura), the ones closest
-  to the Caslano / Magliaso boundary in the report of patch_signs.py, seen by the traffic they face;
+  to the Caslano / Magliaso boundary in the report of signs_net.signs_step, seen by the traffic they face;
 - markings: the cantonal road's centre line, a crossing and a roundabout, seen from the lane of the traffic
   that meets the crossing sign / the roundabout sign there (a sign faces its traffic: the lane runs against
   'facing', ~2 m left of the pole);
@@ -87,10 +87,10 @@ def main():
         stop = {"x": float(c[0]), "y": float(c[1]), "facing": [float(n[0]), float(n[1])], "plates": [["3.01", None]],
                 "src": "osm v2.6"}
     sign_view("signs_stop", stop)
-    # the panorama plates patch_signs.py draws: their place and side in props_poles.dae of the v2.6 zip,
+    # the panorama plates signs_net.signs_step draws: their place and side in props_poles.dae of the v2.6 zip,
     # their code in dati/signs_panorama.json
     import zipfile
-    from patch_signs import existing_props, PANO_SIGNS
+    from signs_net import existing_props, PANO_SIGNS
     codes_p = json.load(open(PANO_SIGNS, encoding="utf-8"))
     pano = []
     for mat, c, n in existing_props(zipfile.ZipFile(V26))[2]:

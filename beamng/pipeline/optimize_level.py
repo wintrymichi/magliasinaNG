@@ -258,8 +258,15 @@ def iter_input(src):
                 yield i.filename, (lambda n=i.filename: z.read(n))
 
 
+def level_step(root, workers=None):
+    """The step of the build (build_level.py): the level folder (root: the folder that holds levels/<name>/)
+    rewritten in place."""
+    zi = bng.LevelFiles(root)
+    with zi.writer() as zo:
+        _run({n: (lambda n=n: zi.read(n)) for n in zi.namelist()}, zo.writestr, workers)
+
+
 def main(src, dst, workers=None):
-    t0 = time.time()
     entries = dict(iter_input(src))
     to_zip = dst.lower().endswith(".zip")
     zout = zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=6) if to_zip else None
@@ -273,6 +280,13 @@ def main(src, dst, workers=None):
             os.makedirs(os.path.dirname(p), exist_ok=True)
             with open(p, "wb") as f:
                 f.write(data)
+    _run(entries, put, workers)
+    if zout:
+        zout.close()
+
+
+def _run(entries, put, workers=None):
+    t0 = time.time()
 
     items = {n: r().decode("utf-8") for n, r in entries.items() if "/MissionGroup/" in n and n.endswith("items.level.json")}
     new_items, merge_jobs, merged = plan_merge(items)
@@ -311,8 +325,6 @@ def main(src, dst, workers=None):
                 c = by_cat.setdefault(cat, [0, 0, 0, 0, set()])
                 c[0] += st[0]; c[1] += st[1]; c[2] += 1; c[3] += st[4]; c[4].add(st[3])
             print(f"{k}/{len(jobs)} {time.time() - t0:.0f}s", flush=True)
-    if zout:
-        zout.close()
     for cat, (a, b, n, n0, d) in sorted(by_cat.items()):
         print(f"{cat:12} {n0:5} -> {n:4} shapes  vertices {a:>10,} -> {b:>10,} ({100 * b / max(a, 1):.0f}%)  detail {min(d)}-{max(d)}")
     print(f"vertices {int(tot[0]):,} -> {int(tot[1]):,}  triangles {int(tot[2]):,}  {time.time() - t0:.0f}s")

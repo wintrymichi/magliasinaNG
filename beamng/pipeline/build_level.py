@@ -3,9 +3,15 @@
 Stages (each reads work/ products and writes into the level folder):
   terrain, sky/sun/water/level info, buildings, roads (+ markings, AI roads),
   walls, props (poles/signs/guardrails), vegetation, spawn points.
-Run: python build_level.py [--reuse-roads] [stage ...]   (default: all)
+Then the steps that finish the level as written (FINISH, in this order; they read the level folder and
+rewrite it in place): lighter shapes (v2.5), the game's grass (v2.6), tracks flush with the ground, the
+network's road paint, the far trees and the road signs (v2.7), paved edges flush with the ground, the ground
+behind the walls, the undergrowth, street lamps, roadside posts and poles, the catenary, more signs, piers and
+boats, house details (v2.8). Each writes its report to work/reports/<step>.json.
+Run: python build_level.py [--reuse-roads] [stage ...]   (default: all stages, then the FINISH steps)
   --reuse-roads: the road meshes of the previous build stay and stage_roads only reloads what the
   later stages need (work/roads_state.npz), to build the other stages again quickly.
+  --finish [step ...]: only the FINISH steps (all, or the ones named) on the level folder as it is.
 """
 import json, math, os, shutil, sys, time
 import numpy as np
@@ -61,9 +67,8 @@ def stage_terrain(scene, ctx):
     posts = []
     if "wall_feet" in ctx:
         import walls
-        rec = ctx.setdefault("wall_rec", {})
         posts.append(lambda H, xs, ys: walls.adjust_terrain_roadside(
-            ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H, rec)))
+            ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
@@ -89,8 +94,10 @@ def stage_terrain(scene, ctx):
     mats = terrain.terrain_materials(LEVEL_NAME, base_tex)
     os.makedirs(level_path("art", "terrains"), exist_ok=True)
     json.dump(mats, open(level_path("art", "terrains", "main.materials.json"), "w"), indent=1)
-    if ctx.get("wall_rec"):
-        stage_backfill(scene, ctx, H, base_tex)
+    if ctx.get("river_meshes"):                          # v2.8: the river water cut where the terrain is over it
+        import rivers
+        xs, ys = terrain.vertex_coords()
+        rivers.write(LEVEL_DIR, LEVEL_NAME, scene, ctx["river_meshes"], H, xs, ys)
     scene.add("MissionGroup/level_objects/terrain", {
         "name": "theTerrain", "class": "TerrainBlock", "persistentId": bng.pid(),
         "position": [TER_X0, TER_Y0, z0], "maxHeight": maxh, "squareSize": TER_SQUARE,
@@ -250,11 +257,9 @@ def stage_roads(scene, ctx):
         if tops is not None:
             tops.append(V[T])
         kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S_, ground_))
-        mb.add(mat, kerb, uvs=np.column_stack([kerb[:, 0] + kerb[:, 1], kerb[:, 2]]) / uvt,
-               normals=bng.flat_normals_soup(kerb))
+        mb.add(mat, kerb, uvs=bng.box_uvs_soup(kerb, uvt), normals=bng.flat_normals_soup(kerb))
         if len(wall):
-            mb.add("mp_road_wall", wall, uvs=np.column_stack([wall[:, 0] + wall[:, 1], wall[:, 2]]) / 1.6,
-                   normals=bng.flat_normals_soup(wall))
+            mb.add("mp_road_wall", wall, uvs=bng.box_uvs_soup(wall, 1.6), normals=bng.flat_normals_soup(wall))
             stats["stone faces"] += len(wall) // 6
 
     tops = []
@@ -333,7 +338,9 @@ def stage_roads(scene, ctx):
         tx, ty = int(np.floor(x / CHUNK)), int(np.floor(y / CHUNK))
         mb = builders.setdefault((tx, ty), bng.MeshBuilder())
         V = soup.reshape(-1, 3)
-        uv = V[:, :2] / uvt if kind == "top" else np.column_stack([V[:, 0] + V[:, 1], V[:, 2]]) / uvt
+        # sides, underside, parapets and piers projected face by face (v2.8: the underside and the
+        # parapet tops had one texture row stretched across them)
+        uv = V[:, :2] / uvt if kind == "top" else bng.box_uvs_soup(V, uvt)
         mb.add(mat, V, uvs=uv, normals=bng.flat_normals_soup(V))
 
     def on_cap(r, c, z):
@@ -674,7 +681,7 @@ def stage_water(scene, ctx):
         crossings = [f for _, f in getattr(net, "deck_feet", [])] + [g for g, _, _ in roadheight.paved_polygons()]
         fn = ctx.get("road_mesh_fn")
         road_z = (lambda x, y: fn(x, y)) if fn is not None else (lambda x, y: np.full(len(x), np.nan))
-        ctx["rivers"], ctx["river_polys"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade,
+        ctx["rivers"], ctx["river_polys"], ctx["river_meshes"] = rivers.build(LEVEL_DIR, LEVEL_NAME, scene, av, boxes, at_grade,
                                                          crossings, road_z)
         print("rivers:", ctx["rivers"], flush=True)
 
@@ -691,7 +698,7 @@ def stage_buildings(scene, ctx):
     tiles = buildings_mesh.build(LEVEL_DIR, LEVEL_NAME, ways=ways, net=net)
     for shape, origin, ntri in tiles:
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
-                                                          annotation="BUILDINGS"))
+                                                          annotation="BUILDINGS", **buildings_mesh.NIGHT))
     print("building tiles", len(tiles), "triangles", sum(t[2] for t in tiles))
 
 
@@ -731,37 +738,6 @@ def stage_vegetation(scene, ctx):
         av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
         ctx["vineyards"] = vineyards.build(LEVEL_DIR, LEVEL_NAME, scene, av, net_xy[0], roads + paths)
         print("vineyards:", ctx["vineyards"], flush=True)
-
-
-def stage_backfill(scene, ctx, H, base_tex):
-    """The ground behind the retaining walls, where the terrain was lowered so that no terrain
-    triangle spans a wall (walls.carve_terrain): a mesh with the ground as it was, in the material
-    of the terrain layer there, cut at the roads, paths, bridge decks and railway tracks."""
-    import terrain
-    import walls
-    import roadheight
-    from geo import Grid
-    xs, ys = terrain.vertex_coords()
-    bng.write_materials(level_path("art", "shapes", "walls", "backfill.materials.json"), [
-        bng.material("mp_fill_" + m.lower(), base_tex[m]["b"], f"{det}_nm.png", ground_type=gm)
-        for m, (gm, det, mac, dsize, msize) in terrain.TERRAIN_MATS.items()])
-    drv = [g for g, _, _ in roadheight.paved_polygons()]
-    net = ctx.get("network")
-    if net is not None:
-        drv += [p["geom"] for p in net.polys]
-        drv += [foot for _, foot in getattr(net, "deck_feet", [])]
-    # nor over the railway (railway.py): the bed of every track with its shoulders
-    if "railway" in ctx.get("stages", STAGES):
-        import railway
-        import shapely
-        drv += [shapely.LineString(Q[:, :2]).buffer(railway.SLEEPER_LEN[p["OBJEKTART"]] / 2 + railway.BALLAST_EXTRA +
-                                                     railway.EMBANK_MAX, cap_style="flat")
-                for p, Q in railway.tracks() if p.get("KUNSTBAUTE") != "Bruecke"]
-    drv = [g for g in drv if g is not None and not g.is_empty]
-    layers = np.load(os.path.join(WORK, "terrain_layers.npy"), mmap_mode="r")
-    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
-    walls.build_backfill(LEVEL_DIR, LEVEL_NAME, scene, ctx["wall_rec"], H, xs, ys, ctx["wall_feet"], drv, layers,
-                         dtm.sample)
 
 
 def stage_groundcover(scene, ctx):
@@ -850,7 +826,8 @@ def write_info(ctx):
                         "la rete, circa %d 000 alberi, traffico IA. La Strada "
                         "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
                         "ci sono anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano, il passo sopra "
-                        "Gravesano fino ad Arosio, la cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
+                        "Gravesano fino ad Arosio, la strada Arosio - Mugena - Breno - Miglieglia - Novaggio, la "
+                        "cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
                         "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
                         "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
                         "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "
@@ -895,7 +872,50 @@ STAGES = ["roads", "walls", "water", "terrain", "railway", "sky", "backdrop", "b
           "markings", "ai", "props", "vegetation", "groundcover", "spawns"]
 
 
+# (name, module, function, keyword arguments): the steps that finish the level, in this order
+FINISH = [
+    ("optimize", "optimize_level", "level_step", {}),            # v2.5: fewer, lighter shapes
+    ("grass", "groundcover", "grass_step", {}),                  # v2.6: the game's grass
+    ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
+    ("markings", "markings_net", "markings_step", {}),           # v2.7: the network's road paint redrawn
+    ("far_trees", "far_trees", "far_trees_step", {}),            # v2.7: far trees
+    ("signs", "signs_net", "signs_step", {"report": True}),      # v2.7: road signs
+    ("paved_edges", "network_mesh", "paved_edges_step", {"report": True}),   # v2.8: the ground first
+    ("wall_fill", "walls", "wall_fill_step", {"report": True}),
+    ("wall_doubles", "walls", "double_faces_step", {"report": True}),    # no wall face drawn twice
+    ("understory", "understory", "understory_step", {"report": True}),
+    ("lamps", "lamps", "lamps_step", {"report": True}),           # then what stands on it
+    ("roadside", "poles", "roadside_step", {"report": True}),
+    ("catenary", "railway", "catenary_step", {"report": True}),
+    ("signs_more", "signs_more", "signs_more_step", {"report": True}),
+    ("lake", "water", "lake_step", {"report": True}),
+    ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+]
+
+
+def finish(names=None):
+    """The FINISH steps (all, or those named) on the level folder."""
+    import importlib
+    root = os.path.dirname(os.path.dirname(LEVEL_DIR))       # the folder that holds levels/<name>/
+    rdir = os.path.join(WORK, "reports")
+    os.makedirs(rdir, exist_ok=True)
+    os.environ.setdefault("MAGLIASO_OSM_PINNED", "1")        # OpenStreetMap from the extract in beamng/dati
+    for name, mod, fn, kw in FINISH:
+        if names and name not in names:
+            continue
+        kw = dict(kw)
+        if kw.get("report"):
+            kw["report"] = os.path.join(rdir, f"{name}.json")
+        t0 = time.time()
+        print(f"== finish: {name} ({mod}.{fn})", flush=True)
+        getattr(importlib.import_module(mod), fn)(root, **kw)
+        print(f"[finish {name}: {time.time() - t0:.0f} s]", flush=True)
+
+
 def main():
+    if "--finish" in sys.argv[1:]:
+        finish([a for a in sys.argv[1:] if not a.startswith("--")])
+        return
     reuse = "--reuse-roads" in sys.argv[1:]
     stages = [a for a in sys.argv[1:] if not a.startswith("--")] or STAGES
     if set(stages) == set(STAGES) and os.path.exists(LEVEL_DIR):
@@ -928,6 +948,8 @@ def main():
                                  "rivers", "vineyards") if k in ctx}
     if stats:
         json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
+    if set(stages) == set(STAGES):
+        finish()
     print("level written to", LEVEL_DIR)
 
 

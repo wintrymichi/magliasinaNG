@@ -16,6 +16,8 @@ into the bed as before):
 - a material of its own: a dark green tint with LerpAlpha transparency, smooth (the sky reflects
   in it), ripples in a drawn normal map (nothing from a photograph).
 The transparency and the look in the game could not be checked here.
+v2.8: the water is written once the terrain is final (write) and cut to where it stands more than SHORE m
+over it, on a 1.5 m mesh: on the torrents it ran in and out of the banks in triangles.
 """
 import os
 import numpy as np
@@ -27,7 +29,8 @@ from bld_textures import noise, aniso_noise, normal_map, to8, save
 MIN_WIDTH = 2.5         # m, mean width of a river surface (area / half perimeter) to get water
 LOW_R = 3.0             # m, radius of the lowest ground under the water
 OVER = 0.12             # m of water over that ground
-CELL = 3.0              # m, mesh cell
+CELL = 1.5              # m, mesh cell (v2.8: the terrain step, was 3 m; the water is cut where the terrain is over it)
+SHORE = 0.06            # m, the water is left out where it is less than this over the terrain (v2.8)
 FORD = 1.5              # m, a road surface less than this above the water crosses it at its level
 DEPTH = 0.35            # m of terrain under the water
 CARVE_MAX = 1.5         # m, terrain higher than this over the water (a bank in a gorge) is not lowered
@@ -192,18 +195,86 @@ def build(level_dir, level_name, scene, av, lake_boxes, at_grade, crossings, roa
                 V, T = road_mesh.mesh_polygon(piece, zf, cell=CELL)
                 if not len(T) or not np.isfinite(V[:, 2]).all():
                     continue
-                mb = builders.setdefault((tx, ty), bng.MeshBuilder())
-                mb.add("mp_river_water", V, uvs=V[:, :2] / TILE_M, normals=np.repeat([[0.0, 0.0, 1.0]], len(V), 0),
-                       tris=T)
-    ntri = 0
-    for (tx, ty), mb in sorted(builders.items()):
+                builders.setdefault((tx, ty), []).append(V[T])
+    meshes = {k: np.concatenate(v) for k, v in builders.items()}
+    stats.update(chunks=len(meshes), triangles_before_trim=int(sum(len(m) for m in meshes.values())))
+    bed = [q for p in polys for q in shapely.get_parts(p.difference(keep) if not keep.is_empty else p)
+           if q.geom_type == "Polygon" and q.area > 1.0]
+    stats["ha_bed_lowered"] = round(sum(q.area for q in bed) / 1e4, 1)
+    return stats, bed, meshes
+
+
+def terrain_at(H, xs, ys, x, y):
+    """Height of the terrain (vertex heights H, rows ys, columns xs) at points, on its triangles: the
+    diagonal of every square alternates as the game splits them (walls.build_backfill)."""
+    sq = xs[1] - xs[0]
+    c, r = (x - xs[0]) / sq, (y - ys[0]) / sq
+    c0 = np.clip(np.floor(c).astype(np.int64), 0, len(xs) - 2)
+    r0 = np.clip(np.floor(r).astype(np.int64), 0, len(ys) - 2)
+    fx, fy = np.clip(c - c0, 0, 1), np.clip(r - r0, 0, 1)
+    h00, h10, h01, h11 = H[r0, c0], H[r0, c0 + 1], H[r0 + 1, c0], H[r0 + 1, c0 + 1]
+    even = ((r0 ^ c0) & 1) == 0
+    # even squares split along 00-11, odd ones along 10-01
+    a = np.where(fx >= fy, h00 + fx * (h10 - h00) + fy * (h11 - h10), h00 + fy * (h01 - h00) + fx * (h11 - h01))
+    b = np.where(fx + fy <= 1, h00 + fx * (h10 - h00) + fy * (h01 - h00),
+                 h11 + (1 - fx) * (h01 - h11) + (1 - fy) * (h10 - h11))
+    return np.where(even, a, b)
+
+
+def clip_above(T, d):
+    """The parts of the triangles T (k, 3, 3) where the linear field d (k, 3, at their corners) is positive:
+    (m, 3, 3) triangles, the shore cut straight across every triangle (marching triangles)."""
+    pos = d > 0
+    n = pos.sum(1)
+    out = [T[n == 3]]
+    for want in (1, 2):
+        sel = np.flatnonzero(n == want)
+        if not len(sel):
+            continue
+        t, dd, pp = T[sel], d[sel], pos[sel]
+        # rotate every triangle so that its odd corner (the single positive one, or the single negative one)
+        # comes first, keeping the winding
+        odd = np.argmax(pp if want == 1 else ~pp, axis=1)
+        idx = (odd[:, None] + np.arange(3)[None]) % 3
+        ar = np.arange(len(sel))[:, None]
+        t, dd = t[ar, idx], dd[ar, idx]
+        f1 = (dd[:, 0] / (dd[:, 0] - dd[:, 1]))[:, None]
+        f2 = (dd[:, 0] / (dd[:, 0] - dd[:, 2]))[:, None]
+        p1 = t[:, 0] + f1 * (t[:, 1] - t[:, 0])
+        p2 = t[:, 0] + f2 * (t[:, 2] - t[:, 0])
+        if want == 1:
+            out.append(np.stack([t[:, 0], p1, p2], 1))
+        else:
+            out.append(np.stack([p1, t[:, 1], t[:, 2]], 1))
+            out.append(np.stack([p1, t[:, 2], p2], 1))
+    return np.concatenate(out) if out else np.zeros((0, 3, 3))
+
+
+def write(level_dir, level_name, scene, meshes, H, xs, ys, group="MissionGroup/level_objects/Water"):
+    """The river meshes (build) written once the terrain is final (v2.8): every triangle cut to the part
+    more than SHORE m over the terrain. Up to v2.8 the whole surface was drawn: on the banks of the
+    torrents (the Magliasina) the water ran in and out of the terrain in triangles, a fifth of it under the
+    ground and much of the rest within a few centimetres of it."""
+    ntri, kept_m2, cut_m2 = 0, 0.0, 0.0
+    for (tx, ty), T in sorted(meshes.items()):
+        d = T[:, :, 2] - terrain_at(H, xs, ys, T[:, :, 0].ravel(), T[:, :, 1].ravel()).reshape(-1, 3) - SHORE
+        area = lambda A: float(0.5 * np.linalg.norm(np.cross(A[:, 1] - A[:, 0], A[:, 2] - A[:, 0]), axis=1).sum())
+        a0 = area(T)
+        T = clip_above(T, d)
+        T = T[0.5 * np.linalg.norm(np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0]), axis=1) > 1e-3]
+        a1 = area(T) if len(T) else 0.0
+        kept_m2 += a1
+        cut_m2 += a0 - a1
+        if not len(T):
+            continue
+        V = T.reshape(-1, 3)
+        mb = bng.MeshBuilder()
+        mb.add("mp_river_water", V, uvs=V[:, :2] / TILE_M, normals=np.repeat([[0.0, 0.0, 1.0]], len(V), 0))
         rel = f"art/shapes/water/river_{tx:+03d}_{ty:+03d}.dae"
         origin = np.array([(tx + 0.5) * CHUNK, (ty + 0.5) * CHUNK, 0.0])
         mb.write_dae(os.path.join(level_dir, rel), name=f"river_{tx}_{ty}", origin=origin)
         ntri += mb.triangle_count()
         scene.add(group, bng.tsstatic(f"/levels/{level_name}/{rel}", origin, collision=False))
-    stats.update(chunks=len(builders), triangles=ntri)
-    bed = [q for p in polys for q in shapely.get_parts(p.difference(keep) if not keep.is_empty else p)
-           if q.geom_type == "Polygon" and q.area > 1.0]
-    stats["ha_bed_lowered"] = round(sum(q.area for q in bed) / 1e4, 1)
-    return stats, bed
+    print("rivers: %d triangles, %.1f ha of water, %.1f ha under or at the terrain left out"
+          % (ntri, kept_m2 / 1e4, cut_m2 / 1e4), flush=True)
+    return ntri

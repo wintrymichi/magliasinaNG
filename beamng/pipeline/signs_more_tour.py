@@ -1,8 +1,8 @@
-"""The views of the check of patch_signs_more.py (v2.8): the warning and parking signs nobody mapped.
+"""The views of the check of signs_more.signs_more_step (v2.8): the warning and parking signs nobody mapped.
     python signs_more_tour.py sites <zip before> <report>        -> verifica/v2.8/signs/sites.json
     python signs_more_tour.py render <level before> <level after>  -> verifica/v2.8/signs/render3d/
     python signs_more_tour.py views <zip> <tag>                    -> <user>/magliaso_unpaved_views.json
-sites: one sign of every kind the patch put up (the report of patch_signs_more.py), seen by the traffic that
+sites: one sign of every kind the patch put up (the report of signs_more.signs_more_step), seen by the traffic that
 reads it: 15 m before it, 2.5 m to the left of its pole and 1.5 m over the road, looking at its plate.
 render: before and after with render3d.py (textured, the plates as drawn), side by side (compare_<kind>.jpg).
 views: the same views for the in-game tour of run_signs_more_screenshots.ps1 (bng_lua/magliaso_unpaved.lua),
@@ -10,7 +10,7 @@ with the frame rate of every view.
 """
 import json, os, sys, zipfile
 import numpy as np
-import patch_signs as ps
+import signs_net as ps
 import wall_fill_tour as wft
 from road_mesh import TriSurface
 from config import BEAMNG_USER
@@ -68,7 +68,7 @@ def render(before, after):
         ims = [Image.open(os.path.join(out, f"{t}_{s['name']}.jpg")) for t in ("before", "after")]
         w, h = ims[0].size
         im = Image.new("RGB", (2 * w + 8, h), "white")
-        for k, (a, label) in enumerate(zip(ims, ("v2.7", "patch_signs_more.py"))):
+        for k, (a, label) in enumerate(zip(ims, ("v2.7", "signs_more.signs_more_step"))):
             im.paste(a, (k * (w + 8), 0))
             ImageDraw.Draw(im).text((k * (w + 8) + 14, 12), label, fill="white", font_size=28, stroke_width=2,
                                     stroke_fill="black")

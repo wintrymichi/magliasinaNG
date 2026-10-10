@@ -46,12 +46,12 @@ MAT_COLORS = [
     ("osm_giveway", (0.95, 0.95, 0.95)),
     ("pole", (0.55, 0.56, 0.58)), ("sign", (0.9, 0.9, 0.92)), ("delineator_black", (0.1, 0.1, 0.1)),
     ("delineator", (0.95, 0.95, 0.95)), ("cabinet", (0.6, 0.6, 0.55)), ("backdrop", (0.35, 0.42, 0.28)),
-    # v2.8 lake (patch_lake.py): the colours of its materials
+    # v2.8 lake (water.lake_step): the colours of its materials
     ("pier_deck", (0.50, 0.44, 0.36)), ("pier_beam", (0.30, 0.25, 0.19)), ("pier_float", (0.16, 0.17, 0.17)),
     ("pier_pile", (0.42, 0.43, 0.44)), ("boat_white", (0.90, 0.90, 0.88)), ("boat_blue", (0.08, 0.16, 0.32)),
     ("boat_grey", (0.50, 0.52, 0.54)), ("boat_beige", (0.72, 0.66, 0.54)), ("boat_dark", (0.08, 0.08, 0.09)),
     ("boat_metal", (0.75, 0.76, 0.77)), ("boat_inside", (0.78, 0.78, 0.76)),
-    # v2.8 house details (patch_house_details.py)
+    # v2.8 house details (buildings_mesh.house_details_step)
     ("house_zinc", (0.60, 0.61, 0.60)), ("house_copper", (0.47, 0.30, 0.20)), ("house_metal", (0.70, 0.71, 0.72)),
     ("house_dish", (0.86, 0.86, 0.84)),
 ]
@@ -398,6 +398,8 @@ class Level:
         rows = []
         for f in glob.glob(os.path.join(self.lv, "forest", "*.forest4.json")):
             name = os.path.basename(f)[:-len(".forest4.json")]
+            if name.startswith("italy_guardrails"):          # v2.8: the guard rails, not plants
+                continue
             h, r = size.get(name, (10.0, 3.0))
             kind = 2 if ("bush" in name or "hedge" in name) else (1 if any(c in name for c in CONIFER) else 0)
             for o in self._read(f):
@@ -482,7 +484,7 @@ class Renderer:
         """textured: the meshes whose materials have textures in the level folder (the buildings of
         v2.2) are drawn with them (colour, opacity, normal map), the rest in the colours of MAT_COLORS.
         dae_normals: the untextured meshes are lit with the normals of their DAE, as in the game (v2.8:
-        patch_wall_fill.py), instead of one normal per triangle."""
+        walls.wall_fill_step), instead of one normal per triangle."""
         self.level = Level(lv)
         self.W, self.H, self.quality = W, H, quality
         self.textured = textured
