@@ -10,6 +10,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 SRC = os.path.join(ROOT, "beamng", "verifica", "screenshots")
 OUT = os.path.join(ROOT, "web", "img")
 FILES = [
+    "v2.8/overview-novaggio-miglieglia-malcantone.jpg",
     "14_passo_tornante.jpg", "12_pura_cantonale.jpg", "13_agno_via.jpg", "11_magliaso_strada.jpg",
     "01_magliaso_lago.jpg", "05_ponte_tresa.jpg", "09_passo_arosio.jpg", "10_caslano_torrazza.jpg",
     "02_agno_nucleo.jpg", "03_cademario.jpg", "08_sessa.jpg",
