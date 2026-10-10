@@ -231,6 +231,7 @@ that way too, and are now functions of the modules they belong to. Their order:
 | 1-6 | `optimize`, `grass`, `unpaved`, `markings`, `far_trees`, `signs` | the steps of v2.5 to v2.7, in the order of their releases (the paint follows the flattened dirt tracks) |
 | 7 | `paved_edges` | it changes the terrain heights: first of the v2.8 steps, so that everything placed after it stands on the v2.8 ground (placed on the v2.7 ground, 693 of the new lamps and 383 of the wooden poles would stand more than 5 cm under it) |
 | 8 | `wall_fill` | the normals of the backfill and the grass over low walls from the terrain heights of 7 |
+| 8b | `wall_doubles` | no wall face drawn twice (`walls.double_faces_step`): a stone face of a road mesh in the plane of a wall, a wall face in the plane of another, goes; before the objects that keep clear of the walls |
 | 9 | `understory` | the forest floor layers and their verge twins, the undergrowth GroundCover; it could swap with 8 |
 | 10-15 | `lamps`, `roadside`, `catenary`, `signs_more`, `lake`, `house_details` | objects on the ground of 7; the delineators and poles keep clear of the lamps (11 after 10), the downpipes reach the ground of 7 |
 

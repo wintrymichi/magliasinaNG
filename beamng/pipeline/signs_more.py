@@ -20,9 +20,10 @@ danger outside the villages, up to 50 m inside):
   or 10 places or more; with no access recorded, PARK_BIG m2 or 40 places or more; not along the street;
   or a parking_entrance node): where the drive into it leaves a road of the network, for the traffic that
   has it on its right.
-Only on the Swiss side; a sign is left out where v2.7 already has the same signal within DEDUP m for
-the same direction (beamng/verifica/signs_v2.7.json), and where another one of these stands within
-25 m for the same direction.
+Only on the Swiss side; a sign is left out where the level already has the same signal within DEDUP m for
+the same direction (the plates of the level: signs_net.level_plates; up to v2.8 the list of the v2.7 build,
+beamng/verifica/signs_v2.7.json, which missed the panorama plates and the signs of the current build), and
+where another one of these stands within 25 m for the same direction.
 
     plan() -> [signs_net.Sign]
 (c) OpenStreetMap contributors, ODbL.
@@ -340,17 +341,21 @@ def parkings(cx):
     return out
 
 
-def _dedup(signs):
-    """Left out where v2.7 has the same signal within DEDUP m for the same direction, or another of these
-    of the same kind stands within 25 m for the same direction."""
+def _dedup(signs, plates=None):
+    """Left out where the level has the same signal within DEDUP m for the same direction (plates:
+    signs_net.level_plates; None: the v2.7 list, beamng/verifica/signs_v2.7.json), or another of these of
+    the same kind stands within 25 m for the same direction."""
     old = []
-    if os.path.exists(V27):
+    if plates is not None:
+        for key, c, n2, _ in plates:
+            old.append((float(c[0]), float(c[1]), -np.asarray(n2, float), {key}))
+    elif os.path.exists(V27):
         for o in json.load(open(V27, encoding="utf-8")).get("signs", []):
             f = np.asarray(o["facing"], float)
-            old.append((o["x"], o["y"], -f, {c for c, _ in o["plates"]}))
+            old.append((o["x"], o["y"], -f, {sn.slug(c, v) for c, v in o["plates"]}))
     keep = []
     for s in signs:
-        codes = {c for c, _ in s.plates} - {"text", "5.01", "5.03"}
+        codes = {sn.slug(c, v) for c, v in s.plates if c not in ("text", "5.01", "5.03")}
         if any(math.hypot(x - s.x, y - s.y) < DEDUP and np.dot(u, s.u) > 0.5 and codes & c for x, y, u, c in old):
             continue
         if any(o.kind == s.kind and math.hypot(o.x - s.x, o.y - s.y) < 25 and np.dot(o.u, s.u) > 0.5 for o in keep):
@@ -359,9 +364,9 @@ def _dedup(signs):
     return keep
 
 
-def plan():
+def plan(plates=None):
     cx = Ctx()
-    return _dedup(curves(cx) + level_crossings(cx) + hazards(cx) + parkings(cx))
+    return _dedup(curves(cx) + level_crossings(cx) + hazards(cx) + parkings(cx), plates)
 
 
 if __name__ == "__main__":
@@ -436,9 +441,10 @@ def v2_8_posts(z):
 
 def signs_more_step(root, report=None):
     t0 = time.time()
-    signs = plan()
-    print(f"{len(signs)} signs planned: {Counter(s.kind for s in signs)}", flush=True)
     z = bng.LevelFiles(root)
+    up = ps.level_plates(z)
+    signs = plan(up)
+    print(f"{len(signs)} signs planned: {Counter(s.kind for s in signs)}", flush=True)
     old_mats = json.loads(z.read(ps.MATERIALS)) if ps.MATERIALS in z.namelist() else {}
     world = ps.World(z, np.array([[s.x, s.y] for s in signs]))
     from scipy.spatial import cKDTree
@@ -470,10 +476,7 @@ def signs_more_step(root, report=None):
     if "mp_ch_pole" not in old_mats:
         m = bng.material("mp_ch_pole", base_color=[0.62, 0.63, 0.64, 1], roughness=0.45, metallic=0.6)
         mats[m["name"]] = m
-    seen = []                                              # (x, y, travel direction) of the signs up
-    if os.path.exists(V27):
-        for o in json.load(open(V27, encoding="utf-8")).get("signs", []):
-            seen.append((o["x"], o["y"], -np.asarray(o["facing"], float)))
+    seen = [(float(c[0]), float(c[1]), -np.asarray(n2, float)) for _, c, n2, _ in up]    # the signs up
     rep["moved_back"] = 0
     for s in signs:
         if any(math.hypot(x - s.x, y - s.y) < SPACING and np.dot(u, s.u) > 0.5 for x, y, u in seen):

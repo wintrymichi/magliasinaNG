@@ -98,7 +98,8 @@ SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 def sv_runs(existing):
     """Guard rails of the rest of the network seen in the Street View panoramas (sv_guardrails.py, v2.2):
     [{pts: [[x, y, z of the road edge, top height]], side}], without the ones along the rails of the
-    original route (existing runs, within 1.5 m)."""
+    original route (existing runs, within 1.5 m): a run is cut there into the pieces before and after (up to
+    v2.8 the points left were joined, and the rail went on across the stretch along the existing one)."""
     if not os.path.exists(SV_RUNS):
         return []
     import shapely
@@ -109,13 +110,86 @@ def sv_runs(existing):
         P = np.array(r["pts"], float)
         if len(P) < 2:
             continue
-        if old is not None:
-            keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1])
-            if keep.sum() < 3:
-                continue
-            P = P[keep]
-        out.append({"pts": P, "side": r["side"], "seg": r.get("seg", -1)})
+        keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1]) if old is not None else np.ones(len(P), bool)
+        for piece in pieces(keep):
+            if len(piece) >= 3:
+                out.append({"pts": P[piece], "side": r["side"], "seg": r.get("seg", -1), "votes": r.get("votes", 0)})
     return out
+
+
+def pieces(keep):
+    """The runs of consecutive True of a mask, as index arrays."""
+    idx = np.flatnonzero(keep)
+    return np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1) if len(idx) else []
+
+
+DOUBLE = 1.0             # m: a rail this close to one already laid, and running along it, is the same rail
+STEP_DOUBLE = 0.5        # m between the points tested
+
+
+def length(P):
+    return float(np.linalg.norm(np.diff(np.asarray(P)[:, :2], axis=0), axis=1).sum()) if len(P) > 1 else 0.0
+
+
+def drop_doubles(runs, laid=()):
+    """The runs (in the order of trust: the first kept whole) without the stretches that lie along a rail
+    already laid (laid: (k, 2, 2) segments, e.g. the modules in the level) or along a run kept before them:
+    every point within DOUBLE m of such a rail, its direction within 35 degrees, goes and the run is cut there;
+    pieces shorter than MIN_PIECE m are dropped. Two sources (the measured rails of the cantonal road, the
+    panoramas of the rest of the network, the rails on the walls of fences.py) saw some rails twice, and the
+    game had two rows of modules on one line. Returns (runs, metres dropped)."""
+    import shapely
+    lines = [shapely.LineString(np.asarray(s, np.float64)) for s in laid]
+    tree = shapely.STRtree(lines) if lines else None
+    out, dropped = [], 0.0
+    for r in runs:
+        P = np.asarray(r["pts"], np.float64)
+        if len(P) < 2:
+            continue
+        d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P[:, :2], axis=0), axis=1))]
+        st = np.unique(np.r_[np.arange(0, d[-1], STEP_DOUBLE), d[-1]])
+        P = np.column_stack([np.interp(st, d, P[:, k]) for k in range(P.shape[1])])
+        if len(P) < 2:
+            continue
+        keep = np.ones(len(P), bool)
+        if tree is not None:
+            T = np.gradient(P[:, :2], axis=0)
+            T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+            pts = shapely.points(P[:, :2])
+            ii, jj = tree.query(pts, predicate="dwithin", distance=DOUBLE)
+            for i, j in zip(ii, jj):
+                if not keep[i]:
+                    continue
+                g = lines[j]
+                s = g.project(pts[i])
+                a, b = g.interpolate(max(s - 0.5, 0.0)), g.interpolate(min(s + 0.5, g.length))
+                dv = np.array([b.x - a.x, b.y - a.y])
+                if abs(float(dv @ T[i])) > 0.82 * max(np.linalg.norm(dv), 1e-9):
+                    keep[i] = False
+        dropped += length(P) - sum(length(P[q]) for q in pieces(keep))
+        new = []
+        for q in pieces(keep):
+            Q = P[q]
+            if len(Q) >= 2 and length(Q) >= MIN_PIECE:
+                new.append({**r, "pts": Q})
+            else:
+                dropped += length(Q)
+        out += new
+        if new:
+            # the runs kept so far are rails laid for the ones after them
+            lines += [shapely.LineString(n_["pts"][:, :2]) for n_ in new]
+            tree = shapely.STRtree(lines)
+    return out, dropped
+
+
+def module_segments(src):
+    """(k, 2, 2) the beam of every module of a level (folder or zip), end to end."""
+    P, R, T = read_modules(src)
+    keep = [t == MODULE for t in T]
+    if not any(keep):
+        return np.zeros((0, 2, 2))
+    P, R = P[keep], R[keep]
+    return np.stack([P[:, :2] - 1.5 * R[:, 0, :2], P[:, :2] + 1.5 * R[:, 0, :2]], 1)
 
 
 def open_crossings(runs, gap=GAP_CROSS):
@@ -198,6 +272,7 @@ END_START, END_END = "italy_guardrails_basic_end_cw", "italy_guardrails_basic_en
 MODULE_LEN, MODULE_STEP = 3.0, 2.8          # m: Italy lays them 2.8 m apart (0.2 m overlap)
 FACE_OUT = 0.02                              # m, the origin this far towards the road from the back of the old rail
 MIN_RUN = 1.0                                # m, shorter pieces get no rail
+MIN_STEP = 2.0                               # m, the least step of two modules (1 m over each other)
 BOX = (-1.5, 1.5, -0.07, 0.15, 0.0, 0.9)     # m, the beam and its posts over the ground, local x, y, z (module_faces)
 ITALY_MATERIALS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati",
                                "italy_guardrail_materials.json")
@@ -216,10 +291,16 @@ def modules(P, side):
     if L <= MODULE_LEN:
         spans = [(0.5 * L - 0.5 * MODULE_LEN, 0.5 * L + 0.5 * MODULE_LEN)]
     else:
-        a = list(np.arange(0.0, L - MODULE_LEN + 1e-6, MODULE_STEP))
-        if L - MODULE_LEN - a[-1] > 0.05:
-            a.append(L - MODULE_LEN)
-        spans = [(t, t + MODULE_LEN) for t in a]
+        # the modules evenly along the line, at most MODULE_STEP apart; where that would lay two of them more
+        # than 1 m over each other (up to v2.8 the last one went back to end at the end of the line, over the
+        # one before it: a double beam), one fewer at MODULE_STEP, centred (the line a little longer than them)
+        n = int(np.ceil((L - MODULE_LEN) / MODULE_STEP - 1e-9)) + 1
+        step = (L - MODULE_LEN) / (n - 1)
+        if step < MIN_STEP:
+            n -= 1
+            step = MODULE_STEP
+        a0 = 0.5 * (L - (MODULE_LEN + step * (n - 1)))
+        spans = [(a0 + k * step, a0 + k * step + MODULE_LEN) for k in range(n)]
 
     def frame(p0, p1, level=False):
         X = p1 - p0
@@ -340,10 +421,15 @@ def build(level_dir, level_name, scene, road_fn=None):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
     foot = foot_fn()
     items = []
+    measured = []
     for r in runs:
         P = np.array(r["pts"])
         P[:, 2] = foot(P[:, 0], P[:, 1])
-        items += modules(P, r["side"])
+        measured.append({**r, "pts": P})
+    # the rails of the cantonal road, measured: a stretch measured twice is laid once
+    measured, gone = drop_doubles(measured)
+    for r in measured:
+        items += modules(r["pts"], r["side"])
     # the rest of the network: the rails seen in the panoramas, on the edge of the road as built
     extra = sv_runs(runs)
     if road_fn is not None and extra:
@@ -352,6 +438,11 @@ def build(level_dir, level_name, scene, road_fn=None):
         for r in extra:
             r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
     extra = open_crossings(extra)
+    # where a panorama run lies along a rail laid already (on the edge of the road as built, two runs can
+    # come onto one line): only the first; the runs with more votes first
+    extra.sort(key=lambda r: -np.ravel(r.get("votes", 0))[0])
+    extra, gone2 = drop_doubles(extra, [r["pts"][:, :2] for r in measured])
+    print(f"guard rails laid twice, left out: {gone + gone2:.0f} m")
     for r in extra:
         items += modules(r["pts"], r["side"])
     if extra:
