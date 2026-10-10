@@ -125,14 +125,14 @@ def rail_doubles(items):
             dup[b] = True
     places = P[dup]
     return {"modules": len(P), "doubled": int(dup.sum()), "doubled_m": round(float(dup.sum()) * 2.8),
-            "places": [[round(float(x), 1), round(float(y), 1)] for x, y, _ in places[:400]]}
+            "places": [[round(float(x), 1), round(float(y), 1)] for x, y, _ in places[:60]]}
 
 
 def plates(tris):
     """[(material, centre (3,), normal (3,), width)] of the sign plates: pairs of triangles."""
     out = []
     for m, lst in tris.items():
-        if not SIGN_MAT.match(m) or m.endswith("_back"):
+        if not SIGN_MAT.match(m) or m.endswith("_back") or m == "mp_ch_pole":
             continue
         for t, s in lst:
             for k in range(0, len(t) - 1, 2):
@@ -172,7 +172,7 @@ def sign_doubles(pl):
         places.append({"mat": pl[a][0], "at": [round(float(C[b, 0]), 1), round(float(C[b, 1]), 1)], "d": round(d, 2),
                        "shapes": [sa, sb]})
     return {"plates": len(pl), "doubled": int(dup.sum()), "by_distance": dict(hist), "by_shapes": dict(kinds),
-            "places": places[:400]}
+            "places": places[:60]}
 
 
 def wall_doubles(tris):

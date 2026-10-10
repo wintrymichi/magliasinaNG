@@ -27,4 +27,4 @@ jobs:
         working-directory: beamng/pipeline
         run: |
           python doubles.py ../../art/magliaso_pura_v2.8.zip ../../doubles.json
-          cat ../../doubles.json
+          python -c "import json; r = json.load(open('../../doubles.json')); [print(k, json.dumps(v)) for k, v in r.items()]"
