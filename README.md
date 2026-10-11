@@ -175,6 +175,8 @@ How to run the pipeline yourself, the environment variables, the coordinate syst
 
 ## Quality and verification
 
+> **The drive tests are diagnostics, not a verdict on playability.** The virtual drive test and the game's AI drives exist to find spots worth a look (a step, a bump, an object at the road edge). A simulated wheel or the game's AI stops or counts an event where a player simply drives on, so a number in these reports, or an AI that got stuck, does not mean a road cannot be driven.
+
 - **Automatic checks over the whole map** (`check_level.py`, results in [`beamng/verifica/check_level.json`](beamng/verifica/check_level.json)): terrain above the roads, holes, steps, seams between blocks, obstacles on the carriageway searched along every road and trail, trees in the clearance envelope, the AI network, missing files and, since v2.4, building walls facing inwards.
 - **Virtual drive test** (`drive_test.py`, [`beamng/verifica/drive_test.json`](beamng/verifica/drive_test.json)): a simulated car (a quarter-car model on all four wheels) drives every road in both directions and every trail, 670 km, on the level's surfaces as written. On the same roads as v2.1 it counts 66 % fewer steps on minor roads (1695 → 570) and 20 % fewer on main roads (74 → 59); wheels lifting off the road drop by 57 % on minor roads and 58 % on main roads, hard hits by 25 % and sharp twists by 61 % on minor roads.
 - **Street View review** ([`beamng/verifica/REVISIONE.md`](beamng/verifica/REVISIONE.md)): for every road, the panorama coverage, the measured buildings, the guardrails and walls seen, the drive-test events before and after, and the places compared photo/map from the same camera, with the problems found and the fixes.
@@ -201,7 +203,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | Tunnels are not built: roads and the railway stop at the portals. | [#19](https://github.com/wintrymichi/magliasinaNG/issues/19) |
 | One-way streets only where OpenStreetMap records them. | [#20](https://github.com/wintrymichi/magliasinaNG/issues/20) |
 | Road signs only where OpenStreetMap maps them or records the rule that needs them: warning, direction and parking signs nobody mapped are missing; 35 plates of the cantonal road keep a single colour; no railway overhead line. | [#21](https://github.com/wintrymichi/magliasinaNG/issues/21) |
-| v2.8: pale jagged bands on some stone wall caps (cantonal road hairpins, road from Arosio), pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, one "keep right" sign standing twice near the Magliaso roundabout; the AI driver gets stuck at a few spots (Mugena, Vezio, Miglieglia, Pura). Details in [`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md). | — |
+| v2.8: pale jagged bands on some stone wall caps (cantonal road hairpins, road from Arosio), pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, one "keep right" sign standing twice near the Magliaso roundabout; the AI driver stops at a few spots (Mugena, Vezio, Miglieglia, Pura): spots to look at, not roads you cannot drive (see *Quality and verification*). Details in [`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md). | — |
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
 
 ## Repository layout

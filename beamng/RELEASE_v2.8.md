@@ -75,7 +75,7 @@ Behind every retaining wall the terrain used to be lowered to the foot of the wa
 ## Checked
 
 - **Without the game:** each change on its own with the pipeline's 3D renderer, before and after at the same views ([`beamng/verifica/v2.8/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8), one folder per change); the automatic checks of the whole level (*v2.8 build test* workflow): `check_level.py` without a change, `drive_test.py` with the same or fewer knocks (hard knocks on the main roads 12,284 → 12,150, on the minor roads 142,463 → 142,383); no object of one change standing in one of another (lamps, delineators, wooden poles and their cables, signs, catenary masts, gutters, the railway), in [`beamng/verifica/v2.8/build/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/v2.8/build).
-- **In the game:** the zip of the *final build test* workflow, the one published here, in BeamNG.drive 0.39 (native Linux build, RTX 4070): the level loads in 130 s with a peak of 6.4 GB of memory, without a crash. Driven by hand: the guard rails whole along the Magliaso–Pura road and the mountain roads, the roundabout signs, the road from Arosio over Mugena, Vezio, Breno and Miglieglia to Novaggio (9.6 km, drivable end to end), under the Magliaso bridge by the roundabout. Report: [`beamng/verifica/v2.8/ingame_test_report.md`](https://github.com/wintrymichi/magliasinaNG/blob/main/beamng/verifica/v2.8/ingame_test_report.md).
+- **In the game:** the zip of the *final build test* workflow, the one published here, in BeamNG.drive 0.39 (native Linux build, RTX 4070): the level loads in 130 s with a peak of 6.4 GB of memory, without a crash. Checked at fixed views: the guard rails whole along the Magliaso–Pura road and the mountain roads, the roundabout signs, under the Magliaso bridge by the roundabout. Driven by the game's AI: the cantonal road Magliaso–Pura and the road from Arosio over Mugena, Vezio, Breno and Miglieglia to Novaggio (9.6 km), both to the end. The AI drives are a diagnostic, not a measure of whether a road can be played: the game's AI brakes and stops at a bump, a step or an object a player drives over or around, and the test resets it there. A stop of the AI marks a spot to look at, not a road you cannot drive. Report: [`beamng/verifica/v2.8/ingame_test_report.md`](https://github.com/wintrymichi/magliasinaNG/blob/main/beamng/verifica/v2.8/ingame_test_report.md).
 
 ## Limits
 
@@ -84,7 +84,7 @@ Known, to fix in a next version:
 - Some stone wall caps show pale jagged bands (the cantonal road's hairpins, the road from Arosio).
 - Pale slabs on the abutments of the Magliasina bridge; pale patches in the grass at Agno.
 - One "keep right" sign still stands twice (Magliaso, near the roundabout).
-- The game's AI driver gets stuck at a few spots (Mugena, Vezio, Miglieglia, Pura); driving by hand is fine.
+- The game's AI driver stops at a few spots (Mugena, Vezio, Miglieglia, Pura): bumps or objects at the edge of the road to look at. The AI test is a diagnostic, not a verdict on whether the road can be driven.
 
 - Street lamps, delineators, wooden poles, catenary masts, aerials, dishes and solar panels stand where a rule puts them, not where they really are: no open data has them.
 - The boats do not move with the waves; the undergrowth, the house details and the delineators have no collision.
