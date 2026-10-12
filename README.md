@@ -14,6 +14,8 @@
 
 **[wintrymichi.ch](https://wintrymichi.ch)** · [Download v2.8](https://github.com/wintrymichi/magliasinaNG/releases/latest)
 
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
+
 ![Novaggio, Miglieglia and the Alto Malcantone in v2.8](beamng/verifica/screenshots/v2.8/overview-novaggio-miglieglia-malcantone.jpg)
 
 </div>
