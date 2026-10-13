@@ -888,6 +888,7 @@ FINISH = [
     ("grass", "groundcover", "grass_step", {}),                  # v2.6: the game's grass
     ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
     ("markings", "markings_net", "markings_step", {}),           # v2.7: the network's road paint redrawn
+    ("road_wear", "road_wear", "road_wear_step", {"report": True}),   # v3.0: tyre tracks and dirty edges
     ("far_trees", "far_trees", "far_trees_step", {}),            # v2.7: far trees
     ("signs", "signs_net", "signs_step", {"report": True}),      # v2.7: road signs
     ("paved_edges", "network_mesh", "paved_edges_step", {"report": True}),   # v2.8: the ground first
