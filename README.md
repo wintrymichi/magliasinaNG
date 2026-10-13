@@ -527,11 +527,11 @@ The views are named `NNNN_<panoId>_<direction>_p<pitch>.jpg`: the direction is r
 
 ## Licence
 
-The map, the mod and this repository are **free for non-commercial use** under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): you can play, share and modify them, as long as you credit the project and don't make money with them.
+The map, the mod and this repository are **free for non-commercial use** under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). You can play, share and modify them, provided you give appropriate credit, indicate any changes, and comply with the licence terms.
 
-**Commercial use is not allowed without permission and a paid licence** (for example selling the map or a mod based on it, a paywall, a paid bundle, paid work or advertising). To ask, write to **[info@wintrymichi.ch](mailto:info@wintrymichi.ch)**.
+**Commercial use of my original work is not permitted without my prior written permission and a separate commercial licence, subject to a fee agreed in writing.** This includes selling or commercially redistributing the map or derivative mods, paid downloads, paywalls, paid bundles, subscriptions, and commercial services incorporating my work. Advertising-supported use may also require permission depending on the circumstances. To request a commercial licence, contact [**info@wintrymichi.ch**](mailto:info@wintrymichi.ch).
 
-The third-party data below keeps its own licence: the OpenStreetMap extracts stay under the ODbL. The full terms are in [`LICENSE`](LICENSE).
+Third-party materials remain subject to their respective licences. OpenStreetMap data and extracts remain under the ODbL. The full terms are available in [`LICENSE`](LICENSE).
 
 ## Sources and licences
 
