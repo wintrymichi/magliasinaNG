@@ -53,16 +53,14 @@ def stage_terrain(scene, ctx):
     colors = json.load(open(os.path.join(WORK, "terrain_colors.json")))
     base_tex = {}
     rng = np.random.default_rng(3)
+    noise_img = {}
     for m in terrain.TERRAIN_MATS:
         c = np.array(colors[m] if m in colors else colors[terrain.VERGE_OF[m]], np.float32)
         noise = rng.normal(0, 1, (64, 64)).astype(np.float32)
         from scipy.ndimage import gaussian_filter, zoom
         n = zoom(gaussian_filter(noise, 3, mode="wrap"), terrain.BASE_TEX // 64, order=1)
         n = n / (np.abs(n).max() + 1e-6)
-        img = np.clip(c[None, None, :] * (1 + 0.08 * n[..., None]), 0, 255).astype(np.uint8)
-        rel = f"art/terrains/t_base_{m.lower()}_b.png"
-        save_png(level_path(*rel.split("/")), img)
-        base_tex[m] = {"b": f"{L}/{rel}", "size": 256}
+        noise_img[m] = np.clip(c[None, None, :] * (1 + 0.08 * n[..., None]), 0, 255).astype(np.uint8)
     override = ctx.get("terrain_override")
     posts = []
     if "wall_feet" in ctx:
@@ -91,6 +89,16 @@ def stage_terrain(scene, ctx):
         no_cover = binary_dilation(override[1], iterations=1)
     z0, maxh, H = terrain.build_terrain(LEVEL_DIR, *(override or (None, None, None)), post_fn=post,
                                         cap=ctx.get("terrain_cap"), no_cover=no_cover)
+    # v3.0: the open ground's base colour from the orthophoto over the whole block (terrain.base_color_maps)
+    cols = {m: colors[m] if m in colors else colors[terrain.VERGE_OF[m]] for m in terrain.TERRAIN_MATS}
+    maps = terrain.base_color_maps(cols, np.load(os.path.join(WORK, "terrain_layers.npy"), mmap_mode="r")) \
+        if os.path.exists(os.path.join(WORK, "ortho.tif")) else {}
+    for m in terrain.TERRAIN_MATS:
+        src = terrain.VERGE_OF.get(m, m)
+        rel = f"art/terrains/t_base_{src.lower()}_b.png"
+        if src == m:
+            save_png(level_path(*rel.split("/")), maps.get(m, noise_img[m]))
+        base_tex[m] = {"b": f"{L}/{rel}", "size": terrain.BASE_SIZE_M if src in maps else 256}
     mats = terrain.terrain_materials(LEVEL_NAME, base_tex)
     os.makedirs(level_path("art", "terrains"), exist_ok=True)
     json.dump(mats, open(level_path("art", "terrains", "main.materials.json"), "w"), indent=1)
@@ -108,10 +116,11 @@ def stage_terrain(scene, ctx):
 
 
 TL = "/assets/materials/tileable"
+ASPHALT_TILE = 6.0      # v3.0: surface_textures.ASPHALT_TILE_M (the game's Italy asphalt tiled over 1.25 m up to v2.8)
 ROAD_CLASSES = {  # cadastral class: (material, mesh cell m, uv tile m)
-    "strada_sentiero": ("mp_road_asphalt", 1.0, 1.25),
-    "altro_rivestimento_duro": ("mp_hard_asphalt", 2.0, 1.25),
-    "marciapiede": ("mp_sidewalk", 1.0, 1.25),
+    "strada_sentiero": ("mp_road_asphalt", 1.0, ASPHALT_TILE),
+    "altro_rivestimento_duro": ("mp_hard_asphalt", 2.0, ASPHALT_TILE),
+    "marciapiede": ("mp_sidewalk", 1.0, ASPHALT_TILE),
     "spartitraffico": ("mp_island", 1.0, 2.5),
 }
 CHUNK = 128.0
@@ -119,26 +128,27 @@ CHUNK = 128.0
 
 def road_materials():
     a = f"{TL}/concrete/italy_asphalt/t_asphalt"
+    a = f"{L}/art/shapes/roads/t_road_asphalt"            # v3.0: the old asphalt of surface_textures.asphalt
     s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
     st = f"{L}/art/shapes/buildings/t_bld_stone"          # v2.2: the rubble stone of the walls (bld_textures.py)
     return [
-        bng.material("mp_road_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", ground_type="ASPHALT"),
-        bng.material("mp_hard_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[0.92, 0.92, 0.92, 1], ground_type="ASPHALT"),
-        bng.material("mp_sidewalk", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[1.05, 1.05, 1.05, 1], ground_type="ASPHALT"),
+        bng.material("mp_road_asphalt", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
+                     f"{a}_ao.data.png", ground_type="ASPHALT"),
+        bng.material("mp_hard_asphalt", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
+                     f"{a}_ao.data.png", base_color=[1.06, 1.06, 1.05, 1], ground_type="ASPHALT"),
+        bng.material("mp_sidewalk", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
+                     f"{a}_ao.data.png", base_color=[1.2, 1.19, 1.17, 1], ground_type="ASPHALT"),
         bng.material("mp_island", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
                      ground_type="CONCRETE"),
         # 2022 resurfacing: new asphalt is about half as bright as the old surface in the photos
-        bng.material("mp_road_asphalt_fresh", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[0.5, 0.5, 0.52, 1], ground_type="ASPHALT"),
+        bng.material("mp_road_asphalt_fresh", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
+                     f"{a}_ao.data.png", base_color=[0.72, 0.72, 0.74, 1], ground_type="ASPHALT"),
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
         bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
                      f"{st}_ao.data.png", ground_type="ROCK"),
         # v2.0 network: paved paths, bridge parapets
-        bng.material("mp_path_paved", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[0.98, 0.97, 0.95, 1], ground_type="ASPHALT"),
+        bng.material("mp_path_paved", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
+                     f"{a}_ao.data.png", base_color=[1.12, 1.11, 1.09, 1], ground_type="ASPHALT"),
         bng.material("mp_bridge_parapet", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
                      base_color=[0.85, 0.85, 0.83, 1], ground_type="CONCRETE"),
     ] + surface_materials()

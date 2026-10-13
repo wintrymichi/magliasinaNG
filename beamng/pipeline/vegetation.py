@@ -41,6 +41,33 @@ MODELS = {
 }
 
 
+# v3.0: a model is drawn between SCALE_MIN and SCALE_MAX of its own height. Up to v2.8 the model was the one
+# whose crown, scaled to the measured height, came closest to the measured crown, at any scale: the 4-9 m
+# trees took the big aspen, the wide small beech and the wide fir at about half their size (about 25 000
+# trees of the v2.8 release, 5-9 m high and as wide, with leaves down to the ground) and looked like shrubs.
+SCALE_MIN, SCALE_MAX = 0.75, 1.6
+KIND_CLASSES = {"broadleaf": ("deciduous_small", "deciduous_narrow", "deciduous_large"),
+                "conifer": ("conifer",)}
+
+
+def model_candidates(cls, h, dims):
+    """Models for a tree of class `cls` and height `h`: those of its class drawn within the scale range;
+    else those of its kind (broad-leaved, conifer) within it; else the model of its kind closest to its
+    height in its own size."""
+    own = [p for p in MODELS[cls] if p in dims]
+    if cls in ("bush", "palm", "conifer_narrow"):
+        return own
+    ok = [p for p in own if SCALE_MIN <= h / dims[p][0] <= SCALE_MAX]
+    if ok:
+        return ok
+    kind = "conifer" if cls in KIND_CLASSES["conifer"] else "broadleaf"
+    pool = sorted({p for c in KIND_CLASSES[kind] for p in MODELS[c] if p in dims})
+    ok = [p for p in pool if SCALE_MIN <= h / dims[p][0] <= SCALE_MAX]
+    if ok:
+        return ok
+    return [min(pool, key=lambda p: abs(np.log(h / dims[p][0])))]
+
+
 def paved_dist_dir():
     """Signed distance to the meshed paved areas (roadheight.paved_polygons; negative inside)
     and the unit vector away from them."""
@@ -102,6 +129,37 @@ FAR = True
 FAR_CAP = 600_000     # far trees at most
 
 
+# v3.0: tops under a taller crown. The canopy model finds a local maximum wherever the surface of the
+# forest bulges, and in a closed forest many of them are the lower branches of a big crown or a small
+# tree in its shade: 4-9 m "trees" that were drawn as bushes (a big model scaled to half, foliage to the
+# ground) between the 20 m trees, and from the road the forest looked like trees and shrubs mixed.
+# A top lower than UNDER_RATIO times a tree whose crown covers it (within UNDER_REACH of its crown
+# radius) is not drawn: the crown above it is.
+UNDER_RATIO = 0.6
+UNDER_REACH = 0.9
+UNDER_MAX_H = 12.0    # m, taller tops are always trees of their own
+
+
+def under_crowns(x, y, h, d):
+    """Mask of the tops that stand under the crown of a much taller tree."""
+    from scipy.spatial import cKDTree
+    xy = np.column_stack([x, y])
+    tree = cKDTree(xy)
+    out = np.zeros(len(x), bool)
+    cand = np.flatnonzero(h < UNDER_MAX_H)
+    r_max = UNDER_REACH * 0.5 * min(float(np.max(d)) if len(d) else 0.0, 16.0)
+    if not len(cand) or r_max <= 0:
+        return out
+    for i, nb in zip(cand, tree.query_ball_point(xy[cand], r_max)):
+        nb = np.asarray(nb)
+        if not len(nb):
+            continue
+        tall = nb[h[nb] * UNDER_RATIO > h[i]]
+        if len(tall) and (np.hypot(x[tall] - x[i], y[tall] - y[i]) < UNDER_REACH * 0.5 * d[tall]).any():
+            out[i] = True
+    return out
+
+
 def tallest_per_cell(x, y, h, idx, cell):
     """The tallest of the trees `idx` in every cell of a `cell` m grid."""
     order = idx[np.argsort(-h[idx])]
@@ -140,9 +198,11 @@ def thin(x, y, h, dist, cap, dist_path=None):
     return np.sort(np.concatenate(keep))
 
 
-def far_items(far, level_dir, level_name):
+def far_items(far, level_dir, level_name, fill=None):
     """{(name, shape path): [(x, y, z, yaw, scale, None)]} of the far trees `far` (trees.npz fields,
-    plus 'dist_path': m from the nearest path) and their models written into the level."""
+    plus 'dist_path': m from the nearest path) and their models written into the level. fill: the
+    trees of forest_fill.fill (v3.0, the woods outside the survey: the same fields plus 'conifer'),
+    added after the cap of the measured ones."""
     import far_trees
     from landcover import CODE
     garden = np.isin(far["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],
@@ -155,6 +215,13 @@ def far_items(far, level_dir, level_name):
         asset_bounds.register(p, mn, mx)
     names, scale, radius = far_trees.assign(far["h"], far["d"], far["rgb"], conifer, cols)
     keep = far_trees.select(names, radius, far.get("dist_path"), FAR_CAP, far["h"], far["x"], far["y"])
+    if fill is not None and len(fill["x"]):
+        n0 = len(names)
+        f_names, f_scale, _ = far_trees.assign(fill["h"], fill["d"], fill["rgb"], fill["conifer"], cols)
+        far = {k: np.concatenate([far[k], fill[k]]) for k in ("x", "y", "z")}
+        names, scale = np.concatenate([names, f_names]), np.concatenate([scale, f_scale])
+        keep = np.concatenate([keep, np.ones(len(f_names), bool)])
+        print("forest fill: %d far trees outside the survey" % (len(names) - n0))
     rng = np.random.default_rng(11)
     yaw = rng.uniform(0, 2 * np.pi, len(names))
     out = {}
@@ -178,6 +245,9 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     ok = t["lc"] != CODE["none"]
     t = {k: t[k][ok] for k in t.files}
     print("trees outside the cadastral survey dropped:", int((~ok).sum()))
+    under = under_crowns(t["x"], t["y"], t["h"], t["d"])
+    t = {k: t[k][~under] for k in t}
+    print("tops under a taller crown dropped:", int(under.sum()), "of", len(under))
     if net_xy is not None:
         from scipy.spatial import cKDTree
         pts, hw, is_path = net_xy
@@ -216,7 +286,7 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     rng = np.random.default_rng(rng_seed)
     items = {}
     for i in range(len(x)):
-        cands = [p for p in MODELS[cls[i]] if p in dims]
+        cands = model_candidates(cls[i], h[i], dims)
         H0 = np.array([dims[p][0] for p in cands])
         W0 = np.array([dims[p][1] for p in cands])
         s = h[i] / H0
