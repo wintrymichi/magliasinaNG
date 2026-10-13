@@ -127,7 +127,6 @@ CHUNK = 128.0
 
 
 def road_materials():
-    a = f"{TL}/concrete/italy_asphalt/t_asphalt"
     a = f"{L}/art/shapes/roads/t_road_asphalt"            # v3.0: the old asphalt of surface_textures.asphalt
     s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
     st = f"{L}/art/shapes/buildings/t_bld_stone"          # v2.2: the rubble stone of the walls (bld_textures.py)
@@ -901,6 +900,8 @@ FINISH = [
     ("signs_more", "signs_more", "signs_more_step", {"report": True}),
     ("lake", "water", "lake_step", {"report": True}),
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+    ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
+    ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
 ]
 
 
