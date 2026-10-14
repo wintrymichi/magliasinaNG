@@ -1,4 +1,4 @@
-BeamNG.drive (0.39) map of the **Malcantone**, version 3.0: the [v2.8](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.8) map polished up close and from afar, after the feedback on r/BeamNG ("blocky, smeary, lacking detail"). Trees that are trees, woods on every mountain around the map, ground coloured from the aerial photo, new asphalt with the wear of the traffic, new stone and concrete walls, and the villages lived in: bins, hydrants, recycling points, café terraces, planters, mirrors at blind exits, flower boxes at the windows, woodpiles at the rustici. Same area, roads and buildings.
+BeamNG.drive (0.39) map of the **Malcantone**, version 3.0: the [v2.8](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.8) map polished up close and from afar, after the feedback on r/BeamNG ("blocky, smeary, lacking detail"). Trees that are trees, woods on every mountain around the map, ground coloured from the aerial photo, the asphalt, walls and paving of the game's Italy level with the wear of the traffic, smooth curves, and the villages lived in: bins, hydrants, recycling points, café terraces, planters, mirrors at blind exits, flower boxes at the windows, woodpiles at the rustici. Same area, roads and buildings.
 
 <!-- screenshots: added after the in-game test, when michi gives the go -->
 
@@ -16,15 +16,19 @@ Every tree of the map came from the canopy model of swisstopo inside the cadastr
 
 Up to v2.8 each ground material had one flat colour and its detail faded out at 80 m, so the ground looked smeared. Now each material has a colour map over the whole terrain taken from the orthophoto (`terrain.base_color_maps`, limited so that it does not copy shadows and crowns), the detail reaches 160 m with stronger relief, and the steep banks over 40° have their own material (forest soil with roots and a rocky macro texture) instead of stretched meadow.
 
-## Asphalt and its wear
+## Vanilla asphalt and its wear
 
-The carriageways have a new asphalt texture drawn by the pipeline (`surface_textures.asphalt`): one tile every 6 m instead of the 1.25 m of the game's Italian asphalt, so no repeating pattern, an even grey with grain, a few faint cracks and oil drops; the stretches resurfaced in 2022 the same. On it (`road_wear.py`) every lane has the two faint darker tracks of the wheels (one pair in the middle of the narrow roads) and every edge a light band of dust, both stopping at the edge of the road they meet: about 330 km of tracks and 440 km of edges, translucent strips 1.2 cm over the asphalt, without collision.
+The carriageways, yards, pavements and paths have the asphalt of the game's Italy level with its macro detail map (`italy_mats.py`, one tile every 4 m, the detail every 40 m, so no repeating pattern); up to v2.8 the same texture without its detail, every 1.25 m. On it (`road_wear.py`), with Italy's own road overlays, the way Italy lays them: lighter and darker patches over the whole carriageway, every lane the two tyre tracks, now and then a cracked and patched stretch of 15–45 m, and every edge a light band of dust; all of them stop at the edge of the road they meet. Translucent strips a few millimetres over the asphalt, without collision.
 
 The white edge lines are laid from the edge of the road mesh, measured every metre and smoothed, instead of the AI road's width: up to v2.8 about a tenth of them wandered off the asphalt, now about 1 %.
 
-## Stone and concrete walls
+## Vanilla walls and paving
 
-The stone walls have a new texture of coursed rubble masonry with spalls in the joints, lichen and moss, instead of the round cells of v2.8; the concrete walls have rain streaks, lichen and damp patches.
+The stone walls and the stone faces of bridges and steps have Italy's medieval stone wall, the concrete walls, traffic islands and bridge parapets Italy's old concrete, the setts and cobbled streets Italy's cobblestones.
+
+## Smooth curves
+
+The cadastral survey draws a curved road edge, kerb or wall as straight pieces a few metres long, and up to v2.8 the roads, pavements and walls showed every piece. Now every gently turning outline is a curve through the surveyed points, a point every 0.75 m (`smooth_geom.py`); corners of 35° or more stay sharp, and two neighbours (a road and its pavement) get exactly the same curve on their shared edge.
 
 ## Street life
 

@@ -105,6 +105,36 @@ def understory_object():
     return o
 
 
+# v3.0 (understory.understory_step): life on the open meadows and lawns, which up to v3.0 were bare grass between
+# the houses (the big lawns of Agno): now and then a shrub of the game's own models along the meadows, a few
+# more on the gardens, placed around the camera like the undergrowth (nothing stored per shrub, no collision).
+# (layer, model, probability, scale min, max)
+MEADOW_SHAPES = [
+    ("Grass", "/levels/italy/art/shapes/trees/trees_italy/generibush.dae", 0.5, 0.30, 0.60),
+    ("Grass", "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_c.dae", 0.3, 0.25, 0.45),
+    ("GardenGrass", "/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae", 1.0, 0.30, 0.55),
+    ("GardenGrass", "/levels/italy/art/shapes/trees/trees_italy/generibush.dae", 0.6, 0.25, 0.45),
+    ("GardenGrass", "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_b.dae", 0.3, 0.22, 0.35),
+]
+MEADOW = ("meadow_life", 80.0, 55.0, 8, 260, 33)
+
+
+def meadow_object():
+    """The GroundCover of the shrubs on the meadows and lawns (MEADOW_SHAPES)."""
+    name, radius, dissolve, grid, max_el, seed = MEADOW
+    types = []
+    for layer, shape, p, smin, smax in MEADOW_SHAPES:
+        t = _t(layer, [0, 0, 1, 1], p, smin, smax, 1, 1, 1.0, 0.0)
+        t.update(shapeFilename=shape, maxSlope=35)
+        types.append(t)
+    o = {"name": name, "class": "GroundCover", "persistentId": bng.pid(), "position": [0, 0, 0],
+         "material": "mp_gc_grass_short", "radius": radius, "dissolveRadius": dissolve, "gridSize": grid, "zOffset": 0,
+         "seed": seed, "maxElements": max_el, "maxBillboardTiltAngle": 40, "shapeCullRadius": radius,
+         "shapesCastShadows": False, "Types": types}
+    o.update(WIND)
+    return o
+
+
 def materials():
     out = []
     for name, (color, maps, alpha_ref) in MATERIALS.items():
