@@ -130,6 +130,15 @@ def main(out):
     sm = landcover.load_av()
     t2 = time.time()
     gaps, stats = partition_stats(raw, sm)
+    stats["kept_as_surveyed"] = len(smooth_geom.KEPT)
+    stats["kept_examples"] = smooth_geom.KEPT[:20]
+    flat = [(c, p) for c, lst in raw["LCSF"].items() for g, _ in lst for p in polys(g)]
+    tree = shapely.STRtree([p for _, p in flat])
+    stats["gap_neighbours"] = []
+    for area, x, y in stats["largest_gaps"][:8]:
+        near = tree.query(shapely.Point(x, y).buffer(5))
+        stats["gap_neighbours"].append([[flat[j][0], round(flat[j][1].area), len(flat[j][1].interiors),
+                                         len(flat[j][1].exterior.coords)] for j in near[:6]])
     stats.update(load_s=round(t1 - t0), smooth_s=round(t2 - t1 - (t1 - t0)))
     print("smoothing:", stats, flush=True)
     json.dump(stats, open(os.path.join(out, "smooth_stats.json"), "w"), indent=1)
