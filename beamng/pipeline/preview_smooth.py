@@ -135,6 +135,15 @@ def main(out):
     flat = [(c, p) for c, lst in raw["LCSF"].items() for g, _ in lst for p in polys(g)]
     tree = shapely.STRtree([p for _, p in flat])
     stats["gap_neighbours"] = []
+    # the survey polygons at the three largest gaps, as they are, snapped and smoothed (for debugging elsewhere)
+    dbg = {}
+    for area, x, y in stats["largest_gaps"][:3]:
+        for j in tree.query(shapely.Point(x, y).buffer(5)):
+            p = flat[j][1]
+            if p.area < 5e6:
+                dbg[str(j)] = {"cls": flat[j][0], "raw": shapely.to_wkt(p, rounding_precision=3),
+                               "smoothed": shapely.to_wkt(smooth_geom.smooth_partition([p], [False])[0], rounding_precision=3)}
+    json.dump(dbg, open(os.path.join(out, "gap_polygons.json"), "w"))
     for area, x, y in stats["largest_gaps"][:8]:
         near = tree.query(shapely.Point(x, y).buffer(5))
         stats["gap_neighbours"].append([[flat[j][0], round(flat[j][1].area), len(flat[j][1].interiors),

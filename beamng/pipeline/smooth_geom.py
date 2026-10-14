@@ -21,8 +21,7 @@ STEP = 0.75            # m between the points of a curve
 MIN_PIECE = 1.0        # m: shorter pieces stay straight
 MAX_SUB = 12           # points per piece at most
 KEY = 1000.0           # vertices within 1 mm are one
-KEEP_AREA = (0.02, 2.0)  # a smoothed polygon whose area changes by more (share, m2) stays as it was
-KEPT = []               # (index, area, smoothed area) of those, for the reports
+KEPT = []               # (index, area, None) of the polygons kept as surveyed, for the reports
 SNAP = 0.002           # m: a neighbour's vertex this close to an edge is put on it
 
 
@@ -157,7 +156,7 @@ def smooth_partition(geoms, rigid):
             q = shapely.Polygon(rings[0], rings[1:])
             # a curve that crosses another ring of the polygon (a hole close to the outline, a narrow neck)
             # would lose or add area when repaired: that polygon stays as surveyed
-            if not q.is_valid or abs(q.area - p.area) > KEEP_AREA[0] * p.area + KEEP_AREA[1]:
+            if not q.is_valid:
                 KEPT.append((i, round(p.area, 1), round(q.area, 1) if q.is_valid else None))
                 q = p
             parts.append(q)
