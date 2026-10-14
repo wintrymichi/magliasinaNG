@@ -2,6 +2,21 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
+## v3.0 (not released yet)
+
+Built and checked automatically on GitHub Actions (`v3 build test`: zip 542 MB, no sign or guard rail drawn twice); the in-game test is still to do. Release notes: [`beamng/RELEASE_v3.0.md`](beamng/RELEASE_v3.0.md).
+
+- **Trees, not shrubs:** no tree model is shrunk below 0.75 of its size any more, each tree takes the model closest to its height, and false tops under taller crowns are dropped (about 25,000 trees of v2.8 looked like shrubs).
+- **Woods on every mountain:** the forest of ESA WorldCover 2021 planted as far trees on the whole terrain block outside the cadastral survey (about 330,000 trees on 64 km²), the terrain and the backdrop coloured by its land cover.
+- **Ground coloured from the aerial photo:** a colour map per ground material from the orthophoto, detail to 160 m, a material of its own for the steep banks.
+- **Vanilla asphalt with the wear of the traffic:** the game's Italy asphalt with its macro detail (4 m tile instead of 1.25 m without detail), Italy's tyre tracks in every lane, Italy's lighter and darker patches over the whole carriageway and cracked stretches now and then, dusty edges; all of it stops at the roads they meet.
+- **Vanilla walls and paving:** Italy's medieval stone wall on the stone walls and bridge sides, Italy's old concrete on the concrete walls, islands and parapets, Italy's cobbles on the setts and cobbled streets.
+- **Smooth curves:** the curved edges of roads, pavements, yards and walls of the cadastral survey are rounded through the surveyed points (`smooth_geom.py`) instead of straight pieces a few metres long.
+- **Street life:** bins, hydrants, recycling points, café terraces, planters, convex mirrors, letter boxes, house bins, garden tables, pallets and drums, and props along the edges of the squares, car parks and yards, by rules, with the game's Italy models (`street_life.py`, about 13,000 objects).
+- **Flower boxes and woodpiles** at the houses (`house_extras.py`).
+- **Edge lines on the asphalt:** laid from the edge of the road mesh instead of the AI road's width (off the asphalt: 11 % of their length before, 1 % now).
+- One "keep right" sign no longer stands twice.
+
 ## v2.8 (10 October 2026)
 
 - **Tested in the game:** the released zip (the *final build test* workflow's) in BeamNG.drive 0.39, native Linux build, RTX 4070: loads in 130 s, 6.4 GB of memory at its peak, no crash. Guard rails whole, roundabout signs, the road Arosio – Mugena – Vezio – Breno – Miglieglia – Novaggio drivable end to end (9.6 km), the underside of the Magliaso bridge clean ([`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md), screenshots in [`beamng/verifica/screenshots/v2.8/`](beamng/verifica/screenshots/v2.8)).

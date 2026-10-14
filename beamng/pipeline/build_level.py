@@ -53,16 +53,14 @@ def stage_terrain(scene, ctx):
     colors = json.load(open(os.path.join(WORK, "terrain_colors.json")))
     base_tex = {}
     rng = np.random.default_rng(3)
+    noise_img = {}
     for m in terrain.TERRAIN_MATS:
         c = np.array(colors[m] if m in colors else colors[terrain.VERGE_OF[m]], np.float32)
         noise = rng.normal(0, 1, (64, 64)).astype(np.float32)
         from scipy.ndimage import gaussian_filter, zoom
         n = zoom(gaussian_filter(noise, 3, mode="wrap"), terrain.BASE_TEX // 64, order=1)
         n = n / (np.abs(n).max() + 1e-6)
-        img = np.clip(c[None, None, :] * (1 + 0.08 * n[..., None]), 0, 255).astype(np.uint8)
-        rel = f"art/terrains/t_base_{m.lower()}_b.png"
-        save_png(level_path(*rel.split("/")), img)
-        base_tex[m] = {"b": f"{L}/{rel}", "size": 256}
+        noise_img[m] = np.clip(c[None, None, :] * (1 + 0.08 * n[..., None]), 0, 255).astype(np.uint8)
     override = ctx.get("terrain_override")
     posts = []
     if "wall_feet" in ctx:
@@ -91,6 +89,16 @@ def stage_terrain(scene, ctx):
         no_cover = binary_dilation(override[1], iterations=1)
     z0, maxh, H = terrain.build_terrain(LEVEL_DIR, *(override or (None, None, None)), post_fn=post,
                                         cap=ctx.get("terrain_cap"), no_cover=no_cover)
+    # v3.0: the open ground's base colour from the orthophoto over the whole block (terrain.base_color_maps)
+    cols = {m: colors[m] if m in colors else colors[terrain.VERGE_OF[m]] for m in terrain.TERRAIN_MATS}
+    maps = terrain.base_color_maps(cols, np.load(os.path.join(WORK, "terrain_layers.npy"), mmap_mode="r")) \
+        if os.path.exists(os.path.join(WORK, "ortho.tif")) else {}
+    for m in terrain.TERRAIN_MATS:
+        src = terrain.VERGE_OF.get(m, m)
+        rel = f"art/terrains/t_base_{src.lower()}_b.png"
+        if src == m:
+            save_png(level_path(*rel.split("/")), maps.get(m, noise_img[m]))
+        base_tex[m] = {"b": f"{L}/{rel}", "size": terrain.BASE_SIZE_M if src in maps else 256}
     mats = terrain.terrain_materials(LEVEL_NAME, base_tex)
     os.makedirs(level_path("art", "terrains"), exist_ok=True)
     json.dump(mats, open(level_path("art", "terrains", "main.materials.json"), "w"), indent=1)
@@ -108,39 +116,35 @@ def stage_terrain(scene, ctx):
 
 
 TL = "/assets/materials/tileable"
+ASPHALT_TILE = 4.0      # v3.0: italy_mats.ASPHALT_TILE (Italy's asphalt tiled over 1.25 m up to v2.8, without its detail map)
+ROAD_TINT = [0.85, 0.85, 0.85]   # Italy's asphalt at 1.0 reads as concrete on wide carriageways (about 150 sRGB)
+ITALY_STONE = {"sett": "italy_cobblestone_patterned", "cobble": "italy_cobblestone"}
 ROAD_CLASSES = {  # cadastral class: (material, mesh cell m, uv tile m)
-    "strada_sentiero": ("mp_road_asphalt", 1.0, 1.25),
-    "altro_rivestimento_duro": ("mp_hard_asphalt", 2.0, 1.25),
-    "marciapiede": ("mp_sidewalk", 1.0, 1.25),
+    "strada_sentiero": ("mp_road_asphalt", 1.0, ASPHALT_TILE),
+    "altro_rivestimento_duro": ("mp_hard_asphalt", 2.0, ASPHALT_TILE),
+    "marciapiede": ("mp_sidewalk", 1.0, ASPHALT_TILE),
     "spartitraffico": ("mp_island", 1.0, 2.5),
 }
 CHUNK = 128.0
 
 
 def road_materials():
-    a = f"{TL}/concrete/italy_asphalt/t_asphalt"
-    s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
-    st = f"{L}/art/shapes/buildings/t_bld_stone"          # v2.2: the rubble stone of the walls (bld_textures.py)
+    """v3.0: the asphalt of the game's Italy level (italy_mats.py) on the carriageways, yards, pavements and
+    paths, Italy's old concrete on the islands and parapets, Italy's medieval stone wall on the stone faces."""
+    import italy_mats as it
     return [
-        bng.material("mp_road_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", ground_type="ASPHALT"),
-        bng.material("mp_hard_asphalt", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[0.92, 0.92, 0.92, 1], ground_type="ASPHALT"),
-        bng.material("mp_sidewalk", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[1.05, 1.05, 1.05, 1], ground_type="ASPHALT"),
-        bng.material("mp_island", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
-                     ground_type="CONCRETE"),
-        # 2022 resurfacing: new asphalt is about half as bright as the old surface in the photos
-        bng.material("mp_road_asphalt_fresh", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[0.5, 0.5, 0.52, 1], ground_type="ASPHALT"),
+        it.material("mp_road_asphalt", "italy_asphalt", "ASPHALT", tint=ROAD_TINT),
+        it.material("mp_hard_asphalt", "italy_asphalt", "ASPHALT", tint=[0.9, 0.9, 0.89]),
+        it.material("mp_sidewalk", "italy_asphalt", "ASPHALT", tint=[1.0, 0.99, 0.97]),
+        it.material("mp_island", "m_concrete_old", "CONCRETE"),
+        # 2022 resurfacing: darker in the photos, but darker in the game too (0.72, then 0.86 in the v3 test
+        # builds) it reads as black patches with sharp edges on the grey road: the same asphalt as the rest
+        it.material("mp_road_asphalt_fresh", "italy_asphalt", "ASPHALT", tint=ROAD_TINT),
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
-        bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
-                     f"{st}_ao.data.png", ground_type="ROCK"),
+        it.material("mp_road_wall", "italy_medieval_stone_wall", "ROCK"),
         # v2.0 network: paved paths, bridge parapets
-        bng.material("mp_path_paved", f"{a}_b.color.dds", f"{a}_nm.normal.dds", f"{a}_r.data.dds",
-                     f"{a}_ao.data.dds", base_color=[0.98, 0.97, 0.95, 1], ground_type="ASPHALT"),
-        bng.material("mp_bridge_parapet", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
-                     base_color=[0.85, 0.85, 0.83, 1], ground_type="CONCRETE"),
+        it.material("mp_path_paved", "italy_asphalt", "ASPHALT", tint=[0.95, 0.94, 0.93]),
+        it.material("mp_bridge_parapet", "m_concrete_old", "CONCRETE", base_color=[0.9, 0.9, 0.88, 1]),
     ] + surface_materials()
 
 
@@ -149,11 +153,15 @@ def surface_materials():
     yards and paths (osm_surface.MATS); the ground type gives the grip and the sound in the game."""
     import osm_surface
     t = f"{L}/art/shapes/roads"
+    import italy_mats as it
     ground = {"gravel": "GRAVEL", "dirt": "DIRT", "sett": "COBBLESTONE", "cobble": "COBBLESTONE"}
     out = []
     for group, mats in osm_surface.MATS.items():
         for surf, name in mats.items():
             if surf == "hard":
+                continue
+            if surf in ITALY_STONE:                       # v3.0: Italy's cobbles (italy_mats.py)
+                out.append(it.material(name, ITALY_STONE[surf], ground[surf]))
                 continue
             out.append(bng.material(name, f"{t}/t_road_{surf}_b.color.png", f"{t}/t_road_{surf}_nm.normal.png",
                                     f"{t}/t_road_{surf}_r.data.png", f"{t}/t_road_{surf}_ao.data.png",
@@ -441,23 +449,18 @@ def stage_roads_reuse(scene, ctx):
 def stage_walls(scene, ctx):
     import walls
     import bld_textures
-    # v2.2: original procedural textures (bld_textures.py): rubble stone (shared with the rustici) and
-    # board-formed concrete, instead of the vanilla regular stone bricks
-    bdir, wdir = level_path("art", "shapes", "buildings"), level_path("art", "shapes", "walls")
+    # v2.2: original procedural textures (bld_textures.py): rubble stone (the rustici) and plaster
+    bdir = level_path("art", "shapes", "buildings")
     os.makedirs(bdir, exist_ok=True)
     bld_textures.stone_wall(bdir)
     bld_textures.plaster(bdir)
-    bld_textures.walls(wdir)
-    st, cc = f"{L}/art/shapes/buildings/t_bld_stone", f"{L}/art/shapes/walls/t_wall_concrete"
+    import italy_mats as it
+    # v3.0: the walls of the game's Italy level (italy_mats.py): medieval stone, old concrete
     bng.write_materials(level_path("art", "shapes", "walls", "main.materials.json"), [
-        bng.material("mp_wall_stone", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
-                     f"{st}_ao.data.png", ground_type="ROCK"),
-        bng.material("mp_wall_stone_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
-                     ground_type="CONCRETE"),
-        bng.material("mp_wall_concrete", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
-                     ground_type="CONCRETE"),
-        bng.material("mp_wall_concrete_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
-                     ground_type="CONCRETE"),
+        it.material("mp_wall_stone", "italy_medieval_stone_wall", "ROCK"),
+        it.material("mp_wall_stone_top", "m_concrete_old", "CONCRETE"),
+        it.material("mp_wall_concrete", "m_concrete_old", "CONCRETE"),
+        it.material("mp_wall_concrete_top", "m_concrete_old", "CONCRETE", base_color=[0.92, 0.92, 0.9, 1]),
         bng.material("mp_wall_plaster", f"{L}/art/shapes/buildings/t_bld_plaster_b.color.png",
                      f"{L}/art/shapes/buildings/t_bld_plaster_nm.normal.png",
                      f"{L}/art/shapes/buildings/t_bld_plaster_r.data.png", vert_color=True, ground_type="CONCRETE")])
@@ -878,6 +881,7 @@ FINISH = [
     ("grass", "groundcover", "grass_step", {}),                  # v2.6: the game's grass
     ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
     ("markings", "markings_net", "markings_step", {}),           # v2.7: the network's road paint redrawn
+    ("road_wear", "road_wear", "road_wear_step", {"report": True}),   # v3.0: tyre tracks and dirty edges
     ("far_trees", "far_trees", "far_trees_step", {}),            # v2.7: far trees
     ("signs", "signs_net", "signs_step", {"report": True}),      # v2.7: road signs
     ("paved_edges", "network_mesh", "paved_edges_step", {"report": True}),   # v2.8: the ground first
@@ -890,6 +894,8 @@ FINISH = [
     ("signs_more", "signs_more", "signs_more_step", {"report": True}),
     ("lake", "water", "lake_step", {"report": True}),
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+    ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
+    ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
 ]
 
 

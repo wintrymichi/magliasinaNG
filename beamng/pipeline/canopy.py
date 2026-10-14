@@ -60,6 +60,8 @@ TRUNK_GAP = 0.8                             # m between two trunks after a move
 MOVE = 3.0                                  # m, farthest a tree moves (clearance.MOVE_TREE)
 SHRUB_MOVE = 1.5                            # m, farthest a shrub or hedge moves (clearance.MAX_SHIFT)
 SCALES = (0.85, 0.7)                        # smaller scales tried before a tree is removed
+SWAP_MIN, SWAP_MAX = 0.75, 1.6              # v3.0: a swapped model within this share of its own height (vegetation.SCALE_MIN)
+SCALE_FLOOR = 0.6                           # v3.0: never a model under this share of its own height (a shrub)
 SINK = {"tree": 0.15, "bush": 0.10, "hedge": 0.10}
 FLOAT_TOL = 0.3                             # m of an item's base above the ground (check_level)
 PROP_R = 0.8                                # m from a trunk to a vanilla prop (street light, bench)
@@ -681,12 +683,12 @@ def _fix(F, T, ground, trees, moved_to, i, kind, ux, uy, limit, fam, sink, stats
             t = F.types.index(name)
             H0, R0, _, _ = F.sizes[name]
             s = h0 / H0
-            if t != t0_ and 0.5 <= s <= 2.0 and min(R0 * s, MAX_R) < r0 - 0.05:
+            if t != t0_ and SWAP_MIN <= s <= SWAP_MAX and min(R0 * s, MAX_R) < r0 - 0.05:
                 swaps.append((t, s, "swap"))
         swaps.sort(key=lambda o: -F.size(i, o[0], o[1])[1])          # the widest that fits first
         options += swaps
         tn, sn_, _ = min(options, key=lambda o: F.size(i, o[0], o[1])[1])
-        options += [(tn, sn_ * f, "scale") for f in SCALES]
+        options += [(tn, sn_ * f, "scale") for f in SCALES if sn_ * f >= SCALE_FLOOR]
     steps = np.r_[0.0, np.arange(0.25, limit + 1e-6, 0.25)]
     tree = fam is not None
     for t, s, how in options:

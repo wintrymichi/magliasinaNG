@@ -361,6 +361,7 @@ def select(names_, radius, dist_path=None, cap=None, h=None, x=None, y=None):
 # A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish far_trees
 # --------------------------------------------------------------------------------------------------
 
+FILL = True        # v3.0: far trees on the forest outside the cadastral survey too (forest_fill.py)
 MARGIN = 3.0       # m beyond vegetation.NEAR / NEAR_PATH: the distances here are to the meshes, not the lines
 MATCH = 1.0        # m: a measured tree with a forest item this close is in the level already
 FAR_FILE = re.compile(r"/(forest/far_[a-z]+_[a-z]\.forest4\.json|art/shapes/trees/far_[^/]+)$")
@@ -387,6 +388,10 @@ def far_trees_step(root, trees_f=None):
     t = {k: t[k] for k in t.files}
     ok = t["lc"] != CODE["none"]
     t = {k: v[ok] for k, v in t.items()}
+    measured = t
+    under = vegetation.under_crowns(t["x"], t["y"], t["h"], t["d"])     # v3.0: tops under a taller crown
+    t = {k: v[~under] for k, v in t.items()}
+    print("tops under a taller crown left out:", int(under.sum()))
     road, path = surface_points(zi, lv)
     xy = np.column_stack([t["x"], t["y"]])
     d_road = cKDTree(road).query(xy)[0] if len(road) else np.full(len(xy), 1e9)
@@ -404,7 +409,9 @@ def far_trees_step(root, trees_f=None):
     far["dist_path"] = d_path[cand]
     tmp = tempfile.mkdtemp(prefix="magliaso_far_")
     try:
-        items = vegetation.far_items(far, tmp, LEVEL_NAME)
+        import forest_fill, water                                           # v3.0: the woods outside the survey
+        fill = forest_fill.fill(measured, water.lake_level()) if FILL else None
+        items = vegetation.far_items(far, tmp, LEVEL_NAME, fill)
         md_name = f"{lv}/art/forest/managedItemData.json"
         managed = json.loads(zi.read(md_name)) if md_name in zi.NameToInfo else {}
         managed = {k: v for k, v in managed.items() if not k.startswith("far_")}

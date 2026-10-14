@@ -219,11 +219,11 @@ def understory_step(root, report=None):
         measured[m] = np.median(a.reshape(-1, 3), 0).round().astype(int).tolist()
         new[f] = darker(zi.read(f), measured[m], FLOOR)
     veg_name = f"{lv}/main/MissionGroup/level_objects/vegetation/items.level.json"
-    veg = [o for o in read_items(zi, veg_name) if o.get("name") != groundcover.UNDERSTORY[0]]
+    veg = [o for o in read_items(zi, veg_name) if o.get("name") not in (groundcover.UNDERSTORY[0], groundcover.MEADOW[0])]
     parent = next((o["__parent"] for o in veg if o.get("class") == "GroundCover"), "vegetation")
-    u = groundcover.understory_object()
-    u["__parent"] = parent
-    veg.append(u)
+    for u in (groundcover.understory_object(), groundcover.meadow_object()):     # v3.0: and the meadow shrubs
+        u["__parent"] = parent
+        veg.append(u)
     new[veg_name] = write_items(veg)
 
     with zi.writer() as zo:

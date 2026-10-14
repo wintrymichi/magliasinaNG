@@ -518,6 +518,7 @@ POLE_R = 0.030            # m, 60 mm steel tube
 REPLACE = 8.0             # m: a mapped sign takes the place of a panorama sign this close
 REPLACE_RULE = 5.0        # m: a sign the rules imply, of a panorama sign this close
 CLEAR = 0.45              # m: no new pole this close to an existing one
+PANO_SAME = 8.0           # m: two panorama poles with the same signal for the same traffic this close are one (v3.0)
 SAME_SIGN = 25.0          # m: a plate of the same signal for the same traffic this close is the same sign (v2.8)
 ROAD_MATS = ("mp_road_asphalt", "mp_road_asphalt_fresh", "mp_road_gravel", "mp_road_dirt", "mp_road_sett",
              "mp_road_cobble")
@@ -985,6 +986,18 @@ def build(z, signs):
                 break
         else:
             poles.append([pc, [(float(cc[2]), stack, n2)]])
+    # v3.0: one sign measured from two panoramas a few metres apart is one sign (the v2.8 release had the
+    # "keep right" of the island at the Magliaso roundabout twice, 4 m apart)
+    kept = []
+    for pc, items in poles:
+        sig = {(st[0][0], st[0][1]) for _, st, _ in items}
+        nrm = items[0][2]
+        if any(np.hypot(*(q[0] - pc)) < PANO_SAME and float(np.dot(q[1][0][2], nrm)) > 0.7
+               and sig & {(st[0][0], st[0][1]) for _, st, _ in q[1]} for q in kept):
+            rep["panorama"]["double_of_panorama"] += 1
+            continue
+        kept.append([pc, items])
+    poles = kept
     for pc, items in poles:
         # top to bottom; a plate drawn bigger than the one measured pushes the ones under it down
         floor = None

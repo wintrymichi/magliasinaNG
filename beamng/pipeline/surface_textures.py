@@ -286,12 +286,74 @@ def cobble(dst, n=N):
     _write(dst, "t_road_cobble", _fit_mean(np.clip(col, 0, 1), target("cobble")), hgt, 0.8 / mm, rough, ao_r=6, ao_k=0.09)
 
 
-SURFACES = ("gravel", "dirt", "sett", "cobble")
+ASPHALT_TILE_M = 6.0          # v3.0: metres covered by the asphalt texture (the uv tile of the network's asphalt)
+ASPHALT_N = 2048
+ASPHALT_BRIGHTNESS = 116.0    # mean sRGB of the old asphalt of the network (the game's Italy asphalt at 1.0: about 150; 104 looked black in game)
+
+
+def asphalt(dst, n=ASPHALT_N):
+    """Asphalt of the roads, yards and pavements of the network (v3.0): an old wearing course of bitumen
+    with crushed stone (2-11 mm grains, the lighter ones polished by the tyres), darker bitumen-rich
+    and lighter ravelled patches over metres, a few filled cracks, oil drips (nothing that catches the eye
+    where the tile repeats). Up to v2.8 the network used the game's Italy asphalt over 1.25 m: an even light grey that
+    repeated every car length and looked like concrete from the driver's seat."""
+    rng = np.random.default_rng(SEED + 7)
+    tm = ASPHALT_TILE_M
+    mm = tm * 1000 / n                                       # mm per pixel
+    fine = noise(n, n, 0.6, rng)
+    mid = noise(n, n, 3.0, rng)
+    blot = noise(n, n, n / tm * 0.35, rng)                   # 0.35 m blotches
+    big = noise(n, n, n / tm * 1.2, rng)                     # metres
+    col = np.empty((n, n, 3), np.float32)
+    matrix = np.array([0.27, 0.27, 0.28], np.float32)
+    col[:] = matrix * (1 + 0.06 * fine + 0.04 * mid)[..., None]
+    hgt = 0.3 * fine + 0.4 * mid
+    pal = np.array([[0.62, 0.61, 0.59], [0.50, 0.50, 0.50], [0.70, 0.68, 0.64], [0.40, 0.40, 0.41],
+                    [0.58, 0.54, 0.48]], np.float32)
+    for count, (r0, r1), hmm in ((int(90000 * (tm / 6) ** 2), (1.0, 2.5), 0.8), (int(9000 * (tm / 6) ** 2), (2.5, 5.5), 1.5)):
+        h, sid = _domes(n, rng, count, (r0 / mm, r1 / mm), aspect=(1.0, 1.7), embed=0.55)
+        on = sid >= 0
+        tone = pal[rng.choice(len(pal), count, p=[0.35, 0.25, 0.15, 0.15, 0.1])] * rng.uniform(0.85, 1.1, count)[:, None]
+        # the exposed grains: lighter where the tyres polish them, half hidden in bitumen elsewhere
+        expose = np.clip(0.55 + 0.06 * blot, 0.15, 1.0)
+        mixw = (h * expose)[..., None]
+        col = np.where(on[..., None], col * (1 - mixw) + tone[np.maximum(sid, 0)] * mixw, col)
+        hgt = np.where(on, hgt + hmm * h, hgt)
+    # bitumen-rich (darker, smoother) and ravelled (lighter, rougher) patches over metres, faint: inside a
+    # 6 m tile stronger ones repeat as clouds along the road (first v3 build)
+    rich = np.clip(big - 0.4, 0, None)
+    ravel = np.clip(-big - 0.6, 0, None)
+    col *= (1 - 0.02 * rich + 0.015 * ravel + 0.01 * blot)[..., None]
+    # filled cracks: thin dark meandering lines of bitumen
+    g = np.zeros((n, n), np.float32)
+    for _ in range(int(4 * (tm / 6) ** 2)):
+        x, y = rng.uniform(0, n, 2)
+        a = rng.uniform(0, 2 * np.pi)
+        L = rng.uniform(0.6, 2.5) / tm * n
+        steps = int(L / 2)
+        for _k in range(steps):
+            a += rng.normal(0, 0.25)
+            x, y = (x + 2 * np.cos(a)) % n, (y + 2 * np.sin(a)) % n
+            g[int(y), int(x)] = 1.0
+    crack = gaussian_filter(g, 1.6 / mm * 2, mode="wrap")
+    crack = np.clip(crack / max(float(crack.max()), 1e-6) * 3.0, 0, 1)
+    col *= (1 - 0.18 * crack)[..., None]
+    hgt -= 1.5 * crack
+    # oil drips
+    drip = np.clip(noise(n, n, 10, rng) - 2.2, 0, 1) * (noise(n, n, 200, rng) > 0.3)
+    col *= (1 - 0.2 * drip)[..., None]
+    col = _fit_mean(np.clip(col, 0, 1), (ASPHALT_BRIGHTNESS,) * 3 * np.array([1.0, 1.0, 1.02]))
+    rough = np.clip(0.80 + 0.06 * fine - 0.03 * rich + 0.03 * ravel - 0.12 * drip, 0.5, 1.0)
+    _write(dst, "t_road_asphalt", col, hgt, 1.0 / mm, rough, ao_r=3, ao_k=0.08)
+
+
+SURFACES = ("gravel", "dirt", "sett", "cobble", "asphalt")
 
 
 def build(dst):
-    """All the textures into dst (names t_road_<surface>_b.color.png ...)."""
-    for f in (gravel, dirt, sett, cobble):
+    """All the textures into dst (names t_road_<surface>_b.color.png ...). v3.0: the asphalt, the setts and the
+    cobbles of the level are Italy's (italy_mats.py); their textures here are no longer written."""
+    for f in (gravel, dirt):
         f(dst)
 
 

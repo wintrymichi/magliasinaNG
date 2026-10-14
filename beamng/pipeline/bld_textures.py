@@ -660,31 +660,100 @@ def lit(h, k=1.0):
     return 1.0 + k * (-dx - dy)
 
 
+def coursed_stones(n, rng, tile_m=3.0, h_rng=(0.13, 0.30), w_rng=(0.22, 0.62)):
+    """Rubble masonry laid in rough courses on a tileable n x n grid of tile_m m: (stone id per pixel, -1 in
+    the joints; distance to the nearest joint, px; joint mask; px per metre). Courses of h_rng m, stones of
+    w_rng m (longer in the taller courses), each a superellipse with a few straight split faces."""
+    px = n / tile_m
+    # course heights that fill the tile
+    hs = []
+    while sum(hs) < tile_m - h_rng[0]:
+        hs.append(rng.uniform(*h_rng))
+    hs = np.array(hs) * tile_m / sum(hs)
+    y_edges = np.concatenate([[0], np.cumsum(hs)]) * px
+    ids = -np.ones((n, n), np.int32)
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float32)
+    wob_y = 0.012 * px * noise(n, n, 18, rng)
+    wob_x = 0.012 * px * noise(n, n, 14, rng)
+    Yw, Xw = (yy + wob_y) % n, (xx + wob_x) % n
+    sid = 0
+    info = []
+    gap = 0.012 * px
+    for c in range(len(hs)):
+        y0, y1 = y_edges[c], y_edges[c + 1]
+        ws = []
+        while sum(ws) < tile_m - w_rng[0]:
+            ws.append(rng.uniform(*w_rng) * (hs[c] / 0.2) ** 0.5)
+        ws = np.array(ws) * tile_m / sum(ws)
+        x_edges = (np.concatenate([[0], np.cumsum(ws)]) * px + rng.uniform(0, n)) 
+        inrow = (Yw >= y0) & (Yw < y1)
+        for k in range(len(ws)):
+            a, b = x_edges[k], x_edges[k + 1]
+            xr = (Xw - a) % n
+            sel = inrow & (xr < (b - a))
+            u = xr[sel] / (b - a); v = (Yw[sel] - y0) / (y1 - y0)
+            # irregular rounded outline: superellipse with a noisy radius
+            p = rng.uniform(3.0, 6.0)
+            uu, vv = 2 * u - 1, 2 * v - 1
+            r = np.abs(uu) ** p + np.abs(vv) ** p
+            lim = 1.0 - rng.uniform(0.0, 0.08) - 0.03 * np.sin(u * rng.uniform(4, 9) + rng.uniform(0, 6))
+            m = r < lim
+            # split faces: a few straight cuts across the corners make the stones angular
+            for _ in range(rng.integers(2, 5)):
+                a_ = rng.uniform(0, 2 * np.pi)
+                m &= (uu * np.cos(a_) + vv * np.sin(a_)) < rng.uniform(0.78, 0.98)
+            idx = np.flatnonzero(sel)[m]
+            ids.ravel()[idx] = sid
+            info.append((u.mean(), hs[c]))
+            sid += 1
+    joint = ids < 0
+    # small filler stones (spalls) wedged in the wider joints
+    from scipy.spatial import cKDTree
+    m_ = int(n * n / (0.07 * px) ** 2)
+    P = rng.uniform(0, n, (m_, 2))
+    T = cKDTree(np.concatenate([P + [dx, dy] for dx in (-n, 0, n) for dy in (-n, 0, n)]))
+    jy, jx = np.nonzero(joint)
+    d2, i2 = T.query(np.column_stack([jx, jy]), k=2)
+    fill = (d2[:, 1] - d2[:, 0]) > 0.012 * px
+    d_join = distance_transform_edt(joint)          # distance into the joint from the big stones
+    fill &= d_join[jy, jx] > 0.010 * px
+    ids[jy[fill], jx[fill]] = sid + (i2[fill, 0] % m_)
+    joint = ids < 0
+    dist = distance_transform_edt(~joint)
+    # small filler stones in the wider joints
+    return ids, dist, joint, px
+
 def stone_wall(dst, n=1024):
-    """Rubble-stone masonry of the rustici (gneiss and granite, grey to ochre, lime mortar joints)."""
+    """Rubble-stone masonry of the rustici and the dry-stone retaining walls (v3.0): split gneiss and granite
+    stones laid in rough courses, grey to ochre, with small spalls wedged in the joints, lichen and moss;
+    up to v2.8 a mosaic of flat Voronoi cells with wide pale joints (a cartoon of a wall)."""
     rng = np.random.default_rng(SEED + 2)
-    cell, edge = voronoi_stones(n, rng, rows=8, jitter=0.35, flat=2.0)
-    k = cell.max() + 1
-    palette = np.array([[0.56, 0.56, 0.54], [0.60, 0.57, 0.52], [0.52, 0.47, 0.40], [0.63, 0.56, 0.44],
-                        [0.44, 0.44, 0.43], [0.66, 0.65, 0.62]])
-    pick = rng.choice(len(palette), k, p=[0.3, 0.2, 0.15, 0.1, 0.15, 0.1])
-    tone = rng.uniform(0.85, 1.12, k)
-    base = palette[pick][cell] * tone[cell][..., None]
-    grain = noise(n, n, 0.9, rng)
-    mica = (rng.random((n, n)) > 0.995).astype(np.float32)
-    ew = 0.03
-    mortar = edge < 0.010
-    dome = np.sqrt(np.clip((edge - 0.012) / ew, 0, 1))
-    hgt = dome * 6.0 + 0.4 * grain
-    hgt[mortar] = -1.0 + 0.3 * grain[mortar]
-    shade = np.clip(lit(gaussian_filter(hgt, 1.5, mode="wrap"), 0.6), 0.55, 1.35) * (0.62 + 0.38 * dome)
-    col = base * (1 + 0.07 * grain + 0.15 * mica)[..., None] * shade[..., None]
-    mcol = np.array([0.63, 0.61, 0.57]) * (1 + 0.06 * grain[mortar, None])
-    col[mortar] = mcol * 0.55
+    ids, dist, joint, px = coursed_stones(n, rng)
+    k = ids.max() + 2
+    palette = np.array([[0.50, 0.50, 0.48], [0.56, 0.54, 0.50], [0.47, 0.43, 0.37], [0.58, 0.52, 0.42],
+                        [0.40, 0.40, 0.39], [0.62, 0.61, 0.58], [0.52, 0.46, 0.38]])
+    pick = rng.choice(len(palette), k, p=[0.28, 0.2, 0.14, 0.1, 0.14, 0.08, 0.06])
+    tone = rng.uniform(0.86, 1.1, k)
+    base = palette[pick][ids] * tone[ids][..., None]
+    g1 = noise(n, n, 0.8, rng); g2 = noise(n, n, 4, rng); g3 = noise(n, n, 24, rng)
+    veins = np.abs(noise(n, n, 6, rng)) < 0.08
+    lichen = (noise(n, n, 5, rng) > 1.6) & (noise(n, n, 40, rng) > 0.2)
+    moss = np.clip(noise(n, n, 50, rng) - 0.6, 0, 1)
+    dome = np.clip(dist / (0.035 * px), 0, 1) ** 0.6
+    hgt = dome * 5.0 + 0.5 * g1 + 0.8 * g2
+    hgt[joint] = -2.0 + 0.4 * g1[joint]
+    shade = np.clip(lit(gaussian_filter(hgt, 1.2, mode="wrap"), 0.35), 0.75, 1.2) * (0.72 + 0.28 * dome)
+    col = base * (1 + 0.06 * g1 + 0.08 * g2 + 0.05 * g3)[..., None] * shade[..., None]
+    col[veins & ~joint] *= 1.12
+    col[lichen & ~joint] = col[lichen & ~joint] * 0.4 + np.array([0.72, 0.73, 0.66]) * 0.6
+    mcol = np.array([0.30, 0.29, 0.26])
+    col[joint] = mcol * (0.8 + 0.25 * np.clip(g2[joint], -1, 1))[:, None]
+    col = col * (1 - 0.35 * moss[..., None]) + moss[..., None] * 0.35 * np.array([0.30, 0.34, 0.20])
+    rough = np.where(joint, 0.97, 0.84 + 0.05 * g1)
     save(os.path.join(dst, "t_bld_stone_b.color.png"), to8(col))
-    save(os.path.join(dst, "t_bld_stone_nm.normal.png"), normal_map(hgt, 1.2))
-    save(os.path.join(dst, "t_bld_stone_r.data.png"), to8(np.where(mortar, 0.95, 0.78 + 0.05 * grain)))
-    save(os.path.join(dst, "t_bld_stone_ao.data.png"), ao_map(hgt, 6, 0.10))
+    save(os.path.join(dst, "t_bld_stone_nm.normal.png"), normal_map(hgt, 1.0))
+    save(os.path.join(dst, "t_bld_stone_r.data.png"), to8(rough))
+    save(os.path.join(dst, "t_bld_stone_ao.data.png"), ao_map(hgt, 5, 0.12))
 
 
 def plinth(dst, w=1024, h=256):
@@ -855,14 +924,18 @@ def concrete_wall(dst, n=1024, tile_m=4.0):
     pores = (rng.random((n, n)) > 0.992).astype(np.float32)
     blot = noise(n, n, 45, rng)
     streak = np.clip(aniso_noise(n, n, 160, 10, rng), 0, None)
-    v = tone * (1 + 0.035 * grain + 0.05 * blot - 0.035 * streak - 0.12 * pores)
+    # v3.0: weathered: darker rain streaks under the board joints, blotches of damp and lime, lichen
+    streak2 = np.clip(aniso_noise(n, n, 90, 4, rng) - 1.0, 0, None)
+    lichen = np.clip(noise(n, n, 3, rng) - 1.7, 0, 1) * (noise(n, n, 60, rng) > 0)
+    v = tone * (1 + 0.035 * grain + 0.09 * blot - 0.07 * streak - 0.12 * streak2 - 0.12 * pores + 0.25 * lichen)
     joint_b = np.minimum(board, 1 - board) < 0.012
     joint_p = np.minimum(panel, 1 - panel) < 0.004
     v = np.where(joint_b, v * 0.88, v)
     v = np.where(joint_p, v * 0.85, v)
     ties = (np.hypot(((X + 0.25) % 0.5) - 0.25, ((Yup + 0.25) % 0.75) - 0.375) < 0.012)
     v = np.where(ties, v * 0.6, v)
-    col = np.stack([v * 1.0, v * 1.0, v * 0.985], -1)
+    damp = np.clip(noise(n, n, 70, rng), 0, None)
+    col = np.stack([v * 1.0, v * 0.99, v * 0.955], -1) * (1 - 0.06 * damp)[..., None]
     hgt = 0.4 * grain - 1.5 * joint_b - 2.0 * joint_p - 3.0 * ties - 1.0 * pores
     save(os.path.join(dst, "t_wall_concrete_b.color.png"), to8(col))
     save(os.path.join(dst, "t_wall_concrete_nm.normal.png"), normal_map(hgt, 0.6))

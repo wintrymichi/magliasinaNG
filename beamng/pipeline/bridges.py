@@ -213,7 +213,7 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         mat_top = {("road", "hard"): "mp_road_asphalt", ("road", "natural"): "mp_road_gravel",
                    ("path", "hard"): "mp_path_paved", ("path", "natural"): "mp_path_dirt"}[(s["kind"], s["surface"])]
         cxy = P.mean(0)
-        on_mesh(cxy[0], cxy[1], mat_top, 1.25, top, "top")
+        on_mesh(cxy[0], cxy[1], mat_top, 6.0 if mat_top in ("mp_road_asphalt", "mp_path_paved", "mp_sidewalk", "mp_hard_asphalt") else 1.25, top, "top")   # v3.0: the asphalt over 6 m
         on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
         if len(par):
             on_mesh(cxy[0], cxy[1], "mp_bridge_parapet", 1.6, par, "side")
