@@ -22,6 +22,9 @@ them, by rules, on the built level:
   chairs and an umbrella in the garden of GARDEN_SHARE; pallets (some stacked) and drums beside
   YARD_STUFF_SHARE of the other buildings (sheds, barns, workshops);
 - a bench at the viewpoints OSM records (tourism=viewpoint).
+- the squares, car parks and yards (the cadastral hard ground, YARD_MIN m2 and more): props along their
+  edges, by what is around (benches, planters, bins on the village squares; pallets, drums, skips beside
+  the sheds and workshops), the middle left free for the cars.
 A village road point: VILLAGE_N buildings of the Federal Register within VILLAGE_R m (as lamps.py).
 Nothing stands on a carriageway, a railway, in or under a building (its roof outline and CLEAR m), on a
 wall, within CLEAR m of the other props, guard rails, fences and trunks, or on ground steeper than
@@ -98,6 +101,12 @@ YARD_STUFF_SHARE = 0.08
 BAGS_SHARE = 0.35
 HOUSE = (1020, 1030, 1040)      # GWR categories with homes
 TERRACE_PLACES = {"cafe", "bar", "restaurant", "ice_cream", "pub", "fast_food"}
+YARD_MATS = ("mp_hard_asphalt",)  # the cadastral 'other hard surface': squares, car parks, forecourts, yards
+YARD_CELL = 1.0                 # m, grid of the yards
+YARD_MIN = 120.0                # m2: smaller hard ground is a drive, left as it is
+YARD_EDGE = (0.9, 1.9)          # m from the edge of a yard to the middle of the props along it
+YARD_PITCH = 7.0                # m along the edge between two props of a yard
+YARD_FILL = 0.55                # share of the edge places of a yard that get a prop
 RING = np.array([[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]])
 
 
@@ -115,6 +124,7 @@ class Site:
         none = [np.zeros((0, 3, 3))]
         self.carr = road_mesh.TriSurface(np.concatenate([t for m, t in road.items() if CARRIAGEWAY.match(m)] or none))
         self.paved = road_mesh.TriSurface(np.concatenate([t for m, t in road.items() if not CARRIAGEWAY.match(m)] or none))
+        self.hard = [t for m, t in road.items() if m in YARD_MATS]      # squares, car parks, yards
         self.roof = road_mesh.TriSurface(np.concatenate(list(faces(zi, lv, ["buildings"]).values()) or none))
         self.wall = road_mesh.TriSurface(np.concatenate(list(faces(zi, lv, ["walls"], keep=lambda sn: "backfill" not in sn)
                                                              .values()) or none))
@@ -460,6 +470,87 @@ def houses_props(site, roads, out, rng, gwr):
                     out.add(want, qq[0], qq[1], z + 0.2, a + rng.uniform(-0.15, 0.15), r=0.0, count=False)
 
 
+def yards(site, roads, out, rng, gwr):
+    """The squares, car parks and yards (the cadastral hard ground beside the roads, YARD_MIN m2 and more):
+    along their edges, inside, one prop every YARD_PITCH m for YARD_FILL of the places, by what is around:
+    in a village benches facing the square, planters, bins, a picnic table on the big ones, a recycling
+    corner on some; beside sheds, barns and workshops pallets (some stacked), drums, a skip, rubbish bags;
+    out of the villages bins and planters. The middle stays free for the cars."""
+    from scipy import ndimage
+    if not site.hard:
+        return
+    T = np.concatenate(site.hard)
+    S = road_mesh.TriSurface(T)
+    other = np.array([[b["x"], b["y"]] for b in gwr if b.get("gkat") not in HOUSE] or np.zeros((0, 2)))
+    otree = cKDTree(other) if len(other) else None
+    c = T.mean(1)[:, :2]
+    tiles = {tuple(k) for k in np.floor(c / 256.0).astype(int).tolist()}
+    n = int(256 / YARD_CELL)
+    for tx, ty in sorted(tiles):
+        g = (np.arange(n) + 0.5) * YARD_CELL
+        X, Y = np.meshgrid(tx * 256.0 + g, ty * 256.0 + g)
+        m = np.isfinite(S.height(X.ravel(), Y.ravel(), "high")).reshape(n, n)
+        lab, k = ndimage.label(m)
+        if not k:
+            continue
+        area = ndimage.sum(m, lab, np.arange(1, k + 1)) * YARD_CELL ** 2
+        dist = ndimage.distance_transform_edt(m) * YARD_CELL
+        gy, gx = np.gradient(dist)                               # pointing into the yard
+        for i in np.flatnonzero(area >= YARD_MIN):
+            cells = np.flatnonzero((lab.ravel() == i + 1) & (dist.ravel() >= YARD_EDGE[0]) & (dist.ravel() <= YARD_EDGE[1]))
+            if not len(cells):
+                continue
+            P = np.column_stack([X.ravel()[cells], Y.ravel()[cells]])
+            ctr = P.mean(0)
+            vil = bool(roads.village(ctr[None])[0])
+            work = otree is not None and len(otree.query_ball_point(ctr, 25.0 + math.sqrt(area[i]) / 2)) > 0
+            kind = "work" if work and (not vil or rng.uniform() < 0.5) else "square" if vil else "plain"
+            big = area[i] >= 600
+            chosen = []
+            if kind == "square" and big and rng.uniform() < 0.25:     # a recycling corner on some squares
+                j = int(rng.integers(len(P)))
+                if recycling(site, roads, out, rng, P[j]):
+                    chosen.append(P[j])
+            for j in rng.permutation(len(P)):
+                q = P[j]
+                if chosen and np.min(np.hypot(*(np.asarray(chosen) - q).T)) < YARD_PITCH:
+                    continue
+                chosen.append(q)
+                if rng.uniform() > YARD_FILL:
+                    continue
+                inward = math.atan2(gy.ravel()[cells[j]], gx.ravel()[cells[j]])
+                along = inward + math.pi / 2
+                u = rng.uniform()
+                if kind == "square":
+                    key = "bench" if u < 0.35 else "planter_square" if u < 0.55 else "planter_round" if u < 0.7 else \
+                        "planter" if u < 0.8 else "bin" if u < 0.95 else ("picnic" if big else "bench")
+                elif kind == "work":
+                    key = "pallet" if u < 0.4 else "drum" if u < 0.65 else "dumpster" if u < 0.78 else \
+                        "trashbags" if u < 0.88 else "house_bin"
+                else:
+                    key = "bin" if u < 0.4 else "planter_round" if u < 0.7 else "planter_square" if u < 0.85 else "bench"
+                r = MODELS[key][1]
+                qq = q + (r - 0.3) * np.array([math.cos(inward), math.sin(inward)])     # its back to the edge
+                z = site.free(qq, r)
+                if z is None:
+                    continue
+                face = {"bench": inward, "dumpster": inward, "house_bin": inward, "planter_square": along,
+                        "planter": along, "picnic": along}.get(key, rng.uniform(0, 2 * np.pi))
+                out.add(key, qq[0], qq[1], z, face)
+                out.counts["yard_props"] = out.counts.get("yard_props", 0) + 1
+                if key == "pallet" and rng.uniform() < 0.5:
+                    for h in range(1, 1 + int(rng.integers(1, 4))):
+                        out.add("pallet", qq[0], qq[1], z + 0.2 * h, face + rng.uniform(-0.1, 0.1), r=0.0, count=False)
+                elif key == "drum" and rng.uniform() < 0.6:              # drums stand in twos and threes
+                    for h in range(1, 1 + int(rng.integers(1, 3))):
+                        d = qq + 0.74 * h * np.array([math.cos(along), math.sin(along)])
+                        zd = site.free(d, MODELS["drum"][1])
+                        if zd is None:
+                            break
+                        out.add("drum", d[0], d[1], zd, rng.uniform(0, 2 * np.pi))
+            out.counts["yards"] = out.counts.get("yards", 0) + 1
+
+
 def _past_eaves(site, p, d, extra=0.0):
     """The first point from the building point p along d beyond its roof (and ROOF_CLEAR, a little more)."""
     for s in np.arange(1.0, 18.0, 0.5):
@@ -537,6 +628,7 @@ def street_life_step(root, report=None):
     along_villages(site, roads, out, rng, "bin", BIN_SPACING)
     along_villages(site, roads, out, rng, "hydrant", HYDRANT_SPACING, lateral=0.35)
     houses_props(site, roads, out, rng, gwr)
+    yards(site, roads, out, rng, gwr)
     print("street life: %s; left out: %s" % (out.counts, site.why), flush=True)
 
     grp = f"{lv}/main/MissionGroup/props/items.level.json"

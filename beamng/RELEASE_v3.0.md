@@ -18,7 +18,7 @@ Up to v2.8 each ground material had one flat colour and its detail faded out at 
 
 ## Asphalt and its wear
 
-The carriageways have a new asphalt texture drawn by the pipeline (`surface_textures.asphalt`): one tile every 6 m instead of the 1.25 m of the game's Italian asphalt, so no repeating pattern, darker and warmer, with grain, richer and ravelled patches, a few faint cracks and oil drops. On it (`road_wear.py`) every lane has the two darker tracks of the wheels (one pair in the middle of the narrow roads) and every edge a lighter band of dust and sand: about 330 km of tracks and 440 km of edges, translucent strips 1.2 cm over the asphalt, without collision.
+The carriageways have a new asphalt texture drawn by the pipeline (`surface_textures.asphalt`): one tile every 6 m instead of the 1.25 m of the game's Italian asphalt, so no repeating pattern, an even grey with grain, a few faint cracks and oil drops; the stretches resurfaced in 2022 a little darker. On it (`road_wear.py`) every lane has the two faint darker tracks of the wheels (one pair in the middle of the narrow roads) and every edge a light band of dust, both stopping at the edge of the road they meet: about 330 km of tracks and 440 km of edges, translucent strips 1.2 cm over the asphalt, without collision.
 
 ## Stone and concrete walls
 
@@ -34,9 +34,10 @@ The villages had street lamps and little else. Now (`street_life.py`), by rules,
 - planters along the pedestrian streets and squares;
 - convex mirrors on a pole where a village road ends between houses on another road;
 - at the houses: bins between some of them and the road, letter boxes on their stand at the edge of the road, garden tables with chairs and an umbrella; pallets and drums beside sheds, barns and workshops;
-- the post boxes, picnic tables and viewpoints OpenStreetMap records.
+- the post boxes, picnic tables and viewpoints OpenStreetMap records;
+- the squares, car parks and yards: along their edges benches, planters and bins on the village squares, pallets (some stacked), drums, skips and rubbish bags beside the sheds and workshops, the middle left free for the cars (about 7,800 props on 2,500 yards).
 
-On the v2.8 level that is about 3,900 objects. Not their real places: no open data has them.
+On the v2.8 level that is about 13,000 objects. Not their real places: no open data has them.
 
 ## Flower boxes and woodpiles
 

@@ -6,7 +6,7 @@
 # downloads are cached between runs. Nothing is published as a release.
 #
 # It runs when this file changes on the v3 branch (bump the build stamp below to rebuild) or on demand.
-# build stamp: 2
+# build stamp: 3
 name: v3 build test
 
 on:
@@ -60,7 +60,7 @@ jobs:
       - name: Downloads from earlier runs
         uses: actions/cache@v4
         with:
-          path: ${{ github.workspace }}/../bm/data
+          path: /home/runner/work/magliasinaNG/bm/data     # MAGLIASO_ROOT/data, written out: the cache takes no '..'
           key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
           restore-keys: v3-data-
 
@@ -141,7 +141,7 @@ jobs:
           done
           cp "$MAGLIASO_ROOT/data/worldcover/worldcover.tif" "$D/" || true
           L="$MAGLIASO_ROOT/beamng_user/levels/magliaso_pura"
-          tar -C "$L" -cf "$D/level_light.tar" forest art/forest art/terrains main --exclude='*.dae' || true
+          tar -C "$L" --exclude='*.dae' -cf "$D/level_light.tar" forest art/forest art/terrains main || true
           ls -la "$D"
 
       - uses: actions/upload-artifact@v4

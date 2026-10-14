@@ -288,7 +288,7 @@ def cobble(dst, n=N):
 
 ASPHALT_TILE_M = 6.0          # v3.0: metres covered by the asphalt texture (the uv tile of the network's asphalt)
 ASPHALT_N = 2048
-ASPHALT_BRIGHTNESS = 104.0    # mean sRGB of the old asphalt of the network (the game's Italy asphalt at 1.0: about 150)
+ASPHALT_BRIGHTNESS = 116.0    # mean sRGB of the old asphalt of the network (the game's Italy asphalt at 1.0: about 150; 104 looked black in game)
 
 
 def asphalt(dst, n=ASPHALT_N):
@@ -315,14 +315,15 @@ def asphalt(dst, n=ASPHALT_N):
         on = sid >= 0
         tone = pal[rng.choice(len(pal), count, p=[0.35, 0.25, 0.15, 0.15, 0.1])] * rng.uniform(0.85, 1.1, count)[:, None]
         # the exposed grains: lighter where the tyres polish them, half hidden in bitumen elsewhere
-        expose = np.clip(0.55 + 0.25 * blot + 0.15 * big, 0.15, 1.0)
+        expose = np.clip(0.55 + 0.06 * blot, 0.15, 1.0)
         mixw = (h * expose)[..., None]
         col = np.where(on[..., None], col * (1 - mixw) + tone[np.maximum(sid, 0)] * mixw, col)
         hgt = np.where(on, hgt + hmm * h, hgt)
-    # bitumen-rich (darker, smoother) and ravelled (lighter, rougher) patches over metres
+    # bitumen-rich (darker, smoother) and ravelled (lighter, rougher) patches over metres, faint: inside a
+    # 6 m tile stronger ones repeat as clouds along the road (first v3 build)
     rich = np.clip(big - 0.4, 0, None)
     ravel = np.clip(-big - 0.6, 0, None)
-    col *= (1 - 0.16 * rich + 0.10 * ravel + 0.04 * blot)[..., None]
+    col *= (1 - 0.02 * rich + 0.015 * ravel + 0.01 * blot)[..., None]
     # filled cracks: thin dark meandering lines of bitumen
     g = np.zeros((n, n), np.float32)
     for _ in range(int(4 * (tm / 6) ** 2)):
@@ -336,13 +337,13 @@ def asphalt(dst, n=ASPHALT_N):
             g[int(y), int(x)] = 1.0
     crack = gaussian_filter(g, 1.6 / mm * 2, mode="wrap")
     crack = np.clip(crack / max(float(crack.max()), 1e-6) * 3.0, 0, 1)
-    col *= (1 - 0.30 * crack)[..., None]
+    col *= (1 - 0.18 * crack)[..., None]
     hgt -= 1.5 * crack
     # oil drips
     drip = np.clip(noise(n, n, 10, rng) - 2.2, 0, 1) * (noise(n, n, 200, rng) > 0.3)
-    col *= (1 - 0.35 * drip)[..., None]
+    col *= (1 - 0.2 * drip)[..., None]
     col = _fit_mean(np.clip(col, 0, 1), (ASPHALT_BRIGHTNESS,) * 3 * np.array([1.0, 1.0, 1.02]))
-    rough = np.clip(0.80 + 0.06 * fine - 0.06 * rich + 0.06 * ravel - 0.12 * drip, 0.5, 1.0)
+    rough = np.clip(0.80 + 0.06 * fine - 0.03 * rich + 0.03 * ravel - 0.12 * drip, 0.5, 1.0)
     _write(dst, "t_road_asphalt", col, hgt, 1.0 / mm, rough, ao_r=3, ao_k=0.08)
 
 

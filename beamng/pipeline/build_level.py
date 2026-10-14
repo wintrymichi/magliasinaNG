@@ -139,9 +139,10 @@ def road_materials():
                      f"{a}_ao.data.png", base_color=[1.2, 1.19, 1.17, 1], ground_type="ASPHALT"),
         bng.material("mp_island", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
                      ground_type="CONCRETE"),
-        # 2022 resurfacing: new asphalt is about half as bright as the old surface in the photos
+        # 2022 resurfacing: new asphalt is darker than the old surface in the photos (0.72 in the first v3
+        # build: black patches on the grey road in game)
         bng.material("mp_road_asphalt_fresh", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
-                     f"{a}_ao.data.png", base_color=[0.72, 0.72, 0.74, 1], ground_type="ASPHALT"),
+                     f"{a}_ao.data.png", base_color=[0.86, 0.86, 0.87, 1], ground_type="ASPHALT"),
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
         bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
                      f"{st}_ao.data.png", ground_type="ROCK"),

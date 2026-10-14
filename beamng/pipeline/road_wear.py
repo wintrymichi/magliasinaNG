@@ -13,7 +13,7 @@ lanes each way):
 - edges: a band EDGE_W m wide along each edge, EDGE_IN m in from it;
 both as translucent strips (their own drawn textures: the opacity fades across the band and varies along
 it, so no edge shows), LIFT m over the top faces of the paved carriageways of the level, never off them
-(gravel and earth roads, bridges without a paved deck, the ends of a road beyond the mesh are left out).
+(gravel and earth roads, bridges without a paved deck, the ends of a road beyond the mesh are left out), and cut where they reach the carriageway of a crossing road.
 One mesh per TILE m tile in MissionGroup/roads/markings, without collision; the textures in
 art/shapes/roads. Everything else is copied as it is.
 
@@ -42,6 +42,11 @@ STEP = 2.0                   # m between the vertices of a strip
 V_TILE = 16.0                # m of road per repeat of the textures along them
 SHAPE = re.compile(r"art/shapes/roads/road_wear_[-+]\d+_[-+]\d+\.dae$")
 TEX = ("t_wear_track", "t_wear_edge")
+TRACK_ALPHA = 0.24           # most opacity of a track (0.36 in the first v3 build: black stripes in game)
+EDGE_ALPHA = 0.42            # most opacity of the dust at the edge (0.7: sand-coloured bands in game)
+CROSS_IN = 0.4               # m: a band is cut where it lies this far inside the carriageway of another AI road
+CROSS_ANGLE = 25.0           # degrees
+MIN_PIECE = 6                # vertices (STEP m each): shorter pieces of a band are left out
 
 
 def textures(dst, n=(64, 512)):
@@ -54,7 +59,7 @@ def textures(dst, n=(64, 512)):
     px = h / V_TILE                                                   # pixels per metre along the road
     along = aniso_noise(h, w, 2.5 * px, 3, rng)                       # metres-long patches, never dashes
     fine = aniso_noise(h, w, 0.15 * px, 1.5, rng)
-    a = np.clip(across[None, :] * (0.8 + 0.15 * along + 0.06 * fine), 0, 1) * 0.36
+    a = np.clip(across[None, :] * (0.8 + 0.15 * along + 0.06 * fine), 0, 1) * TRACK_ALPHA
     col = np.zeros((h, w, 3), np.float32) + np.array([0.15, 0.15, 0.155])
     col *= (1 + 0.06 * fine)[..., None]
     Image.fromarray(np.dstack([to8(col), to8(a)])).save(os.path.join(dst, "t_wear_track_b.color.png"))
@@ -62,8 +67,8 @@ def textures(dst, n=(64, 512)):
     edge = np.clip(1.0 - u / 0.9, 0, 1) ** 0.8 * np.clip(u / 0.08, 0, 1)
     along2 = aniso_noise(h, w, 1.5 * px, 3, rng)
     speck = aniso_noise(h, w, 0.6, 0.6, rng)
-    a2 = np.clip(edge[None, :] * (0.6 + 0.25 * along2 + 0.15 * speck), 0, 1) * 0.7
-    col2 = np.zeros((h, w, 3), np.float32) + np.array([0.45, 0.42, 0.35])
+    a2 = np.clip(edge[None, :] * (0.6 + 0.25 * along2 + 0.15 * speck), 0, 1) * EDGE_ALPHA
+    col2 = np.zeros((h, w, 3), np.float32) + np.array([0.37, 0.355, 0.32])
     col2 *= (1 + 0.10 * speck + 0.05 * along2)[..., None]
     Image.fromarray(np.dstack([to8(col2), to8(a2)])).save(os.path.join(dst, "t_wear_edge_b.color.png"))
 
@@ -99,19 +104,64 @@ def bands(road):
     return nodes, out
 
 
-def strip(P, off, width, S, middle=True):
-    """Triangles and texture coordinates of a band at `off` m left of the polyline P (n, 2) on surface S."""
+class Carriageways:
+    """The carriageways of all the AI roads, sampled every metre along their axes with their half widths:
+    where a road meets another (a junction, a roundabout), its bands must stop at the other's edge, or the
+    tracks and the dusty edges of a side road run across the main road."""
+    def __init__(self, roads):
+        from scipy.spatial import cKDTree
+        pts, half, rid, tang = [], [], [], []
+        for k, road in enumerate(roads):
+            nodes = np.asarray(road["nodes"], np.float64)
+            if len(nodes) < 2:
+                continue
+            s = np.r_[0, np.cumsum(np.hypot(*np.diff(nodes[:, :2], axis=0).T))]
+            sd = np.linspace(0, s[-1], max(int(np.ceil(s[-1])), 1) + 1)
+            pts.append(np.column_stack([np.interp(sd, s, nodes[:, 0]), np.interp(sd, s, nodes[:, 1])]))
+            half.append(np.interp(sd, s, nodes[:, 3]) / 2)
+            tg = np.gradient(pts[-1], axis=0)
+            tang.append(tg / np.maximum(np.linalg.norm(tg, axis=1, keepdims=True), 1e-9))
+            rid.append(np.full(len(sd), k))
+        self.P, self.half, self.rid = np.concatenate(pts), np.concatenate(half), np.concatenate(rid)
+        self.tang = np.concatenate(tang)
+        self.tree = cKDTree(self.P)
+        self.rmax = float(self.half.max())
+
+    def inside_other(self, C, k):
+        """(n,) bool: the points C (n, 2) of a band lie CROSS_IN m or more inside the carriageway of an AI road
+        other than k that crosses it (more than CROSS_ANGLE off its direction: the next piece of the same street
+        goes on in line and does not cut it)."""
+        out = np.zeros(len(C), bool)
+        T = np.gradient(C, axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        cmax = np.cos(np.radians(CROSS_ANGLE))
+        for i, near in enumerate(self.tree.query_ball_point(C, self.rmax)):
+            if not near:
+                continue
+            near = np.asarray(near)
+            near = near[(self.rid[near] != k) & (np.abs(self.tang[near] @ T[i]) < cmax)]
+            if len(near):
+                d = np.hypot(*(self.P[near] - C[i]).T)
+                out[i] = bool((d < self.half[near] - CROSS_IN).any())
+        return out
+
+
+def strip(P, off, width, S, middle=True, keep=None):
+    """Triangles and texture coordinates of a band at `off` m left of the polyline P (n, 2) on surface S
+    (only where keep (n,) is true, when given)."""
     T = np.gradient(P, axis=0)
     T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
     Nl = np.column_stack([-T[:, 1], T[:, 0]])
     C = P + Nl * off[:, None]
     z = S.height(C[:, 0], C[:, 1], "high")
     ok = np.isfinite(z)
+    if keep is not None:
+        ok &= keep(C)
     s = np.r_[0, np.cumsum(np.hypot(*np.diff(C, axis=0).T))]
     tris, uvs = [], []
     e = np.flatnonzero(np.diff(np.r_[0, ok.astype(int), 0]))
     for a, b in zip(e[::2], e[1::2]):
-        if b - a < 3:
+        if b - a < MIN_PIECE:
             continue
         Pa, za, sa, Na = C[a:b], z[a:b], s[a:b], Nl[a:b]
         rows = []
@@ -149,9 +199,10 @@ def road_wear_step(root, report=None):
     carriage = [up_faces(t) for m, t in surf.items() if m in CARRIAGE_MATS]
     S = TriSurface(np.concatenate(carriage))
     roads = read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json")
+    cw = Carriageways(roads)
     builders = {}
     stats = {"roads": 0, "track_m": 0.0, "edge_m": 0.0}
-    for road in roads:
+    for k, road in enumerate(roads):
         nodes, bl = bands(road)
         if not bl or len(nodes) < 2:
             continue
@@ -166,7 +217,8 @@ def road_wear_step(root, report=None):
         stats["roads"] += 1
         for mat, off, width in bl:
             od = np.interp(sd, s, off)
-            t, uv = strip(Pd, od, width, S, middle="track" in mat)    # the narrow edge bands are flat
+            t, uv = strip(Pd, od, width, S, middle="track" in mat,    # the narrow edge bands are flat
+                          keep=lambda C, k=k: ~cw.inside_other(C, k))
             if not len(t):
                 continue
             if mat == "mp_wear_edge_r":                      # the band of the right edge: its outer side is u = 1
