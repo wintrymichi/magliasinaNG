@@ -19,7 +19,8 @@ CORNER = 35.0          # degrees of turn: a corner, kept sharp
 STRAIGHT = 0.5         # degrees: a vertex this straight needs no curve on its pieces
 STEP = 0.75            # m between the points of a curve
 MIN_PIECE = 1.0        # m: shorter pieces stay straight
-MAX_SUB = 12           # points per piece at most
+MAX_SUB = 27           # points per piece at most
+LONG = 20.0            # m: a longer piece is a straight (a boundary, a long wall) and stays straight, its ends too
 KEY = 1000.0           # vertices within 1 mm are one
 KEPT = []               # (index, area, None) of the polygons kept as surveyed, for the reports
 SNAP = 0.002           # m: a neighbour's vertex this close to an edge is put on it
@@ -59,7 +60,8 @@ def _smooth_chain(P, fixed, closed):
         return P
     turn = np.array([_turn(P[i - 1], P[i], P[(i + 1) % n]) if (closed or 0 < i < n - 1) else 180.0
                      for i in range(n)])
-    fix = fixed | (turn >= CORNER)
+    seg = np.linalg.norm(np.roll(P, -1, 0) - P, axis=1)             # piece i: P[i] -> P[i + 1]
+    fix = fixed | (turn >= CORNER) | (seg > LONG) | (np.roll(seg, 1) > LONG)
     if not closed:
         fix[0] = fix[-1] = True
     out = []
