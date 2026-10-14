@@ -1,0 +1,14 @@
+{
+ "polygons_raw": 40147,
+ "polygons_smoothed": 40296,
+ "invalid_smoothed": 0,
+ "area_raw_m2": 79250312,
+ "area_smoothed_m2": 79253211,
+ "overlap_m2": 5470.8,
+ "overlap_raw_m2": 118.6,
+ "gaps_m2": 21831.5,
+ "vertices_raw": 1196160,
+ "vertices_smoothed": 4276532,
+ "load_s": 9,
+ "smooth_s": 68
+}
