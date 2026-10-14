@@ -11,8 +11,12 @@ lanes each way):
   together on one band (on a road narrower than NARROW m, one pair in the middle of the road: there cars
   drive in the middle);
 - edges: a band EDGE_W m wide along each edge, EDGE_IN m in from it;
-both as translucent strips (their own drawn textures: the opacity fades across the band and varies along
-it, so no edge shows), LIFT m over the top faces of the paved carriageways of the level, never off them
+- v3.0 vanilla: the tyre tracks on the texture of the game's Italy level (m_asphalt_trackwear), and two more
+  layers of Italy's own road overlays: a band of lighter and darker patches over the whole carriageway
+  (italy_asphalt_overlay_light, as Italy lays it: 112 m of road per repeat at 6 m width) and, on stretches of
+  CRACK_LEN m now and then (one about every CRACK_EVERY m), cracked and patched asphalt (italy_road_cracks);
+both as translucent strips (the edge on its own drawn texture: the opacity fades across the band and varies
+along it, so no edge shows; the others with Italy's opacity maps), each layer at its own height, LIFT m over the top faces of the paved carriageways of the level, never off them
 (gravel and earth roads, bridges without a paved deck, the ends of a road beyond the mesh are left out), and cut where they reach the carriageway of a crossing road.
 One mesh per TILE m tile in MissionGroup/roads/markings, without collision; the textures in
 art/shapes/roads. Everything else is copied as it is.
@@ -41,7 +45,13 @@ PAIR_W = TRACK_GAP + TRACK_W + 0.35   # m, the band that carries the two tracks 
 STEP = 2.0                   # m between the vertices of a strip
 V_TILE = 16.0                # m of road per repeat of the textures along them
 SHAPE = re.compile(r"art/shapes/roads/road_wear_[-+]\d+_[-+]\d+\.dae$")
-TEX = ("t_wear_track", "t_wear_edge")
+TEX = ("t_wear_edge",)
+# material: (lift m over the road, m of road per repeat of the texture for a band 1 m wide, or None: V_TILE)
+LAYER = {"mp_wear_variation": (0.006, 112.0 / 6.0), "mp_wear_cracks": (0.008, 16.0 / 4.0),
+         "mp_wear_track": (0.010, 4.0), "mp_wear_edge": (0.012, None), "mp_wear_edge_r": (0.012, None)}
+CRACK_LEN = (15.0, 45.0)     # m, length of a cracked stretch
+CRACK_EVERY = 160.0          # m of road per cracked stretch, on average
+CRACK_W = 4.0                # m, width of a cracked stretch (Italy's), narrower on narrow roads
 TRACK_ALPHA = 0.24           # most opacity of a track (0.36 in the first v3 build: black stripes in game)
 EDGE_ALPHA = 0.42            # most opacity of the dust at the edge (0.7: sand-coloured bands in game)
 CROSS_IN = 0.4               # m: a band is cut where it lies this far inside the carriageway of another AI road
@@ -74,17 +84,17 @@ def textures(dst, n=(64, 512)):
 
 
 def materials():
+    import italy_mats as it
     t = f"/levels/{LEVEL_NAME}/art/shapes/roads"
-    out = []
-    for name, rough in (("t_wear_track", 0.62), ("t_wear_edge", 0.95)):
-        out.append(bng.material("mp_" + name[2:], f"{t}/{name}_b.color.png", roughness=rough,
-                                extra={"translucent": True, "translucentBlendOp": "LerpAlpha",
-                                       "translucentZWrite": False, "castShadows": False}))
-    return out
+    return [bng.material("mp_wear_edge", f"{t}/t_wear_edge_b.color.png", roughness=0.95, extra=it.OVERLAY),
+            it.material("mp_wear_track", "m_asphalt_trackwear", overlay=True),
+            it.material("mp_wear_variation", "italy_asphalt_overlay_light", overlay=True),
+            it.material("mp_wear_cracks", "italy_road_cracks", overlay=True)]
 
 
-def bands(road):
-    """[(material, offsets (n,) m left of the axis, width m)] of an AI road's wear bands, from its nodes."""
+def bands(road, rng=None):
+    """[(material, offsets (n,) m left of the axis, width m, stretches [(s0, s1)] m along the road or None:
+    all)] of an AI road's wear bands, from its nodes."""
     nodes = np.asarray(road["nodes"], np.float64)
     W = np.median(nodes[:, 3])
     if W < MIN_W:
@@ -93,14 +103,26 @@ def bands(road):
     lanes = max(ll + lr, 1)
     out = []
     half = nodes[:, 3] / 2
+    zero = np.zeros(len(nodes))
+    out.append(("mp_wear_variation", zero, max(W - 0.8, 2.0), None))
     if W < NARROW or lanes == 1:
-        out.append(("mp_wear_track", np.zeros(len(nodes)), PAIR_W))
+        out.append(("mp_wear_track", zero, PAIR_W, None))
     else:
         lw = nodes[:, 3] / lanes
         for k in range(lanes):
-            out.append(("mp_wear_track", -half + lw * (k + 0.5), PAIR_W))
+            out.append(("mp_wear_track", -half + lw * (k + 0.5), PAIR_W, None))
     for s in (-1, 1):
-        out.append(("mp_wear_edge" + ("_r" if s < 0 else ""), s * (half - EDGE_IN), EDGE_W))     # s < 0: the right edge
+        out.append(("mp_wear_edge" + ("_r" if s < 0 else ""), s * (half - EDGE_IN), EDGE_W, None))     # s < 0: the right edge
+    if rng is not None:
+        L = float(np.hypot(*np.diff(nodes[:, :2], axis=0).T).sum())
+        spans, s0 = [], rng.exponential(CRACK_EVERY)
+        while s0 < L:
+            s1 = s0 + rng.uniform(*CRACK_LEN)
+            spans.append((s0, min(s1, L)))
+            s0 = s1 + rng.exponential(CRACK_EVERY)
+        if spans:
+            cw = min(CRACK_W, W - 1.2)
+            out.append(("mp_wear_cracks", zero + rng.uniform(-0.3, 0.3) * max(W - cw - 0.6, 0), cw, spans))
     return nodes, out
 
 
@@ -146,7 +168,7 @@ class Carriageways:
         return out
 
 
-def strip(P, off, width, S, middle=True, keep=None):
+def strip(P, off, width, S, middle=True, keep=None, lift=LIFT, v_tile=V_TILE):
     """Triangles and texture coordinates of a band at `off` m left of the polyline P (n, 2) on surface S
     (only where keep (n,) is true, when given)."""
     T = np.gradient(P, axis=0)
@@ -166,12 +188,12 @@ def strip(P, off, width, S, middle=True, keep=None):
         Pa, za, sa, Na = C[a:b], z[a:b], s[a:b], Nl[a:b]
         rows = []
         for k in ((1, 0, -1) if middle else (1, -1)):                # left side, (middle,) right side of the band
-            Q = np.column_stack([Pa + Na * k * width / 2, za + LIFT])
+            Q = np.column_stack([Pa + Na * k * width / 2, za + lift])
             if k:
                 zq = S.height(Q[:, 0], Q[:, 1], "high")
-                Q[:, 2] = np.where(np.isfinite(zq), zq + LIFT, Q[:, 2])
+                Q[:, 2] = np.where(np.isfinite(zq), zq + lift, Q[:, 2])
             rows.append(Q)
-        v = sa / V_TILE
+        v = sa / v_tile
         n1 = b - a - 1
         ts, us = [], []
         pairs = (((rows[1], 0.5), (rows[2], 1.0)), ((rows[0], 0.0), (rows[1], 0.5))) if middle else (((rows[0], 0.0), (rows[1], 1.0)),)
@@ -201,9 +223,10 @@ def road_wear_step(root, report=None):
     roads = read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json")
     cw = Carriageways(roads)
     builders = {}
-    stats = {"roads": 0, "track_m": 0.0, "edge_m": 0.0}
+    stats = {"roads": 0, "track_m": 0.0, "edge_m": 0.0, "variation_m": 0.0, "cracks_m": 0.0}
+    rng = np.random.default_rng(23)
     for k, road in enumerate(roads):
-        nodes, bl = bands(road)
+        nodes, bl = bands(road, rng)
         if not bl or len(nodes) < 2:
             continue
         P = nodes[:, :2]
@@ -215,16 +238,23 @@ def road_wear_step(root, report=None):
         sd = np.linspace(0, s[-1], int(np.ceil(s[-1] / STEP)) + 1)
         Pd = np.column_stack([np.interp(sd, s, P[:, 0]), np.interp(sd, s, P[:, 1])])
         stats["roads"] += 1
-        for mat, off, width in bl:
+        for mat, off, width, spans in bl:
             od = np.interp(sd, s, off)
-            t, uv = strip(Pd, od, width, S, middle="track" in mat,    # the narrow edge bands are flat
-                          keep=lambda C, k=k: ~cw.inside_other(C, k))
+            inside = np.ones(len(sd), bool)
+            if spans is not None:
+                inside = np.zeros(len(sd), bool)
+                for a, b in spans:
+                    inside |= (sd >= a) & (sd <= b)
+            lift, per_m = LAYER[mat]
+            t, uv = strip(Pd, od, width, S, middle="edge" not in mat,    # the narrow edge bands are flat
+                          keep=lambda C, k=k, inside=inside: inside & ~cw.inside_other(C, k),
+                          lift=lift, v_tile=per_m * width if per_m else V_TILE)
             if not len(t):
                 continue
             if mat == "mp_wear_edge_r":                      # the band of the right edge: its outer side is u = 1
                 mat, uv = "mp_wear_edge", uv.copy()
                 uv[..., 0] = 1.0 - uv[..., 0]
-            stats["track_m" if "track" in mat else "edge_m"] += float(len(t) / (4 if "track" in mat else 2) * STEP)
+            stats[mat[8:].split("_")[0] + "_m"] += float(len(t) / (2 if "edge" in mat else 4) * STEP)
             c = t.mean(1)
             keys = np.floor(c[:, :2] / TILE).astype(int)
             for key in {tuple(k) for k in keys.tolist()}:
@@ -269,8 +299,8 @@ def road_wear_step(root, report=None):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     stats.update(meshes=len(builders), seconds=round(time.time() - t0))
-    stats["track_km"] = round(stats.pop("track_m") / 1000, 1)
-    stats["edge_km"] = round(stats.pop("edge_m") / 1000, 1)
+    for kind in ("track", "edge", "variation", "cracks"):
+        stats[kind + "_km"] = round(stats.pop(kind + "_m") / 1000, 1)
     print("road wear:", stats, flush=True)
     if report:
         json.dump(stats, open(report, "w"), indent=1)

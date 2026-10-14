@@ -449,23 +449,18 @@ def stage_roads_reuse(scene, ctx):
 def stage_walls(scene, ctx):
     import walls
     import bld_textures
-    # v2.2: original procedural textures (bld_textures.py): rubble stone (shared with the rustici) and
-    # board-formed concrete, instead of the vanilla regular stone bricks
-    bdir, wdir = level_path("art", "shapes", "buildings"), level_path("art", "shapes", "walls")
+    # v2.2: original procedural textures (bld_textures.py): rubble stone (the rustici) and plaster
+    bdir = level_path("art", "shapes", "buildings")
     os.makedirs(bdir, exist_ok=True)
     bld_textures.stone_wall(bdir)
     bld_textures.plaster(bdir)
-    bld_textures.walls(wdir)
-    st, cc = f"{L}/art/shapes/buildings/t_bld_stone", f"{L}/art/shapes/walls/t_wall_concrete"
+    import italy_mats as it
+    # v3.0: the walls of the game's Italy level (italy_mats.py): medieval stone, old concrete
     bng.write_materials(level_path("art", "shapes", "walls", "main.materials.json"), [
-        bng.material("mp_wall_stone", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
-                     f"{st}_ao.data.png", ground_type="ROCK"),
-        bng.material("mp_wall_stone_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
-                     ground_type="CONCRETE"),
-        bng.material("mp_wall_concrete", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
-                     ground_type="CONCRETE"),
-        bng.material("mp_wall_concrete_top", f"{cc}_b.color.png", f"{cc}_nm.normal.png", f"{cc}_r.data.png",
-                     ground_type="CONCRETE"),
+        it.material("mp_wall_stone", "italy_medieval_stone_wall", "ROCK"),
+        it.material("mp_wall_stone_top", "m_concrete_old", "CONCRETE"),
+        it.material("mp_wall_concrete", "m_concrete_old", "CONCRETE"),
+        it.material("mp_wall_concrete_top", "m_concrete_old", "CONCRETE", base_color=[0.92, 0.92, 0.9, 1]),
         bng.material("mp_wall_plaster", f"{L}/art/shapes/buildings/t_bld_plaster_b.color.png",
                      f"{L}/art/shapes/buildings/t_bld_plaster_nm.normal.png",
                      f"{L}/art/shapes/buildings/t_bld_plaster_r.data.png", vert_color=True, ground_type="CONCRETE")])
