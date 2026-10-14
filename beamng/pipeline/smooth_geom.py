@@ -21,6 +21,7 @@ STEP = 0.75            # m between the points of a curve
 MIN_PIECE = 1.0        # m: shorter pieces stay straight
 MAX_SUB = 12           # points per piece at most
 KEY = 1000.0           # vertices within 1 mm are one
+SNAP = 0.002           # m: a neighbour's vertex this close to an edge is put on it
 
 
 def _turn(prev, p, nxt):
@@ -91,18 +92,47 @@ def _polys(g):
     return list(g.geoms) if hasattr(g, "geoms") else [g]
 
 
+def _snap_shared(geoms, tol=SNAP):
+    """The polygons with the vertices of their neighbours inserted where these lie on their edges: the survey
+    often has a vertex on one side of a shared edge only (a T-junction), and the two sides would get different
+    curves (gaps and overlaps between neighbours)."""
+    tree = shapely.STRtree(geoms)
+    out = list(geoms)
+    for i, g in enumerate(geoms):
+        near = [j for j in tree.query(g.buffer(tol)) if j != i]
+        if not near:
+            continue
+        pts = shapely.extract_unique_points(shapely.GeometryCollection([geoms[j] for j in near]))
+        q = shapely.snap(g, pts, tol)
+        out[i] = q if q.is_valid else g
+    return out
+
+
 def smooth_partition(geoms, rigid):
     """The polygons geoms (shapely Polygon / MultiPolygon, a partition sharing their edges) with their curves
-    smoothed; rigid[i]: geoms[i] stays as it is and fixes its vertices for the others."""
-    owners = {}
+    smoothed; rigid[i]: geoms[i] stays as it is and fixes its vertices for the others.
+
+    A vertex is free (inside a chain) only where both its edges have the same owners as the vertex itself, i.e.
+    inside one stretch of boundary shared by the same polygons (or on the outline of one polygon alone): the
+    chain of that stretch is then the same sequence of vertices for every polygon on it, so they all get the
+    same curve."""
+    geoms = _snap_shared(geoms)
+    owners, eown = {}, {}
     for i, g in enumerate(geoms):
         for p in _polys(g):
             if p.geom_type != "Polygon" or p.is_empty:
                 continue
             for r in _rings(p):
-                for k in set(_keys(np.asarray(r.coords)[:-1, :2])):
+                ks = _keys(np.asarray(r.coords)[:-1, :2])
+                for k in set(ks):
                     owners.setdefault(k, set()).add(i)
+                for a, b in zip(ks, ks[1:] + ks[:1]):
+                    eown.setdefault((a, b) if a <= b else (b, a), set()).add(i)
     rigid_set = {i for i, r in enumerate(rigid) if r}
+
+    def edge(a, b):
+        return eown.get((a, b) if a <= b else (b, a), set())
+
     out = []
     for i, g in enumerate(geoms):
         if i in rigid_set:
@@ -116,7 +146,11 @@ def smooth_partition(geoms, rigid):
             for r in _rings(p):
                 P = np.asarray(r.coords)[:-1, :2]
                 ks = _keys(P)
-                fixed = np.array([len(owners.get(k, ())) >= 3 or bool(owners.get(k, set()) & rigid_set) for k in ks])
+                n = len(ks)
+                fixed = np.zeros(n, bool)
+                for m, k in enumerate(ks):
+                    o = owners.get(k, set())
+                    fixed[m] = (bool(o & rigid_set) or edge(ks[m - 1], k) != o or edge(k, ks[(m + 1) % n]) != o)
                 rings.append(_smooth_chain(P, fixed, True))
             q = shapely.Polygon(rings[0], rings[1:])
             if not q.is_valid:
