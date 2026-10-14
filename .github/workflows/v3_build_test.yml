@@ -6,7 +6,7 @@
 # downloads are cached between runs. Nothing is published as a release.
 #
 # It runs when this file changes on the v3 branch (bump the build stamp below to rebuild) or on demand.
-# build stamp: 5
+# build stamp: 6
 name: v3 build test
 
 on:
