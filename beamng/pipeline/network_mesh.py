@@ -566,7 +566,7 @@ def harmonic_fill(Z, m, D):
 # ---------------------------------------------------------------------- meshes and carve
 # class -> (material group of osm_surface.MATS, mesh cell m, uv tile m of the asphalt); the unpaved and
 # stone surfaces (v2.4) tile over surface_textures.TILE_M m
-CLASS_MESH = {"road": ("road", 3.0, 6.0), "strip_road": ("road", 3.0, 6.0), "hard": ("hard", 2.0, 6.0),
+CLASS_MESH = {"road": ("road", 3.0, 4.0), "strip_road": ("road", 3.0, 4.0), "hard": ("hard", 2.0, 4.0),
               "strip_path": ("path", 2.0, 6.0)}            # v3.0: 6 m, surface_textures.ASPHALT_TILE_M (up to v2.8 1.25)
 FIXED = {"sidewalk": ("mp_sidewalk", 2.0, 6.0), "island": ("mp_island", 2.0, 2.5)}
 

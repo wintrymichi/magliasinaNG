@@ -351,8 +351,9 @@ SURFACES = ("gravel", "dirt", "sett", "cobble", "asphalt")
 
 
 def build(dst):
-    """All the textures into dst (names t_road_<surface>_b.color.png ...)."""
-    for f in (gravel, dirt, sett, cobble, asphalt):
+    """All the textures into dst (names t_road_<surface>_b.color.png ...). v3.0: the asphalt, the setts and the
+    cobbles of the level are Italy's (italy_mats.py); their textures here are no longer written."""
+    for f in (gravel, dirt):
         f(dst)
 
 

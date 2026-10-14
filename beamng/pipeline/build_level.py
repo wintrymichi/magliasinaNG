@@ -116,7 +116,9 @@ def stage_terrain(scene, ctx):
 
 
 TL = "/assets/materials/tileable"
-ASPHALT_TILE = 6.0      # v3.0: surface_textures.ASPHALT_TILE_M (the game's Italy asphalt tiled over 1.25 m up to v2.8)
+ASPHALT_TILE = 4.0      # v3.0: italy_mats.ASPHALT_TILE (Italy's asphalt tiled over 1.25 m up to v2.8, without its detail map)
+ROAD_TINT = [0.85, 0.85, 0.85]   # Italy's asphalt at 1.0 reads as concrete on wide carriageways (about 150 sRGB)
+ITALY_STONE = {"sett": "italy_cobblestone_patterned", "cobble": "italy_cobblestone"}
 ROAD_CLASSES = {  # cadastral class: (material, mesh cell m, uv tile m)
     "strada_sentiero": ("mp_road_asphalt", 1.0, ASPHALT_TILE),
     "altro_rivestimento_duro": ("mp_hard_asphalt", 2.0, ASPHALT_TILE),
@@ -127,30 +129,22 @@ CHUNK = 128.0
 
 
 def road_materials():
-    a = f"{L}/art/shapes/roads/t_road_asphalt"            # v3.0: the old asphalt of surface_textures.asphalt
-    s = f"{TL}/concrete/sidewalk1/t_sidewalk1"
-    st = f"{L}/art/shapes/buildings/t_bld_stone"          # v2.2: the rubble stone of the walls (bld_textures.py)
+    """v3.0: the asphalt of the game's Italy level (italy_mats.py) on the carriageways, yards, pavements and
+    paths, Italy's old concrete on the islands and parapets, Italy's medieval stone wall on the stone faces."""
+    import italy_mats as it
     return [
-        bng.material("mp_road_asphalt", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
-                     f"{a}_ao.data.png", ground_type="ASPHALT"),
-        bng.material("mp_hard_asphalt", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
-                     f"{a}_ao.data.png", base_color=[1.06, 1.06, 1.05, 1], ground_type="ASPHALT"),
-        bng.material("mp_sidewalk", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
-                     f"{a}_ao.data.png", base_color=[1.2, 1.19, 1.17, 1], ground_type="ASPHALT"),
-        bng.material("mp_island", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
-                     ground_type="CONCRETE"),
+        it.material("mp_road_asphalt", "italy_asphalt", "ASPHALT", tint=ROAD_TINT),
+        it.material("mp_hard_asphalt", "italy_asphalt", "ASPHALT", tint=[0.9, 0.9, 0.89]),
+        it.material("mp_sidewalk", "italy_asphalt", "ASPHALT", tint=[1.0, 0.99, 0.97]),
+        it.material("mp_island", "m_concrete_old", "CONCRETE"),
         # 2022 resurfacing: darker in the photos, but darker in the game too (0.72, then 0.86 in the v3 test
         # builds) it reads as black patches with sharp edges on the grey road: the same asphalt as the rest
-        bng.material("mp_road_asphalt_fresh", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
-                     f"{a}_ao.data.png", ground_type="ASPHALT"),
+        it.material("mp_road_asphalt_fresh", "italy_asphalt", "ASPHALT", tint=ROAD_TINT),
         # stone face under a paved edge high above the ground (bridge sides, walls at steps)
-        bng.material("mp_road_wall", f"{st}_b.color.png", f"{st}_nm.normal.png", f"{st}_r.data.png",
-                     f"{st}_ao.data.png", ground_type="ROCK"),
+        it.material("mp_road_wall", "italy_medieval_stone_wall", "ROCK"),
         # v2.0 network: paved paths, bridge parapets
-        bng.material("mp_path_paved", f"{a}_b.color.png", f"{a}_nm.normal.png", f"{a}_r.data.png",
-                     f"{a}_ao.data.png", base_color=[1.12, 1.11, 1.09, 1], ground_type="ASPHALT"),
-        bng.material("mp_bridge_parapet", f"{s}_b.color.dds", f"{s}_nm.normal.dds", f"{s}_r.data.dds",
-                     base_color=[0.85, 0.85, 0.83, 1], ground_type="CONCRETE"),
+        it.material("mp_path_paved", "italy_asphalt", "ASPHALT", tint=[0.95, 0.94, 0.93]),
+        it.material("mp_bridge_parapet", "m_concrete_old", "CONCRETE", base_color=[0.9, 0.9, 0.88, 1]),
     ] + surface_materials()
 
 
@@ -159,11 +153,15 @@ def surface_materials():
     yards and paths (osm_surface.MATS); the ground type gives the grip and the sound in the game."""
     import osm_surface
     t = f"{L}/art/shapes/roads"
+    import italy_mats as it
     ground = {"gravel": "GRAVEL", "dirt": "DIRT", "sett": "COBBLESTONE", "cobble": "COBBLESTONE"}
     out = []
     for group, mats in osm_surface.MATS.items():
         for surf, name in mats.items():
             if surf == "hard":
+                continue
+            if surf in ITALY_STONE:                       # v3.0: Italy's cobbles (italy_mats.py)
+                out.append(it.material(name, ITALY_STONE[surf], ground[surf]))
                 continue
             out.append(bng.material(name, f"{t}/t_road_{surf}_b.color.png", f"{t}/t_road_{surf}_nm.normal.png",
                                     f"{t}/t_road_{surf}_r.data.png", f"{t}/t_road_{surf}_ao.data.png",

@@ -33,7 +33,7 @@ def to_local(geom):
     return shapely.transform(geom, lambda c: np.stack(lv95_to_local(c[:, 0], c[:, 1]), 1))
 
 
-def load_av():
+def load_av(smooth=True):
     out = {"LCSF": {}, "SOSF": {}, "SOLI": {}, "SOPT": {}}
     for layer in out:
         for f in json.load(open(os.path.join(DATA, "av", f"{layer}.geojson")))["features"]:
@@ -41,7 +41,8 @@ def load_av():
             if not g.is_valid:
                 g = shapely.make_valid(g)
             out[layer].setdefault(f["properties"]["Genere"], []).append((g, f["properties"]))
-    smooth_curves(out)
+    if smooth:
+        smooth_curves(out)
     return out
 
 
