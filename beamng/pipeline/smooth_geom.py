@@ -118,8 +118,19 @@ def smooth_partition(geoms, rigid):
     A vertex is free (inside a chain) only where both its edges have the same owners as the vertex itself, i.e.
     inside one stretch of boundary shared by the same polygons (or on the outline of one polygon alone): the
     chain of that stretch is then the same sequence of vertices for every polygon on it, so they all get the
-    same curve."""
+    same curve. A polygon whose smoothed outline is not valid (a curve crossing another of its rings) stays as
+    surveyed, and then fixes its vertices for its neighbours as well (a second pass)."""
     geoms = _snap_shared(geoms)
+    del KEPT[:]
+    out = _smooth_once(geoms, rigid)
+    if KEPT:
+        bad = {k[0] for k in KEPT}
+        out = _smooth_once(geoms, [r or i in bad for i, r in enumerate(rigid)])
+        out = [geoms[i] if i in bad else g for i, g in enumerate(out)]
+    return out
+
+
+def _smooth_once(geoms, rigid):
     owners, eown = {}, {}
     for i, g in enumerate(geoms):
         for p in _polys(g):
