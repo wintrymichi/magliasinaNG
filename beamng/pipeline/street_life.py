@@ -490,6 +490,14 @@ def yards(site, roads, out, rng, gwr):
         g = (np.arange(n) + 0.5) * YARD_CELL
         X, Y = np.meshgrid(tx * 256.0 + g, ty * 256.0 + g)
         m = np.isfinite(S.height(X.ravel(), Y.ravel(), "high")).reshape(n, n)
+        if not m.any():
+            continue
+        # the edge of a yard where it meets the grass, a wall, a house: not where it goes on as road or
+        # pavement (the first v3 test build put pallets in the middle of the paved squares)
+        xr, yr = X.ravel(), Y.ravel()
+        paved = (m.ravel() | np.isfinite(site.carr.height(xr, yr, "high")) |
+                 np.isfinite(site.paved.height(xr, yr, "high"))).reshape(n, n)
+        open_dist = ndimage.distance_transform_edt(paved) * YARD_CELL
         lab, k = ndimage.label(m)
         if not k:
             continue
@@ -497,7 +505,8 @@ def yards(site, roads, out, rng, gwr):
         dist = ndimage.distance_transform_edt(m) * YARD_CELL
         gy, gx = np.gradient(dist)                               # pointing into the yard
         for i in np.flatnonzero(area >= YARD_MIN):
-            cells = np.flatnonzero((lab.ravel() == i + 1) & (dist.ravel() >= YARD_EDGE[0]) & (dist.ravel() <= YARD_EDGE[1]))
+            cells = np.flatnonzero((lab.ravel() == i + 1) & (dist.ravel() >= YARD_EDGE[0]) & (dist.ravel() <= YARD_EDGE[1])
+                                   & (open_dist.ravel() <= YARD_EDGE[1] + 0.3))
             if not len(cells):
                 continue
             P = np.column_stack([X.ravel()[cells], Y.ravel()[cells]])

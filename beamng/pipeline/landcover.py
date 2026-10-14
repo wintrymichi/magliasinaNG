@@ -41,7 +41,23 @@ def load_av():
             if not g.is_valid:
                 g = shapely.make_valid(g)
             out[layer].setdefault(f["properties"]["Genere"], []).append((g, f["properties"]))
+    smooth_curves(out)
     return out
+
+
+def smooth_curves(av):
+    """v3.0: the curves of the survey smoothed (smooth_geom.py): the land cover as one partition (the
+    buildings kept as they are), the walls' footprints and axes on their own."""
+    import smooth_geom
+    items = [(cls, k) for cls, lst in av["LCSF"].items() for k in range(len(lst))]
+    geoms = [av["LCSF"][c][k][0] for c, k in items]
+    new = smooth_geom.smooth_partition(geoms, [c == "edificio" for c, _ in items])
+    for (c, k), g in zip(items, new):
+        av["LCSF"][c][k] = (g, av["LCSF"][c][k][1])
+    av["SOSF"]["muro"] = [(smooth_geom.smooth_polygon(g), p) for g, p in av["SOSF"].get("muro", [])]
+    av["SOLI"]["muro"] = [(smooth_geom.smooth_line(g), p) for g, p in av["SOLI"].get("muro", [])]
+    print("survey curves smoothed: %d land cover polygons, %d + %d walls"
+          % (len(geoms), len(av["SOSF"]["muro"]), len(av["SOLI"]["muro"])), flush=True)
 
 
 def main():

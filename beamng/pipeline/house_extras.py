@@ -38,8 +38,10 @@ WOOD_H = (1.0, 1.7)
 OUT_TEST = 2.5                                # m from the wall: the side without a roof there is the outside
 SHAPE = re.compile(r"art/shapes/buildings/extras/house_extras_[-+]\d+_[-+]\d+\.dae$")
 D = "art/shapes/buildings/extras"
+# colours of the boxes as seen (sRGB); the material takes them linear (baseColorFactor): in the first v3 build
+# they were given as sRGB and the white boxes showed as glowing white rectangles
 BOXES = (("mp_fbox_terracotta", (0.56, 0.30, 0.20)), ("mp_fbox_wood", (0.27, 0.33, 0.24)),
-         ("mp_fbox_white", (0.84, 0.84, 0.82)))
+         ("mp_fbox_white", (0.72, 0.71, 0.68)))
 FLOWERS = ((0.80, 0.10, 0.10), (0.92, 0.38, 0.62), (0.95, 0.95, 0.93), (0.70, 0.18, 0.55))   # rows of the plant texture
 
 
@@ -147,7 +149,8 @@ def textures(dst):
 
 def materials():
     t = f"/levels/{LEVEL_NAME}/{D}"
-    out = [bng.material(m, base_color=list(c) + [1], roughness=0.8, double_sided=True) for m, c in BOXES]   # either winding
+    lin = lambda c: [float(((v + 0.055) / 1.055) ** 2.4) for v in c]
+    out = [bng.material(m, base_color=lin(c) + [1], roughness=0.8, double_sided=True) for m, c in BOXES]   # either winding
     out.append(bng.material("mp_plants", f"{t}/t_plants_b.color.png", roughness=0.9, alpha_test=60, double_sided=True))
     out.append(bng.material("mp_logs", f"{t}/t_logs_b.color.png", roughness=0.9, ground_type="WOOD", double_sided=True))
     out.append(bng.material("mp_bark", f"{t}/t_bark_b.color.png", roughness=0.95, ground_type="WOOD", double_sided=True))
