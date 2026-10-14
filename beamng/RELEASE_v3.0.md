@@ -20,6 +20,8 @@ Up to v2.8 each ground material had one flat colour and its detail faded out at 
 
 The carriageways have a new asphalt texture drawn by the pipeline (`surface_textures.asphalt`): one tile every 6 m instead of the 1.25 m of the game's Italian asphalt, so no repeating pattern, an even grey with grain, a few faint cracks and oil drops; the stretches resurfaced in 2022 a little darker. On it (`road_wear.py`) every lane has the two faint darker tracks of the wheels (one pair in the middle of the narrow roads) and every edge a light band of dust, both stopping at the edge of the road they meet: about 330 km of tracks and 440 km of edges, translucent strips 1.2 cm over the asphalt, without collision.
 
+The white edge lines are laid from the edge of the road mesh, measured every metre and smoothed, instead of the AI road's width: up to v2.8 about a tenth of them wandered off the asphalt, now about 1 %.
+
 ## Stone and concrete walls
 
 The stone walls have a new texture of coursed rubble masonry with spalls in the joints, lichen and moss, instead of the round cells of v2.8; the concrete walls have rain streaks, lichen and damp patches.

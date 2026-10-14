@@ -12,8 +12,10 @@ dati/road_marking_templates.json (the dataset of the Swiss markings, VSS SN 640 
 and OSM centre lines with their widths):
 1. lines: every cleaned line is cut into the stretches along each road it follows; on one road the
    lines of one colour at the same offset (within SLOT m) are one line, at one offset from the axis
-   (on the axis when within AXIS m of it) or, near the edge, at one inset from the edge (it follows
-   the road's width); dashed stretches get one dash and one period of the dataset and one phase,
+   (on the axis when within AXIS m of it) or, near the edge, at one inset from the edge (v3.0: the edge
+   of the road mesh, measured every metre and smoothed, never closer than EDGE_MIN_INSET m to it: up to
+   the first v3 build the AI road's width, which differs from the mesh, and the edge lines wandered on
+   and off the asphalt); dashed stretches get one dash and one period of the dataset and one phase,
    solid stretches are joined across short gaps; a line is one width of the dataset;
 2. pedestrian crossings: the standard crossing (bars parallel to the road, across the carriageway) at
    the measured place, square to the road;
@@ -45,6 +47,10 @@ MIN_PIECE = 0.6       # m
 SQUARE = 15.0         # deg, a bar this close to square (or along) the road is laid square (along)
 HATCH_R = 6.0         # m, bars of one hatched area
 ARROW_IOU = 0.42      # least overlap of an arrow of the dataset with the traced blob
+EDGE_MED = 9          # m (odd), median of the measured edge distance (v3.0)
+EDGE_FIT = 21         # m (odd), quadratic fit of it
+EDGE_SLACK = 1.0      # m beyond the AI road's half width: farther is the mouth of another road
+EDGE_MIN_INSET = 0.2  # m, an edge line stays this far inside the edge of the road mesh
 LANE_SNAP = 0.9       # m, an arrow this close to the middle of a lane is laid there
 
 
@@ -296,7 +302,29 @@ def _lane_model(slots, W, lanes, oneway):
     return n, [(-0.5 + i / n) for i in range(1, n)]
 
 
-def lay_lines(lines, roads, tpl, stats, lanes=None, oneway=None):
+def edge_distance(roads, rid, sgn, carriage):
+    """(s, e): stations every metre of road rid and the distance from its axis to the edge of the carriageway
+    on side sgn (+1 left), measured on the road meshes and smoothed (a median over EDGE_MED m, then a quadratic
+    fit over EDGE_FIT m), never more than EDGE_SLACK m beyond the AI road's half width (the mouth of a side road);
+    the AI road's half width where no carriageway is found."""
+    from scipy.ndimage import median_filter
+    from scipy.signal import savgol_filter
+    L = roads.length(rid)
+    s = np.r_[np.arange(0, L, 1.0), L]
+    X, _, Nn, Wd = roads.frame(rid, s)
+    raw = Wd / 2
+    for i in range(len(s)):
+        sp = carriage.span(X[i], sgn * Nn[i])
+        if sp is not None:
+            raw[i] = min(sp[1], Wd[i] / 2 + EDGE_SLACK)
+    e = median_filter(raw, size=EDGE_MED, mode="nearest")
+    w = min(EDGE_FIT, len(s) if len(s) % 2 else len(s) - 1)
+    if w >= 5:
+        e = savgol_filter(e, w, 2, mode="interp")
+    return s, e, raw
+
+
+def lay_lines(lines, roads, tpl, stats, lanes=None, oneway=None, carriage=None):
     """The cleaned lines laid along the road axis: [{"color", "width", "pattern", "runs"}]. On every road
     the lines inside the carriageway go on the lane lines of its lanes (OSM, or the count that explains
     the traced lines best), the others keep their inset from the edge; paint at neither is left out."""
@@ -367,7 +395,14 @@ def lay_lines(lines, roads, tpl, stats, lanes=None, oneway=None):
             if key[0] == "edge":
                 sgn = key[2]
                 inset = float(np.median([W / 2 - abs(tm) for _, tm in group]))
-                off = lambda s, rid=rid, sgn=sgn, inset=inset: sgn * np.maximum(roads.frame(rid, s)[3] / 2 - inset, 0.3)
+                if carriage is not None:          # v3.0: from the edge of the road mesh, not the AI road's width
+                    se, e, raw = edge_distance(roads, rid, sgn, carriage)
+                    inset = max(inset, EDGE_MIN_INSET)
+                    o = np.minimum(e - inset, raw - EDGE_MIN_INSET)            # never off the asphalt
+                    o = np.convolve(np.pad(o, 3, mode="edge"), np.ones(7) / 7, "valid")
+                    off = lambda s, sgn=sgn, se=se, o=o: sgn * np.maximum(np.interp(s, se, o), 0.3)
+                else:
+                    off = lambda s, rid=rid, sgn=sgn, inset=inset: sgn * np.maximum(roads.frame(rid, s)[3] / 2 - inset, 0.3)
                 tm = sgn * (W / 2 - inset)
             else:
                 f = frac[key[2]]
@@ -638,7 +673,7 @@ def standard(d, roads, carriage=None, ways=None, drive=None):
     stats = {k: 0 for k in ("lines", "dashed_stretches", "dashes_kept", "paint_off_axis", "crossings", "crossings_kept",
                             "strips_squared", "strips_on_lines", "strips_dropped", "hatched_areas", "arrows", "marks_dropped", "lines_dropped")}
     lanes, oneway = road_lanes(roads, ways, drive) if ways is not None else (None, None)
-    lines = lay_lines(d["lines"], roads, tpl, stats, lanes, oneway)
+    lines = lay_lines(d["lines"], roads, tpl, stats, lanes, oneway, carriage)
     polys = lay_crossings(d["polygons"], roads, tpl, carriage, stats)
     polys += lay_strips(d["polygons"], roads, tpl, stats, lines)
     polys += lay_arrows(d["polygons"], roads, tpl, stats)

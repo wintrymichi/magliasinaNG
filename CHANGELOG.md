@@ -13,6 +13,7 @@ Built and checked automatically on GitHub Actions (`v3 build test`: zip 542 MB, 
 - **New stone and concrete walls:** coursed rubble masonry with moss; concrete with rain streaks and lichen.
 - **Street life:** bins, hydrants, recycling points, café terraces, planters, convex mirrors, letter boxes, house bins, garden tables, pallets and drums, and props along the edges of the squares, car parks and yards, by rules, with the game's Italy models (`street_life.py`, about 13,000 objects).
 - **Flower boxes and woodpiles** at the houses (`house_extras.py`).
+- **Edge lines on the asphalt:** laid from the edge of the road mesh instead of the AI road's width (off the asphalt: 11 % of their length before, 1 % now).
 - One "keep right" sign no longer stands twice.
 
 ## v2.8 (10 October 2026)
