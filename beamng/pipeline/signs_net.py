@@ -515,6 +515,8 @@ LOW_VILLAGE = 2.10        # m, underside of the lowest plate where the limit is 
 LOW_ROAD = 1.50           # m, elsewhere
 GAP = 0.05                # m between plates on a pole
 POLE_R = 0.030            # m, 60 mm steel tube
+ROAD_DROP = 0.15          # m: the plates of a sign measured from no lower than this under the carriageway beside it
+POLE_GONE = 0.15          # m: the tube triangles this near the foot of a pole without plates go with it
 REPLACE = 8.0             # m: a mapped sign takes the place of a panorama sign this close
 REPLACE_RULE = 5.0        # m: a sign the rules imply, of a panorama sign this close
 CLEAR = 0.45              # m: no new pole this close to an existing one
@@ -800,6 +802,21 @@ class World:
         zt = self.ter(x, y)
         return np.where(np.isfinite(zr), np.maximum(zr, zt), zt)
 
+    def base(self, c):
+        """(foot of the pole, height the plates are measured from) at c: the ground, but the plates never lower
+        than the carriageway beside the pole (v3.0: a pole on the slope under a road, behind its guard rail, held
+        its plates down at the road's level, half buried seen from the road)."""
+        zg = float(self.ground([c[0]], [c[1]])[0])
+        ring = np.array([c + r * np.array([math.cos(a), math.sin(a)]) for r in (0.5, 1, 1.5, 2, 3, 4, 5)
+                         for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)])
+        zr = self.carr.height(ring[:, 0], ring[:, 1], "near", np.full(len(ring), zg))
+        ok = np.isfinite(zr)
+        if not ok.any():
+            return zg, zg
+        d = np.hypot(*(ring[ok] - c).T)
+        zroad = float(zr[ok][np.argmin(d)])
+        return zg, max(zg, zroad - ROAD_DROP)
+
 
 def place(world, s, poles_tree, pole_xy):
     """(pole x, y) for a sign, None when there is no free ground beside the road."""
@@ -920,7 +937,7 @@ def build(z, signs):
         if c is None:
             rep["left_out"][s.kind] += 1
             continue
-        z0 = float(world.ground([c[0]], [c[1]])[0])
+        zg, z0 = world.base(c)
         low = LOW_VILLAGE if (s.limit or 50) <= 50 else LOW_ROAD
         nrm = -s.u
         plates = []
@@ -941,7 +958,7 @@ def build(z, signs):
         tng = np.array([nrm[1], -nrm[0]])
         legs = [c - tng * wmax * 0.3, c + tng * wmax * 0.3] if wmax > 0.95 else [c]
         for lc in legs:
-            Vt = tube(lc, z0 - 0.3, top - 0.02)
+            Vt = tube(lc, zg - 0.3, top - 0.02)
             # plain colour: texture coordinates near 0, so write_dae does not shift the plates' ones
             mb.add("mp_ch_pole", Vt, uvs=np.zeros((len(Vt), 2)), normals=bng.flat_normals_soup(Vt))
         for code, val, p, zc in layout:
@@ -972,7 +989,15 @@ def build(z, signs):
             continue
         stack = [(info["code"], info["value"])] + [tuple(b) for b in info.get("below", [])]
         if not all(signs_ch.known(c_, v_) for c_, v_ in stack):
-            rep["panorama"]["kept_" + info["code"]] += 1     # backs, bus stops, boards: as measured
+            if info["code"] == "back":
+                rep["panorama"]["kept_back"] += 1          # the grey back of a sign facing the other way
+                continue
+            # v3.0: the boards no signal is drawn for (direction and street-name boards, tourist and hiking signs,
+            # bus-stop plates, unread plates) were left as measured: without the panorama imagery a flat blob of
+            # one colour in the outline of the photo (the Magliaso roundabout, screenshot 04); they go, and the
+            # roundabouts get their direction signs from direction_signs.py
+            drop_pano.add(mat)
+            rep["panorama"]["removed_" + info["code"]] += 1
             continue
         drop_pano.add(mat)
         if shown([q for q in up if q[3] == "props_osm"], cc[0], cc[1], -n2, [slug(info["code"], info.get("value"))], 10.0):
@@ -1016,6 +1041,19 @@ def build(z, signs):
                 floor = zc - p.h / 2
     # the grey backs (mp_sign_back) of the panorama plates that go
     rep["drop_backs"] = [c2 - np.r_[n2 * 0.01, 0] for m2, c2, n2 in pano_plates if m2 in drop_pano]
+    # v3.0: the poles left without any plate (their boards went, no signal is drawn on them): they go too
+    drawn = np.array([pc for pc, _ in poles]).reshape(-1, 2)
+    kept = np.array([c2[:2] - n2 * PANO_OFF for m2, c2, n2 in pano_plates if m2 not in drop_pano]).reshape(-1, 2)
+    bare = []
+    for m2, c2, n2 in pano_plates:
+        if m2 not in drop_pano:
+            continue
+        pc = c2[:2] - n2 * PANO_OFF
+        if (len(drawn) and np.hypot(*(drawn - pc).T).min() < 0.4) or (len(kept) and np.hypot(*(kept - pc).T).min() < 0.4):
+            continue
+        if not any(np.hypot(*(b - pc)) < 0.2 for b in bare):
+            bare.append(pc)
+    rep["bare_poles"] = bare
     # the STOP and give-way plates of v2.6, drawn again
     for name, code in (("osm_stop", "3.01"), ("osm_giveway", "3.02")):
         col, op = rgba_files(signs_ch.plate(code).img)
@@ -1029,7 +1067,7 @@ def build(z, signs):
 FLIP = re.compile(r"mp_sign_\d|mp_sign_back$|mp_osm_(stop|giveway|timetable|sign_back|bus_)")
 
 
-def rewrite(z, path, drop=(), drop_backs=()):
+def rewrite(z, path, drop=(), drop_backs=(), bare_poles=()):
     """A props mesh (bytes) without the materials `drop` (and the grey backs mp_sign_back centred at
     `drop_backs`) and with the old sign plates (FLIP) turned to face their traffic: winding reversed
     and the image turned upright and read left to right."""
@@ -1050,6 +1088,12 @@ def rewrite(z, path, drop=(), drop_backs=()):
             DB = np.array(drop_backs)
             gone = np.min(np.linalg.norm(pc[:, None, :] - DB[None], axis=2), axis=1) < 0.03
             tris = tris.reshape(-1, 2, 3)[~gone].reshape(-1, 3)
+        if mat in ("mp_pole_steel", "mp_osm_pole") and len(bare_poles):
+            # the triangles of the tubes standing at a pole that keeps no plate
+            t = V[idx[:, 0]].reshape(-1, 3, 3)[:, :, :2].mean(1)
+            BP = np.array(bare_poles)
+            gone = np.min(np.linalg.norm(t[:, None, :] - BP[None], axis=2), axis=1) < POLE_GONE
+            tris = tris[~gone]
         if FLIP.match(mat):
             tris = tris[:, ::-1]
             uv = uv.copy()
@@ -1075,10 +1119,12 @@ def signs_step(root, report=None):
         files[SHAPE] = open(f, "rb").read()
     rep["flipped_triangles"] = 0
     backs = rep.pop("drop_backs")
-    for name, dr, db in (("props_poles", drop, backs), ("props_osm", (), ())):
+    bare = rep.pop("bare_poles")
+    rep["bare_poles_removed"] = len(bare)
+    for name, dr, db, bp in (("props_poles", drop, backs, bare), ("props_osm", (), (), ())):
         path = f"{LEVEL}/art/shapes/props/{name}.dae"
         if path in zi.namelist():
-            files[path], k = rewrite(zi, path, dr, db)
+            files[path], k = rewrite(zi, path, dr, db, bp)
             rep["flipped_triangles"] += k
     files[MATERIALS] = json.dumps({m["name"]: m for m in mats}, indent=1).encode("utf-8")
     group_file = f"{LEVEL}/main/MissionGroup/props/osm/items.level.json"

@@ -492,7 +492,7 @@ def signs_more_step(root, report=None):
         if c is None:
             rep["left_out"][s.kind] += 1
             continue
-        z0 = float(world.ground([c[0]], [c[1]])[0])
+        zg, z0 = world.base(c)
         low = ps.LOW_VILLAGE if (s.limit or 50) <= 50 else ps.LOW_ROAD
         nrm = -s.u
         plates = [(code, val, signs_ch.plate(code, val, big=s.big)) for code, val in s.plates]
@@ -505,7 +505,7 @@ def signs_more_step(root, report=None):
             layout.append((code, val, pl, zb + pl.h / 2))
             zb += pl.h + ps.GAP
         top = zb - ps.GAP
-        Vt = ps.tube(c, z0 - 0.3, top - 0.02)
+        Vt = ps.tube(c, zg - 0.3, top - 0.02)
         mb.add("mp_ch_pole", Vt, uvs=np.zeros((len(Vt), 2)), normals=bng.flat_normals_soup(Vt))
         for code, val, pl, zc in layout:
             mat = material_for(code, val)
