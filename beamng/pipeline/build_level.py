@@ -886,6 +886,7 @@ FINISH = [
     ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
     ("markings", "markings_rules", "markings_rules_step", {"report": True}),   # v3.0: the road paint by the Swiss rules
     ("road_wear", "road_wear", "road_wear_step", {"report": True}),   # v3.0: tyre tracks and dirty edges
+    ("shoulders", "road_shoulders", "shoulders_step", {"report": True}),   # v3.0: no step from the roads to the ground
     ("islands", "islands", "islands_step", {"report": True}),          # v3.0: raised islands, keep-right signs
     ("far_trees", "far_trees", "far_trees_step", {}),            # v2.7: far trees
     ("signs", "signs_net", "signs_step", {"report": True}),      # v2.7: road signs
