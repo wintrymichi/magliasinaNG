@@ -775,8 +775,14 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
 # - gutters along the eaves of every pitched roof: the boundary edges of the roof faces that are level (within
 #   EAVE_DZ m) and lower than the roof beside them, chained into runs and joined where they run on straight; a
 #   channel GUTTER_W m wide and GUTTER_H m deep just outside the wall, zinc grey or copper (the same for a roof);
+#   v3.0: only where the eave is a real one, over a wall top of the building (within WALL_REACH m across and from
+#   WALL_BELOW m under the eave to WALL_ABOVE over it, on EAVE_ON_WALL of its length): up to the v3 test build every
+#   level edge of a roof had its gutter, also the rims of roofs hanging over nothing (canopies, porches, the
+#   overhang of the survey's roofs over their footprint), so that gutters ran in the air as frames round houses;
 # - downpipes (DOWNPIPE m square, down to the ground) at both ends of the runs of eaves of PIPE_RUN m or more,
-#   the longest runs first, PIPES_MAX a roof at most;
+#   the longest runs first, PIPES_MAX a roof at most; v3.0: against the wall under the end of the run (the
+#   nearest wall top within WALL_REACH m, the pipe PIPE_OFF m out of the wall face), none where no wall is under
+#   it: up to the v3 test build a pipe stood at the rim of the roof, in the garden where the roof overhung;
 # - on the roofs of the houses (GWR residential categories): a TV aerial on the ridge of AERIAL_SHARE of those built
 #   before 1991 (a mast and two cross-arms), a satellite dish on DISH_SHARE of them (turned to the satellites
 #   over the equator at 13 degrees east, as most dishes in Ticino), solar panels on PV_SHARE of those with a roof
@@ -800,6 +806,11 @@ AERIAL_SHARE, DISH_SHARE, PV_SHARE = 0.30, 0.20, 0.20
 PV_AZ, PV_MIN, PV_INSET = 50.0, 12.0, 0.5
 NEAR_DRAW, PV_DRAW = 450.0, 1100.0
 DISH_AZ, DISH_EL = 174.0, 36.0            # degrees: the satellites at 13 E seen from Lugano
+WALL_MATS = re.compile(r"^(bld_plaster|bld_stone|bld_plinth|mp_bld_photo_\d+)$")   # the walls of buildings_mesh
+WALL_REACH = 0.8                          # m across from an eave to the top of its wall (the roof overhangs it)
+WALL_BELOW, WALL_ABOVE = 1.5, 0.3         # m of the wall top under / over the eave
+EAVE_ON_WALL = 0.7                        # share of an eave over a wall for its gutter
+PIPE_OFF = 0.06                           # m from the wall face to the axis of a downpipe (with DOWNPIPE / 2)
 RESIDENTIAL = {1020, 1021, 1025, 1030, 1040}
 OLD = 8017                                # GWR period code: built in 1990 or before
 
@@ -912,7 +923,34 @@ def components(P):
     return lab[:k]
 
 
-def house_details(W, T, ground, gwr, rep):
+def wall_tops(W, parts, step=0.25):
+    """(points (n, 3) every `step` m along the top edges of the wall faces of a building shape, the outward
+    horizontal normal of their face (n, 2)): the level edges at the top of the upright wall triangles."""
+    tri = [W[idx[:, 0]].reshape(-1, 3, 3) for m, idx in parts if WALL_MATS.match(m)]
+    if not tri:
+        return np.zeros((0, 3)), np.zeros((0, 2))
+    t = np.concatenate(tri)
+    n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+    ln = np.linalg.norm(n, axis=1)
+    up = (ln > 1e-9) & (np.abs(n[:, 2]) < 0.2 * np.maximum(ln, 1e-12))
+    t, n = t[up], n[up][:, :2]
+    n = n / np.maximum(np.linalg.norm(n, axis=1), 1e-12)[:, None]
+    P, N = [], []
+    for a, b in ((0, 1), (1, 2), (2, 0)):
+        A, B = t[:, a], t[:, b]
+        zt = t[:, :, 2].max(1)
+        top = (np.abs(A[:, 2] - zt) < 0.05) & (np.abs(B[:, 2] - zt) < 0.05)
+        L = np.linalg.norm(B[:, :2] - A[:, :2], axis=1)
+        for k in np.flatnonzero(top & (L > 0.05)):
+            s_ = np.linspace(0.0, 1.0, max(2, int(L[k] / step) + 1))[:, None]
+            P.append(A[k] + (B[k] - A[k]) * s_)
+            N.append(np.repeat(n[k][None], len(s_), 0))
+    if not P:
+        return np.zeros((0, 3)), np.zeros((0, 2))
+    return np.concatenate(P), np.concatenate(N)
+
+
+def house_details(W, T, ground, gwr, rep, walls=None):
     """{material: [triangles]} of the details of the houses of one building shape (world coordinates W)."""
     out = {}
 
@@ -945,7 +983,29 @@ def house_details(W, T, ground, gwr, rep):
     cz = t3[F].mean(1)
     ok = (np.abs(B[:, 2] - A[:, 2]) < EAVE_DZ) & (L > EAVE_MIN) & (cz[:, 2] > (A[:, 2] + B[:, 2]) / 2 + 0.1)
     E, F, A, B, L, cz = E[ok], F[ok], A[ok], B[ok], L[ok], cz[ok]
-    d = (B[:, :2] - A[:, :2]) / L[:, None]
+    # v3.0: only the eaves over a wall top of the building
+    from scipy.spatial import cKDTree
+    wp, wn = walls if walls is not None else (np.zeros((0, 3)), np.zeros((0, 2)))
+    wtree = cKDTree(wp[:, :2]) if len(wp) else None
+
+    def wall_under(p, z):
+        """Index into wp of the nearest wall top under the eave point p (2,) at height z, or -1."""
+        if wtree is None:
+            return -1
+        ks = wtree.query_ball_point(p, WALL_REACH)
+        ks = [k for k in ks if z - WALL_BELOW <= wp[k, 2] <= z + WALL_ABOVE]
+        return min(ks, key=lambda k: np.hypot(*(wp[k, :2] - p))) if ks else -1
+    on = np.zeros(len(E), bool)
+    for k in range(len(E)):
+        s_ = np.linspace(0.05, 0.95, max(2, int(L[k] / 0.5) + 1))
+        z = (A[k, 2] + B[k, 2]) / 2
+        hit = [wall_under(A[k, :2] + (B[k, :2] - A[k, :2]) * f, z) >= 0 for f in s_]
+        on[k] = np.mean(hit) >= EAVE_ON_WALL
+    rep["eaves_in_air_m"] = rep.get("eaves_in_air_m", 0.0) + float(L[~on].sum())
+    E, F, A, B, L, cz = E[on], F[on], A[on], B[on], L[on], cz[on]
+    if not len(E):
+        E = np.zeros((0, 2), np.int64)
+    d = (B[:, :2] - A[:, :2]) / np.maximum(L, 1e-9)[:, None]
     out_n = np.column_stack([d[:, 1], -d[:, 0]])
     side = (((A[:, :2] + B[:, :2]) / 2 - cz[:, :2]) * out_n).sum(1)
     out_n *= np.where(side < 0, -1.0, 1.0)[:, None]                         # away from the roof
@@ -1014,9 +1074,13 @@ def house_details(W, T, ground, gwr, rep):
             for v, k, w in ends:
                 if len(put) >= PIPES_MAX:
                     break
-                o = out_n[k]
-                q = X[v, :2] + o * (DOWNPIPE / 2 + 0.01) + (X[w, :2] - X[v, :2]) / max(
-                    np.linalg.norm(X[w, :2] - X[v, :2]), 1e-9) * 0.15
+                along = (X[w, :2] - X[v, :2]) / max(np.linalg.norm(X[w, :2] - X[v, :2]), 1e-9)
+                j = wall_under(X[v, :2] + along * 0.15, X[v, 2])
+                if j < 0:                                   # v3.0: no pipe where no wall is under the gutter
+                    rep["pipes_no_wall"] = rep.get("pipes_no_wall", 0) + 1
+                    continue
+                o = wn[j] if np.dot(wn[j], out_n[k]) > 0 else -wn[j]
+                q = wp[j, :2] + o * (DOWNPIPE / 2 + PIPE_OFF)                 # against the wall face
                 if any(np.hypot(*(q - p)) < 1.5 for p in put):
                     continue
                 zt = float(ground([q[0]], [q[1]])[0])
@@ -1027,6 +1091,9 @@ def house_details(W, T, ground, gwr, rep):
                 n_out = [k2 for k2 in range(0, 8, 2) if np.dot(np.cross(sides[k2][1] - sides[k2][0],
                                                                    sides[k2][2] - sides[k2][0])[:2], o) > -1e-9]
                 add(m, [t for k2 in n_out for t in sides[k2:k2 + 2]])              # not the side against the wall
+                g = X[v, :2] + out_n[k] * GUTTER_W / 2 + along * 0.15              # the outlet of the gutter
+                if np.hypot(*(g - q)) > 0.1:                                       # the swan neck to the pipe
+                    add(m, beam(np.r_[g, ztop], np.r_[q, ztop - 0.25], DOWNPIPE))
                 put.append(q)
                 rep["downpipes"] += 1
     # the roofs of the houses: aerial, dish, solar panels
@@ -1127,7 +1194,7 @@ def house_details_step(root, report=None):
         V, _, _, _, parts, _ = optimize_level.parse(zi.read(sn).decode("utf-8"))
         W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
         T = roof_parts(V, parts)
-        det = house_details(W, T, ground, gwr, rep)
+        det = house_details(W, T, ground, gwr, rep, wall_tops(W, parts))
         rep["shapes"] += 1
         for m, tris in det.items():
             if not tris:
@@ -1210,6 +1277,7 @@ def house_details_step(root, report=None):
           flush=True)
     if report:
         rep.update({"gutter_km": round(rep.pop("gutter_m") / 1000, 1),
+                    "eaves_in_air_km": round(rep.pop("eaves_in_air_m", 0.0) / 1000, 1),
                     "pv_m2": round(rep["pv_m2"]), "detail_tiles": nt_n, "panel_tiles": nt_f, "triangles": ntri})
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(rep, open(report, "w"), indent=1)
