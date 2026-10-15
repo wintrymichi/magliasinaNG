@@ -44,6 +44,7 @@ BALLAST_EXTRA = 0.35          # m of ballast beyond the sleepers on each side
 BALLAST_SLOPE = 0.9           # m out, down to the terrain
 SMOOTH = 6.0                  # m, smoothing of the bed along the line
 STEP = 1.0                    # m between the stations of a track
+XY_SMOOTH = 3.0               # m, smoothing of the line sideways (swissTLM3D vertices)
 LEVEL_DZ = 0.6                # m, a road mesh this close to the bed is a level crossing
 RAISE = 2.5                   # m, the line may stand this far over the terrain of the level (on an embankment)
 COVER = 1.0                   # m, a line this far under the terrain across its whole bed runs under a deck: left out
@@ -79,6 +80,7 @@ def tracks():
             Q = np.column_stack([x, y, P[:, 2]])
             # the runs of the line inside the area (densified: the cut falls within a metre)
             Qd, _ = resample(Q, 1.0)
+            Qd = smooth_xy(Qd)
             ins = shapely.contains_xy(keep, Qd[:, 0], Qd[:, 1])
             e = np.flatnonzero(np.diff(np.r_[0, ins.astype(int), 0]))
             for a, b in zip(e[::2], e[1::2]):
@@ -133,6 +135,21 @@ def carve_terrain(H, xs, ys, keep=None):
         n += int(cut.sum())
     print("railway: terrain lowered under the tracks at %d vertices" % n)
     return H
+
+
+def smooth_xy(Q, sigma=XY_SMOOTH):
+    """Q (resampled every metre) with x, y smoothed over sigma m along the line, the two ends kept:
+    the vertices of swissTLM3D step sideways by decimetres, and rails drawn through them zigzag (a
+    real curve, radius 80 m or more, moves by sigma**2 / 2R, a few centimetres)."""
+    if len(Q) < 5:
+        return Q
+    out = Q.copy()
+    for k in (0, 1):
+        v = Q[:, k]
+        # odd reflection about the ends: a straight line stays straight up to its ends
+        ext = np.r_[2 * v[0] - v[1:][::-1], v, 2 * v[-1] - v[:-1][::-1]]
+        out[:, k] = gaussian_filter1d(ext, sigma, mode="nearest")[len(v) - 1:2 * len(v) - 1]
+    return out
 
 
 def resample(Q, step=STEP):

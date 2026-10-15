@@ -69,7 +69,7 @@ def stage_terrain(scene, ctx):
             ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
     if "lake_grid" in ctx:
         import water
-        posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"]))
+        posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"], ctx.get("water_cover")))
     if ctx.get("river_polys"):                           # v2.4: the beds of the rivers under their water
         import rivers
         posts.append(lambda H, xs, ys: rivers.carve_terrain(H, xs, ys, ctx["river_polys"],
@@ -671,8 +671,8 @@ def stage_water(scene, ctx):
                                        {"waveDir": [-0.3, -0.8], "waveMagnitude": 0.03, "waveSpeed": 1}]}
     import backdrop
     from config import TER_X1, TER_Y1
-    level, lake, wet = water.build(scene, backdrop.CX, backdrop.CY, params, (TER_X0, TER_Y0, TER_X1, TER_Y1))
-    ctx["lake_level"], ctx["lake_grid"], ctx["wet_grid"] = level, lake, wet
+    level, lake, wet, cover = water.build(scene, backdrop.CX, backdrop.CY, params, (TER_X0, TER_Y0, TER_X1, TER_Y1))
+    ctx["lake_level"], ctx["lake_grid"], ctx["wet_grid"], ctx["water_cover"] = level, lake, wet, cover
     print("lake level", level)
     # v2.4: water in the rivers (rivers.py), not over the lake's blocks nor the fords, on under the bridges
     net = ctx.get("network")

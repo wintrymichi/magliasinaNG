@@ -178,7 +178,7 @@ def rectangles(lake, forbidden, coarse=4, reach=3):
 
 def build(scene, cx, cy, params, block):
     """Water blocks over the lake near the terrain block (x0, y0, x1, y1); returns (level, lake
-    mask grid, covered mask grid) for the lake beds and the backdrop."""
+    mask grid, covered mask grid, water block mask grid) for the lake beds and the backdrop."""
     level = lake_level()
     lake, h, x0, y1 = lake_mask(level, cx, cy)
     low = ~lake & (np.nan_to_num(h, nan=level + 10) < level - LOW)
@@ -203,21 +203,32 @@ def build(scene, cx, cy, params, block):
     flooded = int((covered & ~lake & (np.nan_to_num(h, nan=999) < level - LOW)).sum())
     print("water blocks %d over %.0f km2 (lake %.1f km2), dry land below the lake covered: %d cells" %
           (len(rects), covered.sum() * GRID ** 2 / 1e6, (lake & near).sum() * GRID ** 2 / 1e6, flooded), flush=True)
-    return level, Grid(lake.astype(np.uint8), x0, y1, GRID), Grid((lake & covered).astype(np.uint8), x0, y1, GRID)
+    return level, Grid(lake.astype(np.uint8), x0, y1, GRID), Grid((lake & covered).astype(np.uint8), x0, y1, GRID), \
+           Grid(covered.astype(np.uint8), x0, y1, GRID)
 
 
-def lake_bed(H, xs, ys, level, lake_grid):
-    """Terrain under the lake: at least 1 m under the water, deeper away from the shore (max 6 m).
-    Only where the ground is at the water already (the DTM shows the lake flat at its level): the
-    land of a shore cell of the GRID m mask stays, so the shore follows the ground, not the grid."""
+def lake_bed(H, xs, ys, level, lake_grid, cover=None):
+    """Terrain under the lake: under the water, deeper away from the shore (a shallow beach of 0.25 m
+    sloping 1:4 down to 1 m + 10 %, at most 6 m). Where the ground is at the water already (lower than
+    SHORE m over it) and joined to the lake: the ground under the water blocks (cover, a GRID m mask)
+    a terrain square or more inside their edges, in one piece with the lake cells; so the shore follows
+    the ground, not the squares of the grid (up to v3.0 only the ground in a lake cell went under, and
+    the ground left at the water drew a zigzag of GRID m squares along the shore)."""
     X, Y = np.meshgrid(xs, ys)
-    inside = lake_grid.sample(X.ravel(), Y.ravel(), order=0).reshape(X.shape) > 0
-    inside &= H < level + SHORE
-    if not inside.any():
+    low = H < level + SHORE
+    core = (lake_grid.sample(X.ravel(), Y.ravel(), order=0).reshape(X.shape) > 0) & low
+    if not core.any():
         return H
     step = xs[1] - xs[0]
+    if cover is not None:
+        cov = cover.sample(X.ravel(), Y.ravel(), order=0).reshape(X.shape) > 0
+        cov = ndi.binary_erosion(cov, iterations=max(int(np.ceil(2.0 / step)), 1), border_value=1)
+        lab, n = ndi.label(low & (cov | core))
+        inside = np.isin(lab, np.unique(lab[core & (lab > 0)]))
+    else:
+        inside = core
     d = ndi.distance_transform_edt(inside) * step
-    bed = level - np.minimum(1.0 + 0.1 * d, 6.0)
+    bed = level - np.minimum(np.minimum(0.25 + 0.25 * d, 1.0 + 0.1 * d), 6.0)
     return np.where(inside, np.minimum(H, bed), H)
 
 
