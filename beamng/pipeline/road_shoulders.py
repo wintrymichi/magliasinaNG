@@ -11,6 +11,10 @@ Left as they were: the vertices under a road surface (carved already), the terra
 fence or railway mesh passes through, and the edges standing more than MAX_DROP over the ground (embankments,
 bridge decks: a slope that high would bury what stands below them).
 
+Beside an embankment (the ground TRIM_DROP m under the edge TRIM_REACH m out) the vertices that the carving of
+the road set to its height one square beyond its edge stood out of the slope as a row of teeth (along the lake
+at Magliaso, screenshot 37): they come down to a slope of TRIM_SLOPE from the edge, never under the ground beyond.
+
 Where a paved road still stands FACE_MIN or more over the ground beside it after that (a lane above another, a
 road on a fill), its side face showed as a black band floating over the grass (screenshot 17): a stone retaining
 face goes from the edge down into the ground there (art/shapes/walls/shoulder_walls_*.dae, in the walls group),
@@ -53,6 +57,9 @@ FACE_TILE_M = 512.0    # m: the size of the DAE tiles of the faces
 BATTER = 0.10          # m out per m down
 PARAPET_R = 3.0        # m: edges this near a bridge parapet are bridges
 FACE_SHAPE = re.compile(r"art/shapes/walls/shoulder_walls_[^/]+\.dae$")
+TRIM_DROP = 1.5        # m: the ground this far under the edge TRIM_REACH m out: an embankment, where
+TRIM_REACH = 3.0       # the ground carved for the road beyond its edge is trimmed to a slope of TRIM_SLOPE
+TRIM_SLOPE = 1.5       # (never under the ground out there)
 REACH = FLAT + MAX_DROP / SLOPE + 0.5                 # m: the farthest vertex a shoulder can raise
 SAMPLE = 0.25          # m between the samples along the triangles of the meshes that keep their ground
 KEEP = ("/art/shapes/walls/", "/art/shapes/buildings/", "/art/shapes/fences/")      # their feet may be buried
@@ -167,8 +174,7 @@ def faces(P, N, I, H, top, par, on_paved, rep):
     files {name: bytes} and their TSStatics in the walls group."""
     n = H.shape[0]
     o1 = P[:, :2] + N * 0.4
-    o2 = P[:, :2] + N * 1.0
-    g = np.minimum(terrain_at(H, o1[:, 0], o1[:, 1]), terrain_at(H, o2[:, 0], o2[:, 1]))
+    g = terrain_at(H, o1[:, 0], o1[:, 1])                            # right beside the edge (not a slope further out)
     h = P[:, 2] - g
     c = np.clip(np.floor((o1[:, 0] - TER_X0) / TER_SQUARE).astype(np.int64), 0, n - 2)
     r = np.clip(np.floor((o1[:, 1] - TER_Y0) / TER_SQUARE).astype(np.int64), 0, n - 2)
@@ -260,6 +266,9 @@ def shoulders_step(root, report=None):
     rep["edge_km_lower_ground"] = round(float((drop > MIN_LIFT).sum()) * STEP / 1000, 1)
     rep["edge_km_embankment"] = round(float((drop > MAX_DROP).sum()) * STEP / 1000, 1)
     rep["drop_p50_p90"] = [round(float(v), 2) for v in np.percentile(drop[low], [50, 90])] if low.any() else []
+    out3 = P[:, :2] + N * TRIM_REACH
+    g3 = terrain_at(H, out3[:, 0], out3[:, 1])
+    emb = P[:, 2] - g3 > TRIM_DROP
     tree = cKDTree(P[:, :2])
 
     # the terrain vertices within REACH of an edge
@@ -271,6 +280,7 @@ def shoulders_step(root, report=None):
     top = np.maximum(np.maximum(pad[:-1, :-1], pad[:-1, 1:]), np.maximum(pad[1:, :-1], pad[1:, 1:]))   # per vertex
     del pad
     new = H.copy()
+    trim = np.full(H.shape, np.inf)
     lifted, metres = 0, 0.0
     band = 512
     for r0 in range(0, n, band):
@@ -297,8 +307,17 @@ def shoulders_step(root, report=None):
             sel = np.isfinite(target) & (lift > MIN_LIFT) & (lift <= MAX_DROP)   # not a slope falling away
             tv = top[rr, cc]                                              # -inf: nothing there, +inf: railway
             sel &= np.isneginf(tv) | ((tv >= target + STANDS) & ~np.isposinf(tv))
+            # beside an embankment: no tooth of the ground carved for the road standing out at road level
+            tv = top[rr, cc]
+            tsel = side & ~under & emb[k] & (d[idx] <= TRIM_REACH) & ~np.isfinite(tv)
+            bound = np.maximum(P[k, 2] - SHOULDER_DZ - TRIM_SLOPE * np.maximum(d[idx] - 0.3, 0.0), g3[k])
+            tsel &= H[rr, cc] > bound + MIN_LIFT
+            np.minimum.at(trim, (rr[tsel], cc[tsel]), bound[tsel])
             rr, cc, target = rr[sel], cc[sel], target[sel]
             np.maximum.at(new, (rr, cc), target)
+    cut = trim < H - MIN_LIFT
+    new = np.where(cut, trim, new)
+    rep["vertices_trimmed"] = int(cut.sum())
     dz = new - H
     lifted = int((dz > MIN_LIFT).sum())
     metres = float(dz[dz > MIN_LIFT].sum()) if lifted else 0.0
@@ -309,7 +328,7 @@ def shoulders_step(root, report=None):
     del paved
     files, objs = faces(P, N, I, new, top, par, on_paved, rep)
     q2 = np.clip(np.round((new - Z0) / MAXH * 65535.0), 0, 65535).astype("<u2")
-    q2 = np.where(dz > MIN_LIFT, q2, q)                                   # the others exactly as they were
+    q2 = np.where(np.abs(dz) > MIN_LIFT, q2, q)                          # the others exactly as they were
     new_ter = data[:5] + q2.tobytes() + data[5 + 2 * n * n:]
     assert len(new_ter) == len(data)
     with zi.writer() as zo:

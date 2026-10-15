@@ -21,7 +21,7 @@ One mesh per 512 m tile in MissionGroup/railway, with collision.
 import json, os
 import numpy as np
 import shapely
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d, median_filter
 import bng
 from config import DATA, LEVEL_NAME, lv95_to_local
 import area
@@ -43,6 +43,7 @@ RAIL_W, RAIL_H = 0.07, 0.15
 BALLAST_EXTRA = 0.35          # m of ballast beyond the sleepers on each side
 BALLAST_SLOPE = 0.9           # m out, down to the terrain
 SMOOTH = 6.0                  # m, smoothing of the bed along the line
+MEDIAN = 9                    # stations (m): the running median of the terrain under the bed
 STEP = 1.0                    # m between the stations of a track
 LEVEL_DZ = 0.6                # m, a road mesh this close to the bed is a level crossing
 RAISE = 2.5                   # m, the line may stand this far over the terrain of the level (on an embankment)
@@ -92,7 +93,7 @@ def carve_terrain(H, xs, ys, keep=None):
     higher than the line of swissTLM3D minus 0.05 m within half = SLEEPER_LEN / 2 + BALLAST_EXTRA +
     CARVE_W m of the axis, and beyond it no higher than a side of CUT_SLOPE (a cutting, smooth on the
     terrain grid); lowered by at most CARVE_MAX m, not at the vertices of keep (the ground carved for
-    the roads, whose walls stand there), not where the ground is higher than the line by COVER m all
+    the roads, whose walls stand there) outside the bed itself, not where the ground is higher than the line by COVER m all
     across the bed (a deck over the tracks)."""
     from scipy.spatial import cKDTree
     from scipy.ndimage import maximum_filter1d, minimum_filter1d
@@ -127,7 +128,10 @@ def carve_terrain(H, xs, ys, keep=None):
         target = z + np.maximum(d - half, 0.0) * CUT_SLOPE
         cut = (h > target) & (h - target <= CARVE_MAX) & ~deck[j[inb]]
         if keep is not None:
-            cut &= ~keep[r0:r1, c0:c1].ravel()[inb]
+            # v3.0: the ground of the roads is kept beside the bed, not in it: a road on a wall over the line
+            # (along the lake at Magliaso) left the vertices of its edge standing in the ballast as spikes
+            # that the bed climbed over
+            cut &= ~keep[r0:r1, c0:c1].ravel()[inb] | (d <= half - CARVE_W)
         sub[inb[cut]] = target[cut]
         H[r0:r1, c0:c1] = sub.reshape(r1 - r0, c1 - c0)
         n += int(cut.sum())
@@ -235,7 +239,9 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
             # the bed: on top of the terrain across its whole width, smoothed along the line
             offs = np.linspace(-half + 0.2, half - 0.2, 7)
             Z = np.stack([terrain_top(P[:, 0] + N[:, 0] * o, P[:, 1] + N[:, 1] * o) for o in offs], 1)
-            top_t = Z.max(1)
+            # v3.0: a running median along the line, not the highest vertex: one spike of the terrain no longer
+            # lifts the bed into a hump (the terrain is lowered under the bed by carve_terrain)
+            top_t = median_filter(Z.max(1), size=MEDIAN, mode="nearest")
             covered = gaussian_filter1d((P3[:, 2] < Z.min(1) - COVER).astype(float), 2.0, mode="nearest") > 0.2
             bed = gaussian_filter1d(top_t + np.clip(P3[:, 2] - top_t, 0.0, RAISE), SMOOTH / STEP / 2, mode="nearest")
             bed = np.maximum(bed, top_t - 0.02)
