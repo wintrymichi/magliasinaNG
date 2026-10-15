@@ -18,6 +18,9 @@ into the bed as before):
 The transparency and the look in the game could not be checked here.
 v2.8: the water is written once the terrain is final (write) and cut to where it stands more than SHORE m
 over it, on a 1.5 m mesh: on the torrents it ran in and out of the banks in triangles.
+v3.0: the bed is lowered with a bank BANK m wide outside the surveyed surface, eased from the bed up to the ground
+(carve_terrain): up to the v3 test build only the vertices inside it went down, so the bank was a row of teeth one
+terrain square high, and the water cut on them in a zigzag (the Magliasina at the Magliaso roundabout).
 """
 import os
 import numpy as np
@@ -34,6 +37,7 @@ SHORE = 0.06            # m, the water is left out where it is less than this ov
 FORD = 1.5              # m, a road surface less than this above the water crosses it at its level
 DEPTH = 0.35            # m of terrain under the water
 CARVE_MAX = 1.5         # m, terrain higher than this over the water (a bank in a gorge) is not lowered
+BANK = 2.5              # m outside the river surface over which the bed rises to the ground (v3.0)
 FORD_KEEP = 2.5         # m around the roads and paths at the level of the ground: the terrain is not lowered
 CHUNK = 128.0
 
@@ -146,13 +150,14 @@ def water_z(x, y):
     return out
 
 
-def carve_terrain(H, xs, ys, polys):
+def carve_terrain(H, xs, ys, polys, keep=None):
     """The terrain heights H (rows ys, columns xs: the vertex grid) lowered to DEPTH m under the water
     at the vertices inside the river surfaces, but those more than CARVE_MAX m above the water (the
-    steep banks of a gorge that the surveyed surface takes in)."""
-    n = 0
+    steep banks of a gorge that the surveyed surface takes in); v3.0: eased up to the ground within BANK m
+    outside them, but not at the vertices of keep (the ground of the roads)."""
+    n = nb = 0
     for p in polys:
-        x0, y0, x1, y1 = p.bounds
+        x0, y0, x1, y1 = p.buffer(BANK).bounds
         c0, c1 = np.searchsorted(xs, x0), np.searchsorted(xs, x1)
         r0, r1 = np.searchsorted(ys, y0), np.searchsorted(ys, y1)
         if c1 <= c0 or r1 <= r0:
@@ -161,6 +166,9 @@ def carve_terrain(H, xs, ys, polys):
         ins = shapely.contains_xy(p, X, Y)
         if not ins.any():
             continue
+        band = ~ins & shapely.contains_xy(p.buffer(BANK, quad_segs=4), X, Y)
+        if keep is not None:                           # not the ground of the roads (their edges stand on it)
+            band &= ~keep[r0:r1, c0:c1]
         rr, cc = np.nonzero(ins)
         zw = water_z(X[ins], Y[ins])
         cur = H[r0 + rr, c0 + cc]
@@ -168,7 +176,20 @@ def carve_terrain(H, xs, ys, polys):
         ok = cur - zw <= CARVE_MAX
         H[r0 + rr[ok], c0 + cc[ok]] = np.minimum(cur[ok], zw[ok] - DEPTH)
         n += int(ok.sum())
-    print("rivers: terrain lowered under the water at %d vertices" % n, flush=True)
+        # v3.0: the bank, from the bed at the edge of the surface (d = 0) up to the ground at BANK m
+        rr, cc = np.nonzero(band)
+        if len(rr):
+            bx, by = X[band], Y[band]
+            d = shapely.distance(p, shapely.points(bx, by))
+            zw = water_z(bx, by)
+            cur = H[r0 + rr, c0 + cc]
+            f = np.clip(d / BANK, 0.0, 1.0)
+            f = f * f * (3 - 2 * f)
+            bed = zw - DEPTH
+            ok = (cur - zw <= CARVE_MAX) & (cur > bed)
+            H[r0 + rr[ok], c0 + cc[ok]] = np.minimum(cur[ok], bed[ok] + (cur[ok] - bed[ok]) * f[ok])
+            nb += int(ok.sum())
+    print("rivers: terrain lowered under the water at %d vertices, %d on the banks" % (n, nb), flush=True)
     return H
 
 
