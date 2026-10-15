@@ -808,9 +808,10 @@ def island_mesh(B, c, u, length, zg, pillars, n_disp, z_ceil, mats):
         ang = np.linspace(0, 2 * np.pi, 13)
         ring = [bc + (u * math.cos(a) + v * math.sin(a)) * 0.08 for a in ang]
         for k in range(12):
-            B.add("solid", mats["bands"], quad(np.r_[ring[k], zt], np.r_[ring[k + 1], zt], np.r_[ring[k + 1], zt + 1.0],
-                                               np.r_[ring[k], zt + 1.0], np.r_[(ring[k] + ring[k + 1]) / 2 - bc, 0],
-                                               [(k / 12, 0), ((k + 1) / 12, 0), ((k + 1) / 12, 1), (k / 12, 1)]))
+            t, uv = quad(np.r_[ring[k], zt], np.r_[ring[k + 1], zt], np.r_[ring[k + 1], zt + 1.0],
+                         np.r_[ring[k], zt + 1.0], np.r_[(ring[k] + ring[k + 1]) / 2 - bc, 0],
+                         [(k / 12, 0), ((k + 1) / 12, 0), ((k + 1) / 12, 1), (k / 12, 1)])
+            B.add("solid", mats["bands"], t, uv)
     for f in pillars:                                               # clad steel pillars
         B.add("solid", mats["steel"], box(c + u * f * (length / 2), u, (PILLAR / 2, PILLAR / 2), zt, z_ceil))
     spots = [0.0] if n_disp == 1 else [-0.25, 0.25]
