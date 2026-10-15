@@ -451,6 +451,8 @@ class Context:
         gwr = json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz")))["buildings"]
         G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or 30) >= 30])
         self.gtree = cKDTree(G)
+        rings = [w["line"] for w in self.ways if w["tags"].get("junction") in ("roundabout", "circular")]
+        self.rings = shapely.union_all(rings) if rings else None
 
 
 def _zone(tags):
@@ -487,6 +489,10 @@ def road_context(roads, cx):
         r.lm_no = np.array([t.get("lane_markings") == "no" if t else False for t in tags])
         r.lanes = np.array([int(t["lanes"]) if t.get("lanes", "").isdigit() else 0 for t in tags])
         ring = np.array([t.get("junction") in ("roundabout", "circular") if t else False for t in tags])
+        # per station too: an AI road can go on through the ring (the cantonal road over the Magliaso roundabout)
+        if cx.rings is not None:
+            ring |= shapely.dwithin(cx.rings, shapely.points(r.X), 3.0)
+        r.ring_st = ring
         r.ring = bool(ring.mean() > 0.5) if m.any() else False
         r.main = bool(np.median(r.rank) >= MAIN_RANK)
         hw = [t.get("highway") for t in tags if t]
@@ -507,6 +513,7 @@ class Arm:
         self.dir = unit(road.X[far] - road.X[i]) if far != i else unit(road.T[i] * d)
         near = road.idx(np.clip(s + d * np.arange(0, 25, 2.0), 0, road.L))
         self.rank = int(np.median(road.rank[near]))
+        self.ring = bool(road.ring_st[road.idx(np.clip(s + d * np.arange(0, 8, 2.0), 0, road.L))].mean() > 0.5)
         if road.oneway:
             self.enter, self.leave = d < 0, d > 0                   # the nodes run in the direction of travel
         else:
@@ -619,9 +626,20 @@ def decide(junc, cx, stats):
     ctl_nodes = [(np.array([n["x"], n["y"]]), n["tags"].get("highway")) for n in cx.nodes
                  if n["tags"].get("highway") in ("stop", "give_way", "traffic_signals")]
     ckd = cKDTree(np.array([p for p, _ in ctl_nodes])) if ctl_nodes else None
+    # the roundabouts of OSM: centre and radius of every ring; at a junction on a ring the arms along the ring
+    # (tangential) are the ring, those across it (radial) the entries and exits (the AI roads of a roundabout are
+    # short pieces that do not always follow the mapped ring)
+    rings = [(c, rad) for c, rad, _ in ring_list(cx)]
     for J in junc:
         arms = J["arms"]
-        ring = [a for a in arms if a.r.ring]
+        if any(np.hypot(*(J["c"] - c)) < rad + RING_ZONE for c, rad in rings):
+            # on a roundabout: its entries get their give-way lines from the mapped ring (roundabout_entries)
+            for a in arms:
+                a.control = "ring"
+            J["main"] = list(arms)
+            stats["arms_ring"] = stats.get("arms_ring", 0) + len(arms)
+            continue
+        ring = [a for a in arms if a.ring]
         main = []
         if len(arms) == 2:
             main = list(arms)                             # one road going on in two pieces
@@ -761,7 +779,7 @@ def transverse(junc, roads, paint, stats):
                 sa = s0 + a.d * depth
                 sb = sa + a.d * R["long_len"]
                 r.centre_override.append((min(sa, sb), max(sa, sb), "long", a))
-            if line_ok and depth > 0 and ctl == "give_way" and any(m.r.ring for m in main) and a.rank >= MAIN_RANK:
+            if line_ok and depth > 0 and ctl == "give_way" and any(m.ring for m in main) and a.rank >= MAIN_RANK:
                 pre_announce(a, s0 + a.d * (depth + R["pre_d"]), paint)
             for m in main:
                 m.r.mouths.setdefault("arms", []).append((m, a))
@@ -1128,6 +1146,12 @@ def lay_edges(r, masks, paint, stats):
         lim = raw - side * EDGE_MIN_IN
         off = np.where(side * off > side * lim, lim, off)
         off = np.convolve(np.pad(off, 3, mode="edge"), np.ones(7) / 7, "valid")
+        # no edge line where its offset swings (round a splitter island or a lay-by the measured edge leaves the
+        # road's): a line there zigzagged across the lane
+        if len(off) > 2:
+            slope = np.abs(np.gradient(off, r.s))
+            swing = np.convolve(slope > EDGE_SWING, np.ones(5), "same") > 0
+            ok = ok & ~swing
         f = lambda s, off=off: r.interp(off, s)
         solid, guide = [], []
         for p, q in runs(ok):
@@ -1602,6 +1626,94 @@ def tessellate(paint, S, builders, stats):
     stats["off_road_left_out"] = off
 
 
+EDGE_SWING = 0.12       # m of offset per m of road: an edge line steeper than this is no edge line
+RING_ZONE = 12.0        # m beyond the mapped ring: the junctions of a roundabout
+RING_HALF = 4.0         # m from the mapped ring (the middle of the circulating lane) to its outer edge
+
+
+def ring_list(cx):
+    """[(centre, mean radius, ring line)] of the roundabouts of OSM (their ways joined)."""
+    lines = [w["line"] for w in cx.ways if w["tags"].get("junction") in ("roundabout", "circular")]
+    if not lines:
+        return []
+    merged = shapely.line_merge(shapely.union_all(lines))
+    out = []
+    for g in getattr(merged, "geoms", [merged]):
+        P = np.asarray(g.coords)[:, :2]
+        if len(P) < 4 or np.hypot(*(P[0] - P[-1])) > 2.0:
+            continue
+        c = P.mean(0)
+        out.append((c, float(np.hypot(*(P - c).T).mean()), g))
+    return out
+
+
+def roundabout_entries(cx, paint, stats, bbox=None):
+    """The give-way line (6.13, a row of triangles, tips towards the driver) at every entry of a roundabout: where
+    the OSM way that enters it crosses the outer edge of the circulating carriageway, across its incoming half (the
+    whole carriageway of a one-way entry), measured on the asphalt."""
+    tri = R.get("teeth", {"base": 0.5, "height": 0.6, "gap": 0.25})
+    base, height, gap = tri.get("base", 0.5), tri.get("height", 0.6), tri.get("gap", 0.25)
+    for c, rad, ring in ring_list(cx):
+        if bbox is not None and not (bbox[0] - 50 < c[0] < bbox[2] + 50 and bbox[1] - 50 < c[1] < bbox[3] + 50):
+            continue
+        r_out = rad + RING_HALF
+        for w in cx.ways:
+            t = w["tags"]
+            if t.get("junction") in ("roundabout", "circular") or t.get("highway") in ("service", "track"):
+                continue
+            P = w["xy"]
+            for end in (0, -1):
+                if shapely.distance(ring, shapely.Point(P[end])) > 1.5:
+                    continue
+                Q = P if end == -1 else P[::-1]                  # walking towards the ring
+                ow = t.get("oneway") in ("yes", "1", "true", "-1")
+                inbound = (end == -1) == (t.get("oneway") != "-1")
+                if ow and not inbound:
+                    continue
+                d = np.hypot(*(Q - c).T)
+                k = np.flatnonzero((d[:-1] >= r_out) & (d[1:] < r_out))
+                if len(k):
+                    k = int(k[-1])
+                    f = (d[k] - r_out) / max(d[k] - d[k + 1], 1e-9)
+                    p = Q[k] + (Q[k + 1] - Q[k]) * f
+                    tv = unit(Q[k + 1] - Q[k])                   # towards the ring
+                else:                                            # a short way: on along its last piece
+                    e, tv = Q[-1], unit(Q[-1] - Q[0])
+                    m = e - c
+                    bq = float(m @ -tv)
+                    disc = bq * bq - (float(m @ m) - r_out * r_out)
+                    if disc < 0:
+                        continue
+                    p = e - tv * (bq + np.sqrt(disc))
+                nr = np.array([tv[1], -tv[0]])                   # right of the driver entering
+                # the asphalt across the entry: from the mapped line (the middle of a two-way road, often on its
+                # splitter island) to the right for the incoming lane, both ways on a one-way entry
+                o = np.arange(-8.0 if ow else 0.0, 8.0, 0.2)
+                q = p + nr * o[:, None]
+                zq = CARR.height(q[:, 0], q[:, 1], "high")
+                zq = np.where(np.abs(zq - np.nanmedian(zq)) < 0.5, zq, np.nan) if np.isfinite(zq).any() else zq
+                on = np.isfinite(zq)
+                if not on.any():
+                    stats["roundabout_entry_off_road"] = stats.get("roundabout_entry_off_road", 0) + 1
+                    continue
+                runs_ = [(i0, i1) for i0, i1 in runs(on)]
+                # the run of asphalt nearest to the line on the right (on a one-way entry the one under the line)
+                i0, i1 = min(runs_, key=lambda ab: abs(o[ab[0]] if o[ab[0]] > 0 else (0 if o[ab[1] - 1] >= 0 else -o[ab[1] - 1])))
+                lo, hi = max(o[i0], 0.0 if not ow else o[i0]) + 0.3, o[i1 - 1] - 0.3
+                z0 = float(np.nanmedian(zq[i0:i1]))
+                if hi - lo < 1.5:
+                    stats["roundabout_entry_narrow"] = stats.get("roundabout_entry_narrow", 0) + 1
+                    continue
+                n = int((hi - lo + gap) // (base + gap))
+                start = lo + 0.5 * ((hi - lo) - (n * base + (n - 1) * gap))
+                for i in range(n):
+                    a = p + nr * (start + i * (base + gap))
+                    b = a + nr * base
+                    tip = (a + b) / 2 - tv * height
+                    paint.poly(np.array([a, b, tip]), z0, "white", "give_way_ring")
+                stats["roundabout_entries"] = stats.get("roundabout_entries", 0) + 1
+
+
 # ---------------------------------------------------------------------- the step
 def paint_level(zi, bbox=None, stats=None):
     """Everything above on the level of LevelFiles zi: (Paint, roads, junctions, S (road faces))."""
@@ -1640,6 +1752,7 @@ def paint_level(zi, bbox=None, stats=None):
     junc = junctions(roads)
     decide(junc, cx, stats)
     transverse(junc, roads, paint, stats)
+    roundabout_entries(cx, paint, stats, bbox)
     crossings(roads, cx, tr, paint, stats)
     print("junctions %d, crossings (%.0f s)" % (len(junc), time.time() - t0), flush=True)
     for J in junc:
