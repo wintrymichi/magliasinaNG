@@ -472,8 +472,10 @@ def stage_walls(scene, ctx):
 
 
 def stage_guardrails(scene, ctx):
+    """v3.0: the rails go to the edge of the roads as built, every road (up to v2.8 the height function of the
+    corridor only: the rails of the rest of the network stayed where the panoramas put them)."""
     import guardrail_mesh
-    guardrail_mesh.build(LEVEL_DIR, LEVEL_NAME, scene, road_fn=ctx.get("road_mesh_fn"))
+    guardrail_mesh.build(LEVEL_DIR, LEVEL_NAME, scene, road_fn=guardrail_mesh.edge_fn(LEVEL_DIR))
 
 
 def stage_fences(scene, ctx):

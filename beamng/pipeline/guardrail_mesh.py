@@ -90,6 +90,10 @@ def foot_fn():
 
 
 EDGE_IN, EDGE_SEARCH, EDGE_OUT = 1.5, 3.0, 0.3     # m: search the road's edge from inside to outside, rail beyond it
+SMOOTH_LINE = 9.0        # m: the line of a rail smoothed over this length before it goes to the edge
+SMOOTH_E = 10.0          # m: its distance from the road's edge smoothed over this length
+SMOOTH_Z = 6.0           # m: its foot smoothed over this length
+JOIN_GAP = 12.0          # m: two runs of the panoramas on one side of a road this far apart, in line, are one rail
 GAP_CROSS = 1.0          # m beyond the half width of a line that crosses a rail: the rail is open there
 MIN_PIECE = 4.0          # m, shorter pieces of a rail cut at a crossing are dropped
 SV_RUNS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "guardrails_sv.json")
@@ -241,11 +245,21 @@ def open_crossings(runs, gap=GAP_CROSS):
 
 
 def to_edge(P, side, road_fn, ground):
-    """A rail seen in the panoramas moved onto the edge of the road as built: every point on the line
-    across the road through it goes to EDGE_OUT m outside the last road face (searching from EDGE_IN m
-    inside to EDGE_SEARCH m outside), its foot at the height of the road's edge; and the ground under it
-    for the posts. P: (n, 4) x, y, z, top -> (n, 5) x, y, z, top, ground."""
-    P = np.array(P, float)
+    """A rail moved onto the edge of the road as built: the line of the rail smoothed (savgol over SMOOTH_LINE m),
+    then every point on the line across the road through it goes to EDGE_OUT m outside the last road face
+    (searching from EDGE_IN m inside to EDGE_SEARCH m outside), that distance smoothed along the rail (a median
+    over SMOOTH_E m, then a quadratic fit: a side road or a lay-by does not pull the rail in or out), its foot at
+    the height of the road's edge, smoothed over SMOOTH_Z m; and the ground under it for the posts. Where no road
+    face is found along a stretch the distance of the points around it holds. P: (n, 4) x, y, z, top -> (n, 5)
+    x, y, z, top, ground. v3.0: up to v2.8 road_fn held only the corridor of the cantonal road, and the rails of
+    the rest of the network stood where the panoramas put them, off the asphalt as built and not along it."""
+    from scipy.ndimage import median_filter
+    from scipy.signal import savgol_filter
+    P, _ = resample(np.array(P, float), 0.5)
+    n = len(P)
+    if n >= 7:
+        w = min(int(SMOOTH_LINE / 0.5) | 1, n if n % 2 else n - 1)
+        P[:, :2] = savgol_filter(P[:, :2], w, 2, axis=0, mode="interp")
     T = np.gradient(P[:, :2], axis=0)
     T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
     out = side * np.column_stack([-T[:, 1], T[:, 0]])          # away from the road
@@ -253,17 +267,75 @@ def to_edge(P, side, road_fn, ground):
     X = P[:, None, 0] + out[:, None, 0] * offs[None]
     Y = P[:, None, 1] + out[:, None, 1] * offs[None]
     Z = road_fn(X.ravel(), Y.ravel()).reshape(X.shape)
-    on = np.isfinite(Z)
+    # a face far under or over the rail is another road (under a bridge, above a wall), not this one's edge
+    on = np.isfinite(Z) & (np.abs(Z - P[:, None, 2]) < 1.5)
     has = on.any(1)
     last = np.where(has, on.shape[1] - 1 - np.argmax(on[:, ::-1], axis=1), 0)
-    e = np.where(has, offs[last], 0.0)
-    ze = np.where(has, Z[np.arange(len(P)), last], P[:, 2])
+    e = np.where(has, offs[last], np.nan)
+    ze = np.where(has, Z[np.arange(n), last], np.nan)
+    if not has.any():
+        e, ze = np.zeros(n), P[:, 2] + 0.03
+    elif not has.all():
+        i = np.arange(n)
+        e = np.interp(i, i[has], e[has])
+        ze = np.interp(i, i[has], ze[has])
+    if n >= 5:
+        e = median_filter(e, size=min(int(SMOOTH_E / 0.5) | 1, n if n % 2 else n - 1), mode="nearest")
+        ze = median_filter(ze, size=5, mode="nearest")
+        w = min(int(SMOOTH_E / 0.5) | 1, n if n % 2 else n - 1)
+        if w >= 5:
+            e = savgol_filter(e, w, 2, mode="interp")
+        w = min(int(SMOOTH_Z / 0.5) | 1, n if n % 2 else n - 1)
+        if w >= 5:
+            ze = savgol_filter(ze, w, 2, mode="interp")
     Q = P.copy()
     Q[:, :2] = P[:, :2] + out * (e + EDGE_OUT)[:, None]
-    from scipy.ndimage import median_filter
-    Q[:, 2] = median_filter(ze - 0.03, size=5, mode="nearest") if len(P) >= 5 else ze - 0.03
+    Q[:, 2] = ze - 0.03
     g = ground(Q[:, 0], Q[:, 1])
     return np.column_stack([Q, g])
+
+
+def join_runs(runs, gap=JOIN_GAP):
+    """Runs of the panoramas on the same side of the same road line whose end lies within `gap` m of the start
+    of the next one, in line with both, joined into one: the panoramas see a rail in pieces (a car, a bush in
+    front), and the game had holes of a few metres in rails that run on. Where a road or path really crosses
+    the gap, open_crossings opens it again."""
+    by = {}
+    for r in runs:
+        by.setdefault((r.get("seg", -1), r["side"]), []).append(r)
+    out = []
+    for (seg, side), rs in by.items():
+        if seg < 0 or len(rs) == 1:
+            out += rs
+            continue
+        rs = [dict(r, pts=np.asarray(r["pts"], float)) for r in rs]
+        merged = True
+        while merged:
+            merged = False
+            for i, a in enumerate(rs):
+                for j, b in enumerate(rs):
+                    if i == j:
+                        continue
+                    A, B = a["pts"], b["pts"]
+                    if len(A) < 2 or len(B) < 2:
+                        continue
+                    d = B[0, :2] - A[-1, :2]
+                    L = float(np.hypot(*d))
+                    ta = A[-1, :2] - A[-2, :2]
+                    tb = B[1, :2] - B[0, :2]
+                    ta /= max(np.hypot(*ta), 1e-9)
+                    tb /= max(np.hypot(*tb), 1e-9)
+                    inline = L < 1e-6 or (float(d @ ta) / L > 0.9 and float(d @ tb) / L > 0.9)
+                    if L < gap and inline and float(ta @ tb) > 0.8:
+                        rs[i] = dict(a, pts=np.vstack([A, B]), votes=max(np.ravel(a.get("votes", 0))[0],
+                                                                         np.ravel(b.get("votes", 0))[0]))
+                        del rs[j]
+                        merged = True
+                        break
+                if merged:
+                    break
+        out += rs
+    return out
 
 
 ITALY = "/levels/italy/art/shapes/buildings/"
@@ -424,6 +496,25 @@ def module_points(src, step=0.25):
     return np.concatenate([p[None, :2] + u[:, None] * r[0, :2] for p, r in zip(P, R)])
 
 
+def edge_fn(level_dir, near=8.0):
+    """(x, y) -> height of the highest road face of the level (folder as being built: the road meshes written
+    by the stage roads, corridor and network) there, NaN off the roads; only the faces within `near` m of a
+    rail of guardrails_final.json or of the panoramas are kept (the whole network would not fit the memory)."""
+    import markings_net
+    import osm_surface
+    from road_mesh import TriSurface
+    from scipy.spatial import cKDTree
+    pts = [np.array(r["pts"], float)[:, :2] for r in json.load(open(os.path.join(WORK, "guardrails_final.json")))]
+    if os.path.exists(SV_RUNS):
+        pts += [np.array(r["pts"], float)[:, :2] for r in json.load(open(SV_RUNS)) if len(r["pts"])]
+    pts = np.concatenate([resample(np.column_stack([p, np.zeros(len(p))]), 1.0)[0][:, :2] for p in pts if len(p) > 1])
+    mats = osm_surface.ROAD_MATS + osm_surface.HARD_MATS + ("mp_road_asphalt_fresh", "mp_sidewalk", "mp_island")
+    tops = markings_net.road_tops(level_dir, mats)
+    d, _ = cKDTree(pts).query(tops.mean(1)[:, :2], distance_upper_bound=near)
+    S = TriSurface(tops[np.isfinite(d)])
+    return lambda x, y: S.height(x, y, "high")
+
+
 def build(level_dir, level_name, scene, road_fn=None):
     runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
     foot = foot_fn()
@@ -433,15 +524,21 @@ def build(level_dir, level_name, scene, road_fn=None):
         P = np.array(r["pts"])
         P[:, 2] = foot(P[:, 0], P[:, 1])
         measured.append({**r, "pts": P})
+    # v3.0: the measured rails of the cantonal road on the edge of the road as built too (the corridor surfaces of
+    # v1.1 under them were rebuilt since; up to v2.8 they stood on the measured line, here and there off the
+    # asphalt or into it)
+    from geo import Grid
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    if road_fn is not None:
+        for r in measured:
+            r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
     # the rails of the cantonal road, measured: a stretch measured twice is laid once
     measured, gone = drop_doubles(measured)
     for r in measured:
         items += modules(r["pts"], r["side"])
     # the rest of the network: the rails seen in the panoramas, on the edge of the road as built
-    extra = sv_runs(runs)
+    extra = join_runs(sv_runs(runs))
     if road_fn is not None and extra:
-        from geo import Grid
-        dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
         for r in extra:
             r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
     extra = open_crossings(extra)
