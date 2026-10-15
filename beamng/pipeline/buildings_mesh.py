@@ -40,6 +40,11 @@ GROUND_AO_H = 4.0           # m above the foot of the building where it ends
 NIGHT = {"nightEmissive": "1", "nightEmissiveColor": "255 214 160", "instanceColor": [0, 0, 0, 1]}
 
 
+def cross2(a, b):
+    """z of the cross product of 2D vectors (np.cross takes no 2D vectors from numpy 2.5)."""
+    return a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
+
+
 def wall_uvs(tris):
     t = tris.reshape(-1, 3, 3)
     n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
@@ -1100,7 +1105,7 @@ def house_details(W, T, ground, gwr, rep, walls=None):
     for c in np.unique(lab):
         sel = lab == c
         tri = t3[sel]
-        foot = shapely.union_all([shapely.Polygon(t[:, :2]) for t in tri if abs(np.cross(t[1, :2] - t[0, :2], t[2, :2] - t[0, :2])) > 1e-6])
+        foot = shapely.union_all([shapely.Polygon(t[:, :2]) for t in tri if abs(cross2(t[1, :2] - t[0, :2], t[2, :2] - t[0, :2])) > 1e-6])
         if foot.is_empty or foot.area < 30:
             continue
         hit = gwr.query(foot, predicate="contains")

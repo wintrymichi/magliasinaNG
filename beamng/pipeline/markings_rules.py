@@ -105,6 +105,11 @@ PAINT = {"white": "mp_road_paint", "yellow": "mp_road_paint_yellow", "red": "mp_
 
 
 # ---------------------------------------------------------------------- the rules (dati/swiss_markings.json)
+def cross2(a, b):
+    """z of the cross product of 2D vectors (np.cross takes no 2D vectors from numpy 2.5)."""
+    return a[..., 0] * b[..., 1] - a[..., 1] * b[..., 0]
+
+
 def _v(x):
     return x["value"] if isinstance(x, dict) and "value" in x else x
 
@@ -1925,7 +1930,7 @@ def old_paint(zi, mk):
     out = {}
     objs = [o for o in mk if NET_SHAPE.search(o.get("shapeName", "")) or OLD_SHAPE.search(o.get("shapeName", ""))]
     for mat, t in shape_tris(zi, LV, objs).items():
-        a = 0.5 * np.abs(np.cross(t[:, 1, :2] - t[:, 0, :2], t[:, 2, :2] - t[:, 0, :2])).sum()
+        a = 0.5 * np.abs(cross2(t[:, 1, :2] - t[:, 0, :2], t[:, 2, :2] - t[:, 0, :2])).sum()
         out[mat] = round(float(a), 1)
     return out
 
