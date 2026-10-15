@@ -365,7 +365,9 @@ def row_vines(q, A, B, ground, rng, full_of, post_kind):
     d3, n3 = np.array([d[0], d[1], 0.0]), np.array([n[0], n[1], 0.0])
     s = np.linspace(0, L, max(2, int(np.ceil(L / PROFILE_STEP)) + 1))
     z = ground(A[0] + d[0] * s, A[1] + d[1] * s)
-    at = lambda ss: np.column_stack([A[0] + d[0] * ss, A[1] + d[1] * ss, np.interp(ss, s, z)])
+    def at(ss):
+        ss = np.asarray(ss, np.float64)
+        return np.column_stack([A[0] + d[0] * ss, A[1] + d[1] * ss, np.interp(ss, s, z)])
     near = s[simplify(s, z, NEAR_TOL, NEAR_SEG)]
     far = s[simplify(s, z, FAR_TOL, FAR_SEG)]
     spans = max(1, int(round(L / POST_GAP)))
