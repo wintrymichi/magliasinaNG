@@ -221,6 +221,31 @@ The heavy data (not in the repository) is in `D:\beamng_magliaso\`: `data\` = do
 
 What each version changed in the pipeline and which scripts do it, newest first. The player-facing summary is in [`CHANGELOG.md`](../CHANGELOG.md).
 
+### Version 3.0: the fixes after the first test
+
+The first v3 build (Actions run *v3 build test* #6) was tested in the game; the problems are in
+[`immagini_per_v3`](immagini_per_v3). The fixes are finishing steps or stage changes of `build_level.py`; each was
+tried on a copy of the tested level and checked with the 3D renderer (`render3d.py`), before and after, in
+[`verifica/v3`](verifica/v3). The workflow *v3 rebuild* (`.github/workflows/v3_rebuild.yml`) builds the level with all
+of them from scratch.
+
+| Step / module | What |
+|---|---|
+| `bridge_fill` (`bridge_fill.py`, `dati/ponti_fill.json`) | two decks side by side over one river made one slab, their inner parapets out |
+| `markings` (`markings_rules.py`, `dati/swiss_markings.json`, `dati/swiss_signs_rules.json`) | the road paint by the Swiss rules, give-way teeth at the roundabout entries |
+| `road_wear` (`road_wear.py`) | dust on the true edges of the asphalt, tracks in the lanes, cut at junctions and roundabouts |
+| `shoulders` (`road_shoulders.py`) | terrain up to the road edges, teeth trimmed beside embankments, stone faces under the paved edges left standing |
+| `islands` (`islands.py`) | raised islands with kerbs and keep-right signs |
+| `far_trees` (`far_trees.py`, `forest_fill.gap_fill`) | far trees from 5 m off the paths, the gaps of the survey's woods filled |
+| `wall_feet` (`walls.py`), `fences.rebase`, `guardrail_mesh.to_edge` | wall feet to the ground, fences on the crests, guard rails on the road edge |
+| `direction_signs` (`direction_signs.py`) | pointers at the roundabouts to the next villages |
+| `facade_relief` (`facade_relief.py`) | copings and cornices on the flat roofs |
+| `house_details` (`buildings_mesh.py`) | gutters only on eaves with a wall under them |
+| `fuel_stations` (`fuel_stations.py`) | canopies, pump islands, dispensers, price totems |
+| `shopfronts` (`shopfronts.py`) | parody shop signs, awnings and their props |
+| `vineyards_ground` (`vineyards.py`, `vine_textures.py`) | vines on wires, two detail levels, on the final terrain |
+| stages | `railway.py`: rail beds on a running median, the road ground carved in the bed; `water.lake_bed`: the shore from the ground under the water blocks |
+
 ### Version 2.8: the build and the release
 
 v2.8 is built from scratch, like v2.4, with every step that came after v2.4 inside the build: `build_level.py` runs

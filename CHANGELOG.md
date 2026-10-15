@@ -17,6 +17,22 @@ Built and checked automatically on GitHub Actions (`v3 build test`: zip 542 MB, 
 - **Edge lines on the asphalt:** laid from the edge of the road mesh instead of the AI road's width (off the asphalt: 11 % of their length before, 1 % now).
 - One "keep right" sign no longer stands twice.
 
+
+**Fixed after the first v3 test** (the 50 screenshots in [`beamng/immagini_per_v3`](beamng/immagini_per_v3); before and after renders in [`beamng/verifica/v3/`](beamng/verifica/v3)):
+
+- **Road markings by the Swiss rules:** a dataset of the Swiss markings and signs (`beamng/dati/swiss_markings.json`, `swiss_signs_rules.json`) and the paint laid by those rules from the road geometry (`markings_rules.py`): edge and centre lines, give-way teeth at the roundabout entries, no line zigzagging round an island.
+- **Roundabouts and road edges:** the dust of the edges on the real edge of the asphalt (no dirty band in the middle of a junction or round a roundabout); tyre tracks inside the lanes, cut at the junctions.
+- **No step from the road to the ground:** the terrain brought up to the edge of the roads with a shoulder; where a paved road still stands over the ground, a stone retaining face under its edge instead of a black side floating over the grass; the teeth of road ground beside the embankments trimmed (`road_shoulders.py`).
+- **Raised traffic islands** with kerbs, cobbled tops and keep-right signs facing the traffic (`islands.py`); **direction signs** at the roundabouts towards the next villages (`direction_signs.py`); the sign posts on the ground, no bare post, no unknown board.
+- **Guard rails on the road edge**, smooth, joined over short gaps; **walls**: no line wall along a surveyed wall, no wall inside a bridge deck, no foot floating over the ground; fences on the wall crests; bridge parapets only where the ground drops beside the deck.
+- **One bridge over the Magliasina** between Magliaso and Caslano: the Via Cantonale and its slip road on one slab instead of two decks with the river showing between them (`bridge_fill.py`, `beamng/dati/ponti_fill.json`).
+- **Lakeside:** the rails no longer climb over the spikes of the road ground beside the wall (`railway.py`); the lake shore follows the ground instead of 25 m squares (`water.lake_bed`).
+- **Fuel stations rebuilt:** canopies with the brand fascia, pump islands with dispensers and prices, price totems by the road (`fuel_stations.py`, parody brands).
+- **Shops and restaurants of OpenStreetMap** with parody signs, awnings and their props (tables and umbrellas, products outside, trolleys: `shopfronts.py`).
+- **Woods without bare bands** along the roads and paths (far trees in the gaps of the measured woods: `forest_fill.gap_fill`).
+- **Vineyards as vineyards:** leaf walls on wires, trunks, posts and wires near the roads, bare earth under the rows, two detail levels (`vineyards.py`, `vine_textures.py`).
+- **Buildings:** no gutter or downpipe hanging in the air beside a house; copings and cornices on the flat-roofed shops and workshops (`facade_relief.py`).
+
 ## v2.8 (10 October 2026)
 
 - **Tested in the game:** the released zip (the *final build test* workflow's) in BeamNG.drive 0.39, native Linux build, RTX 4070: loads in 130 s, 6.4 GB of memory at its peak, no crash. Guard rails whole, roundabout signs, the road Arosio – Mugena – Vezio – Breno – Miglieglia – Novaggio drivable end to end (9.6 km), the underside of the Magliaso bridge clean ([`beamng/verifica/v2.8/ingame_test_report.md`](beamng/verifica/v2.8/ingame_test_report.md), screenshots in [`beamng/verifica/screenshots/v2.8/`](beamng/verifica/screenshots/v2.8)).
