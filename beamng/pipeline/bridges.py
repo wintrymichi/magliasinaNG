@@ -11,6 +11,11 @@ corridor (which keeps its v1.1 surface) gets:
   stream under a road) the sides reach down to the ground instead.
 The ground under a bridge is not filled: only where it rises above the underside of the slab is it
 lowered to it.
+v3.0: two road bridges side by side (the two carriageways of a road, a slip road beside the main one: swissTLM3D draws
+a line each) with less than TWIN_GAP m between their decks are one bridge, as they are built: the gap between them is
+closed by a deck of the same slab under a median MEDIAN_KERB m high, and no parapet stands along the side where the
+other deck is. Up to the v3 test build they were two bridges with the river showing between them (the Via Cantonale
+over the Magliasina at the Magliaso roundabout).
 beamng/dati/ponti.json lists every bridge (swissTLM3D id, place, length, height above the ground,
 the check flags) and holds the manual corrections, read back at every build:
   "z0" / "z1": deck height at the first / last end (m), "profile": "straight" (a straight deck
@@ -38,6 +43,9 @@ LOW = 1.5
 EXTRA_W = 0.3          # m of deck beyond the carriageway on each side
 PARAPET_DROP = 0.6     # m of drop beside the deck edge that needs a parapet
 PARAPET_RUN = 2.0      # m the parapet goes on beyond it
+TWIN_GAP = 10.0        # m between two road decks side by side that are one bridge
+TWIN_ANGLE = 25.0      # degrees between their directions, at most
+MEDIAN_KERB = 0.12     # m of the median between them over the decks
 
 
 def load_overrides():
@@ -60,10 +68,11 @@ def _quad(a, b, c, d, out):
     return t
 
 
-def deck_geometry(P, N, z, hw, ground, kind, typ, avoid=None):
+def deck_geometry(P, N, z, hw, ground, kind, typ, avoid=None, no_parapet=None):
     """Triangles (k, 3, 3) of a deck along stations P (n, 2) with normals N and deck heights z:
     (top, sides and underside, parapets, piers), each facing outwards. avoid: the drivable surfaces
-    under the bridge (no pier on them)."""
+    under the bridge (no pier on them). no_parapet: (left, right) masks of the stations where that side
+    of the deck joins a twin deck (no parapet there)."""
     n = len(P)
     L = P + N * hw
     R = P - N * hw
@@ -99,6 +108,8 @@ def deck_geometry(P, N, z, hw, ground, kind, typ, avoid=None):
             idx = np.flatnonzero(need)
             near = np.abs(sst[:, None] - sst[idx][None, :]).min(1) <= PARAPET_RUN
             need = near
+        if no_parapet is not None:                     # v3.0: the side joined to a twin deck
+            need = need & ~no_parapet[0 if sign > 0 else 1]
         for a, b in zip(*[np.flatnonzero(np.diff(np.r_[0, need.astype(int), 0]))[k::2] for k in (0, 1)]):
             if b - a < 2:
                 continue
@@ -194,6 +205,7 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
     for q in segs:
         for nd in q["nodes"]:
             degree[nd] = degree.get(nd, 0) + 1
+    todo = []
     for s in segs:
         if not s["bridge"]:
             continue
@@ -215,6 +227,11 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         notes = []
         if not ("z0" in o or "z1" in o or o.get("profile")):
             P, N, z, notes = ends_to_ground(P, N, z, s, degree, ground)
+        todo.append(dict(s=s, a=a, n=n, P=P, N=N, z=z, o=o, hw=hw, z_line=z_line, notes=notes,
+                         foot=shapely.LineString(P).buffer(hw, cap_style="flat")))
+    twins = twin_pairs(todo)
+    for b in todo:
+        s, a, n, P, N, z, o, hw, z_line, notes = (b[k] for k in ("s", "a", "n", "P", "N", "z", "o", "hw", "z_line", "notes"))
         g = ground(P[:, 0], P[:, 1])
         clear = z - SLAB - g
         typ = o.get("type") or ("culvert" if clear.max() < LOW else "open")
@@ -223,10 +240,12 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
             under = net.ptree.query(shapely.LineString(P).buffer(hw + 3.0), predicate="intersects")
             if len(under):
                 avoid = shapely.union_all([net.polys[i]["geom"] for i in under])
-        top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ, avoid)
+        top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ, avoid, b.get("no_parapet"))
         mat_top = {("road", "hard"): "mp_road_asphalt", ("road", "natural"): "mp_road_gravel",
                    ("path", "hard"): "mp_path_paved", ("path", "natural"): "mp_path_dirt"}[(s["kind"], s["surface"])]
         cxy = P.mean(0)
+        if twins:
+            notes = notes + [f"twin of {t}" for t in b.get("twin_of", [])]
         on_mesh(cxy[0], cxy[1], mat_top, 6.0 if mat_top in ("mp_road_asphalt", "mp_path_paved", "mp_sidewalk", "mp_hard_asphalt") else 1.25, top, "top")   # v3.0: the asphalt over 6 m
         on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
         if len(par):
@@ -277,7 +296,120 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
                         "z_ends": [round(float(z[0]), 2), round(float(z[-1]), 2)],
                         "max_height_m": round(float(clear.max() + SLAB), 1), "auto_type": typ,
                         "override": {k: v for k, v in o.items() if k in ("z0", "z1", "profile", "type", "skip")}})
+    for i, j in twins:                                 # v3.0: the deck between two twin decks
+        med = median_geometry(todo[i], todo[j])
+        if med is None:
+            continue
+        top, sides, foot, zf = med
+        cxy = np.array(foot.centroid.coords[0])
+        on_mesh(cxy[0], cxy[1], "mp_sidewalk", 6.0, top, "top")
+        on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
+        net.deck_tops.append(top)
+        if hasattr(net, "deck_feet"):
+            net.deck_feet.append(("road", foot))
+        x0, y0, x1, y1 = foot.bounds
+        c0, c1 = max(int(np.searchsorted(xs, x0)) - 1, 0), min(int(np.searchsorted(xs, x1)) + 1, len(xs))
+        r0, r1 = max(int(np.searchsorted(ys, y0)) - 1, 0), min(int(np.searchsorted(ys, y1)) + 1, len(ys))
+        if c1 > c0 and r1 > r0:
+            tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)
+            m = features.rasterize([(foot, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0, dtype=np.uint8,
+                                   all_touched=True).astype(bool)
+            rr, cc = np.nonzero(m)
+            if len(rr):
+                on_carve_min(r0 + rr, c0 + cc, zf(xs[c0 + cc], ys[r0 + rr]) - SLAB - 0.15)
     return records
+
+
+def twin_pairs(todo):
+    """Pairs (i, j) of road decks side by side (less than TWIN_GAP m apart, directions within TWIN_ANGLE degrees,
+    alongside each other over most of the shorter one); marks on every deck the stations of the side that faces
+    its twin (no_parapet) and the twin's name (twin_of)."""
+    pairs = []
+    for i, bi in enumerate(todo):
+        for j in range(i + 1, len(todo)):
+            bj = todo[j]
+            if bi["s"]["kind"] != "road" or bj["s"]["kind"] != "road":
+                continue
+            if bi["foot"].distance(bj["foot"]) > TWIN_GAP:
+                continue
+            di, dj = bi["P"][-1] - bi["P"][0], bj["P"][-1] - bj["P"][0]
+            c = abs(np.dot(di, dj)) / max(np.linalg.norm(di) * np.linalg.norm(dj), 1e-9)
+            if c < np.cos(np.radians(TWIN_ANGLE)):
+                continue
+            short = bi if len(bi["P"]) and np.linalg.norm(di) <= np.linalg.norm(dj) else bj
+            other = bj if short is bi else bi
+            band = other["foot"].buffer(TWIN_GAP + short["hw"] + 0.5)
+            if shapely.LineString(short["P"]).intersection(band).length < 0.6 * shapely.LineString(short["P"]).length:
+                continue
+            pairs.append((i, j))
+    for i, j in pairs:
+        for me, tw in ((todo[i], todo[j]), (todo[j], todo[i])):
+            P, N, hw = me["P"], me["N"], me["hw"]
+            masks = []
+            for sign in (1.0, -1.0):
+                E = P + N * hw * sign
+                probe = E + N * sign * (TWIN_GAP / 2)
+                d = shapely.distance(tw["foot"], shapely.points(probe))
+                masks.append(d <= TWIN_GAP / 2 + 0.5)
+            prev = me.get("no_parapet")
+            me["no_parapet"] = tuple(m | p for m, p in zip(masks, prev)) if prev is not None else tuple(masks)
+            me.setdefault("twin_of", []).append(tw["s"]["tlm"])
+    return pairs
+
+
+def median_geometry(bi, bj):
+    """(top triangles, side and underside triangles, footprint, height function) of the deck that closes the gap
+    between the twin decks bi and bj: the hull of their edges that face each other less the decks, MEDIAN_KERB m
+    over them."""
+    E = []                                             # the edges of the two decks that face each other
+    for b in (bi, bj):
+        for side, sign in ((0, 1.0), (1, -1.0)):
+            m = b["no_parapet"][side]
+            if m.any():
+                E.append(b["P"][m] + b["N"][m] * b["hw"] * sign)
+    if len(E) < 2:
+        return None
+    hull = shapely.MultiPoint(np.vstack(E)).convex_hull
+    gap = hull.difference(bi["foot"]).difference(bj["foot"])
+    gap = gap.buffer(-0.05, join_style="mitre").buffer(0.05, join_style="mitre")     # no slivers along the decks
+    if gap.is_empty:
+        return None
+    parts = [g for g in getattr(gap, "geoms", [gap]) if g.geom_type == "Polygon" and g.area > 1.0]
+    if not parts:
+        return None
+    foot = max(parts, key=lambda g: g.area)
+    PZ = np.vstack([np.column_stack([b["P"], b["z"]]) for b in (bi, bj)])
+    from scipy.spatial import cKDTree
+    kt = cKDTree(PZ[:, :2])
+
+    def zf(x, y):
+        d, k = kt.query(np.column_stack([np.atleast_1d(x), np.atleast_1d(y)]), k=min(4, len(PZ)))
+        w = 1.0 / np.maximum(d, 0.1)
+        return (PZ[k, 2] * w).sum(1) / w.sum(1)
+    tris = shapely.constrained_delaunay_triangles(foot)
+    top, sides = [], []
+    for t in getattr(tris, "geoms", []):
+        q = np.array(t.exterior.coords[:3])
+        zz = zf(q[:, 0], q[:, 1])
+        T = np.column_stack([q, zz + MEDIAN_KERB])[None]
+        n = np.cross(T[0, 1] - T[0, 0], T[0, 2] - T[0, 0])
+        if n[2] < 0:
+            T = T[:, ::-1]
+        top.append(T)
+        B = np.column_stack([q, zz - SLAB])[None]
+        if np.cross(B[0, 1] - B[0, 0], B[0, 2] - B[0, 0])[2] > 0:
+            B = B[:, ::-1]
+        sides.append(B)
+    ring = np.array(foot.exterior.coords)
+    zr = zf(ring[:, 0], ring[:, 1])
+    c = np.array(foot.centroid.coords[0])
+    for k in range(len(ring) - 1):
+        a, b_ = ring[k], ring[k + 1]
+        out = np.r_[(a + b_) / 2 - c, 0.0]
+        sides.append(_quad(np.r_[a, zr[k] + MEDIAN_KERB], np.r_[b_, zr[k + 1] + MEDIAN_KERB], np.r_[b_, zr[k + 1] - SLAB],
+                           np.r_[a, zr[k] - SLAB], out))
+    cat = lambda L_: np.concatenate(L_) if L_ else np.zeros((0, 3, 3))
+    return cat(top), cat(sides), foot, zf
 
 
 def save_records(records, reviewed=None):
