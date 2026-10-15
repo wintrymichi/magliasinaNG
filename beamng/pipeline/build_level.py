@@ -907,6 +907,7 @@ FINISH = [
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, totems
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
     ("shopfronts", "shopfronts", "shopfronts_step", {"report": True}),      # v3.0: parody shop signs, awnings, props
+    ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
 ]
 

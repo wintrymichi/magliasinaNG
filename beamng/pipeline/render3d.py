@@ -40,7 +40,7 @@ RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
 GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
           # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
-          "level_objects/Water", "level_objects/vegetation/vineyards")
+          "level_objects/Water", "level_objects/vegetation/vineyards", "level_objects/terrain_skin")
 # the translucent overlays of a road from the bottom up (road_wear.LAYER): drawn in this order, each a little
 # further towards the camera (polygon offset)
 OVERLAYS = ("variation", "cracks", "track", "edge")
