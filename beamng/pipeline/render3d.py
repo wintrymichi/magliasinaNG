@@ -139,7 +139,9 @@ function skyDome(d, at) {                           // the sky: horizon to zenit
   return m;
 }
 window.renderView = async function (url) {
+  const t0 = performance.now();
   const buf = await (await fetch(url)).arrayBuffer();
+  const t1 = performance.now();
   const hl = new DataView(buf).getUint32(0, true);
   const H = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
   const A = k => { const d = H.arrays[k]; return new T[d.t](buf, d.o, d.n); };
@@ -260,8 +262,11 @@ window.renderView = async function (url) {
     cam.lookAt(...c.target);
   }
   renderer.setSize(H.W, H.H, false);
+  const t2 = performance.now();
   renderer.render(scene, cam);
-  return canvas.toDataURL('image/jpeg', H.quality);
+  const jpeg = canvas.toDataURL('image/jpeg', H.quality);
+  window.r3dTimes = {fetch: t1 - t0, build: t2 - t1, render: performance.now() - t2};    // ms, for profiling
+  return jpeg;
 };
 window.ready = true;
 </script></body></html>"""
