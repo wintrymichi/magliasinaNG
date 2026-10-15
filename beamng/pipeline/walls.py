@@ -540,6 +540,41 @@ def near_vertices(samples, xs, ys, radius):
 LOW_SIDE = 0.25        # a vertex lower than this fraction of the wall height over the wall foot is on its low side
 
 
+SIDE_PROBE = 3.0      # m out from the wall where the ground of either side is read (wall_side)
+
+
+def grid_sample(G, xs, ys, x, y):
+    """Bilinear sample of the vertex grid G (rows ys, columns xs, both ascending and even) at x, y."""
+    sq = xs[1] - xs[0]
+    fc = np.clip((np.asarray(x) - xs[0]) / sq, 0, len(xs) - 1.001)
+    fr = np.clip((np.asarray(y) - ys[0]) / sq, 0, len(ys) - 1.001)
+    c0, r0 = fc.astype(int), fr.astype(int)
+    tc, tr = fc - c0, fr - r0
+    return (G[r0, c0] * (1 - tc) * (1 - tr) + G[r0, c0 + 1] * tc * (1 - tr) + G[r0 + 1, c0] * (1 - tc) * tr
+            + G[r0 + 1, c0 + 1] * tc * tr)
+
+
+def wall_side(poly, X, Y, G, xs, ys):
+    """Per point (X, Y) outside the footprint poly: how much higher the ground is SIDE_PROBE m out on its side of
+    the wall than SIDE_PROBE m out on the other side (beyond the wall's width), from the ground G; nan where the
+    point is on the outline or inside."""
+    b = poly.boundary
+    pts = shapely.points(np.column_stack([X, Y]))
+    q = shapely.get_coordinates(shapely.line_interpolate_point(b, shapely.line_locate_point(b, pts)))
+    v = np.column_stack([X, Y]) - q
+    d = np.hypot(v[:, 0], v[:, 1])
+    out = np.full(len(X), np.nan)
+    ok = d > 0.05
+    if not ok.any():
+        return out
+    v = v[ok] / d[ok, None]
+    width = min(2.0 * poly.area / max(poly.length, 1e-6) * 2.0, 6.0)       # about the wall's thickness
+    a = q[ok] + v * SIDE_PROBE
+    o = q[ok] - v * (SIDE_PROBE + width)
+    out[ok] = grid_sample(G, xs, ys, a[:, 0], a[:, 1]) - grid_sample(G, xs, ys, o[:, 0], o[:, 1])
+    return out
+
+
 def carve_terrain(feet, xs, ys, H):
     """Terrain vertices around the cadastral walls (feet: (footprint, vertices, foot, top, ground behind)
     of every wall, from build), those whose terrain triangles reach a face of a wall (the square of one
@@ -585,6 +620,13 @@ def carve_terrain(feet, xs, ys, H):
         ok = np.isfinite(zl) & np.isfinite(zt) & np.isfinite(zg) & (zl > h0 - 30.0)
         inside = shapely.contains_xy(poly, X, Y)
         low = (h0 < zl + LOW_SIDE * np.maximum(zt - zl, 0.0)) | inside
+        # v3.0: the side of the wall a vertex is on from the ground SIDE_PROBE m out on either side of the wall
+        # (beyond the slope the DTM smears across it), not from the vertex's own height: on that smear a vertex
+        # on the low side of a wall could read as on its high side, and went up to the ground behind the wall
+        # there, out in front of the face (a row of spikes beside the wall, worst along the lake)
+        side = wall_side(poly, X, Y, H0.reshape(len(ys), nx), xs, ys)
+        known = np.isfinite(side)
+        low[known & ~inside] = side[known & ~inside] < 0.5 * np.maximum(zt - zl, 0.0)[known & ~inside]
         d, u = ok & low, ok & ~low
         np.minimum.at(lo, flat[d], zl[d] - 0.02)
         np.maximum.at(hi, flat[u], zg[u] - 0.05)
