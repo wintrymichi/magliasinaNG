@@ -718,6 +718,9 @@ EPS_PAVED = 0.05      # m, under the other faces (they were carved 0.1 m under t
 SHOULDER = 1.5        # m from an unpaved face: the terrain aims at its height
 BLEND = 4.5           # m ... fading back to the ground up to here
 TALL = 1.0            # m, ground further under the face: a wall or a bridge, not a trench
+EMB_FLAT = 0.5        # m (v3.0) of ground at the road's height beside a road higher than TALL over the ground
+EMB_SLOPE = 0.67      # then down 1:1.5 (an embankment) ...
+EMB_MAX = 3.0         # ... where that fills the ground by no more than this (deeper: a wall or a bridge)
 SUB = 5               # face samples per terrain step
 PASSES = 12           # spreading passes before the last, safe one
 EDGE_UP = 0.01        # m, an outer edge vertex of an unpaved face over the terrain
@@ -811,6 +814,12 @@ def block(args):
     w = np.clip((BLEND - D) / (BLEND - SHOULDER), 0.0, 1.0)
     aim = np.where(w > 0, H + w * (R - H), H)
     aim = np.where((R - H < TALL) & (D < BLEND), np.maximum(aim, H), H)
+    # v3.0: a road over the ground by TALL m or more stands on an embankment, not on a vertical face of asphalt:
+    # the ground at its height for EMB_FLAT m, then down at EMB_SLOPE to the ground, filled by at most EMB_MAX m
+    emb = R - np.maximum(D - EMB_FLAT, 0.0) * EMB_SLOPE
+    rim = (D > 0) | ((D > -TER_SQUARE) & ndi.maximum_filter(D > 0, size=3))     # outside, or under the edge
+    fill = (R - H >= TALL) & rim & (emb > H) & (emb - H <= EMB_MAX)
+    aim = np.where(fill, np.maximum(aim, emb), aim)
     if QA is not None:
         aim = Z0 + QA.astype(np.float64) / 65535.0 * MAXH
     moved = aim > H + 1e-4
@@ -1098,8 +1107,8 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
 # were laid flush in v2.7 (network_mesh.unpaved_step: the terrain raised to them and their edges lowered onto it); here the
 # terrain is raised to the paved surfaces with network_mesh.main, and the surfaces stay as they are:
 # - the terrain within 1.5 m of a paved top face raised to network_mesh.EPS m under its height (fading back to the
-#   ground at 4.5 m, only where the ground is lower, and not where it lies more than 1 m under the road: an
-#   embankment or a bridge stays as it is), never over a road face;
+#   ground at 4.5 m, only where the ground is lower; v3.0: where it lies 1-3 m under the road, an embankment
+#   0.5 m flat then 1:1.5 down to the ground instead of a vertical face of asphalt), never over a road face;
 # - the faces are not lowered (EDGE_DROP 0): lowering the outer edges tilts the last strip of a road, where the
 #   wheels of a car run, and drive_test.py counted 40-60 % more hard knocks on the roads (tried in the first
 #   version of this patch);
@@ -1121,7 +1130,7 @@ PAVED = tuple(m for g in osm_surface.MATS.values() for c, m in g.items()
 PAVED_EDGE_DROP = 0.0       # m: the faces stay as they are
 KEEP_OUT = 2.0              # m around guard rails, fences, walls, buildings, railway, parapets
 SAMPLE = 0.5                # m between the samples along the edges of their faces
-KEEP_GROUPS = ("roads/guardrails", "roads/fences", "walls", "buildings", "railway")
+KEEP_GROUPS = ("roads/guardrails", "roads/fences", "walls", "buildings", "railway", "level_objects/Water")
 PARAPET = ("mp_bridge_parapet",)
 
 
