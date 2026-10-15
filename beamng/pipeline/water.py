@@ -47,6 +47,11 @@ THICK = 1.0
 GRID_ELEMENT = 25.0
 LOW = 0.5            # m, dry land this far below the lake must not be covered
 SHORE = 0.5          # m, ground this far above the lake in a lake cell is shore (stays dry)
+WET_DZ = 0.15        # m: ground within this of the lake level under the water blocks is lake (lake_bed)
+BED_SHORE = 0.25     # m under the water at the shore line
+BED_SLOPE = 0.08     # m deeper per m from the shore
+BED_MAX = 6.0        # m, deepest
+BED_MIN_CELLS = 400  # terrain vertices: smaller pools of ground at the water level are not the lake
 
 
 def lake_level():
@@ -203,21 +208,29 @@ def build(scene, cx, cy, params, block):
     flooded = int((covered & ~lake & (np.nan_to_num(h, nan=999) < level - LOW)).sum())
     print("water blocks %d over %.0f km2 (lake %.1f km2), dry land below the lake covered: %d cells" %
           (len(rects), covered.sum() * GRID ** 2 / 1e6, (lake & near).sum() * GRID ** 2 / 1e6, flooded), flush=True)
-    return level, Grid(lake.astype(np.uint8), x0, y1, GRID), Grid((lake & covered).astype(np.uint8), x0, y1, GRID)
+    # v3.0: and every cell under the water blocks (lake_bed takes the shore from the ground there)
+    return (level, Grid(lake.astype(np.uint8), x0, y1, GRID), Grid((lake & covered).astype(np.uint8), x0, y1, GRID),
+            Grid(covered.astype(np.uint8), x0, y1, GRID))
 
 
-def lake_bed(H, xs, ys, level, lake_grid):
-    """Terrain under the lake: at least 1 m under the water, deeper away from the shore (max 6 m).
-    Only where the ground is at the water already (the DTM shows the lake flat at its level): the
-    land of a shore cell of the GRID m mask stays, so the shore follows the ground, not the grid."""
+def lake_bed(H, xs, ys, level, wet_grid):
+    """Terrain under the lake: from BED_SHORE m under the water at the shore down a slope of BED_SLOPE to at most
+    BED_MAX m. The lake is the ground at the water already (the DTM has the lake flat at its level: within
+    WET_DZ m of it) under the water blocks (wet_grid: the cells they cover), joined to the open water. Up to
+    v3.0's test builds it was the 25 m cells of the lake mask, and the ground at the water outside them stayed
+    at the surface in squares and zigzags of shallows (screenshot 37); now the shore is the line of the ground."""
     X, Y = np.meshgrid(xs, ys)
-    inside = lake_grid.sample(X.ravel(), Y.ravel(), order=0).reshape(X.shape) > 0
-    inside &= H < level + SHORE
+    under = wet_grid.sample(X.ravel(), Y.ravel(), order=0).reshape(X.shape) > 0
+    inside = under & (H < level + WET_DZ)
     if not inside.any():
         return H
+    lab, n = ndi.label(inside)
+    if n > 1:                                   # the open water, not a pool of low ground behind the shore
+        sizes = ndi.sum(np.ones(inside.shape), lab, range(1, n + 1))
+        inside = np.isin(lab, np.where(sizes >= max(BED_MIN_CELLS, 0.001 * sizes.max()))[0] + 1)
     step = xs[1] - xs[0]
     d = ndi.distance_transform_edt(inside) * step
-    bed = level - np.minimum(1.0 + 0.1 * d, 6.0)
+    bed = level - np.minimum(BED_SHORE + BED_SLOPE * d, BED_MAX)
     return np.where(inside, np.minimum(H, bed), H)
 
 
