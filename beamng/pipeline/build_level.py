@@ -889,6 +889,7 @@ FINISH = [
     ("paved_edges", "network_mesh", "paved_edges_step", {"report": True}),   # v2.8: the ground first
     ("wall_fill", "walls", "wall_fill_step", {"report": True}),
     ("wall_doubles", "walls", "double_faces_step", {"report": True}),    # no wall face drawn twice
+    ("wall_feet", "walls", "wall_feet_step", {"report": True}),          # v3.0: no wall foot over the ground
     ("understory", "understory", "understory_step", {"report": True}),
     ("lamps", "lamps", "lamps_step", {"report": True}),           # then what stands on it
     ("roadside", "poles", "roadside_step", {"report": True}),

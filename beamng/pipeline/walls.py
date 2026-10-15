@@ -1046,3 +1046,111 @@ def double_faces_step(root, report=None):
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)
     return res
+
+
+# ------------------------------------------------------------------ v3.0: the feet of the walls under the ground
+FOOT_DEPTH = 0.30        # m: the foot of a wall goes at least this far under the terrain around it
+FOOT_GAP = 0.05          # m: a vertex this much lower than the highest one at its place is a foot
+FOOT_MAX = 2.5           # m: a foot further over the terrain stands on something else (a bridge, a deck): kept
+
+
+def _ter_min(Q, z0, maxh, x, y):
+    """Lowest of the four terrain vertices around (x, y): under it for every split of the square."""
+    n = Q.shape[0]
+    c = np.clip(np.floor((x - TER_X0) / TER_SQUARE).astype(np.int64), 0, n - 2)
+    r = np.clip(np.floor((y - TER_Y0) / TER_SQUARE).astype(np.int64), 0, n - 2)
+    q = np.minimum(np.minimum(Q[r, c], Q[r, c + 1]), np.minimum(Q[r + 1, c], Q[r + 1, c + 1]))
+    return z0 + q.astype(np.float64) / 65535.0 * maxh
+
+
+def _set_arr(text, aid, values, fmt):
+    m = re.search(r'(<float_array id="%s" count="\d+">)([^<]*)(</float_array>)' % aid, text)
+    body = " ".join(fmt % v for v in values.ravel())
+    return text[:m.start(2)] + body + text[m.end(2):]
+
+
+def wall_feet_step(root, report=None):
+    """v3.0: no wall standing on air. The foot of a wall was put 0.4 m under the lowest ground of the DTM beside it
+    (wall_geometry), but the terrain of the level is the DTM on a 1.5 m grid, carved and raised by the steps after it:
+    on slopes and where the terrain was lowered beside a wall, 17 km of wall feet of the v3 build test stood 0.15 to
+    over 1 m over the ground, and the wall showed a gap under it (from below, the inside of the wall: "a hole in the
+    wall, you see through it"). Here every foot vertex of the wall meshes (a vertex lower than the one over it at the
+    same place: the bottom corners of the side faces) goes to FOOT_DEPTH m under the lowest terrain vertex around it
+    where it is not already that deep (nor over FOOT_MAX m above it: a wall on a bridge), its texture coordinate along the height moved with it (the stones keep their
+    size). Only the vertex heights and texture coordinates of the wall shapes change."""
+    t0 = time.time()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    blk = next(o for o in [json.loads(l) for l in zi.read(f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
+                           .decode("utf-8").splitlines() if l.strip()] if o.get("class") == "TerrainBlock")
+    z0, maxh = float(blk["position"][2]), float(blk["maxHeight"])
+    data = zi.read(f"{lv}/theTerrain.ter")
+    n = struct.unpack("<I", data[1:5])[0]
+    Q = np.frombuffer(data[5:5 + 2 * n * n], "<u2").reshape(n, n)
+    items = [json.loads(l) for l in zi.read(f"{lv}/main/MissionGroup/walls/items.level.json").decode("utf-8").splitlines()
+             if l.strip()]
+    new, res = {}, {"shapes": 0, "feet_lowered": 0, "lowered_m_p50": 0.0, "lowered_m_max": 0.0}
+    drops = []
+    for o in items:
+        sn = o.get("shapeName", "").lstrip("/")
+        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo or not sn.endswith(".dae"):
+            continue
+        text = zi.read(sn).decode("utf-8")
+        if "<triangles" not in text:
+            continue
+        V, N, UV, C, parts, node = optimize_level.parse(text)
+        W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
+        key = np.round(W[:, :2] * 100).astype(np.int64)
+        _, g = np.unique(key[:, 0] * 10_000_019 + key[:, 1], return_inverse=True)
+        top = np.full(g.max() + 1, -np.inf)
+        np.maximum.at(top, g, W[:, 2])
+        foot = W[:, 2] < top[g] - FOOT_GAP
+        aim = _ter_min(Q, z0, maxh, W[:, 0], W[:, 1]) - FOOT_DEPTH
+        low = foot & (W[:, 2] > aim) & (W[:, 2] - aim < FOOT_MAX + FOOT_DEPTH)
+        if not low.any():
+            continue
+        dz = np.where(low, aim - W[:, 2], 0.0)
+        # texture coordinates: v follows the height on the side faces (v = z / tile, either sign): move the v of the
+        # corners at the lowered vertices by dz times the slope dv/dz of their face
+        UV2 = UV.copy()
+        for mat, idx in parts:
+            tri = idx.reshape(-1, 3, idx.shape[1])
+            vi, ti = tri[..., 0], tri[..., 2]
+            hit = low[vi].any(1)
+            if not hit.any():
+                continue
+            for k in np.flatnonzero(hit):
+                z = W[vi[k], 2]
+                v = UV[ti[k], 1]
+                j = int(np.argmax(z))
+                for c in range(3):
+                    if not low[vi[k, c]] or abs(z[j] - z[c]) < 1e-6:
+                        continue
+                    s = (v[j] - v[c]) / (z[j] - z[c])
+                    UV2[ti[k, c], 1] = UV[ti[k, c], 1] + s * dz[vi[k, c]]
+        V2 = V.copy()
+        V2[:, 2] += dz
+        text = _set_arr(text, "g-pa", V2, "%.3f")
+        text = _set_arr(text, "g-ta", UV2, "%.4f")
+        new[sn] = text.encode("utf-8")
+        drops.append(-dz[low])
+        res["shapes"] += 1
+        res["feet_lowered"] += int(low.sum())
+    if drops:
+        d = np.concatenate(drops)
+        res["lowered_m_p50"], res["lowered_m_max"] = round(float(np.median(d)), 3), round(float(d.max()), 2)
+    with zi.writer() as zo:
+        now = time.localtime()[:6]
+        for i in zi.infolist():
+            if i.filename in new:
+                ni = zipfile.ZipInfo(i.filename, now)          # a new date: the game converts the shape again
+                ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
+                zo.writestr(ni, new[i.filename])
+            else:
+                zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+    res["seconds"] = round(time.time() - t0)
+    print("wall feet:", res, flush=True)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(res, open(report, "w"), indent=1)
+    return res

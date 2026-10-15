@@ -43,7 +43,9 @@ from road_mesh import TriSurface
 
 TILE = 512.0
 ASPHALT = ("mp_road_asphalt", "mp_road_asphalt_fresh")       # the wear goes on these only (not setts, gravel)
-PAVED = ("mp_hard_asphalt", "mp_hard_sett", "mp_hard_cobble", "mp_sidewalk", "mp_island", "mp_path_paved",
+# paved ground that goes on from the asphalt at its height: no dusty edge there (a drive, a yard); not the
+# pavements and islands, at whose kerb the dust gathers
+PAVED = ("mp_hard_asphalt", "mp_hard_sett", "mp_hard_cobble", "mp_path_paved",
          "mp_road_sett", "mp_road_cobble", "mp_path_sett", "mp_path_cobble", "mp_bridge_parapet")
 TRACK_W = 0.75               # m, width of a tyre track
 TRACK_GAP = 1.6              # m between the middles of the two tracks of a lane (a car's track width)
