@@ -260,12 +260,17 @@ def stage_roads(scene, ctx):
 
     stats = {"stone faces": 0}
 
+    # v3.0: the skirts beside a railway reach down to its cutting (railway.carve_terrain lowers the ground there)
+    import railway
+    bed = railway.bed_fn() if "railway" in ctx.get("stages", STAGES) else None
+
     def add_surface(tx, ty, mat, uvt, V, T, S_, ground_, tops=None):
         mb = builders.setdefault((tx, ty), bng.MeshBuilder())
         mb.add(mat, V, uvs=V[:, :2] / uvt, tris=T)
         if tops is not None:
             tops.append(V[T])
-        kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S_, ground_))
+        gr = ground_ if bed is None else (lambda x, y: np.minimum(ground_(x, y), bed(x, y)))
+        kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S_, gr))
         mb.add(mat, kerb, uvs=bng.box_uvs_soup(kerb, uvt), normals=bng.flat_normals_soup(kerb))
         if len(wall):
             mb.add("mp_road_wall", wall, uvs=bng.box_uvs_soup(wall, 1.6), normals=bng.flat_normals_soup(wall))

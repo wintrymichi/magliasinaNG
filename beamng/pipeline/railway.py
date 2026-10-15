@@ -51,6 +51,7 @@ COVER = 1.0                   # m, a line this far under the terrain across its 
 CARVE_W = 0.3                 # m of the terrain lowered beyond the ballast (carve_terrain)
 CARVE_MAX = 4.0               # m, deepest the terrain is lowered under a track
 CUT_SLOPE = 1.5               # m of rise per m of the sides of a cutting, beyond the flat bed
+KEEP_DROP = 1.0               # m: the ground of a road this far over the cutting of a track is lowered too (carve_terrain)
 EMBANK = 1.5                  # horizontal m per m of height of the ballast embankment (at least BALLAST_SLOPE)
 EMBANK_MAX = 3.0              # m, widest embankment beside the ballast
 FLUSH = 0.008                 # m, heads of the rails over the road surface at a level crossing
@@ -129,12 +130,44 @@ def carve_terrain(H, xs, ys, keep=None):
         target = z + np.maximum(d - half, 0.0) * CUT_SLOPE
         cut = (h > target) & (h - target <= CARVE_MAX) & ~deck[j[inb]]
         if keep is not None:
-            cut &= ~keep[r0:r1, c0:c1].ravel()[inb]
+            # v3.0: the ground of a road (a pavement) standing KEEP_DROP m or more over the cutting is lowered too,
+            # under the edge of its mesh, whose skirt reaches down to the cutting (bed_fn): kept, it stood at the
+            # height of the road one terrain step from the bed, in a saw of teeth along the track (the Strada
+            # Cantonale over the line along the lake)
+            cut &= ~keep[r0:r1, c0:c1].ravel()[inb] | (h - target > KEEP_DROP)
         sub[inb[cut]] = target[cut]
         H[r0:r1, c0:c1] = sub.reshape(r1 - r0, c1 - c0)
         n += int(cut.sum())
     print("railway: terrain lowered under the tracks at %d vertices" % n)
     return H
+
+
+def bed_fn():
+    """f(x, y): the lowest carve_terrain can bring the ground there (the bed of a track and the sides of its
+    cutting), +inf away from the tracks: the skirts of the road meshes beside a track reach down to it."""
+    pts, zs, halfs = [], [], []
+    for props, Q in tracks():
+        if props.get("KUNSTBAUTE") == "Bruecke":
+            continue
+        P3, _ = resample(Q, 0.5)
+        pts.append(P3[:, :2])
+        zs.append(P3[:, 2] - 0.05)
+        halfs.append(np.full(len(P3), SLEEPER_LEN[props["OBJEKTART"]] / 2 + BALLAST_EXTRA + CARVE_W))
+    if not pts:
+        return lambda x, y: np.full(np.shape(x), np.inf)
+    P, Z, Hh = np.concatenate(pts), np.concatenate(zs), np.concatenate(halfs)
+    tree = cKDTree(P)
+    reach = float(Hh.max()) + CARVE_MAX / CUT_SLOPE
+
+    def f(x, y):
+        x = np.asarray(x, np.float64)
+        q = np.column_stack([x.ravel(), np.broadcast_to(np.asarray(y, np.float64), x.shape).ravel()])
+        d, j = tree.query(q, distance_upper_bound=reach)
+        out = np.full(len(q), np.inf)
+        ok = np.isfinite(d)
+        out[ok] = Z[j[ok]] + np.maximum(d[ok] - Hh[j[ok]], 0.0) * CUT_SLOPE
+        return out.reshape(x.shape)
+    return f
 
 
 def smooth_xy(Q, sigma=XY_SMOOTH):
