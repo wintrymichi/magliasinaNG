@@ -987,6 +987,12 @@ def build(z, signs):
             drop_pano.add(mat)
             rep["panorama"]["removed_not_a_sign"] += 1
             continue
+        if info["code"] in ("2.33", "2.34"):
+            # v3.0: the keep-right signs of the islands are put up by islands.py on every raised island; the ones
+            # read in the panoramas would stand beside them
+            drop_pano.add(mat)
+            rep["panorama"]["removed_island_" + info["code"]] += 1
+            continue
         stack = [(info["code"], info["value"])] + [tuple(b) for b in info.get("below", [])]
         if not all(signs_ch.known(c_, v_) for c_, v_ in stack):
             if info["code"] == "back":
