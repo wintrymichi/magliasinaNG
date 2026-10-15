@@ -1,0 +1,7 @@
+{
+ "note": "v3.0: bridges that the network draws as two decks side by side but are one slab (bridge_fill.py). box: x0, y0, x1, y1 in level metres; min_height: m over the terrain of a deck top; decks: how many decks make the bridge; material: the top of the slab between them.",
+ "places": [
+  {"name": "Magliasina, Via Cantonale and its slip road (Magliaso - Caslano)", "box": [755, -1110, 815, -1055],
+   "min_height": 1.0, "decks": 2, "material": "mp_hard_asphalt"}
+ ]
+}

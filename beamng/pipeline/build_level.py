@@ -884,6 +884,7 @@ FINISH = [
     ("optimize", "optimize_level", "level_step", {}),            # v2.5: fewer, lighter shapes
     ("grass", "groundcover", "grass_step", {}),                  # v2.6: the game's grass
     ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
+    ("bridge_fill", "bridge_fill", "bridge_fill_step", {"report": True}),   # v3.0: twin decks made one slab
     ("markings", "markings_rules", "markings_rules_step", {"report": True}),   # v3.0: the road paint by the Swiss rules
     ("road_wear", "road_wear", "road_wear_step", {"report": True}),   # v3.0: tyre tracks and dirty edges
     ("shoulders", "road_shoulders", "shoulders_step", {"report": True}),   # v3.0: no step from the roads to the ground
