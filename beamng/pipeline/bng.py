@@ -338,7 +338,8 @@ class MeshBuilder:
             p[0], p[1], p[2], p[3], p[5] = [V], [N], [U], [T], [Cc]
         return int(flip.sum())
 
-    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False, weld=True, billboard=None):
+    def write_dae(self, path, name="mesh", origin=(0, 0, 0), detail=2, orient=False, weld=True, billboard=None,
+                  lods=None):
         """One geometry with one <triangles> list per material, in a single node named
         '<name>_a<detail>' under base00/start01. Torque reads the trailing number of a mesh
         node as its LOD pixel size, so node names must not end with other digits.
@@ -346,16 +347,67 @@ class MeshBuilder:
         weld: shared vertices (weld_corners, v2.5).
         billboard: (pixel size, {"BB::...": value}) adds an imposter detail level (an empty node
         'bb_autobillboard<size>' beside start01, its BB:: settings as FCOLLADA user properties):
-        under that size on screen the game draws a picture of the mesh it renders itself (v2.7)."""
+        under that size on screen the game draws a picture of the mesh it renders itself (v2.7).
+        lods: [(pixel size, MeshBuilder)] more detail levels of the same object (v3.0), each a geometry of
+        its own ('g1', 'g2', ...: arrays 'g1-pa', ...) in a node '<name>_a<size>' beside the first; the game
+        draws the largest one not larger than the shape on screen, none under the smallest size."""
         if orient:
             self.orient_closed()
+        levels = [(int(detail), self)] + [(int(d), mb) for d, mb in (lods or [])]
         if weld:
-            for mat, p in self.parts.items():
-                V2, N2, U2, T2, C2 = weld_corners(np.concatenate(p[0]), np.concatenate(p[1]),
-                                                  np.concatenate(p[2]), np.concatenate(p[3]), np.concatenate(p[5]))
-                self.parts[mat] = [[V2], [N2], [U2], [T2], len(V2), [C2]]
+            for _, mb in levels:
+                mb._weld()
         o = np.asarray(origin, np.float64)
-        Vs, Ns, Ts, Cs, prims, mats, effects, binds = [], [], [], [], [], [], [], []
+        safe = "".join(ch if ch.isalnum() else "_" for ch in name).strip("_") or "mesh"
+        safe = safe.rstrip("0123456789_") or "mesh"
+        geoms, nodes, mats, effects, seen = [], [], [], [], set()
+        for k, (d, mb) in enumerate(levels):
+            gid = "g" if k == 0 else f"g{k}"
+            node = f"{safe}_a{d}"
+            geom, binds = mb._geometry(gid, node, o)
+            geoms.append(geom)
+            nodes.append(f'<node id="{node}" name="{node}" type="NODE"><instance_geometry url="#{gid}" name="{node}">'
+                         f'<bind_material><technique_common>{binds}</technique_common></bind_material></instance_geometry></node>')
+            for mat in mb.parts:
+                if mat in seen:
+                    continue
+                seen.add(mat)
+                m = escape(mat)
+                mats.append(f'<material id="{m}-mat" name="{m}"><instance_effect url="#{m}-fx"/></material>')
+                effects.append(f'<effect id="{m}-fx"><profile_COMMON><technique sid="common"><lambert>'
+                               f'<diffuse><color>0.8 0.8 0.8 1</color></diffuse></lambert></technique></profile_COMMON></effect>')
+        bb = ""
+        if billboard is not None:
+            size, props = billboard
+            bb = (f'<node id="bb" name="bb_autobillboard{int(size)}" type="NODE"><extra><technique profile="FCOLLADA">'
+                  f'<user_properties>{" ".join(f"{k}={v}" for k, v in props.items())}</user_properties>'
+                  f'</technique></extra></node>')
+        doc = f"""<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+<asset><contributor><authoring_tool>magliaso_pura pipeline</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset>
+<library_effects>{"".join(effects)}</library_effects>
+<library_materials>{"".join(mats)}</library_materials>
+<library_geometries>{"".join(geoms)}</library_geometries>
+<library_visual_scenes><visual_scene id="Scene" name="Scene">
+<node id="base00" name="base00" type="NODE"><node id="start01" name="start01" type="NODE">
+{"".join(nodes)}
+</node>{bb}</node>
+</visual_scene></library_visual_scenes>
+<scene><instance_visual_scene url="#Scene"/></scene>
+</COLLADA>"""
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(doc)
+
+    def _weld(self):
+        for mat, p in self.parts.items():
+            V2, N2, U2, T2, C2 = weld_corners(np.concatenate(p[0]), np.concatenate(p[1]),
+                                              np.concatenate(p[2]), np.concatenate(p[3]), np.concatenate(p[5]))
+            self.parts[mat] = [[V2], [N2], [U2], [T2], len(V2), [C2]]
+
+    def _geometry(self, gid, node, o):
+        """(<geometry> text, <instance_material> bindings) of the mesh, positions relative to o."""
+        Vs, Ns, Ts, Cs, prims, binds = [], [], [], [], [], []
         off = 0
         use_col = any(not np.allclose(np.concatenate(p[5]), 1.0) for p in self.parts.values())
         nin = 4 if use_col else 3
@@ -368,15 +420,12 @@ class MeshBuilder:
             Cs.append(np.concatenate(p[5]))
             idx = np.repeat(I.ravel()[:, None], nin, 1).ravel()
             m = escape(mat)
-            col_in = '<input semantic="COLOR" source="#g-c" offset="3" set="0"/>' if use_col else ""
+            col_in = f'<input semantic="COLOR" source="#{gid}-c" offset="3" set="0"/>' if use_col else ""
             prims.append(f'<triangles material="{m}-mat" count="{len(I)}">'
-                         f'<input semantic="VERTEX" source="#g-v" offset="0"/>'
-                         f'<input semantic="NORMAL" source="#g-n" offset="1"/>'
-                         f'<input semantic="TEXCOORD" source="#g-t" offset="2" set="0"/>{col_in}'
+                         f'<input semantic="VERTEX" source="#{gid}-v" offset="0"/>'
+                         f'<input semantic="NORMAL" source="#{gid}-n" offset="1"/>'
+                         f'<input semantic="TEXCOORD" source="#{gid}-t" offset="2" set="0"/>{col_in}'
                          f'<p>{" ".join(map(str, idx))}</p></triangles>')
-            mats.append(f'<material id="{m}-mat" name="{m}"><instance_effect url="#{m}-fx"/></material>')
-            effects.append(f'<effect id="{m}-fx"><profile_COMMON><technique sid="common"><lambert>'
-                           f'<diffuse><color>0.8 0.8 0.8 1</color></diffuse></lambert></technique></profile_COMMON></effect>')
             binds.append(f'<instance_material symbol="{m}-mat" target="#{m}-mat">'
                          f'<bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/></instance_material>')
             off += len(V)
@@ -386,45 +435,23 @@ class MeshBuilder:
         fl = lambda a, d: _TRIM_DOT.sub("", _TRIM_ZEROS.sub(r"\1", " ".join(f"{v:.{d}f}" for v in np.asarray(a).ravel())))
         if len(T) and np.abs(T.mean(0)).max() > 2.0:
             T = T - np.floor(T.mean(0))
-        col_src = (f'<source id="g-c"><float_array id="g-ca" count="{Cc.size}">{fl(Cc, 3)}</float_array>'
-                   f'<technique_common><accessor source="#g-ca" count="{len(Cc)}" stride="4"><param name="R" type="float"/>'
+        col_src = (f'<source id="{gid}-c"><float_array id="{gid}-ca" count="{Cc.size}">{fl(Cc, 3)}</float_array>'
+                   f'<technique_common><accessor source="#{gid}-ca" count="{len(Cc)}" stride="4"><param name="R" type="float"/>'
                    f'<param name="G" type="float"/><param name="B" type="float"/><param name="A" type="float"/></accessor>'
                    f'</technique_common></source>') if use_col else ""
-        safe = "".join(ch if ch.isalnum() else "_" for ch in name).strip("_") or "mesh"
-        safe = safe.rstrip("0123456789_") or "mesh"
-        node = f"{safe}_a{int(detail)}"
-        bb = ""
-        if billboard is not None:
-            size, props = billboard
-            bb = (f'<node id="bb" name="bb_autobillboard{int(size)}" type="NODE"><extra><technique profile="FCOLLADA">'
-                  f'<user_properties>{" ".join(f"{k}={v}" for k, v in props.items())}</user_properties>'
-                  f'</technique></extra></node>')
-        doc = f"""<?xml version="1.0" encoding="utf-8"?>
-<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
-<asset><contributor><authoring_tool>magliaso_pura pipeline</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset>
-<library_effects>{"".join(effects)}</library_effects>
-<library_materials>{"".join(mats)}</library_materials>
-<library_geometries><geometry id="g" name="{node}"><mesh>
-<source id="g-p"><float_array id="g-pa" count="{V.size}">{fl(V, 3)}</float_array>
-<technique_common><accessor source="#g-pa" count="{len(V)}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source>
-<source id="g-n"><float_array id="g-na" count="{N.size}">{fl(N, 3)}</float_array>
-<technique_common><accessor source="#g-na" count="{len(N)}" stride="3"><param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/></accessor></technique_common></source>
-<source id="g-t"><float_array id="g-ta" count="{T.size}">{fl(T, 4)}</float_array>
-<technique_common><accessor source="#g-ta" count="{len(T)}" stride="2"><param name="S" type="float"/><param name="T" type="float"/></accessor></technique_common></source>
+        xyz = '<param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/>'
+        geom = f"""<geometry id="{gid}" name="{node}"><mesh>
+<source id="{gid}-p"><float_array id="{gid}-pa" count="{V.size}">{fl(V, 3)}</float_array>
+<technique_common><accessor source="#{gid}-pa" count="{len(V)}" stride="3">{xyz}</accessor></technique_common></source>
+<source id="{gid}-n"><float_array id="{gid}-na" count="{N.size}">{fl(N, 3)}</float_array>
+<technique_common><accessor source="#{gid}-na" count="{len(N)}" stride="3">{xyz}</accessor></technique_common></source>
+<source id="{gid}-t"><float_array id="{gid}-ta" count="{T.size}">{fl(T, 4)}</float_array>
+<technique_common><accessor source="#{gid}-ta" count="{len(T)}" stride="2"><param name="S" type="float"/><param name="T" type="float"/></accessor></technique_common></source>
 {col_src}
-<vertices id="g-v"><input semantic="POSITION" source="#g-p"/></vertices>
+<vertices id="{gid}-v"><input semantic="POSITION" source="#{gid}-p"/></vertices>
 {"".join(prims)}
-</mesh></geometry></library_geometries>
-<library_visual_scenes><visual_scene id="Scene" name="Scene">
-<node id="base00" name="base00" type="NODE"><node id="start01" name="start01" type="NODE">
-<node id="{node}" name="{node}" type="NODE"><instance_geometry url="#g" name="{node}"><bind_material><technique_common>{"".join(binds)}</technique_common></bind_material></instance_geometry></node>
-</node>{bb}</node>
-</visual_scene></library_visual_scenes>
-<scene><instance_visual_scene url="#Scene"/></scene>
-</COLLADA>"""
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(doc)
+</mesh></geometry>"""
+        return geom, "".join(binds)
 
 
 def vertex_normals(V, T):
