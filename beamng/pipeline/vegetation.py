@@ -168,6 +168,28 @@ def tallest_per_cell(x, y, h, idx, cell):
     return order[np.sort(first)]
 
 
+def network_lines():
+    """(station points, half widths, path mask) of the network lines (work/network.npz), as stage_vegetation
+    passes them to build() (net_xy)."""
+    import network
+    segs, st, _ = network.load()
+    return (np.column_stack([st["x"], st["y"]]), 0.5 * st["width"],
+            np.array([segs[k]["kind"] == "path" for k in st["seg"]], bool))
+
+
+def line_distances(x, y, net_xy):
+    """m from every point to the edge of the nearest road line and of the nearest path line (net_xy: station
+    points, half widths, path mask), as thin() takes them."""
+    from scipy.spatial import cKDTree
+    pts, hw, is_path = net_xy
+    txy = np.column_stack([x, y])
+    dist = []
+    for m in (~is_path, is_path):
+        dd, jj = cKDTree(pts[m]).query(txy) if m.any() else (np.full(len(txy), 1e9), np.zeros(len(txy), int))
+        dist.append(dd - (hw[m][jj] if m.any() else 0.0))
+    return dist
+
+
 def thin(x, y, h, dist, cap, dist_path=None):
     """Indices of the trees kept: all within NEAR m of the roads and NEAR_PATH m of the paths, the
     tallest of every cell of BANDS farther out, beyond the last band the tallest of every cell of a
@@ -200,7 +222,8 @@ def thin(x, y, h, dist, cap, dist_path=None):
 
 def far_items(far, level_dir, level_name, fill=None):
     """{(name, shape path): [(x, y, z, yaw, scale, None)]} of the far trees `far` (trees.npz fields,
-    plus 'dist_path': m from the nearest path) and their models written into the level. fill: the
+    plus 'dist': {surface class of canopy.py: m from the trunk to the nearest surface of the class})
+    and their models written into the level. fill: the
     trees of forest_fill.fill (v3.0, the woods outside the survey: the same fields plus 'conifer'),
     added after the cap of the measured ones."""
     import far_trees
@@ -214,7 +237,7 @@ def far_items(far, level_dir, level_name, fill=None):
     for n, (p, mn, mx) in models.items():
         asset_bounds.register(p, mn, mx)
     names, scale, radius = far_trees.assign(far["h"], far["d"], far["rgb"], conifer, cols)
-    keep = far_trees.select(names, radius, far.get("dist_path"), FAR_CAP, far["h"], far["x"], far["y"])
+    keep = far_trees.select(names, radius, far.get("dist"), FAR_CAP, far["h"], far["x"], far["y"])
     if fill is not None and len(fill["x"]):
         n0 = len(names)
         f_names, f_scale, _ = far_trees.assign(fill["h"], fill["d"], fill["rgb"], fill["conifer"], cols)
@@ -228,7 +251,7 @@ def far_items(far, level_dir, level_name, fill=None):
     for i in np.flatnonzero(keep):
         n = names[i]
         out.setdefault((n, models[n][0]), []).append((far["x"][i], far["y"][i], far["z"][i] - 0.15, yaw[i], scale[i], None))
-    print("far trees: %d of %d left out by the thinning (%d with the crown over a path or over the cap)"
+    print("far trees: %d of %d left out by the thinning (%d with the trunk or crown in a clearance profile or over the cap)"
           % (int(keep.sum()), len(names), int((~keep).sum())))
     return out
 
@@ -249,18 +272,12 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     t = {k: t[k][~under] for k in t}
     print("tops under a taller crown dropped:", int(under.sum()), "of", len(under))
     if net_xy is not None:
-        from scipy.spatial import cKDTree
-        pts, hw, is_path = net_xy
-        txy = np.column_stack([t["x"], t["y"]])
-        dist = []
-        for m in (~is_path, is_path):
-            dd, jj = cKDTree(pts[m]).query(txy) if m.any() else (np.full(len(txy), 1e9), np.zeros(len(txy), int))
-            dist.append(dd - (hw[m][jj] if m.any() else 0.0))
+        dist = line_distances(t["x"], t["y"], net_xy)
         keep = thin(t["x"], t["y"], t["h"], dist[0], CAP - SHRUBS, dist[1])
         dropped = np.ones(len(t["x"]), bool)
         dropped[keep] = False
         far = {k: v[dropped] for k, v in t.items()}
-        far["dist_path"] = dist[1][dropped]
+        far["dist"] = {0: dist[0][dropped], 2: dist[1][dropped]}       # canopy.SURFACE_CLASS: roads, paths
         t = {k: v[keep] for k, v in t.items()}
     x, y, z, h, d = t["x"], t["y"], t["z"], t["h"], t["d"]
     garden = np.isin(t["lc"], [CODE["giardino"], CODE["altro_rivestimento_duro"], CODE["edificio"],

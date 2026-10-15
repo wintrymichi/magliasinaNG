@@ -13,8 +13,10 @@ than MESH_PX pixels on screen, within about ten metres of the camera, and below 
 (Torque 'autobillboard'): BB['BB::EQUATOR_STEPS'] pictures of the mesh around it, rendered and
 lit by the game itself, drawn as one camera-facing quad per tree and batched per forest cell. These
 trees are never near a road (they are where thin() drops a tree: more than 30 m from a road, 5 m
-from a path), so from the roads they are always quads: the count of the forest comes back for the
+from a path), so from the roads they are mostly quads: the count of the forest comes back for the
 cost of two triangles a tree, and the vanilla trees near the roads are the same as before.
+Near a path they keep their trunk off its surface and their crown out of its clearance profile
+(PROFILE, TRUNK_GAP; select): a broad-leaved crown higher than that overhangs the path, as in a wood.
 
 Models are scaled to the measured height (H0 m at scale 1); among the broad-leaved forms the one
 whose crown at that scale is closest to the measured crown diameter. The shade is the measured
@@ -33,7 +35,6 @@ import bng
 from bld_textures import noise
 import json, os, re, shutil, sys, tempfile, zipfile
 from scipy.spatial import cKDTree
-import osm_surface
 import vegetation
 from config import LEVEL_NAME, WORK
 from landcover import CODE
@@ -51,7 +52,13 @@ BB_PX = 100               # detail size of the imposter (any size under MESH_PX:
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
       "BB::DIM": 256, "BB::INCLUDE_POLES": 1}
 CARD_SHADE = (0.78, 1.0)   # vertex colour of each leaf card (the shade colour is the material's at the top)
-PATH_GAP = 0.5            # m: no far tree whose crown comes closer than this to a path
+# v3.0: clearance of the far trees from the drivable surfaces, per surface class of canopy.py (carriageways and
+# the surveyed tracks, sidewalks and yards, paths): the trunk at least TRUNK_GAP m from the surface, no foliage
+# under PROFILE m over it beyond EDGE_TOL m of its edge. Up to the v3 test build no far tree had its crown within
+# 0.5 m of a path (PATH_GAP), at any height: a 20 m chestnut, 16 m wide, stood at least 8.5 m from it.
+TRUNK_GAP = (1.0, 1.0, 0.5)     # m (clearance.ROAD_CLEAR, PATH_CLEAR)
+PROFILE = (4.5, 2.5, 4.0)       # m (canopy.CLEAR; over the paths 4 m: a car driven on a path passes under the crowns)
+EDGE_TOL = 0.3                  # m (canopy.EDGE_TOL)
 SEED = 61
 
 
@@ -327,12 +334,26 @@ def build(level_dir, level_name, cols):
     return out
 
 
-def select(names_, radius, dist_path=None, cap=None, h=None, x=None, y=None):
-    """Mask of the far trees kept: none whose crown comes within PATH_GAP m of a path; at most `cap`
-    (the tallest of every cell of the coarsest grid that is still too many are dropped first)."""
+def crown_reach(names_, h, radius, top):
+    """Widest radius (m) of the far crowns (models names_, heights h, crown radii) up to `top` m over their
+    base: the broad-leaved ones an ellipsoid from 0.34 h, the firs a cone from 0.18 h (the meshes above)."""
+    import canopy
+    fir = np.array([str(n).startswith("far_fir") for n in names_], bool)
+    out = np.zeros(len(names_))
+    for kind, m in (("conifer", fir), ("broadleaf", ~fir)):
+        if m.any():
+            out[m] = canopy.crown_radius(kind, h[m], radius[m], np.zeros(int(m.sum())), np.full(int(m.sum()), top))
+    return out
+
+
+def select(names_, radius, dist=None, cap=None, h=None, x=None, y=None):
+    """Mask of the far trees kept: none with its trunk within TRUNK_GAP or its crown in the PROFILE of a
+    drivable surface (dist: {surface class: m from the trunk to the nearest surface of the class}); at most
+    `cap` (the tallest of every cell of the coarsest grid that is still too many are dropped first)."""
     keep = np.ones(len(names_), bool)
-    if dist_path is not None:
-        keep &= dist_path - radius > PATH_GAP
+    for c, d in (dist or {}).items():
+        keep &= d >= TRUNK_GAP[c]
+        keep &= crown_reach(names_, h, radius, PROFILE[c]) <= d + EDGE_TOL
     if cap is not None and keep.sum() > cap:
         import vegetation
         idx = np.flatnonzero(keep)
@@ -348,40 +369,80 @@ def select(names_, radius, dist_path=None, cap=None, h=None, x=None, y=None):
 # --------------------------------------------------------------------------------------------------
 # Put the far trees (far_trees.py, v2.7) into the built level, a finishing step of build_level.py.
 #
-# The trees of trees.npz (work/trees.npz of the build, every tree measured in the area) that the
-# level lacks come back as far trees: those more than NEAR + MARGIN m from a road surface and
-# NEAR_PATH + MARGIN m from a path surface of the zip (nearer, vegetation.thin kept every tree and
-# canopy.py may have moved it), with no forest item of the zip within MATCH m (the trees thin() kept
-# in the bands, at their measured place). The road and path surfaces are the top faces of the road
-# meshes of the zip. The far models, their textures and materials go into art/shapes/trees, the items
-# into forest/far_*.forest4.json, their types into art/forest/managedItemData.json. Far trees of an
-# earlier run are replaced. Everything else is copied as it is (same entries, same dates: the game
-# keeps its converted shapes).
+# The trees of trees.npz (work/trees.npz of the build, every tree measured in the area) that vegetation.thin
+# leaves out come back as far trees. v3.0: the trees left out are those of the build stage, from the same lines
+# of the network (work/network.npz) and the same rule. Up to the v3 test build they were taken again from the
+# road meshes of the level, those more than NEAR + 3 m from a road surface and NEAR_PATH + 3 m from a path
+# surface: but the paths in the woods the cadastral survey draws as road polygons (strada_sentiero, 2-4 m)
+# are meshed with the road materials (mp_road_dirt, mp_road_gravel), so along them thin() had kept the trees
+# within 5 m only and this step put none back within 33 m: 54 000 measured trees missing, a band 50-60 m wide
+# along every such path with one tree in four, and 2800 more 5-8 m from the other paths. A tree with a forest
+# item of the level within MATCH m (the trees thin() kept in the bands) is not added. The trunks and crowns
+# stay out of the clearance of the drivable surfaces of the level (select; the top faces of the road meshes,
+# per surface class of canopy.py, rasterised every RES m). The far models, their textures and materials go
+# into art/shapes/trees, the items into forest/far_*.forest4.json, their types into
+# art/forest/managedItemData.json. Far trees of an earlier run are replaced. Everything else is copied as it
+# is (same entries, same dates: the game keeps its converted shapes).
 #
 # A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish far_trees
 # --------------------------------------------------------------------------------------------------
 
 FILL = True        # v3.0: far trees on the forest outside the cadastral survey too (forest_fill.py)
-MARGIN = 3.0       # m beyond vegetation.NEAR / NEAR_PATH: the distances here are to the meshes, not the lines
 MATCH = 1.0        # m: a measured tree with a forest item this close is in the level already
+RES = 0.5          # m, raster of the drivable faces for the distances of the far trees to them
+REACH = 16.0       # m around a tile rasterised with it (the widest crown at the profile height)
 FAR_FILE = re.compile(r"/(forest/far_[a-z]+_[a-z]\.forest4\.json|art/shapes/trees/far_[^/]+)$")
 
 
-def surface_points(zi, lv):
-    """(road points, path points) (n, 2): vertices and centres of the top faces of the road meshes."""
+def surface_tops(zi, lv):
+    """(top faces (k, 3, 3), their surface class of canopy.py) of the road meshes of the level."""
+    import canopy
     surf = shape_tris(zi, lv, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
-    road, path = [], []
+    tops, cls = [], []
     for m, t in surf.items():
-        t = up_faces(t)
-        if not len(t):
+        if m not in canopy.SURFACE_CLASS:
             continue
-        P = np.concatenate([t.reshape(-1, 3), t.mean(1)])[:, :2]
-        (path if m in osm_surface.PATH_MATS else road).append(P)
-    cat = lambda L: np.unique(np.round(np.concatenate(L), 1), axis=0) if L else np.zeros((0, 2))
-    return cat(road), cat(path)
+        t = up_faces(t).astype(np.float32)
+        tops.append(t)
+        cls.append(np.full(len(t), canopy.SURFACE_CLASS[m], np.int8))
+    if not tops:
+        return np.zeros((0, 3, 3), np.float32), np.zeros(0, np.int8)
+    return np.concatenate(tops), np.concatenate(cls)
 
 
-def far_trees_step(root, trees_f=None):
+def surface_distances(tops, cls, x, y):
+    """{surface class: m from every point to the edge of the nearest top face of the class (0 on it, REACH
+    and farther: REACH)}, on a RES m raster of every canopy.TILE m tile with points, REACH m around it."""
+    import cv2
+    import canopy
+    out = {c: np.full(len(x), REACH) for c in (0, 1, 2)}
+    if not len(tops) or not len(x):
+        return out
+    bins = canopy.Bins(tops, cls)
+    tx, ty = np.floor(x / canopy.TILE).astype(int), np.floor(y / canopy.TILE).astype(int)
+    n = int(round((canopy.TILE + 2 * REACH) / RES))
+    for key in sorted(set(zip(tx.tolist(), ty.tolist()))):
+        pi = np.flatnonzero((tx == key[0]) & (ty == key[1]))
+        fi = bins.near(*key)
+        if not len(fi):
+            continue
+        x0, y1 = key[0] * canopy.TILE - REACH, (key[1] + 1) * canopy.TILE + REACH
+        T, K = tops[fi], cls[fi]
+        P = np.round(np.stack([(T[:, :, 0] - x0) / RES, (y1 - T[:, :, 1]) / RES], -1) * 4).astype(np.int32)
+        r = np.clip(((y1 - y[pi]) / RES).astype(int), 0, n - 1)
+        c = np.clip(((x[pi] - x0) / RES).astype(int), 0, n - 1)
+        for k in (0, 1, 2):
+            sel = K == k
+            if not sel.any():
+                continue
+            mask = np.zeros((n, n), np.uint8)
+            cv2.fillPoly(mask, list(P[sel]), 1, lineType=cv2.LINE_8, shift=2)
+            d = cv2.distanceTransform((mask == 0).astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
+            out[k][pi] = np.minimum(np.maximum(d[r, c] - 0.5, 0.0) * RES, REACH)   # cell centre -> edge
+    return out
+
+
+def far_trees_step(root, trees_f=None, report=None):
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     t = np.load(trees_f or os.path.join(WORK, "trees.npz"))
@@ -392,21 +453,23 @@ def far_trees_step(root, trees_f=None):
     under = vegetation.under_crowns(t["x"], t["y"], t["h"], t["d"])     # v3.0: tops under a taller crown
     t = {k: v[~under] for k, v in t.items()}
     print("tops under a taller crown left out:", int(under.sum()))
-    road, path = surface_points(zi, lv)
     xy = np.column_stack([t["x"], t["y"]])
-    d_road = cKDTree(road).query(xy)[0] if len(road) else np.full(len(xy), 1e9)
-    d_path = cKDTree(path).query(xy)[0] if len(path) else np.full(len(xy), 1e9)
+    d_road, d_path = vegetation.line_distances(t["x"], t["y"], vegetation.network_lines())
+    kept = np.zeros(len(xy), bool)
+    kept[vegetation.thin(t["x"], t["y"], t["h"], d_road, vegetation.CAP - vegetation.SHRUBS, d_path)] = True
     have = []
     for n in zi.namelist():
         if n.startswith(f"{lv}/forest/") and n.endswith(".forest4.json") and not FAR_FILE.search(n) \
                 and not os.path.basename(n).startswith("italy_guardrails"):        # v2.8: the guard rails
             have += [o["pos"][:2] for o in read_items(zi, n)]
     d_have = cKDTree(np.array(have)).query(xy)[0] if have else np.full(len(xy), 1e9)
-    cand = (d_road > vegetation.NEAR + MARGIN) & (d_path > vegetation.NEAR_PATH + MARGIN) & (d_have > MATCH)
-    print("trees measured %d: road and path surfaces %d / %d points, forest items %d; far tree candidates %d"
-          % (len(xy), len(road), len(path), len(have), int(cand.sum())))
+    cand = ~kept & (d_have > MATCH)
     far = {k: v[cand] for k, v in t.items()}
-    far["dist_path"] = d_path[cand]
+    tops, cls = surface_tops(zi, lv)
+    far["dist"] = surface_distances(tops, cls, far["x"], far["y"])
+    print("trees measured %d, kept by the thinning %d, forest items %d, drivable top faces %d; far tree candidates %d"
+          % (len(xy), int(kept.sum()), len(have), len(tops), int(cand.sum())))
+    del tops, cls
     tmp = tempfile.mkdtemp(prefix="magliaso_far_")
     try:
         import forest_fill, water                                           # v3.0: the woods outside the survey
