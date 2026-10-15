@@ -38,6 +38,9 @@ EDGE_FADE = 0.3               # ... and down onto the terrain where it is under 
 SMOOTH = 0.8                  # terrain squares, blur of the heights the skin is drawn through
 RING_BLUR = 1.2               # terrain squares, blur of the terrain under the skin
 COLOUR_BLUR = 1.5             # terrain squares, blur of the vertex colours
+INSIDE_IN = 2.0               # half squares: the cut at least this far inside the outline of the skin squares
+INSIDE_FADE = 3.0             # half squares further in: the skin down onto the terrain over these
+INSIDE_BLUR = 1.5             # half squares, blur of the distance inside (a round line, not the staircase)
 TILE = 256                    # terrain vertices per side of a mesh tile
 TILE_M = 3.0                  # m of slope per repeat of the texture
 TEX_N = 512                   # pixels of the texture
@@ -187,6 +190,19 @@ def lattice(H, Hn, rr, cc):
     return keys, np.maximum(zs, split_max(Hn, R, C) + EPS)
 
 
+def inside(keys):
+    """Per lattice point (keys in half squares): how far inside the skin squares it is, as a cut value (< 0 on
+    their outline and up to INSIDE_IN half squares in, EDGE_FADE further in), smoothed: the blurred mask of the
+    terrain vertices would cut across the notches of the squares' staircase and leave it as the edge, in teeth
+    (seen on the slope) and with a lip over the terrain."""
+    k0 = keys.min(0)
+    k = keys - k0 + 2
+    G = np.zeros(k.max(0) + 3, bool)
+    G[k[:, 0], k[:, 1]] = True
+    d = ndi.gaussian_filter(ndi.distance_transform_edt(G), INSIDE_BLUR)
+    return (d[k[:, 0], k[:, 1]] - INSIDE_IN) / INSIDE_FADE * EDGE_FADE
+
+
 def clip(P, N, col, T, f):
     """The triangles T cut along f = 0 (f per vertex), the parts where f >= 0 kept: new vertices on the cut
     edges (positions, normals and colours interpolated)."""
@@ -334,14 +350,13 @@ def steep_skin_step(root, report=None):
             ccs = slice(core[2], core[3] + (1 if core[3] + b0 == n - 1 else 0))
             lo = low[cr, ccs]
             qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
-            sub = q_new[a0:a1, b0:b1][cr, ccs]
-            q_new[a0:a1, b0:b1][cr, ccs] = np.where(lo, qn, sub)
             Hq = Z0 + np.where(low, np.clip(np.rint((Hn - Z0) / MAXH * 65535.0), 0, 65535), q[a0:a1, b0:b1]) / 65535.0 * MAXH
             keys, z = lattice(ndi.gaussian_filter(H, SMOOTH), Hq, rr, cc)       # rounded crest and toe
             R, C = keys[:, 0] / 2.0, keys[:, 1] / 2.0
             # the edge of the skin: cut along a smooth line (the blurred mask at EDGE_ISO), not the staircase of
             # the squares, and its colours blurred (no spikes of another colour)
             wv = ndi.map_coordinates(ndi.gaussian_filter(S.astype(np.float64), EDGE_BLUR), [R, C], order=1)
+            wv = EDGE_ISO + np.minimum(wv - EDGE_ISO, inside(keys))      # the cut never on the squares' staircase
             fl = split_max(Hq, R, C) + EPS                  # down onto the terrain towards the cut: no lip
             z = fl + np.clip((wv - EDGE_ISO) / EDGE_FADE, 0.0, 1.0) * (z - fl)
             gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
@@ -351,6 +366,10 @@ def steep_skin_step(root, report=None):
             mb = bng.MeshBuilder()
             ox, oy = X0 + b0 * sq, Y0 + a0 * sq
             ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv)
+            if not ntri:                                    # nothing left inside the cut: the terrain as it was
+                continue
+            sub = q_new[a0:a1, b0:b1][cr, ccs]
+            q_new[a0:a1, b0:b1][cr, ccs] = np.where(lo, qn, sub)
             origin = np.array([ox + (b1 - b0) * sq / 2, oy + (a1 - a0) * sq / 2, float(np.median(z))])
             with tempfile.TemporaryDirectory() as tmp:
                 f = os.path.join(tmp, "s.dae")
