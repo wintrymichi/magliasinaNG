@@ -599,6 +599,7 @@ def carve_terrain(feet, xs, ys, H):
     H0 = Hf.copy()                                       # the ground as it was: one wall's carve is not another's side
     lo = np.full(Hf.shape, np.inf)
     hi = np.full(Hf.shape, -np.inf)
+    top = np.full(Hf.shape, np.inf)
     for poly, allv, zlo, ztop, zgr in feet:
         x0, y0, x1, y1 = poly.bounds
         c0, c1 = max(int(np.floor((x0 - sq - xs[0]) / sq)), 0), min(int(np.ceil((x1 + sq - xs[0]) / sq)), nx - 1)
@@ -630,10 +631,16 @@ def carve_terrain(feet, xs, ys, H):
         d, u = ok & low, ok & ~low
         np.minimum.at(lo, flat[d], zl[d] - 0.02)
         np.maximum.at(hi, flat[u], zg[u] - 0.05)
+        np.minimum.at(top, flat[u], zt[u] - 0.05)
     down = np.isfinite(lo)
     Hf[down] = np.minimum(Hf[down], lo[down])
     up = np.isfinite(hi) & ~down
     Hf[up] = np.maximum(Hf[up], hi[up])
+    # v3.0: nor over the top of the wall on its high side (the ground carved for a pavement at the edge of the
+    # Strada Cantonale over the lower wall of the railway along the lake stood up to 2 m over its top, a saw of
+    # terrain teeth along the wall, one terrain step from the vertices at its foot)
+    over = np.isfinite(top) & ~down
+    Hf[over] = np.minimum(Hf[over], top[over])
     return Hf.reshape(H.shape)
 
 
