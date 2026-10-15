@@ -30,7 +30,7 @@ import render3d_textures
 
 THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
 THREE = os.path.join(WORK, "three.module.js")
-ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
+ARGS = ["--no-proxy-server", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 SKY = (0.76, 0.82, 0.89)                # sRGB: the horizon, the haze and the background of the top views
 SKY_ZENITH = (0.40, 0.57, 0.80)         # sRGB, the top of the sky dome
 SUN_GLOW = (0.30, 0.27, 0.20)           # linear, added around the sun
@@ -96,7 +96,7 @@ const T = {f4: Float32Array, u1: Uint8Array, u4: Uint32Array};
 const texCache = new Map();                         // textures of the level materials, loaded once
 async function getTex(name, info) {
   if (texCache.has(name)) return texCache.get(name);
-  const buf = await (await fetch('http://r3d.local/tex/' + name)).arrayBuffer();
+  const buf = await (await fetch('/tex/' + name)).arrayBuffer();
   const t = new THREE.DataTexture(new Uint8Array(buf), info.w, info.h, THREE.RGBAFormat);
   t.colorSpace = info.srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -624,30 +624,54 @@ class Renderer:
                 raise
             self._browser = self._pw.chromium.launch(args=ARGS, executable_path=exe)
         self.page = self._browser.new_page()
-        three = open(THREE, "rb").read()
-
-        def serve(route):
-            u = route.request.url
-            if u.endswith("/index.html"):
-                route.fulfill(body=PAGE, content_type="text/html")
-            elif u.endswith("three.module.js"):
-                route.fulfill(body=three, content_type="application/javascript")
-            elif "/view" in u:
-                route.fulfill(body=self._blob, content_type="application/octet-stream")
-            elif "/tex/" in u:
-                route.fulfill(body=self._tex[u.rsplit("/", 1)[1]][0], content_type="application/octet-stream")
-            else:
-                route.fulfill(status=404, body="")
-        self.page.route("http://r3d.local/**", serve)
-        self.page.goto("http://r3d.local/index.html")
+        if getattr(self, "_httpd", None) is None:
+            self._serve()
+        self.page.goto(f"{self._url}/index.html")
         self.page.wait_for_function("window.ready === true", timeout=60000)
         self._n = 0
+
+    def _serve(self):
+        """The page, three.js, the scene of the view and the textures from a local HTTP server (v3.0: through
+        Playwright's request interception a scene of 70 MB took 40 s to reach the page, here well under 1 s)."""
+        import threading
+        from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+        three = open(THREE, "rb").read()
+        r = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                u = self.path
+                if u.endswith("/index.html"):
+                    body, ct = PAGE.encode(), "text/html"
+                elif u.endswith("three.module.js"):
+                    body, ct = three, "application/javascript"
+                elif u.startswith("/view"):
+                    body, ct = r._blob, "application/octet-stream"
+                elif u.startswith("/tex/") and u[5:] in r._tex:
+                    body, ct = r._tex[u[5:]][0], "application/octet-stream"
+                else:
+                    self.send_error(404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", ct)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a):
+                pass
+        self._httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self._url = f"http://127.0.0.1:{self._httpd.server_address[1]}"
+        threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *a):
         self.close()
+        if getattr(self, "_httpd", None) is not None:
+            self._httpd.shutdown()
+            self._httpd = None
 
     def close(self):
         self._browser.close()
@@ -1059,7 +1083,7 @@ class Renderer:
             self.page.wait_for_function("window.ready === true", timeout=60000)
         self._n = n
         try:
-            url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
+            url = self.page.evaluate("u => window.renderView(u)", f"/view{self._n}.bin")
         except Exception as e:                 # the page died (out of memory on a shared machine): a new browser, once
             if "crash" not in str(e).lower() and "closed" not in str(e).lower():
                 raise
@@ -1069,7 +1093,7 @@ class Renderer:
                 pass
             self._start()
             self._n = n
-            url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
+            url = self.page.evaluate("u => window.renderView(u)", f"/view{self._n}.bin")
         data = base64.b64decode(url.split(",", 1)[1])
         os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
         open(out, "wb").write(data)

@@ -26,7 +26,7 @@ from scipy.spatial import cKDTree
 from config import WORK
 from bld_textures import noise, aniso_noise, normal_map, to8, lit, coursed_stones
 
-VERSION = "v1"
+VERSION = "v2"
 CACHE = os.path.join(WORK, "render3d_textures", VERSION)
 SEED = 73
 ASPHALT_M = 4.0               # m per repeat: italy_mats.ASPHALT_TILE
@@ -132,7 +132,7 @@ def concrete(n=1024):
     stain = noise(n, n, n / 10, rng)
     streak = aniso_noise(n, n, n / 12, n / 80, rng)
     pores = rng.random((n, n)) < 0.006
-    crack = gaussian_filter(_walk(n, n, 5, n * 0.5, rng, turn=0.18), 0.7, mode="wrap")
+    crack = gaussian_filter(_walk(n, n, 3, n * 0.4, rng, turn=0.05), 0.7, mode="wrap")
     crack = np.clip(crack / max(float(crack.max()), 1e-6) * 2.5, 0, 1)
     v = (1.0 + 0.05 * fine + 0.035 * mid - 0.05 * np.clip(stain - 0.2, 0, None) + 0.02 * streak
          - 0.25 * gaussian_filter(pores.astype(np.float32), 0.6, mode="wrap") * 4 - 0.22 * crack)
@@ -148,8 +148,8 @@ def stone_wall(n=1024):
     rng = np.random.default_rng(SEED + 2)
     ids, dist, joint, px = coursed_stones(n, rng, tile_m=STONE_M, h_rng=(0.16, 0.34), w_rng=(0.25, 0.65))
     k = int(ids.max()) + 2
-    palette = np.array([[0.66, 0.65, 0.62], [0.72, 0.71, 0.68], [0.60, 0.59, 0.57], [0.68, 0.65, 0.60],
-                        [0.56, 0.56, 0.55], [0.76, 0.75, 0.72]], np.float32)
+    palette = np.array([[0.71, 0.70, 0.67], [0.77, 0.76, 0.73], [0.65, 0.64, 0.62], [0.73, 0.70, 0.65],
+                        [0.62, 0.62, 0.61], [0.80, 0.79, 0.76]], np.float32)
     pick = rng.choice(len(palette), k, p=[0.3, 0.2, 0.18, 0.12, 0.12, 0.08])
     tone = rng.uniform(0.88, 1.08, k)
     base = palette[pick][ids] * tone[ids][..., None]
@@ -159,7 +159,7 @@ def stone_wall(n=1024):
     hgt[joint] = -2.0 + 0.4 * g1[joint]
     shade = np.clip(lit(gaussian_filter(hgt, 1.2, mode="wrap"), 0.3), 0.8, 1.15) * (0.78 + 0.22 * dome)
     col = base * (1 + 0.05 * g1 + 0.06 * g2 + 0.04 * g3)[..., None] * shade[..., None]
-    col[joint] = np.array([0.40, 0.39, 0.37]) * (0.85 + 0.2 * np.clip(g2[joint], -1, 1))[:, None]
+    col[joint] = np.array([0.48, 0.47, 0.45]) * (0.85 + 0.2 * np.clip(g2[joint], -1, 1))[:, None]
     return _rgba(col), hgt, 1.0
 
 
