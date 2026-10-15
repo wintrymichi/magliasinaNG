@@ -1013,7 +1013,7 @@ class Atlas:
         if key is not None and key in self.cache:
             return self.cache[key]
         w, h = img.size[0] + 2 * pad, img.size[1] + 2 * pad
-        hh = int(2 ** math.ceil(math.log2(max(h, 8))))
+        hh = int(math.ceil(h / 16.0)) * 16
         if not self.pages:
             self._page()
         for pi in (len(self.pages) - 1, None):
@@ -2195,9 +2195,11 @@ def place_front(place, f, ctx):
             pole.bar((u, 0.0, zg + 2.3), (u, 0.12, zg + 2.3), 0.04, tex.col(METAL))
             pieces.append(("front", pole))
             out.count("barber_poles")
+    mid = f.at(0.5 * (span[0] + span[1]))
+    place.where = [round(float(v), 2) for v in (mid[0], mid[1], zg, f.e[0], f.e[1])]
     for cat, p in pieces:
         if p.parts:
-            out.add(cat, f.at(0.5 * (span[0] + span[1])), p.placed(o[0], o[1], 0.0, f.angle()))
+            out.add(cat, mid, p.placed(o[0], o[1], 0.0, f.angle()))
     place_props(place, f, ctx, span[0], span[1], awning_d, rng, entrance)
     return None
 
@@ -2326,7 +2328,8 @@ def shopfronts_step(root, report=None, area=None):
            "brands": sorted({p.brand for p in used if p.brand}), "left_out": left, "counts": out.counts,
            "triangles": tris, "triangles_total": sum(tris.values()), "tiles": len(out.tiles),
            "texture_pages": {"signs": len(tex.signs.pages), "props": len(tex.props.pages), "leaves": len(tex.leaves.pages)},
-           "seconds": round(time.time() - t0)}
+           "seconds": round(time.time() - t0),
+           "where": {p.id: [p.kind, p.title] + p.where for p in used}}
     print("written in %.0f s: %d tiles, %d triangles %s" % (time.time() - t0, len(out.tiles), rep["triangles_total"], tris),
           flush=True)
     if report:
