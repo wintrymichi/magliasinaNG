@@ -333,9 +333,16 @@ class Camera(dict):
 _TRIANGLES = re.compile(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', re.S)
 
 
+def _first_geometry(s):
+    """The DAE text up to the end of its first geometry: the detail levels after it (bng.MeshBuilder lods, v3.0
+    vineyards) have their own vertex arrays, their triangles are not indices into the first one's."""
+    i = s.find("</geometry>")
+    return s if i < 0 else s[:i]
+
+
 def _read_dae_parts(path):
     """[(material, triangles (k, 3, 3), uvs (k, 3, 2) or None, vertex colours (k, 3, 3) or None)] of a DAE."""
-    s = open(path, encoding="utf-8").read()
+    s = _first_geometry(open(path, encoding="utf-8").read())
 
     def arr(i):
         m = re.search(r'<float_array id="%s" count="\d+">([^<]*)</float_array>' % i, s)
@@ -364,7 +371,7 @@ def _read_dae(path, factors=None):
     material or the vertex colours), the normals of their corners (k, 3, 3) as the DAE has them and
     the material of every triangle (k,). factors: {material: colour factor} for the materials
     MAT_COLORS does not know (v3.0)."""
-    s = open(path, encoding="utf-8").read()
+    s = _first_geometry(open(path, encoding="utf-8").read())
     factors = factors or {}
 
     def arr(i):
