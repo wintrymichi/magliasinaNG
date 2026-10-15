@@ -349,7 +349,9 @@ def _read_dae_parts(path):
     C = arr("g-ca")
     C = C.reshape(-1, 4) if C is not None else None
     out = []
-    for m in _TRIANGLES.finditer(s):
+    g0 = s.find("<geometry ")                      # several detail levels (vineyards.py): the first, nearest
+    g1 = s.find("</geometry>", g0) if g0 >= 0 else -1
+    for m in _TRIANGLES.finditer(s[g0:g1] if g1 > 0 else s):
         nin = m.group(2).count("<input")
         idx = np.array(m.group(3).split(), np.int64).reshape(-1, nin)
         t = V[idx[:, 0]].reshape(-1, 3, 3)
@@ -381,7 +383,9 @@ def _read_dae(path, factors=None):
     N = arr("g-na")
     N = N.reshape(-1, 3) if N is not None else None
     tris, cols, nrms, mats = [], [], [], []
-    for m in _TRIANGLES.finditer(s):
+    g0 = s.find("<geometry ")
+    g1 = s.find("</geometry>", g0) if g0 >= 0 else -1
+    for m in _TRIANGLES.finditer(s[g0:g1] if g1 > 0 else s):
         nin = m.group(2).count("<input")
         idx = np.array(m.group(3).split(), np.int64).reshape(-1, nin)
         t = V[idx[:, 0]].reshape(-1, 3, 3)

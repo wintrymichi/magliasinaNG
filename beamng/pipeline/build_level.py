@@ -743,7 +743,8 @@ def stage_vegetation(scene, ctx):
         import pickle
         import vineyards
         av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
-        ctx["vineyards"] = vineyards.build(LEVEL_DIR, LEVEL_NAME, scene, av, net_xy[0], roads + paths)
+        ground = vineyards.terrain_sampler(ctx["H"]) if "H" in ctx else None     # v3.0: on the terrain block
+        ctx["vineyards"] = vineyards.build(LEVEL_DIR, LEVEL_NAME, scene, av, net_xy[0], roads + paths, ground=ground)
         print("vineyards:", ctx["vineyards"], flush=True)
 
 
@@ -907,6 +908,7 @@ FINISH = [
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, price totems
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
     ("shopfronts", "shopfronts", "shopfronts_step", {"report": True}),      # v3.0: parody shop signs, awnings, props
+    ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
 ]
 
 

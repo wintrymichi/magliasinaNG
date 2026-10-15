@@ -46,7 +46,7 @@ KEEP_DETAIL = ("backdrop", "props")   # whole-map shapes
 MAX_TILE_RADIUS = 800.0               # m: a larger shape (one mesh over the whole map) is always drawn
 # groups of tile shapes (MissionGroup/<group>/items.level.json) merged MERGE x MERGE
 MERGE_GROUPS = ("buildings", "walls", "roads/surfaces", "roads/guardrails", "roads/fences", "railway",
-                "level_objects/Water", "level_objects/vegetation/vineyards")
+                "level_objects/Water")       # v3.0: not the vineyards (shapes of 96 m with their own detail levels)
 TILE = 128.0
 LEVEL_README = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README_livello.md")
 
@@ -63,7 +63,11 @@ def parse(s):
     C = _arr(s, "g-ca")
     C = C.reshape(-1, 4) if C is not None else None
     parts = []
-    for m in re.finditer(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', s, re.S):
+    # v3.0: a shape with several detail levels (vineyards.py) has a geometry each: the first one (the nearest)
+    g0 = s.find("<geometry ")
+    g1 = s.find("</geometry>", g0) if g0 >= 0 else -1
+    body = s[g0:g1] if g1 > 0 else s
+    for m in re.finditer(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', body, re.S):
         nin = m.group(2).count("<input")
         parts.append((m.group(1), np.array(m.group(3).split(), np.int64).reshape(-1, nin)))
     node = re.search(r'<node id="([^"]+)" name="[^"]+" type="NODE"><instance_geometry', s).group(1)
@@ -81,9 +85,10 @@ def category_dist(rel):
 
 
 def is_pipeline(text):
-    """A shape of the pipeline this step may rewrite; one with an imposter detail level (far_trees.py)
-    keeps its own detail sizes."""
-    return "magliaso_pura pipeline" in text[:400] and "<triangles" in text and "bb_autobillboard" not in text
+    """A shape of the pipeline this step may rewrite; one with an imposter detail level (far_trees.py) or
+    with several (v3.0, vineyards.py) keeps its own detail sizes."""
+    return ("magliaso_pura pipeline" in text[:400] and "<triangles" in text and "bb_autobillboard" not in text
+            and text.count("<geometry ") == 1)
 
 
 def optimize_dae(members, rel):
