@@ -1,0 +1,44 @@
+{
+ "_about": "Placement rules of the main Swiss road signs (Signalisationsverordnung SSV, SR 741.21, Stand 1. Juli 2025), for the sign steps of the pipeline (signs_net.py, signs_more.py) and their review. Distances in metres along the road before the place the sign is about. 'verified': true where the SSV text (or the cited directive) states it; false for the practice of this project. Human summary: beamng/verifica/v3/markings/REGOLE.md.",
+ "version": "2026-10-14",
+ "sources": {
+  "SSV": {"title": "Signalisationsverordnung (SSV), SR 741.21, Stand 1. Juli 2025", "url": "https://www.fedlex.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/1979/1961_1961_1961/20250701/de/pdf-a/fedlex-data-admin-ch-eli-cc-1979-1961_1961_1961-20250701-de-pdf-a.pdf"},
+  "BE_T30": {"title": "Kanton Bern TBA: Arbeitshilfe Tempo-30-Zone und Begegnungszone (2026)", "url": "https://www.bvd.be.ch/content/dam/bvd/dokumente/de/tba/strassen/sm-signalisation-markierung/sm-ah-tempo-30-zone-und-begegnungszone.pdf"},
+  "LU_T30": {"title": "Kanton Luzern vif: Richtlinie Tempo-30-Zonen und Begegnungszonen 653.112", "url": "https://vif.lu.ch/-/media/VIF/Dokumente/download/fachordner/Verkehrsmassnahmen/653_Richtlinien_Verkehrsmassnahmen/653_112_Richtlinie_Tempo_30_Zonen_und_Begegnungszonen.pdf?la=de-CH"}
+ },
+ "general": {
+  "side": {"rule": "right edge of the road; may be repeated on the left, over the road, on islands; only left in compelling exceptions (Art. 103 Abs. 1)", "verified": true, "sources": ["SSV"]},
+  "lateral_clearance": {"inside": [0.30, 2.00], "outside": [0.50, 2.00], "max_special": 3.50, "rule": "from the carriageway edge to the nearest edge of the plate (Art. 103 Abs. 4)", "verified": true, "sources": ["SSV"]},
+  "plate_bottom_height": {"min": 0.60, "max": 2.50, "motorway_min": 1.50, "over_road_min": 4.50, "rule": "over the crown of the road (Art. 103 Abs. 3)", "verified": true, "sources": ["SSV"]},
+  "per_post": {"max": 2, "exceptional": 3, "order_top_down": ["danger", "regulatory or priority", "information"], "rule": "Art. 101 Abs. 6 (not for direction signs)", "verified": true, "sources": ["SSV"]},
+  "not_dense": {"rule": "signs must not stand close together (Art. 101 Abs. 5); not without need, not missing where indispensable, uniform along a road (Art. 101 Abs. 3)", "verified": true, "sources": ["SSV"]},
+  "size": {"rule": "normal size on main and minor roads, small size allowed inside villages and on field tracks and exits (Art. 102 Abs. 2)", "verified": true, "sources": ["SSV"]},
+  "pre_signal_distance": {"inside_min": 50.0, "outside_min": 150.0, "motorway_min": 500.0, "rule": "pre-signals of information signs with the distance plate 5.01 (Art. 44 Abs. 3)", "verified": true, "sources": ["SSV"]}
+ },
+ "signs": {
+  "danger_signs": {
+   "codes": "1.01-1.32",
+   "distance": {"inside": "shortly before the danger; over 50 m before: distance plate 5.01", "inside_max_without_plate": 50.0, "outside": [150.0, 250.0], "outside_else": "distance plate 5.01", "motorway": "at the danger or up to 100 m before, plus a pre-signal 500-1000 m before"},
+   "rule": "only where a driver who does not know the place cannot see the danger, or sees it too late (Art. 3 Abs. 2); repeated on long stretches, length on plate 5.03 (Art. 3 Abs. 4)",
+   "verified": true, "sources": ["SSV"]
+  },
+  "curve": {"codes": {"right": "1.01", "left": "1.02", "double_right_first": "1.03", "double_left_first": "1.04"}, "rule": "bends that force a lower speed by their layout (missing superelevation, strong or uneven curvature); several bends in short succession: the sign of the first with the length plate 5.03; inside villages as a rule none (Art. 4)", "verified": true, "sources": ["SSV"]},
+  "pedestrian_crossing_warning": {"code": "1.22", "rule": "announces crossings not recognisable from 200 m; only outside villages and only at crossings meeting the state of the art (Art. 11 Abs. 1)", "verified": true, "sources": ["SSV"]},
+  "children": {"code": "1.23", "rule": "near schools, playgrounds and the like (Art. 11 Abs. 2)", "verified": true, "sources": ["SSV"]},
+  "stop": {"code": "3.01", "rule": "right edge shortly before the junction; repeated on the left with several lanes the same way; moved back more than 10 m: distance plate 5.01 (Art. 36 Abs. 4-5); only where the lack of sight makes a stop indispensable (Art. 36 Abs. 7); with the stop line 6.10 and the word STOP 6.11 on paved roads (Art. 75 Abs. 2)", "max_setback_without_plate": 10.0, "verified": true, "sources": ["SSV"]},
+  "give_way": {"code": "3.02", "rule": "right edge shortly before the junction (Art. 36 Abs. 4); with the give-way line 6.13 on paved roads (Art. 75 Abs. 4); may be pre-signalled with distance plate on main roads losing priority, outside 150-250 m, inside about 50 m (Art. 36 Abs. 8)", "pre_signal": {"outside": [150.0, 250.0], "inside": 50.0}, "verified": true, "sources": ["SSV"]},
+  "main_road": {"code": "3.03", "rule": "at its start; repeated inside villages shortly before, outside shortly after each junction; may be missing at unimportant junctions (Art. 37 Abs. 2)", "verified": true, "sources": ["SSV"]},
+  "end_of_main_road": {"code": "3.04", "rule": "right edge shortly before the junction, plus a pre-signal with distance plate outside 150-250 m, inside about 50 m before (Art. 38 Abs. 2)", "verified": true, "sources": ["SSV"]},
+  "junction_with_minor_road": {"code": "3.05", "rule": "on minor roads, announces a junction where the driver has priority; inside villages it may be missing where the stop/give-way signs or lines of the side road are visible in time (Art. 39)", "verified": true, "sources": ["SSV"]},
+  "junction_right_of_way": {"code": "3.06", "rule": "only where the road from the right cannot be seen in time, or after several 3.05 junctions (Art. 40 Abs. 2)", "verified": true, "sources": ["SSV"]},
+  "roundabout": {"code": "2.41.1", "rule": "before the entry under the give-way sign 3.02; may be repeated on the central island (Art. 24 Abs. 4)", "with": "3.02", "verified": true, "sources": ["SSV"], "note": "the task named '2.41.1 or 4.04/2.41': in the SSV 2.41 is 'Geradeaus oder Linksabbiegen' and 4.04 is not a roundabout sign; the roundabout is 2.41.1 over 3.02"},
+  "keep_right_of_obstacle": {"code": "2.34", "name": "Hindernis rechts umfahren", "rule": "at the obstacle (island) the driver must pass on the right (Art. 24 Abs. 1b); on splitter and refuge islands, facing the approaching traffic", "verified": true, "sources": ["SSV"], "note": "the task named 2.33: in the SSV 2.33 is 'Fahrtrichtung links' (turn left ahead); 2.34 is keep right"},
+  "pedestrian_crossing_location": {"code": "4.11", "rule": "always at crossings outside villages and at unexpected or badly visible crossings inside; one sign visible from both directions is enough on the island of crossings with islands, and at the edge on narrow minor roads (Art. 47 Abs. 1)", "verified": true, "sources": ["SSV"]},
+  "place_name": {"codes": {"begin_main": "4.27", "end_main": "4.28", "begin_minor": "4.29", "end_minor": "4.30"}, "rule": "white on blue on main roads, black on white on minor roads; where the loosely built-up area begins, not after the general 50 sign; the back shows the next place and the next far destination with its distance (Art. 50)", "verified": true, "sources": ["SSV"]},
+  "general_50": {"codes": {"begin": "2.30.1", "end": "2.53.1"}, "rule": "where the dense building begins on one side of the road; the end where neither side is densely built; may be missing on unimportant minor roads (Art. 22 Abs. 3-4)", "verified": true, "sources": ["SSV"]},
+  "zone_30": {"codes": {"begin": "2.59.1", "end": "2.59.2"}, "rule": "at every entrance of the zone, which must look like a gate (UVEK ordinance SR 741.213.3 Art. 5); the 'ZONE 30' marking only with the sign at the entrance", "verified": true, "sources": ["SSV", "BE_T30", "LU_T30"]},
+  "direction_sign": {"codes": {"motorway": "4.31", "main": "4.32", "minor": "4.33", "table": "4.35"}, "rule": "names places first, important local points if needed; at most three lines per arm (Art. 49, 51)", "verified": true, "sources": ["SSV"]},
+  "advance_direction_sign": {"codes": {"main": "4.36", "minor": "4.37", "roundabout": "4.54"}, "distance": {"outside": [150.0, 250.0], "inside": [20.0, 100.0]}, "rule": "at the latest at the start of the turning lanes; junctions less than 300 m apart on one sign; before roundabouts the roundabout form 4.54 (Art. 52)", "verified": true, "sources": ["SSV"]},
+  "direction_signs_at_roundabouts": {"rule": "one direction sign per exit, at the exit (on the splitter island or the right of the exit), naming the places reached by that arm", "verified": false, "note": "Swiss practice (VSS 40 817-type layouts, not public); the SSV only names the advance sign 4.54"}
+ }
+}

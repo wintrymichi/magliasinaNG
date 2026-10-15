@@ -1,0 +1,213 @@
+{
+ "_about": "Swiss road markings (Signalisationsverordnung SSV, SR 741.21, Art. 72-79a and Anhang 2 Ziffer 6) with the dimensions and rules of use the public cantonal and municipal directives give for the VSS norms (SN 640 850a, VSS 40 851, VSS 40 862, SN 640 241, which are not public). Read by markings_rules.py (v3.0), which lays the paint of the network from the road geometry by these rules. Lengths in metres; a pattern [dash, gap] in metres. 'verified': true where at least one of the listed sources states the value; false where it is an assumption of this project (then 'note' says why). Human summary: beamng/verifica/v3/markings/REGOLE.md.",
+ "version": "2026-10-14",
+ "sources": {
+  "SSV": {"title": "Signalisationsverordnung (SSV) vom 5. September 1979, SR 741.21, Stand 1. Juli 2025 (Art. 3-4, 11, 22-24, 36-52, 72-79a, 101-103, Anhang 2)", "url": "https://www.fedlex.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/1979/1961_1961_1961/20250701/de/pdf-a/fedlex-data-admin-ch-eli-cc-1979-1961_1961_1961-20250701-de-pdf-a.pdf"},
+  "LU": {"title": "Kanton Luzern, Verkehr und Infrastruktur (vif): Richtlinie Markierung 653.201, Juli 2024", "url": "https://vif.lu.ch/-/media/VIF/Dokumente/Download/Fachordner/Verkehrsmassnahmen/653_Richtlinien_Verkehrsmassnahmen/653_201_Richtlinie_Markierung.pdf?la=de-CH"},
+  "LU_T30": {"title": "Kanton Luzern vif: Richtlinie Tempo-30-Zonen und Begegnungszonen 653.112", "url": "https://vif.lu.ch/-/media/VIF/Dokumente/download/fachordner/Verkehrsmassnahmen/653_Richtlinien_Verkehrsmassnahmen/653_112_Richtlinie_Tempo_30_Zonen_und_Begegnungszonen.pdf?la=de-CH"},
+  "BE_HB": {"title": "Kanton Bern, Tiefbauamt: Richtlinie Handbuch Markierung 1. Teil / Praktische Arbeiten, 01.12.2022", "url": "https://www.bvd.be.ch/content/dam/bvd/dokumente/de/tba/dienstleistungen-strassen-und-verkehr/planerkoffer-kantonsstrassen-pkks/technische-vorgaben-entwurf-strassenanlage/pkks-rl-handbuch-markierung-1.pdf"},
+  "BE_T30": {"title": "Kanton Bern, Tiefbauamt: Arbeitshilfe Tempo-30-Zone und Begegnungszone, 01.02.2026 (quotes the UVEK ordinance SR 741.213.3, Art. 4-5)", "url": "https://www.bvd.be.ch/content/dam/bvd/dokumente/de/tba/strassen/sm-signalisation-markierung/sm-ah-tempo-30-zone-und-begegnungszone.pdf"},
+  "BERN_CITY": {"title": "Stadt Bern, Normalien 2.10.2 Hinweise zu einzelnen Markierungselementen (revidiert Juli 2019; scanned text)", "url": "https://www.bern.ch/themen/planen-und-bauen/bern-baut/Standards-Normalien/c-normalien/2-strassenbau/2-10-strassenmarkierungen-1/2-10-2-hinweise-zu-einzelnen-markierungselementen.pdf/@@download/file/2_10_2_Hinweise%20zu%20einzelnen%20Markierungselementen.pdf"},
+  "ZH": {"title": "Kanton Zürich, Tiefbauamt: ABC der Strassenmarkierung (T. Roth)", "url": "https://www.zh.ch/content/dam/zhweb/bilder-dokumente/themen/mobilitaet/strassennetz/strassenunterhalt/markierung-signalisation/grundlagen/abc_strassenmarkierung.pdf"},
+  "BS": {"title": "Kanton Basel-Stadt, BVD: Ausführungsbestimmungen zur Signalisationsverordnung, Teil 3: Markierungen, 01.01.2023", "url": "https://media.bs.ch/original_file/f83ef8f25793ee0f8f11cdacd94fa224dd02a1e9/2023-01-markierungen.pdf"},
+  "TRACE": {"title": "This project: the paint traced in the 10 cm SWISSIMAGE orthophoto (dati/network_markings.json.gz) and the 2022 paint of the cantonal road (dati/cantonale_paint_2022.json): local practice of the Malcantone, used only to confirm", "url": null}
+ },
+ "colours": {
+  "white": {"use": "all markings for motor traffic (SSV Art. 72-76, 78)", "material": "mp_road_paint", "sources": ["SSV"]},
+  "yellow": {"use": "pedestrian crossings 6.17, no-stopping lines 6.18/6.25, zig-zag 6.21, bus and cycle lanes 6.08/6.09, reserved parking", "material": "mp_road_paint_yellow", "sources": ["SSV"]},
+  "red": {"use": "coloured band, only where measured (the cantonal road near Pura, 2022); not a marking of the SSV (a coloured surface, FGSO)", "material": "mp_road_paint_red", "sources": ["TRACE", "LU"]}
+ },
+ "line_width": {
+  "standard": {"value": 0.15, "use": "every longitudinal line on main and minor roads (6.01, 6.03, 6.05, 6.12, 6.15, 6.16)", "verified": true, "sources": ["BE_HB", "ZH", "BS", "LU"]},
+  "centre_multilane": {"value": 0.20, "use": "centre line of two-way roads with more than two lanes (Basel practice)", "verified": true, "sources": ["BS"]},
+  "bus_lane": {"value": 0.20, "verified": true, "sources": ["BE_HB"]},
+  "parking": {"value": 0.10, "use": "parking bays (0.15 for no-parking/no-stopping lines)", "verified": true, "sources": ["BE_HB"]},
+  "stop_line": {"value": 0.50, "verified": true, "sources": ["ZH", "BE_HB", "BS", "BERN_CITY"]},
+  "cycle_stop_line": {"value": 0.30, "verified": true, "sources": ["BE_HB"]},
+  "hatch_bar": {"value": 0.50, "verified": true, "sources": ["BE_HB", "BS"]},
+  "crossing_bar": {"value": 0.50, "verified": true, "sources": ["ZH", "BE_HB", "BS"]},
+  "unverified_0.12": {"value": 0.12, "note": "named in the task as a Swiss width; no public source found for its use (older cantonal edge lines?). Not used.", "verified": false}
+ },
+ "context": {
+  "village": {"rule": "a road point is inside a village (innerorts) where at least 6 buildings of the Federal Register (existing, >= 30 m2) stand within 45 m; runs shorter than 40 m are dropped, gaps shorter than 80 m closed", "n": 6, "radius": 45.0, "min_run": 40.0, "close_gap": 80.0, "verified": false, "note": "the rule of lamps.py (v2.8): the SSV ties innerorts to the place-name signs (Art. 22, 50), which stand where the (loose) built-up area begins"},
+  "main_road_classes": {"value": ["trunk", "trunk_link", "primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"], "note": "OSM classes taken as main roads (Hauptstrassen / verkehrsorientierte Strassen, priority roads); the rest (unclassified, residential, living_street, service, track) as minor roads", "verified": false},
+  "zone_30": {"rule": "OSM zone:maxspeed=CH:30, source:maxspeed=CH:zone30, or maxspeed 30 on a minor road (as signs_net._zone); living_street and maxspeed 20 = meeting zone", "verified": false, "note": "how OSM maps the zones of the area"},
+  "general_speed": {"inside": 50, "outside": 80, "verified": true, "sources": ["SSV"], "note": "VRV Art. 4a, signalled by SSV Art. 22"}
+ },
+ "markings": {
+  "6.01": {
+   "name": {"de": "Sicherheitslinie", "it": "linea di sicurezza", "fr": "ligne de sécurité"},
+   "kind": "longitudinal", "colour": "white", "width": 0.15, "pattern": "solid",
+   "meaning": "may not be crossed (SSV Art. 73 Abs. 6a); marks the middle of the carriageway or lane limits; no longer than sight distance and usual speed require (Art. 73 Abs. 1)",
+   "min_length": {"inside": 20.0, "outside": 50.0, "verified": true, "sources": ["BS"]},
+   "min_carriageway_width": {"value": 6.0, "verified": true, "sources": ["BE_HB"], "note": "BE_HB: 'Bei Strassenbreiten < 6 m darf keine Sicherheitslinie markiert werden'; LU allows solid longitudinal lines from 5.20 m"},
+   "where": ["blind bends where the lack of sight is not obvious, on crests (bridges) where the sight shortens, in dips and double bends hiding oncoming traffic, in tunnels, along islands (BS: with a warning line)", "inside villages only in exceptional cases (BE_HB)", "not in bends whose lack of sight is clearly visible: there a 2/4 Leitlinie gives better guidance outside villages (BE_HB)"],
+   "rule_here": {"outside": "where the sight distance along the centre line is under 'sight_min' m: hairpins (heading change >= 120 deg within 60 m), bends of radius < 'blind_radius' m turning >= 40 deg, crests where a 1.0 m high object is hidden from a 1.0 m eye within 'sight_min' m", "sight_min": 70.0, "blind_radius": 60.0, "hairpin_turn": 120.0, "hairpin_length": 60.0, "inside": "none", "verified": false, "note": "thresholds of this project for the cases BE_HB lists; the norm's sight distances (VSS 40 090) are not public"},
+   "sources": ["SSV", "BE_HB", "BS", "LU"]
+  },
+  "6.02": {"name": {"de": "Doppelte Sicherheitslinie", "it": "doppia linea di sicurezza"}, "kind": "longitudinal", "colour": "white", "width": 0.15, "pattern": "solid x2", "gap_between": {"value": 0.15, "verified": false}, "where": "carriageways with at least three lanes, or two lanes with special safety needs (SSV Art. 73 Abs. 2); only in exceptional cases (BE_HB)", "used_here": false, "sources": ["SSV", "BE_HB"]},
+  "6.03": {
+   "name": {"de": "Leitlinie", "it": "linea di direzione", "fr": "ligne de direction"},
+   "kind": "longitudinal", "colour": "white", "width": 0.15,
+   "pattern": {
+    "normal": {"value": [3.0, 6.0], "verified": true, "sources": ["BE_HB", "ZH", "BS", "BERN_CITY", "TRACE"], "note": "TRACE: the dashed centre lines measured in the Malcantone are 3/6 inside and outside the villages (period 8.5-9.5 m with dashes of about 3 m in 85 of the 119 regular stretches, 21 of 25 inside villages; 2/4 and 4/2 in most of the rest)"},
+    "inside_lucerne": {"value": [3.0, 3.0], "verified": true, "sources": ["LU"], "note": "Lucerne's practice inside villages; not the local practice (TRACE), not used"},
+    "winding": {"value": [2.0, 4.0], "use": "winding mountain roads and bends outside villages; lane lines of turning lanes (Einspurstrecken)", "verified": true, "sources": ["BE_HB", "ZH", "BS", "TRACE"]},
+    "junction": {"value": [1.0, 2.0], "use": "across junctions, from the start to the end of the corner radius", "verified": true, "sources": ["ZH", "BE_HB", "BS"]},
+    "opening": {"value": [1.0, 1.0], "use": "short opening of a safety line (an entrance)", "verified": true, "sources": ["ZH", "BE_HB", "BS"]}
+   },
+   "min_carriageway_width": {"inside": 5.5, "outside": 6.0, "exceptional": 5.8, "verified": true, "sources": ["BE_HB", "LU"], "note": "BE_HB: 'Mittellinien in der Regel nur bei Strassenbreiten >= 5,5 m (ausserorts >= 6 m)'; LU: at least 6.00 m, exceptionally 5.80 m. Used here: 5.5 inside, 5.8 outside"},
+   "where": ["main roads (always on Hauptverkehrsstrassen, as a rule on collector roads, BS)", "minor roads at 50 km/h depending on the place, as a rule not at 30 km/h (BS)", "not in 30 zones (BE_T30)", "interrupted at junctions with the legal right of way (BE_HB 33)", "the centre line of a road with lane_markings=no or lanes=1 in OSM: none"],
+   "rule_here": {"main_roads": "centre line where wide enough", "minor_roads": "only where the trace confirms a centre line over >= 30 % of the visible length", "verified": false},
+   "sources": ["SSV", "BE_HB", "LU", "ZH", "BS"]
+  },
+  "6.04": {"name": {"de": "Doppellinie", "it": "linea doppia"}, "kind": "longitudinal", "colour": "white", "width": 0.15, "pattern": "solid beside a 3/6 Leitlinie", "where": "where the sight requires a restriction in one direction only (SSV Art. 73 Abs. 4); exceptional (BE_HB)", "used_here": false, "note": "the sight in one direction only is not computed: both directions get the safety line", "sources": ["SSV", "BE_HB", "BS"]},
+  "6.05": {
+   "name": {"de": "Vorwarnlinie", "it": "linea di preavviso"},
+   "kind": "longitudinal", "colour": "white", "width": 0.15,
+   "pattern": {"value": [4.0, 2.0], "verified": true, "sources": ["ZH", "BE_HB", "BS", "LU", "BERN_CITY", "TRACE"]},
+   "length": {"outside": 60.0, "inside": 30.0, "verified": true, "sources": ["LU", "BE_HB"], "note": "BERN_CITY: outside at least 50 m, at least three dashes; BS/LU: inside as a rule none"},
+   "gap_before_safety_line": {"value": 2.0, "verified": true, "sources": ["BERN_CITY"]},
+   "where": "announces a safety line or double line: must outside villages, may inside (SSV Art. 73 Abs. 5)",
+   "sources": ["SSV", "LU", "BE_HB", "BS", "ZH"]
+  },
+  "6.06": {
+   "name": {"de": "Einspurpfeile", "it": "frecce di preselezione"},
+   "kind": "symbol", "colour": "white",
+   "length": {"value": 6.5, "verified": true, "sources": ["BE_HB"]},
+   "shaft_width": {"value": 0.15, "verified": true, "sources": ["BE_HB"]},
+   "distance_stop_line_to_shaft": {"value": 11.5, "verified": true, "sources": ["BE_HB"]},
+   "spacing": {"value": 30.0, "verified": true, "sources": ["BE_HB"]},
+   "where": "lanes for left, right or straight on, pointing their way (SSV Art. 74 Abs. 2); in the axis of the lane (BE_HB, BERN_CITY); never the combination left/straight/right (BE_HB)",
+   "rule_here": "only where OSM turn:lanes says so, two arrows per lane at most",
+   "shape": "the arrows of dati/road_marking_templates.json (5 m) scaled to 6.5 m; head shape not verified",
+   "sources": ["SSV", "BE_HB", "BERN_CITY"]
+  },
+  "6.07": {"name": {"de": "Abweispfeile", "it": "frecce di rientro"}, "kind": "symbol", "colour": "white", "length": {"value": 5.0, "verified": true, "sources": ["BE_HB"]}, "where": "announces that the lane must be left in the direction shown (SSV Art. 74 Abs. 3)", "used_here": false, "sources": ["SSV", "BE_HB"]},
+  "6.08": {"name": {"de": "Bus-Streifen", "it": "corsia preferenziale bus"}, "kind": "longitudinal", "colour": "yellow", "width": 0.20, "pattern": {"solid": "normal", "dashed": [4.0, 2.0], "start": [0.5, 0.5], "junction": [1.0, 1.0]}, "text": "BUS", "verified": true, "used_here": false, "sources": ["SSV", "BE_HB", "BERN_CITY"]},
+  "6.09": {"name": {"de": "Radstreifen", "it": "ciclopista su carreggiata"}, "kind": "longitudinal", "colour": "yellow", "width": 0.15, "pattern": {"normal": [3.0, 3.0], "junction": [1.0, 1.0]}, "verified": true, "used_here": false, "note": "no cycle lane of the area is mapped in a usable way (OSM cycleway=lane on 10 ways)", "sources": ["SSV", "ZH", "BE_HB", "BERN_CITY"]},
+  "6.10": {
+   "name": {"de": "Haltelinie", "it": "linea d'arresto"},
+   "kind": "transverse", "colour": "white", "width": 0.50,
+   "where": "at the STOP sign (always on paved roads, SSV Art. 75 Abs. 2), at traffic lights and level crossings; straight, in the alignment of the kerb or edge line of the priority road (BS); 0.10 m clear of the kerbs (BERN_CITY)",
+   "position": {"rule": "its junction side on the edge of the carriageway of the priority road, across the approach lane", "verified": true, "sources": ["BS", "BE_HB"]},
+   "kerb_clearance": {"value": 0.10, "verified": true, "sources": ["BERN_CITY"]},
+   "sources": ["SSV", "ZH", "BE_HB", "BS", "BERN_CITY"]
+  },
+  "6.11": {
+   "name": {"de": "Stop (Bodenschrift)", "it": "STOP (scritta)"},
+   "kind": "text", "colour": "white", "text": "STOP",
+   "letter_height": {"value": 1.6, "verified": false, "note": "BERN_CITY's scanned text reads 1.20 m; the SSV figure (Anhang 2, 6.11) draws the word elongated across the approach lane right behind the stop line"},
+   "distance_from_stop_line": {"value": 1.0, "verified": false, "note": "BERN_CITY's scanned text reads 4.00 m from the stop bar to the lower edge of the text; the SSV figure shows it right behind the line"},
+   "where": "always with the STOP sign on paved roads (SSV Art. 75 Abs. 2)",
+   "sources": ["SSV", "BERN_CITY"]
+  },
+  "6.12": {
+   "name": {"de": "Ununterbrochene Längslinie", "it": "linea longitudinale continua"},
+   "kind": "longitudinal", "colour": "white", "width": 0.15, "pattern": "solid",
+   "length": {"value": 5.0, "min": 3.0, "verified": true, "sources": ["BERN_CITY", "BS"]},
+   "lead_in_dash": {"value": 1.0, "gap": 1.0, "use": "where the side road has no centre line", "verified": true, "sources": ["BS"]},
+   "min_road_width": {"value": 5.0, "verified": true, "sources": ["BS"], "note": "BERN_CITY: 4 m; used: 5.0"},
+   "where": "complements the stop line (SSV Art. 75 Abs. 2) and the give-way line where the road is wide enough (Art. 75 Abs. 4), on the middle of the side road",
+   "sources": ["SSV", "BERN_CITY", "BS"]
+  },
+  "6.13": {
+   "name": {"de": "Wartelinie", "it": "linea di attesa (denti di squalo)"},
+   "kind": "transverse", "colour": "white",
+   "triangle": {"base": 0.50, "height": 0.60, "gap": 0.25, "verified": true, "sources": ["BE_HB", "ZH"], "note": "BE_HB figure 37: A 25 cm, B 50 cm, H 60 cm (cycle: 12.5/25/30); ZH: 50/60"},
+   "orientation": "the tips point towards the approaching driver",
+   "position": {"inside": "in the alignment of the carriageway edge of the priority road", "outside": "in the alignment of its edge line", "verified": true, "sources": ["BE_HB", "BS", "LU"]},
+   "straight": {"value": true, "note": "not angled (LU); BE_HB/BERN_CITY allow angled ones", "sources": ["LU", "BS"]},
+   "min_mouth_width": {"value": 4.0, "rule": "on mouths narrower than 4 m a guide line 6.16 across the whole mouth instead", "verified": true, "sources": ["BERN_CITY"]},
+   "where": ["always at the 'Kein Vortritt' sign 3.02 on paved roads (SSV Art. 75 Abs. 4)", "every roundabout entry (SSV Art. 24 Abs. 4: 2.41.1 over 3.02)", "minor roads joining a main road (priority road) — inferred here from the OSM classes where OSM maps no give_way/stop", "not at junctions with the legal right of way"],
+   "sources": ["SSV", "BE_HB", "ZH", "LU", "BS", "BERN_CITY"]
+  },
+  "6.14": {
+   "name": {"de": "Vorankündigung der Wartelinie", "it": "preavviso della linea di attesa"},
+   "kind": "symbol", "colour": "white", "shape": "outlined triangle standing on its tip, in the approach lane before the give-way line (SSV Anhang 2 figure)",
+   "length": {"value": 4.5, "verified": false}, "base": {"value": 1.5, "verified": false}, "outline_width": {"value": 0.20, "verified": false},
+   "distance_from_give_way_line": {"value": 3.0, "verified": false},
+   "where": "may announce the give-way line on main roads and important minor roads (SSV Art. 75 Abs. 4); no longer used in Basel (BS)",
+   "rule_here": "at roundabout entries of main roads only",
+   "sources": ["SSV", "BS"]
+  },
+  "6.15": {
+   "name": {"de": "Randlinie", "it": "linea di margine"},
+   "kind": "longitudinal", "colour": "white", "width": 0.15, "pattern": "solid",
+   "offset_from_edge": {"value": 0.225, "used": 0.30, "verified": true, "sources": ["BE_HB"], "note": "BE_HB: 22.5 cm from the carriageway edge to the axis of the line; here 0.30 m so the paint stays 0.2 m inside the smoothed edge of the road mesh"},
+   "min_carriageway_width": {"value": 4.5, "verified": true, "sources": ["BE_HB"]},
+   "with_centre_line_min_width": {"value": 6.0, "verified": true, "sources": ["BE_HB"]},
+   "where": ["outside villages, on main roads and priority roads (BERN_CITY, BS, BE_HB: between the place-name signs)", "inside villages only at narrowings, poorly visible islands, where no kerb shows the edge (BERN_CITY, LU)", "none along cycle lanes and pedestrian crossings (BERN_CITY)", "at roundabouts on the inner edge (BS)", "broken 50/50 along side areas: forecourts, entrances, field tracks (LU)", "ends 5 m before and starts 5 m after a junction whose give-way line lies in the carriageway edge alignment (BE_HB 40)"],
+   "sources": ["SSV", "BE_HB", "BERN_CITY", "LU", "BS"]
+  },
+  "6.16": {
+   "name": {"de": "Führungslinie", "it": "linea di guida"},
+   "kind": "longitudinal", "colour": "white", "width": 0.15,
+   "pattern": {"value": [0.5, 0.5], "verified": true, "sources": ["ZH", "BE_HB", "BS", "BERN_CITY", "LU"]},
+   "where": ["6.16.1: across wide mouths after the give-way / stop line, in the alignment of the main road's edge (SSV Art. 76 Abs. 2a, BERN_CITY 7.)", "6.16.2/6.16.3: the course of a main road changing direction at a junction", "along side areas that form no junction with the carriageway (Art. 76 Abs. 2c)", "roundabout exits (BS)", "never at junctions with the legal right of way (SSV Art. 76 Abs. 3)"],
+   "sources": ["SSV", "BS", "BERN_CITY", "LU", "ZH"]
+  },
+  "6.17": {
+   "name": {"de": "Fussgängerstreifen", "it": "passaggio pedonale", "fr": "passage pour piétons"},
+   "kind": "transverse", "colour": "yellow",
+   "bar_width": {"value": 0.50, "verified": true, "sources": ["ZH", "BE_HB", "BS"]},
+   "bar_gap": {"value": 0.50, "verified": true, "sources": ["BE_HB"], "note": "ZH: 0.30-0.50 m"},
+   "bar_length": {"normal": 4.0, "reduced": 3.0, "verified": true, "sources": ["ZH", "BS", "BE_HB"], "note": "ZH/BS: 4.00 m, 3.00 m in special cases on residential streets; BE_HB: 3.00 m normal, 4.00 m exception. Used: 4.0 on main roads, 3.0 on minor roads"},
+   "min_bars_per_lane": {"value": 3, "verified": true, "sources": ["ZH"]},
+   "edge_margin": {"value": "equal on both sides, at least 0.20 m", "verified": true, "sources": ["BE_HB"], "note": "BE_HB: 'Der Abstand vom Rand zum ersten Balken sollte auf beiden Seiten gleich sein'; the 0.20 m minimum is this project's"},
+   "orientation": "bars parallel to the kerb, the crossing square to the road axis, both edges parallel (SSV Art. 77 Abs. 1, BERN_CITY 13., BS)",
+   "lines_stop_before": {"value": 0.5, "verified": false, "note": "BERN_CITY: the Leitlinie up to 0.20 m before the crossing; 0.5 m kept from v2.7"},
+   "where": ["where OSM maps highway=crossing with crossing=marked/zebra/uncontrolled/traffic_signals or crossing:markings=zebra/yes", "not in 30 zones except near schools and homes (UVEK ordinance SR 741.213.3 Art. 4 Abs. 2, BE_T30), never in meeting zones: kept where OSM maps one", "set back at least 5 m from the junction on roads that yield (BE_HB 24)"],
+   "sources": ["SSV", "ZH", "BE_HB", "BS", "BERN_CITY", "BE_T30", "LU_T30"]
+  },
+  "6.18": {"name": {"de": "Halteverbotslinie (vor Fussgängerstreifen)", "it": "linea di divieto di fermata"}, "kind": "longitudinal", "colour": "yellow", "width": 0.15, "length": {"min": 10.0, "verified": true, "sources": ["SSV", "BS"]}, "offset_from_right_edge": {"min": 0.5, "max": 1.0, "verified": true, "sources": ["SSV", "BS"]}, "where": "before crossings on the right edge (both edges on one-way streets), not at junctions, cycle lanes, parking or stopping bays (SSV Art. 77 Abs. 2); BE_HB: only in exceptional cases", "used_here": false, "note": "the orthophoto shows almost none in the area (18 yellow lines traced in 208 km)", "sources": ["SSV", "BS", "BE_HB"]},
+  "6.19": {"name": {"de": "Längsstreifen für Fussgänger"}, "kind": "area", "colour": "yellow", "width": 0.15, "hatch_angle": 45.0, "used_here": false, "sources": ["SSV", "BS", "BE_HB"]},
+  "6.20": {
+   "name": {"de": "Sperrfläche", "it": "zona di presegnalamento / isola spartitraffico dipinta"},
+   "kind": "area", "colour": "white",
+   "outline_width": {"value": 0.15, "verified": true, "sources": ["BS"]},
+   "bar_width": {"value": 0.50, "verified": true, "sources": ["BE_HB", "BS"]},
+   "bar_gap": {"normal": 1.0, "long_or_wide": 2.5, "verified": true, "sources": ["BE_HB", "BS"]},
+   "bar_angle_to_axis": {"value": 30.0, "verified": true, "sources": ["BE_HB", "BS"]},
+   "outline_clearance": {"value": 0.05, "verified": true, "sources": ["BE_HB"]},
+   "where": ["optical guidance and channelling, not to be driven on (SSV Art. 78)", "inside villages as a rule none (BE_HB, BERN_CITY); at central islands none, the longitudinal marking stops at the island (LU)", "rule here: the splitter islands of roundabout arms where the island is painted only (the road mesh is asphalt between the entry and the exit)"],
+   "sources": ["SSV", "BE_HB", "BS", "LU", "BERN_CITY"]
+  },
+  "6.21": {"name": {"de": "Zickzacklinie", "it": "linea a zig-zag (fermata bus)"}, "kind": "longitudinal", "colour": "yellow", "width": 0.15, "band_width": {"value": 2.5, "verified": true, "sources": ["LU"]}, "angle": {"value": 45.0, "verified": true, "sources": ["LU"]}, "length": {"note": "after the steering geometry of the bus (BS); not verified", "verified": false}, "where": "public transport stops (SSV Art. 79a Abs. 3); always on cantonal roads in Lucerne", "used_here": false, "note": "the stops of OSM lie beside the road, often at bays the survey does not show: not drawn", "sources": ["SSV", "LU", "BS"]},
+  "6.22": {"name": {"de": "Parkverbotslinie"}, "kind": "longitudinal", "colour": "yellow", "width": 0.15, "used_here": false, "sources": ["SSV", "BS"]},
+  "6.23": {"name": {"de": "Parkverbotsfeld"}, "kind": "area", "colour": "yellow", "used_here": false, "sources": ["SSV"]},
+  "6.25": {"name": {"de": "Halteverbotslinie"}, "kind": "longitudinal", "colour": "yellow", "width": 0.15, "offset_from_kerb": {"value": 1.0, "min": 0.5}, "used_here": false, "sources": ["SSV", "BS"]},
+  "6.26": {"name": {"de": "Aufstellbereich für Radfahrer"}, "kind": "area", "colour": "yellow", "used_here": false, "sources": ["SSV", "BE_HB"]},
+  "parking_bays": {"name": {"de": "Parkfelder (Art. 79)"}, "kind": "area", "colour": "white (blue zone: blue, reserved: yellow)", "width": 0.10, "used_here": false, "note": "where the bays are is not known from open data", "sources": ["SSV", "BE_HB"]},
+  "zone_30_text": {
+   "name": {"de": "Besondere Markierung «ZONE 30» / «30»", "it": "scritta ZONA 30"},
+   "kind": "text", "colour": "white", "text": ["30", "ZONE"],
+   "where": "'ZONE 30' only together with the zone sign at the zone entrance; '30' alone may repeat it inside large zones (UVEK directive on special markings, BE_T30, BS)",
+   "layout": "'30' nearer the driver, 'ZONE' beyond it (BS figure)",
+   "digit_height": {"value": 2.5, "verified": false}, "letter_height": {"value": 1.6, "verified": false},
+   "distance_from_gate": {"value": 6.0, "verified": false},
+   "sources": ["BE_T30", "BS", "LU"]
+  },
+  "right_of_way": {
+   "name": {"de": "Verzweigung mit Rechtsvortritt"},
+   "rule": "no give-way or stop line, no guide line (SSV Art. 76 Abs. 3); the centre line interrupted in the junction area; edge lines drawn into the side road to the end of the radius (BE_HB 33: here they end at the mouth)",
+   "sources": ["SSV", "BE_HB"]
+  },
+  "roundabout": {
+   "name": {"de": "Kreisverkehrsplatz", "it": "rotatoria"},
+   "elements": "give-way line 6.13 at every entry, guide line 6.16 at the exits, edge line 6.15 on the inner edge; no lane line on the ring (LU, BS, BE_HB 27)",
+   "pedestrian_crossings": "where OSM maps them on the arms (usually one car length back from the ring)",
+   "splitter_islands": "physical islands keep their kerb; a painted island is a Sperrfläche 6.20",
+   "sources": ["LU", "BS", "BE_HB"]
+  },
+  "narrow_roads": {
+   "rule": "no centre line under 5.5 m inside / 5.8 m outside villages, no edge line under 4.5 m, no give-way line on mouths under 4 m (a guide line instead), no 6.12 under 5 m",
+   "sources": ["BE_HB", "LU", "BERN_CITY", "BS"]
+  },
+  "zone_30": {
+   "rule": "no markings that stress the direction of travel (centre line, edge lines, cycle lanes) on the zone's own streets; legal right of way at junctions; no pedestrian crossings except near schools and homes; 'ZONE 30' at the gates",
+   "sources": ["BE_T30", "LU_T30", "BS"]
+  },
+  "unpaved": {"rule": "no markings on roads without a hard surface (SSV Art. 75 Abs. 2 and 4: stop and give-way lines are not drawn there)", "sources": ["SSV"]}
+ }
+}
