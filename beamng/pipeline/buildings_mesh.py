@@ -793,6 +793,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
 
 DETAIL_TILE, PV_TILE = 512.0, 1024.0             # m
 EAVE_DZ, EAVE_MIN = 0.05, 0.5             # m
+EAVE_WALL_R, EAVE_WALL_DZ = 0.8, 1.2      # m: a wall top this near under an eave (v3.0)
 GUTTER_W, GUTTER_H, GUTTER_DROP = 0.12, 0.10, 0.03
 DOWNPIPE = 0.08
 PIPE_RUN, PIPES_MAX = 4.0, 4               # m of eaves for a downpipe; downpipes a roof at most
@@ -912,8 +913,29 @@ def components(P):
     return lab[:k]
 
 
-def house_details(W, T, ground, gwr, rep):
-    """{material: [triangles]} of the details of the houses of one building shape (world coordinates W)."""
+def wall_tops(W, V_parts):
+    """Points (k, 3) every 0.5 m along the top edges of the near-vertical faces of a building shape (its walls):
+    a gutter hangs only where one of them is just under the eave (v3.0)."""
+    pts = []
+    for idx in V_parts:
+        t = W[idx[:, 0]].reshape(-1, 3, 3)
+        nrm = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+        vert = np.abs(nrm[:, 2]) < 0.2 * np.maximum(np.linalg.norm(nrm, axis=1), 1e-12)
+        for tri in t[vert]:
+            o = np.argsort(-tri[:, 2])
+            a, b = tri[o[0]], tri[o[1]]
+            if a[2] - b[2] > 0.3:
+                pts.append(a[None])
+                continue
+            n = max(int(np.linalg.norm(b[:2] - a[:2]) / 0.5), 1)
+            f = np.linspace(0, 1, n + 1)[:, None]
+            pts.append(a + f * (b - a))
+    return np.concatenate(pts) if pts else np.zeros((0, 3))
+
+
+def house_details(W, T, ground, gwr, rep, walls=None):
+    """{material: [triangles]} of the details of the houses of one building shape (world coordinates W).
+    walls: wall_tops() of the shape (v3.0: no gutter where no wall stands under the eave)."""
     out = {}
 
     def add(m, tris):
@@ -977,8 +999,23 @@ def house_details(W, T, ground, gwr, rep):
                 break
         chains.append((verts, edges))
     pipes = {}
+    from scipy.spatial import cKDTree
+    wtree = cKDTree(walls[:, :2]) if walls is not None and len(walls) else None
     for verts, edges in chains:
         f = F[edges[0]]
+        if wtree is not None:
+            # v3.0: the eave over a wall (a gutter and its downpipes hung in the air where a roof face of the survey
+            # stood out beyond the walls, or over a lower roof: screenshot 33)
+            mid = (X[E[edges, 0]] + X[E[edges, 1]]) / 2
+            hit = 0
+            for q in mid:
+                near = wtree.query_ball_point(q[:2], EAVE_WALL_R)
+                hit += any(-EAVE_WALL_DZ < walls[j, 2] - q[2] < 0.3 for j in near)
+            if hit < 0.6 * len(mid):
+                rep["eaves_in_air"] = rep.get("eaves_in_air", 0) + 1
+                if len(rep.setdefault("eaves_in_air_at", [])) < 20:
+                    rep["eaves_in_air_at"].append([round(float(v), 1) for v in mid[len(mid) // 2]])
+                continue
         m = "mp_house_copper" if copper[lab[f]] else "mp_house_zinc"
         run = [0]
         for i in range(1, len(edges) + 1):
@@ -1127,7 +1164,8 @@ def house_details_step(root, report=None):
         V, _, _, _, parts, _ = optimize_level.parse(zi.read(sn).decode("utf-8"))
         W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
         T = roof_parts(V, parts)
-        det = house_details(W, T, ground, gwr, rep)
+        walls = wall_tops(W, [idx for m, idx in parts if "roof" not in m])
+        det = house_details(W, T, ground, gwr, rep, walls)
         rep["shapes"] += 1
         for m, tris in det.items():
             if not tris:
