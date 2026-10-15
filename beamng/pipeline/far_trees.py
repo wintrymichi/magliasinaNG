@@ -51,7 +51,9 @@ BB_PX = 100               # detail size of the imposter (any size under MESH_PX:
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
       "BB::DIM": 256, "BB::INCLUDE_POLES": 1}
 CARD_SHADE = (0.78, 1.0)   # vertex colour of each leaf card (the shade colour is the material's at the top)
-PATH_GAP = 0.5            # m: no far tree whose crown comes closer than this to a path
+PATH_GAP = 0.5            # m: no far tree whose crown comes closer than this to a path (half its crown: v3.0)
+PATH_CROWN = 0.5          # v3.0: the share of the crown that must stay off the path (the whole crown left a bare
+                          # band of a crown's width along every path in the woods, screenshots 42-45)
 SEED = 61
 
 
@@ -328,11 +330,11 @@ def build(level_dir, level_name, cols):
 
 
 def select(names_, radius, dist_path=None, cap=None, h=None, x=None, y=None):
-    """Mask of the far trees kept: none whose crown comes within PATH_GAP m of a path; at most `cap`
+    """Mask of the far trees kept: none whose crown (PATH_CROWN of it) comes within PATH_GAP m of a path; at most `cap`
     (the tallest of every cell of the coarsest grid that is still too many are dropped first)."""
     keep = np.ones(len(names_), bool)
     if dist_path is not None:
-        keep &= dist_path - radius > PATH_GAP
+        keep &= dist_path - PATH_CROWN * radius > PATH_GAP
     if cap is not None and keep.sum() > cap:
         import vegetation
         idx = np.flatnonzero(keep)
@@ -402,7 +404,8 @@ def far_trees_step(root, trees_f=None):
                 and not os.path.basename(n).startswith("italy_guardrails"):        # v2.8: the guard rails
             have += [o["pos"][:2] for o in read_items(zi, n)]
     d_have = cKDTree(np.array(have)).query(xy)[0] if have else np.full(len(xy), 1e9)
-    cand = (d_road > vegetation.NEAR + MARGIN) & (d_path > vegetation.NEAR_PATH + MARGIN) & (d_have > MATCH)
+    # v3.0: from NEAR_PATH of the path surfaces (MARGIN beyond it left a bare band; a tree kept there is matched)
+    cand = (d_road > vegetation.NEAR + MARGIN) & (d_path > vegetation.NEAR_PATH) & (d_have > MATCH)
     print("trees measured %d: road and path surfaces %d / %d points, forest items %d; far tree candidates %d"
           % (len(xy), len(road), len(path), len(have), int(cand.sum())))
     far = {k: v[cand] for k, v in t.items()}
@@ -411,6 +414,11 @@ def far_trees_step(root, trees_f=None):
     try:
         import forest_fill, water                                           # v3.0: the woods outside the survey
         fill = forest_fill.fill(measured, water.lake_level()) if FILL else None
+        if FILL:                                                        # v3.0: and in the gaps of the survey's woods
+            all_xy = np.concatenate([np.column_stack([measured["x"], measured["y"]]),
+                                     np.array(have).reshape(-1, 2)])
+            gap = forest_fill.gap_fill(measured, all_xy, road, path, water.lake_level())
+            fill = {k: np.concatenate([fill[k], gap[k]]) for k in fill}
         items = vegetation.far_items(far, tmp, LEVEL_NAME, fill)
         md_name = f"{lv}/art/forest/managedItemData.json"
         managed = json.loads(zi.read(md_name)) if md_name in zi.NameToInfo else {}

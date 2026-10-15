@@ -137,6 +137,67 @@ def fill(measured, lake_level=None, spacing=SPACING):
             "dist_path": np.full(n, 1e9), "conifer": conifer}
 
 
+GAP_SPACING = 8.0          # m: the jittered grid of the gap fill (v3.0)
+GAP_FREE = 5.5             # m: no tree (measured, in the level or far) this close to a tree of the gap fill
+GAP_ROAD = 10.0            # m from a road surface
+GAP_PATH = 4.0             # m from a path surface
+GAP_LC = ("bosco_fitto", "altro_bosco", "pascolo_boscato_fitto")
+
+
+def gap_fill(measured, trees_xy, road_xy, path_xy, lake_level=None, spacing=GAP_SPACING):
+    """v3.0: far trees in the gaps of the woods inside the survey. The trees there are the tops found in the
+    canopy model, and near the roads and paths (where vegetation.thin keeps them all and no far tree is
+    added) they stood a crown or two apart on bare forest floor, a sparse band along every road and path
+    through the woods with the dense far trees beyond it (screenshot 42). Here a tree goes on every point of
+    a jittered grid of `spacing` m in the forest of the cadastral land cover (GAP_LC) with no tree within
+    GAP_FREE m (trees_xy: every tree measured, in the level or far), GAP_ROAD m from the road surfaces and
+    GAP_PATH m from the path surfaces; its height, crown and colour are those of the nearest measured tree.
+    Returns the fields of fill()."""
+    from scipy.spatial import cKDTree
+    from landcover import CODE
+    lc = np.load(os.path.join(WORK, "landcover05.npz"))
+    a, x_min, y_max, res = lc["a"], float(lc["x_min"]), float(lc["y_max"]), float(lc["res"])
+    rng = np.random.default_rng(SEED + 1)
+    gx = np.arange(TER_X0 + EDGE, TER_X1 - EDGE, spacing)
+    gy = np.arange(TER_Y0 + EDGE, TER_Y1 - EDGE, spacing)
+    X, Y = np.meshgrid(gx, gy)
+    x = X.ravel() + rng.uniform(-JITTER, JITTER, X.size) * spacing
+    y = Y.ravel() + rng.uniform(-JITTER, JITTER, X.size) * spacing
+    r = np.floor((y_max - y) / res).astype(np.int64)
+    c = np.floor((x - x_min) / res).astype(np.int64)
+    ok = (r >= 0) & (r < a.shape[0]) & (c >= 0) & (c < a.shape[1])
+    ok[ok] = np.isin(a[r[ok], c[ok]], [CODE[k] for k in GAP_LC])
+    x, y = x[ok], y[ok]
+    P = np.column_stack([x, y])
+    keep = cKDTree(trees_xy).query(P)[0] > GAP_FREE if len(trees_xy) else np.ones(len(P), bool)
+    if len(road_xy):
+        keep &= cKDTree(road_xy).query(P)[0] > GAP_ROAD
+    if len(path_xy):
+        keep &= cKDTree(path_xy).query(P)[0] > GAP_PATH
+    x, y = x[keep], y[keep]
+    zf = terrain_sampler()
+    z = zf(x, y)
+    keep = np.ones(len(x), bool) if lake_level is None else z > lake_level + LAKE_GAP
+    dzx = (zf(x + 3.0, y) - zf(x - 3.0, y)) / 6.0
+    dzy = (zf(x, y + 3.0) - zf(x, y - 3.0)) / 6.0
+    keep &= np.degrees(np.arctan(np.hypot(dzx, dzy))) < MAX_SLOPE
+    x, y, z = x[keep], y[keep], z[keep]
+    n = len(x)
+    woods = np.flatnonzero(np.isin(measured["lc"], [CODE[k] for k in GAP_LC]) & (measured["h"] >= MIN_H))
+    if len(woods) < 100:
+        woods = np.flatnonzero(measured["h"] >= MIN_H)
+    near = woods[cKDTree(np.column_stack([measured["x"][woods], measured["y"][woods]])).query(np.column_stack([x, y]))[1]]
+    h = measured["h"][near] * rng.uniform(0.85, 1.05, n)
+    d = np.maximum(measured["d"][near], spacing)
+    rgb = measured["rgb"][near].astype(np.float32)
+    z0, z1, p0, p1 = CONIFER_Z
+    conifer = rng.uniform(0, 1, n) < p0 + (p1 - p0) * np.clip((z - z0) / (z1 - z0), 0, 1)
+    print("forest gap fill: %d far trees in the gaps of the woods of the survey (grid %.0f m)" % (n, spacing))
+    return {"x": x, "y": y, "z": z, "h": h, "d": d, "sharp": np.where(conifer, 0.3, 0.05),
+            "rgb": rgb, "lc": np.full(n, CODE["none"], measured["lc"].dtype),
+            "dist_path": np.full(n, 1e9), "conifer": conifer}
+
+
 def layer_classes(X, Y):
     """WorldCover class at local points X, Y (any shape; 0 where there is none), for the terrain layers."""
     wc = worldcover_grid()
