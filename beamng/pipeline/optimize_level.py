@@ -46,7 +46,7 @@ KEEP_DETAIL = ("backdrop", "props")   # whole-map shapes
 MAX_TILE_RADIUS = 800.0               # m: a larger shape (one mesh over the whole map) is always drawn
 # groups of tile shapes (MissionGroup/<group>/items.level.json) merged MERGE x MERGE
 MERGE_GROUPS = ("buildings", "walls", "roads/surfaces", "roads/guardrails", "roads/fences", "railway",
-                "level_objects/Water", "level_objects/vegetation/vineyards")
+                "level_objects/Water")       # v3.0: not the vineyards (shapes of 96 m with their own detail levels)
 TILE = 128.0
 LEVEL_README = os.path.join(os.path.dirname(os.path.abspath(__file__)), "README_livello.md")
 
@@ -81,9 +81,10 @@ def category_dist(rel):
 
 
 def is_pipeline(text):
-    """A shape of the pipeline this step may rewrite; one with an imposter detail level (far_trees.py)
-    keeps its own detail sizes."""
-    return "magliaso_pura pipeline" in text[:400] and "<triangles" in text and "bb_autobillboard" not in text
+    """A shape of the pipeline this step may rewrite; one with an imposter detail level (far_trees.py) or
+    with several (v3.0, vineyards.py) keeps its own detail sizes."""
+    return ("magliaso_pura pipeline" in text[:400] and "<triangles" in text and "bb_autobillboard" not in text
+            and text.count("<geometry ") == 1)
 
 
 def optimize_dae(members, rel):
