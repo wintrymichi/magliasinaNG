@@ -4,31 +4,46 @@
 - terrain: the heights of the .ter, draped with the orthophoto (WORK/ortho.tif); around it a coarse
   terrain for the horizon and the backdrop mesh of the level;
 - the meshes of the level (roads, bridges, road paint, walls, guardrails, fences, buildings, poles
-  and signs) in the colours of their materials, vertex colours where the DAE has them; vanilla
-  shapes (street lights, furniture) as grey posts;
+  and signs) in the colours of their materials, vertex colours where the DAE has them;
+- textured (Renderer(textured=True)): the materials with textures in the level folder drawn with them,
+  and (v3.0) the ones on textures of the game (Italy's asphalt, stone wall, cobbles, concrete, the overlays
+  of the roads' wear) with procedural stand-ins of the same kind and scale (render3d_textures.py); the
+  colour factors of the materials, their opacity (translucent overlays blended, alpha-tested cut-outs) and
+  their sides (one, or both where doubleSided) as the game has them;
+- v3.0: the game's own models (street lights, wooden poles, the street life's clutter) and the guard
+  rail modules of the forest files as proxies of their size, placed with their position, rotation and
+  scale (render3d_models.py); up to v2.8 grey 4 m posts, and no guard rails;
 - trees and shrubs of the forest files as cones / crowns of their size; the lake;
-- sun with shadows, sky and haze.
-Not a picture of the game (no game textures): a check of the geometry and of what is where.
+- sun with soft shadows, a sky dome brighter towards the horizon and the sun, haze.
+Not a picture of the game: a check of the geometry, of the surfaces and of what is where.
 
     with Renderer(level_dir) as r:
         r.shot(Camera.look((x, y, z), (tx, ty, tz)), "view.jpg")
         r.shot(Camera.top(x0, y0, x1, y1, px_per_m=1.0), "tile.jpg")
 Needs: pip install playwright (Chromium: PLAYWRIGHT_BROWSERS_PATH or `playwright install chromium`).
 """
-import base64, glob, json, math, os, re
+import base64, glob, json, math, os, re, zlib
 import numpy as np
 from config import WORK
+import render3d_models
+import render3d_textures
 
 THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
 THREE = os.path.join(WORK, "three.module.js")
 ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
-SKY = (0.70, 0.79, 0.88)
+SKY = (0.76, 0.82, 0.89)                # sRGB: the horizon, the haze and the background of the top views
+SKY_ZENITH = (0.40, 0.57, 0.80)         # sRGB, the top of the sky dome
+SUN_GLOW = (0.30, 0.27, 0.20)           # linear, added around the sun
+HAZE = (350.0, 10000.0)                 # m, linear fog from, to
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
 GROUPS = ("roads/surfaces", "roads/markings", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
           # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
           "level_objects/Water", "level_objects/vegetation/vineyards")
+# the translucent overlays of a road from the bottom up (road_wear.LAYER): drawn in this order, each a little
+# further towards the camera (polygon offset)
+OVERLAYS = ("variation", "cracks", "track", "edge")
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [
@@ -56,8 +71,8 @@ MAT_COLORS = [
     ("house_dish", (0.86, 0.86, 0.84)),
 ]
 CONIFER = ("fir", "pine", "spruce", "larch", "cypress", "conifer")
-# m, height at scale 1 of the game models drawn as posts (measured on the cantonal road: dati/lamps.json and
-# the wooden poles of props.py); the others are drawn 4 m high
+# m, height at scale 1 of the game models drawn as posts up to v2.8 (measured on the cantonal road: dati/lamps.json
+# and the wooden poles of props.py); v3.0: render3d_models draws them, the models it does not know are 4 m posts
 POST_HEIGHT = {"italy_light_single": 8.75, "electric_pole_wood_old_01": 10.05}
 # sRGB colour of every terrain layer (terrain.TERRAIN_MATS; the verges as their meadow): the ground where
 # there is no orthophoto in WORK (a level checked on a machine without the downloads, v2.8), when the level
@@ -106,6 +121,23 @@ function geom(A, pos, extra) {
   g.setAttribute('position', new THREE.BufferAttribute(A(pos), 3));
   return g;
 }
+function skyDome(d, at) {                           // the sky: horizon to zenith, brighter around the sun
+  const g = new THREE.SphereGeometry(d.r, 64, 32);
+  g.rotateX(Math.PI / 2);
+  const p = g.attributes.position, col = new Float32Array(3 * p.count), v = new THREE.Vector3();
+  const sd = new THREE.Vector3(...d.sunDir);
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).normalize();
+    const t = Math.pow(Math.max(v.z, 0), 0.6), glow = Math.pow(Math.max(v.dot(sd), 0), 10);
+    const dim = v.z < 0 ? 1 + 0.2 * v.z : 1;
+    for (let k = 0; k < 3; k++) col[3 * i + k] = (d.horizon[k] * (1 - t) + d.zenith[k] * t + glow * d.glow[k]) * dim;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors: true, side: THREE.BackSide, fog: false,
+                                                            depthWrite: false, depthTest: false}));
+  m.position.set(...at); m.renderOrder = -10; m.frustumCulled = false;
+  return m;
+}
 window.renderView = async function (url) {
   const buf = await (await fetch(url)).arrayBuffer();
   const hl = new DataView(buf).getUint32(0, true);
@@ -115,6 +147,7 @@ window.renderView = async function (url) {
   scene = new THREE.Scene();
   scene.background = new THREE.Color().setRGB(...H.sky, THREE.SRGBColorSpace);
   if (H.fog) scene.fog = new THREE.Fog(scene.background.clone(), H.fog[0], H.fog[1]);
+  if (H.dome) scene.add(skyDome(H.dome, H.camera.pos));
   const hemi = new THREE.HemisphereLight(0xdfe8f2, 0x6a5a45, H.hemi);
   hemi.position.set(0, 0, 1);
   scene.add(hemi);
@@ -146,7 +179,8 @@ window.renderView = async function (url) {
     g.setAttribute('color', new THREE.BufferAttribute(A(s.col), 3, true));
     if (s.nrm) g.setAttribute('normal', new THREE.BufferAttribute(A(s.nrm), 3));
     else g.computeVertexNormals();
-    const mat = new THREE.MeshLambertMaterial({vertexColors: true, side: THREE.DoubleSide});
+    // v3.0: one side, as in the game, unless the material is double sided
+    const mat = new THREE.MeshLambertMaterial({vertexColors: true, side: s.double === false ? THREE.FrontSide : THREE.DoubleSide});
     if (s.offset) { mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -2; }
     const m = new THREE.Mesh(g, mat);
     m.castShadow = s.cast; m.receiveShadow = true;
@@ -155,19 +189,35 @@ window.renderView = async function (url) {
   for (const s of (H.tsoups || [])) {                // meshes with the textures of their material
     const g = geom(A, s.pos);
     g.setAttribute('uv', new THREE.BufferAttribute(A(s.uv), 2));
-    g.setAttribute('color', new THREE.BufferAttribute(A(s.col), 3, true));
+    if (s.col) g.setAttribute('color', new THREE.BufferAttribute(A(s.col), 3, true));
     g.computeVertexNormals();
-    // one side, as in the game, unless the material is double sided (v2.4)
-    const opt = {map: await getTex(s.tex, s.texInfo), vertexColors: true,
-                 side: s.double ? THREE.DoubleSide : THREE.FrontSide,
-                 roughness: s.rough, metalness: 0.0};
+    // one side, as in the game, unless the material is double sided (v2.4); the colour factor of the
+    // material (linear), its opacity: blended over what is behind (translucent) or cut out (alpha test)
+    const opt = {map: await getTex(s.tex, s.texInfo), vertexColors: !!s.col,
+                 side: s.double ? THREE.DoubleSide : THREE.FrontSide, roughness: s.rough, metalness: 0.0};
+    if (s.color) opt.color = new THREE.Color().setRGB(...s.color);
     if (s.nrm) { opt.normalMap = await getTex(s.nrm, s.nrmInfo); opt.normalScale = new THREE.Vector2(1, 1); }
-    if (s.alpha) opt.alphaTest = 0.43;
+    if (s.blend) { opt.transparent = true; opt.opacity = s.opacity; opt.depthWrite = false; }
+    else if (s.alpha) opt.alphaTest = s.alpha;
     const mat = new THREE.MeshStandardMaterial(opt);
     mat.userData.cached = true;
-    if (s.offset) { mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -2; }
+    if (s.offset) { mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -2 * s.offset; }
     const m = new THREE.Mesh(g, mat);
-    m.castShadow = !s.alpha; m.receiveShadow = true;
+    m.renderOrder = s.blend ? 10 + s.offset : 0;
+    m.castShadow = !s.alpha && !s.blend; m.receiveShadow = true;
+    scene.add(m);
+  }
+  for (const md of (H.models || [])) {               // the game's models: proxies, instanced (v3.0)
+    const g = geom(A, md.pos);
+    g.setAttribute('normal', new THREE.BufferAttribute(A(md.nrm), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(A(md.col), 3, true));
+    const mat = md.shiny ? new THREE.MeshPhongMaterial({vertexColors: true, shininess: 40, specular: 0x4a4a4a})
+                         : new THREE.MeshLambertMaterial({vertexColors: true});
+    const m = new THREE.InstancedMesh(g, mat, H.arrays[md.m].n / 16);
+    m.instanceMatrix = new THREE.InstancedBufferAttribute(A(md.m), 16);
+    m.instanceColor = new THREE.InstancedBufferAttribute(A(md.c), 3);
+    m.castShadow = true; m.receiveShadow = true;
+    m.frustumCulled = false;
     scene.add(m);
   }
   for (const inst of H.instances) {
@@ -222,11 +272,19 @@ def srgb_to_lin(c):
     return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
 
 
-def mat_color(name):
+def lin_to_srgb(c):
+    c = np.clip(np.asarray(c, np.float64), 0, 1)
+    return np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+
+
+def mat_color(name, factor=None):
+    """sRGB colour of a material without texture: MAT_COLORS, else its colour factor (linear, v3.0), else grey."""
     n = name.lower()
     for k, c in MAT_COLORS:
         if k in n:
             return c
+    if factor is not None and len(factor) >= 3:
+        return tuple(float(v) for v in lin_to_srgb(factor[:3]))
     return (0.6, 0.6, 0.6)
 
 
@@ -267,6 +325,9 @@ class Camera(dict):
         return c[0] - near_r, c[1] - near_r, c[0] + near_r, c[1] + near_r
 
 
+_TRIANGLES = re.compile(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', re.S)
+
+
 def _read_dae_parts(path):
     """[(material, triangles (k, 3, 3), uvs (k, 3, 2) or None, vertex colours (k, 3, 3) or None)] of a DAE."""
     s = open(path, encoding="utf-8").read()
@@ -283,7 +344,7 @@ def _read_dae_parts(path):
     C = arr("g-ca")
     C = C.reshape(-1, 4) if C is not None else None
     out = []
-    for m in re.finditer(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', s, re.S):
+    for m in _TRIANGLES.finditer(s):
         nin = m.group(2).count("<input")
         idx = np.array(m.group(3).split(), np.int64).reshape(-1, nin)
         t = V[idx[:, 0]].reshape(-1, 3, 3)
@@ -293,28 +354,33 @@ def _read_dae_parts(path):
     return out
 
 
-def _read_dae(path):
+def _read_dae(path, factors=None):
     """Triangles (k, 3, 3) float64 in the DAE frame, their sRGB vertex colours (k, 3, 3) (from the
-    material or the vertex colours) and the normals of their corners (k, 3, 3) as the DAE has them."""
+    material or the vertex colours), the normals of their corners (k, 3, 3) as the DAE has them and
+    the material of every triangle (k,). factors: {material: colour factor} for the materials
+    MAT_COLORS does not know (v3.0)."""
     s = open(path, encoding="utf-8").read()
+    factors = factors or {}
 
     def arr(i):
         m = re.search(r'<float_array id="%s" count="\d+">([^<]*)</float_array>' % i, s)
         return np.array(m.group(1).split(), np.float64) if m else None
     V = arr("g-pa")
+    empty = (np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32),
+             np.zeros(0, object))
     if V is None:
-        return np.zeros((0, 3, 3)), np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32)
+        return empty
     V = V.reshape(-1, 3)
     C = arr("g-ca")
     C = C.reshape(-1, 4) if C is not None else None
     N = arr("g-na")
     N = N.reshape(-1, 3) if N is not None else None
-    tris, cols, nrms = [], [], []
-    for m in re.finditer(r'<triangles material="([^"]*)-mat" count="\d+">(.*?)<p>([^<]*)</p></triangles>', s, re.S):
+    tris, cols, nrms, mats = [], [], [], []
+    for m in _TRIANGLES.finditer(s):
         nin = m.group(2).count("<input")
         idx = np.array(m.group(3).split(), np.int64).reshape(-1, nin)
         t = V[idx[:, 0]].reshape(-1, 3, 3)
-        base = np.array(mat_color(m.group(1)))
+        base = np.array(mat_color(m.group(1), factors.get(m.group(1))))
         if C is not None and nin > 3:
             col = C[idx[:, 3], :3].reshape(-1, 3, 3) * base[None, None] / max(base.max(), 1e-6) \
                 if "bld" not in m.group(1) else C[idx[:, 3], :3].reshape(-1, 3, 3)
@@ -323,9 +389,21 @@ def _read_dae(path):
         tris.append(t)
         cols.append(np.asarray(col, np.float32))
         nrms.append(N[idx[:, 1]].reshape(-1, 3, 3) if N is not None and nin > 1 else np.zeros(t.shape))
+        mats.append(np.full(len(t), m.group(1), object))
     if not tris:
-        return np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32), np.zeros((0, 3, 3), np.float32)
-    return np.concatenate(tris).astype(np.float32), np.concatenate(cols), np.concatenate(nrms).astype(np.float32)
+        return empty
+    return (np.concatenate(tris).astype(np.float32), np.concatenate(cols), np.concatenate(nrms).astype(np.float32),
+            np.concatenate(mats))
+
+
+def _frame(o):
+    """(3, 3) rows: the object's local x, y, z axes in the world, times its scale; None for no rotation and
+    scale 1. BeamNG reads the rows of rotationMatrix as the object's axes (bng.rot_local_x_to)."""
+    R = np.asarray(o.get("rotationMatrix", [1, 0, 0, 0, 1, 0, 0, 0, 1]), np.float64).reshape(3, 3)
+    s = np.broadcast_to(np.asarray(o.get("scale", 1.0), np.float64).ravel(), (3,)) \
+        if np.size(o.get("scale", 1.0)) in (1, 3) else np.ones(3)
+    M = R * s[:, None]
+    return None if np.allclose(M, np.eye(3)) else M
 
 
 class Level:
@@ -344,14 +422,21 @@ class Level:
         self.n = n
         self.ter_path = path
         self.q = np.memmap(path, "<u2", "r", offset=5, shape=(n, n))          # row 0 = south
-        self.statics = []                                                      # (group, shape, position)
+        self.statics = []                                                      # (group, shape, position, frame)
+        models = {}                                                            # model -> [(position, frame)]
         for g in GROUPS + ("level_objects/backdrop",):
             for dp, _, fs in os.walk(os.path.join(lv, "main", "MissionGroup", *g.split("/"))):
                 if "items.level.json" in fs:
                     for o in self._read(os.path.join(dp, "items.level.json")):
                         if o.get("class") == "TSStatic" and "shapeName" in o:
-                            self.statics.append((g, o["shapeName"], np.array(o.get("position", [0, 0, 0]), float),
-                                                 o.get("scale", [1, 1, 1])))
+                            shape = o["shapeName"]
+                            pos = np.array(o.get("position", [0, 0, 0]), float)
+                            if self.local_shape(shape):
+                                self.statics.append((g, shape, pos, _frame(o)))
+                            elif g != "level_objects/backdrop":
+                                # v3.0: the game's own models, drawn as proxies (render3d_models)
+                                name = render3d_models.name_of(shape)
+                                models.setdefault(name if render3d_models.has(name) else "_post", []).append((pos, _frame(o)))
         self.water = []
         for o in self._items("level_objects/Water"):
             if o.get("class") == "WaterBlock":
@@ -360,11 +445,15 @@ class Level:
                 self.water.append((x - sx / 2, y - sy / 2, x + sx / 2, y + sy / 2, z))
             elif o.get("class") == "WaterPlane":
                 self.water.append((-1e5, -1e5, 1e5, 1e5, o["position"][2]))
-        self.forest = self._forest()
+        self.forest = self._forest(models)
+        # model -> (positions (k, 3), frames (k, 3, 3))
+        self.models = {k: (np.array([p for p, _ in v]), np.array([np.eye(3) if M is None else M for _, M in v]))
+                       for k, v in models.items()}
         self._dae = {}
         self._parts = {}
         self._ortho = None
-        self.materials = {}                                   # name -> first stage + flags, of the level's materials
+        # name -> first stage + flags (v3.0: _blend for the translucent ones, _alphaRef), of the level's materials
+        self.materials = {}
         for dp, _, fs in os.walk(lv):
             for fn in fs:
                 if fn.endswith(".materials.json"):
@@ -373,10 +462,13 @@ class Level:
                             if isinstance(m, dict) and m.get("class") == "Material":
                                 st = dict((m.get("Stages") or [{}])[0])
                                 st["_alpha"] = bool(m.get("alphaTest"))
+                                st["_alphaRef"] = m.get("alphaRef")
                                 st["_double"] = bool(m.get("doubleSided"))
+                                st["_blend"] = bool(m.get("translucent")) and m.get("translucentBlendOp") != "None"
                                 self.materials[m.get("name", k)] = st
                     except (ValueError, OSError):
                         pass
+        self.factors = {k: st.get("baseColorFactor") or st.get("diffuseColor") for k, st in self.materials.items()}
 
     def _read(self, f):
         return [json.loads(l) for l in open(f, encoding="utf-8") if l.strip()]
@@ -385,8 +477,9 @@ class Level:
         f = os.path.join(self.lv, "main", "MissionGroup", *group.split("/"), "items.level.json")
         return self._read(f) if os.path.exists(f) else []
 
-    def _forest(self):
-        """x, y, z, height, crown radius, kind (0 broadleaf, 1 conifer, 2 shrub) of every forest item."""
+    def _forest(self, models):
+        """x, y, z, height, crown radius, kind (0 broadleaf, 1 conifer, 2 shrub) of every forest item; the
+        items that are not plants (v3.0: the guard rail modules, guardrail_mesh.py) go to `models`."""
         b = json.load(open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati",
                                         "asset_bounds.json")))
         size = {}
@@ -398,6 +491,10 @@ class Level:
         rows = []
         for f in glob.glob(os.path.join(self.lv, "forest", "*.forest4.json")):
             name = os.path.basename(f)[:-len(".forest4.json")]
+            if render3d_models.has(name.lower()):
+                for o in self._read(f):
+                    models.setdefault(name.lower(), []).append((np.array(o["pos"], float), _frame(o)))
+                continue
             if name.startswith("italy_guardrails"):          # v2.8: the guard rails, not plants
                 continue
             h, r = size.get(name, (10.0, 3.0))
@@ -458,6 +555,11 @@ class Level:
             return lut[lay[r, c]].T
         return fn
 
+    def local_shape(self, shape):
+        """A shape of the level folder (not one of the game's models)."""
+        pref = "/levels/" + os.path.basename(os.path.normpath(self.lv)) + "/"
+        return shape.lower().startswith(pref.lower()) and os.path.exists(os.path.join(self.lv, *shape.split("/")[3:]))
+
     def parts(self, shape):
         if shape not in self._parts:
             path = os.path.join(self.lv, *shape.split("/")[3:])
@@ -472,24 +574,33 @@ class Level:
         f = os.path.join(self.lv, *ref[len(pref):].split("/"))
         return f if os.path.exists(f) else None
 
+    def game_file(self, ref):
+        """A texture path of the game (another level's, /assets/, /art/): not in the level folder."""
+        pref = "/levels/" + os.path.basename(os.path.normpath(self.lv)) + "/"
+        return isinstance(ref, str) and ref.startswith("/") and not ref.lower().startswith(pref.lower())
+
     def dae(self, shape):
         if shape not in self._dae:
             path = os.path.join(self.lv, *shape.split("/")[3:])
-            self._dae[shape] = _read_dae(path) if os.path.exists(path) else None
+            self._dae[shape] = _read_dae(path, self.factors) if os.path.exists(path) else None
         return self._dae[shape]
 
 
 class Renderer:
     def __init__(self, lv, W=1280, H=720, quality=0.88, textured=False, dae_normals=False):
-        """textured: the meshes whose materials have textures in the level folder (the buildings of
-        v2.2) are drawn with them (colour, opacity, normal map), the rest in the colours of MAT_COLORS.
-        dae_normals: the untextured meshes are lit with the normals of their DAE, as in the game (v2.8:
-        walls.wall_fill_step), instead of one normal per triangle."""
+        """textured: the meshes whose materials have textures are drawn with them (colour, opacity,
+        normal map; v3.0: the game's textures as stand-ins, render3d_textures.py), the rest in the colours
+        of MAT_COLORS. dae_normals: the untextured meshes are lit with the normals of their DAE, as in the
+        game (v2.8: walls.wall_fill_step), instead of one normal per triangle."""
         self.level = Level(lv)
         self.W, self.H, self.quality = W, H, quality
         self.textured = textured
         self.dae_normals = dae_normals
-        self._tex = {}
+        self._tex = {}                         # texture name -> (RGBA bytes, info)
+        self._tex_names = {}                   # (files...) -> texture name
+        self._mats = {}                        # material -> texture() result
+        self._shapes = {}                      # shape -> its textured parts and the rest (_shape)
+        self._geo = {}                         # model -> proxy arrays
         if not os.path.exists(THREE):
             import requests
             open(THREE, "wb").write(requests.get(THREE_URL, timeout=60).content)
@@ -568,137 +679,197 @@ class Renderer:
         tex = np.concatenate([rgb, np.full((tw * th, 1), 255, np.uint8)], 1).astype(np.uint8)
         return dict(pos=pos, uv=uv, idx=idx, tex=tex.reshape(-1), tw=tw, th=th, cast=cast)
 
+    def _shape(self, shape):
+        """The meshes of a level shape, in its own frame, read once: ([(material, texture() of it, triangles,
+        uvs, vertex colours)] of the textured materials, (triangles, sRGB colours, normals, double sided) of
+        the rest)."""
+        if shape in self._shapes:
+            return self._shapes[shape]
+        L = self.level
+        parts = L.parts(shape)
+        L._parts.pop(shape, None)                 # kept here only, as it is drawn (v3.0: memory)
+        tex, rest = [], []
+        for mat, tri, uv, vc in parts:
+            info = self.texture(mat) if self.textured and uv is not None else None
+            if info is None:
+                rest.append((mat, tri, vc))
+                continue
+            col = None if vc is None or np.allclose(vc, 1) else \
+                (srgb_to_lin(np.clip(vc, 0, 1)) * 255 + 0.5).astype(np.uint8)       # linear, as drawn
+            tex.append((mat, info, tri, uv.astype(np.float32), col))
+        flat = None
+        if rest and self.dae_normals:             # the normals of the DAE (read again with them)
+            d = L.dae(shape)
+            names, inv = np.unique(d[3].astype(str), return_inverse=True)
+            keep = np.isin(names, [m for m, _, _ in rest])[inv]
+            dbl = np.array([bool(L.materials.get(m, {}).get("_double")) for m in names])[inv]
+            flat = (d[0][keep], d[1][keep], d[2][keep], dbl[keep])
+            L._dae.pop(shape, None)
+        elif rest:
+            cols = []
+            for mat, tri, vc in rest:
+                base = np.array(mat_color(mat, L.factors.get(mat)), np.float32)
+                if vc is not None:
+                    cols.append(vc * base / max(base.max(), 1e-6) if "bld" not in mat else vc)
+                else:
+                    cols.append(np.broadcast_to(base, tri.shape))
+            flat = (np.concatenate([t for _, t, _ in rest]), np.concatenate(cols).astype(np.float32), None,
+                    np.concatenate([np.full(len(t), bool(L.materials.get(m, {}).get("_double"))) for m, t, _ in rest]))
+        self._shapes[shape] = (tex, flat)
+        return self._shapes[shape]
+
     def _soups(self, x0, y0, x1, y1, origin):
         L = self.level
-        out = {"mesh": ([], [], []), "paint": ([], [], []), "posts": []}
+        out = {}
         far_x0, far_y0, far_x1, far_y1 = x0 - 300, y0 - 300, x1 + 300, y1 + 300
-        for g, shape, pos, scale in L.statics:
+
+        def place(tri, pos, M):
+            return (tri if M is None else tri @ M.astype(np.float32)) + pos
+        for g, shape, pos, M in L.statics:
             if g == "level_objects/backdrop":
-                continue
-            local = shape.startswith("/levels/") and os.path.exists(os.path.join(L.lv, *shape.split("/")[3:]))
-            if not local:
-                if x0 < pos[0] < x1 and y0 < pos[1] < y1:
-                    h = POST_HEIGHT.get(os.path.basename(shape).rsplit(".", 1)[0], 4.0) * float(np.asarray(scale).ravel()[-1])
-                    out["posts"].append((pos, h))
                 continue
             whole = np.allclose(pos, 0)
             if not whole and not (far_x0 < pos[0] < far_x1 and far_y0 < pos[1] < far_y1):
                 continue
-            if self.textured:
-                rest = []
-                for mat, tri, uv, vc in L.parts(shape):
-                    info = self.texture(mat) if uv is not None else None
-                    if info is None:
-                        rest.append(mat)
-                        continue
-                    tw = tri + pos
-                    c = tw.mean(1)
-                    m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
-                    if not m.any():
-                        continue
-                    col = vc[m] if vc is not None else np.ones((int(m.sum()), 3, 3), np.float32)
-                    out.setdefault("textured", []).append((mat, info, tw[m] - origin, uv[m], col))
-                if not rest:
-                    continue
-            d = L.dae(shape)
-            if d is None or not len(d[0]):
+            tex, flat = self._shape(shape)
+            for mat, info, tri, uv, col in tex:
+                tw = place(tri, pos, M)
+                c = tw.mean(1)
+                m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
+                if m.any():
+                    out.setdefault("textured", []).append((mat, info, tw[m] - origin, uv[m],
+                                                           None if col is None else col[m]))
+            if flat is None:
                 continue
-            tri, col, nrm = d
-            if self.textured:                          # the untextured materials of the shape only
-                keep = np.zeros(len(tri), bool)
-                o = 0
-                for mat, t_, uv_, vc_ in L.parts(shape):
-                    if mat in rest:
-                        keep[o:o + len(t_)] = True
-                    o += len(t_)
-                tri, col, nrm = tri[keep], col[keep], nrm[keep]
-            tw = tri + pos
+            tri, col, nrm, dbl = flat
+            tw = place(tri, pos, M)
             c = tw.mean(1)
             m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
             if not m.any():
                 continue
             ground = col[:, 0, 0] < 0
-            if ground.any():                                 # coloured like the terrain around it
+            if (ground & m).any():                           # coloured like the terrain around it
                 col = np.array(col, np.float32)
                 V = tw[ground].reshape(-1, 3)
                 rgb = L.ortho()(V[:, 0], V[:, 1]).T.astype(np.float32) / 255.0
                 col[ground] = np.nan_to_num(rgb, nan=0.4).reshape(-1, 3, 3)
             key = "paint" if "markings" in shape else "mesh"
-            out[key][0].append(tw[m] - origin)
-            out[key][1].append(col[m])
-            out[key][2].append(nrm[m])
+            if nrm is not None and M is not None:
+                nrm = nrm @ M.astype(np.float32)
+            for d in (False, True):
+                k = m & (dbl == d)
+                if k.any():
+                    lst = out.setdefault((key, d), ([], [], []))
+                    lst[0].append(tw[k] - origin)
+                    lst[1].append(col[k])
+                    lst[2].append(None if nrm is None else nrm[k])
         return out
 
-    def texture(self, mat):
-        """(name, info) of the colour texture (with the opacity map as alpha) and of the normal map of a
-        level material, loaded once; None where it has no texture in the level folder."""
-        st = self.level.materials.get(mat)
-        if not st:
-            return None
-        cf = self.level.local_file(st.get("baseColorMap"))
-        if cf is None:
-            return None
+    def _image(self, files, white=False, srgb=True, limit=2048):
+        """Name of the texture made of files (colour, opacity or None) or (None, opacity) with white=True:
+        a white texture with that opacity (the colour comes from the material's factor). Loaded once."""
+        key = (files, white, srgb, limit)
+        if key in self._tex_names:
+            return self._tex_names[key]
         from PIL import Image
-        out = []
-        for key, f, srgb, limit in (("c", cf, True, 2048), ("n", self.level.local_file(st.get("normalMap")), False, 1024)):
-            if f is None:
-                out.append((None, None))
-                continue
-            name = f"{mat}_{key}"
-            if name not in self._tex:
-                im = Image.open(f).convert("RGBA")
-                if key == "c":
-                    of = self.level.local_file(st.get("opacityMap"))
-                    if of:
-                        im.putalpha(Image.open(of).convert("L").resize(im.size))
-                if max(im.size) > limit:
-                    k = limit / max(im.size)
-                    im = im.resize((max(1, int(im.size[0] * k)), max(1, int(im.size[1] * k))), Image.LANCZOS)
-                a = np.asarray(im)[::-1].copy()                            # row 0 = bottom (v = 0)
-                self._tex[name] = (a.tobytes(), {"w": im.size[0], "h": im.size[1], "srgb": srgb})
-            out.append((name, self._tex[name][1]))
-        rough = float(st.get("roughnessFactor", 0.85)) if "roughnessFactor" in st else 0.85
-        return {"tex": out[0][0], "texInfo": out[0][1], "nrm": out[1][0], "nrmInfo": out[1][1],
-                "alpha": bool(st.get("_alpha")), "double": bool(st.get("_double")), "rough": rough}
+        cf, of = files
+        if white:
+            a = Image.open(of).convert("L")
+            im = Image.new("RGBA", a.size, (255, 255, 255, 255))
+            im.putalpha(a)
+        else:
+            im = Image.open(cf).convert("RGBA")
+            if of:
+                im.putalpha(Image.open(of).convert("L").resize(im.size))
+        if max(im.size) > limit:
+            k = limit / max(im.size)
+            im = im.resize((max(1, int(im.size[0] * k)), max(1, int(im.size[1] * k))), Image.LANCZOS)
+        a = np.asarray(im)[::-1].copy()                            # row 0 = bottom (v = 0)
+        name = f"t{len(self._tex)}"
+        self._tex[name] = (a.tobytes(), {"w": im.size[0], "h": im.size[1], "srgb": srgb})
+        self._tex_names[key] = (name, self._tex[name][1])
+        return self._tex_names[key]
+
+    def texture(self, mat):
+        """How a level material is drawn with its textures, loaded once; None where it has none (drawn in
+        its flat colour). The colour map with the opacity map as alpha and the normal map: the level's
+        own, else (v3.0) the stand-ins of the game's (render3d_textures); a material with an opacity map
+        and no colour map (the backs of the sign plates) as its colour factor cut out by it. With the
+        colour factor (linear), the opacity of a translucent material, alpha test, sides."""
+        if mat in self._mats:
+            return self._mats[mat]
+        L = self.level
+        st = L.materials.get(mat)
+        info = None
+        if st:
+            ref = st.get("baseColorMap") or st.get("colorMap")
+            cf, of, nf = L.local_file(ref), L.local_file(st.get("opacityMap")), L.local_file(st.get("normalMap"))
+            white = False
+            if cf is None and L.game_file(ref):
+                cf = render3d_textures.colour(ref)               # its opacity is in the stand-in's alpha
+                if cf:
+                    of, nf = None, render3d_textures.normal(ref)
+            elif cf is None and not ref and of:
+                white = True
+            if cf or white:
+                fac = st.get("baseColorFactor") or st.get("diffuseColor") or [1, 1, 1, 1]
+                fac = [float(v) for v in fac] + [1.0] * (4 - len(fac))
+                name, tinfo = self._image((cf, of), white=white)
+                nname, ninfo = self._image((nf, None), srgb=False, limit=1024) if nf else (None, None)
+                blend = bool(st.get("_blend"))
+                layer = next((k + 1 for k, w in enumerate(OVERLAYS) if w in mat), 0)
+                ref_a = st.get("_alphaRef")
+                info = {"tex": name, "texInfo": tinfo, "nrm": nname, "nrmInfo": ninfo,
+                        "alpha": (float(ref_a) / 255.0 if ref_a else 0.43) if st.get("_alpha") else 0.0,
+                        "double": bool(st.get("_double")), "blend": blend,
+                        "opacity": fac[3] * float(st.get("opacityFactor", 1.0)) if blend else 1.0,
+                        "color": fac[:3], "rough": float(st.get("roughnessFactor", 0.85)),
+                        "offset": 1 + layer if blend else (1 if any(w in mat for w in ("markings", "openings", "plinth"))
+                                                           else 0)}
+        self._mats[mat] = info
+        return info
 
     def _backdrop(self, cx, cy, radius, origin):
+        """The backdrop mesh in the colours of its materials (its texture is the game's)."""
         L = self.level
-        for g, shape, pos, scale in L.statics:
+        for g, shape, pos, M in L.statics:
             if g != "level_objects/backdrop":
                 continue
-            if self.textured:
-                rest = []
-                for mat, tri, uv, vc in L.parts(shape):
-                    info = self.texture(mat) if uv is not None else None
-                    if info is None:
-                        rest.append(mat)
-                        continue
-                    tw = tri + pos
-                    c = tw.mean(1)
-                    m = (c[:, 0] > x0) & (c[:, 0] < x1) & (c[:, 1] > y0) & (c[:, 1] < y1)
-                    if not m.any():
-                        continue
-                    col = vc[m] if vc is not None else np.ones((int(m.sum()), 3, 3), np.float32)
-                    out.setdefault("textured", []).append((mat, info, tw[m] - origin, uv[m], col))
-                if not rest:
-                    continue
             d = L.dae(shape)
             if d is None or not len(d[0]):
                 continue
-            tri, col = d[0], d[1]
-            if self.textured:                          # the untextured materials of the shape only
-                keep = np.zeros(len(tri), bool)
-                o = 0
-                for mat, t_, uv_, vc_ in L.parts(shape):
-                    if mat in rest:
-                        keep[o:o + len(t_)] = True
-                    o += len(t_)
-                tri, col = tri[keep], col[keep]
-            tw = tri + pos
+            tw = (d[0] if M is None else d[0] @ M.astype(np.float32)) + pos
             c = tw.mean(1)
             m = np.hypot(c[:, 0] - cx, c[:, 1] - cy) < radius
-            return tw[m] - origin, col[m]
+            return tw[m] - origin, d[1][m]
         return None
+
+    def _geometry(self, model):
+        """Arrays of a model's proxy: positions, normals (float32) and linear vertex colours (uint8)."""
+        if model not in self._geo:
+            T, N, C = render3d_models.geometry(model)
+            col = (srgb_to_lin(np.repeat(C[:, None], 3, 1)) * 255 + 0.5).astype(np.uint8)
+            self._geo[model] = (T.reshape(-1).astype(np.float32), N.reshape(-1).astype(np.float32), col.reshape(-1))
+        return self._geo[model]
+
+    def _models(self, x0, y0, x1, y1, origin):
+        """[(model, instance matrices (k, 16) column-major, instance colours (k, 3))] of the game's models in
+        the region: the frame of every object (rows: its axes times its scale) and its position."""
+        out = []
+        for model, (P, F) in sorted(self.level.models.items()):
+            m = (P[:, 0] > x0) & (P[:, 0] < x1) & (P[:, 1] > y0) & (P[:, 1] < y1)
+            if not m.any():
+                continue
+            P_, F_ = P[m], F[m]
+            M = np.zeros((len(P_), 16), np.float32)
+            M[:, 0:3], M[:, 4:7], M[:, 8:11] = F_[:, 0], F_[:, 1], F_[:, 2]
+            M[:, 12:15] = P_ - origin
+            M[:, 15] = 1
+            rng = np.random.default_rng(zlib.crc32(model.encode()))
+            var = 0.0 if model in render3d_models.SHINY else 0.06
+            C = np.clip(1 + var * rng.standard_normal((len(P), 1)), 0.8, 1.2)[m] * np.ones(3)
+            out.append((model, M, C.astype(np.float32)))
+        return out
 
     def _trees(self, x0, y0, x1, y1, origin, eye=None):
         """Instances of trunks, cones and crowns; seen from `eye`, the trunks only within 250 m and
@@ -813,26 +984,31 @@ class Renderer:
         for j, (mat, (info, tws, uvs, cols)) in enumerate(groups.items()):
             arrays[f"ts{j}_pos"] = np.concatenate(tws).reshape(-1).astype(np.float32)
             arrays[f"ts{j}_uv"] = np.concatenate(uvs).reshape(-1).astype(np.float32)
-            arrays[f"ts{j}_col"] = (srgb_to_lin(np.clip(np.concatenate(cols), 0, 1)).reshape(-1) * 255).astype(np.uint8)
-            tsoups.append(dict(pos=f"ts{j}_pos", uv=f"ts{j}_uv", col=f"ts{j}_col", **info,
-                               offset="markings" in mat or "openings" in mat or "plinth" in mat))
+            tsoups.append(dict(pos=f"ts{j}_pos", uv=f"ts{j}_uv", col=None, **info))
+            if any(c is not None for c in cols):               # vertex colours (linear), white where none
+                arrays[f"ts{j}_col"] = np.concatenate([np.full(t.shape, 255, np.uint8) if c is None else c
+                                                       for t, c in zip(tws, cols)]).reshape(-1)
+                tsoups[-1]["col"] = f"ts{j}_col"
         for key, off in (("mesh", False), ("paint", True)):
-            tris, cols, nrms = S[key]
-            if tris:
-                arrays[f"{key}_pos"] = np.concatenate(tris).reshape(-1).astype(np.float32)
-                arrays[f"{key}_col"] = (srgb_to_lin(np.concatenate(cols)).reshape(-1) * 255).astype(np.uint8)
-                soups.append({"pos": f"{key}_pos", "col": f"{key}_col", "cast": key == "mesh", "offset": off})
+            for dbl in (False, True):
+                if (key, dbl) not in S:
+                    continue
+                tris, cols, nrms = S[(key, dbl)]
+                name = f"{key}{int(dbl)}"
+                arrays[f"{name}_pos"] = np.concatenate(tris).reshape(-1).astype(np.float32)
+                arrays[f"{name}_col"] = (srgb_to_lin(np.concatenate(cols)).reshape(-1) * 255).astype(np.uint8)
+                soups.append({"pos": f"{name}_pos", "col": f"{name}_col", "cast": key == "mesh", "offset": off,
+                              "double": dbl})
                 if self.dae_normals:                   # the normals the game lights the meshes with
-                    arrays[f"{key}_nrm"] = np.concatenate(nrms).reshape(-1).astype(np.float32)
-                    soups[-1]["nrm"] = f"{key}_nrm"
-        if S["posts"]:
-            P = np.array([p for p, _ in S["posts"]])
-            M = np.zeros((len(P), 16), np.float32)
-            M[:, 0], M[:, 5], M[:, 10], M[:, 15] = 0.25, 0.25, np.array([h for _, h in S["posts"]]), 1
-            M[:, 12:15] = P - origin
-            arrays["posts_m"] = M.reshape(-1)
-            arrays["posts_c"] = np.tile(srgb_to_lin([0.5, 0.5, 0.52]).astype(np.float32), len(P))
-            instances.append({"shape": "box", "m": "posts_m", "c": "posts_c"})
+                    arrays[f"{name}_nrm"] = np.concatenate(nrms).reshape(-1).astype(np.float32)
+                    soups[-1]["nrm"] = f"{name}_nrm"
+        models = []
+        for j, (model, M, C) in enumerate(self._models(x0 - pad, y0 - pad, x1 + pad, y1 + pad, origin)):
+            pos, nrm, col = self._geometry(model)
+            arrays[f"md{j}_pos"], arrays[f"md{j}_nrm"], arrays[f"md{j}_col"] = pos, nrm, col
+            arrays[f"md{j}_m"], arrays[f"md{j}_c"] = M.reshape(-1), C.reshape(-1)
+            models.append({"pos": f"md{j}_pos", "nrm": f"md{j}_nrm", "col": f"md{j}_col", "m": f"md{j}_m",
+                           "c": f"md{j}_c", "shiny": model in render3d_models.SHINY})
         if trees:
             eye = cam["pos"] if cam["kind"] != "top" else None
             for j, (shape, M, C) in enumerate(self._trees(x0 - pad, y0 - pad, x1 + pad, y1 + pad, origin, eye)):
@@ -844,6 +1020,7 @@ class Renderer:
                  if w[0] < cx + far and w[2] > cx - far and w[1] < cy + far and w[3] > cy - far]
         a, e = math.radians(SUN_AZ), math.radians(SUN_EL)
         sd = np.array([math.cos(e) * math.sin(a), math.cos(e) * math.cos(a), math.sin(e)])
+        dome = None
         if cam["kind"] == "top":
             span = max(x1 - x0, y1 - y0)
             focus = np.zeros(3)
@@ -856,12 +1033,14 @@ class Renderer:
             focus = p + d * 0.5 * span
             camd = {"kind": "persp", "pos": p.tolist(), "target": t.tolist(), "fov": cam["fov"],
                     "near": cam["near"], "far": cam["far"]}
-            fog = [600.0, 9000.0]
-        header = {"W": int(W), "H": int(H), "quality": self.quality, "sky": list(SKY), "fog": fog,
+            fog = list(HAZE)
+            dome = {"r": 0.9 * float(cam["far"]), "zenith": srgb_to_lin(SKY_ZENITH).tolist(),
+                    "horizon": srgb_to_lin(SKY).tolist(), "glow": list(SUN_GLOW), "sunDir": sd.tolist()}
+        header = {"W": int(W), "H": int(H), "quality": self.quality, "sky": list(SKY), "fog": fog, "dome": dome,
                   "hemi": 1.25, "sun": 2.6, "sunPos": (focus + sd * 1500).tolist(), "sunTarget": focus.tolist(),
                   "shadowR": 0.75 * span, "shadowFar": 4000.0, "shadowMap": 4096,
-                  "terrains": terrains, "soups": soups, "tsoups": tsoups, "instances": instances, "water": water,
-                  "camera": camd}
+                  "terrains": terrains, "soups": soups, "tsoups": tsoups, "models": models, "instances": instances,
+                  "water": water, "camera": camd}
         return self._pack(header, arrays)
 
     def shot(self, cam, out, **kw):
@@ -874,7 +1053,18 @@ class Renderer:
             self.page.reload()
             self.page.wait_for_function("window.ready === true", timeout=60000)
         self._n = n
-        url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
+        try:
+            url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
+        except Exception as e:                 # the page died (out of memory on a shared machine): a new browser, once
+            if "crash" not in str(e).lower() and "closed" not in str(e).lower():
+                raise
+            try:
+                self.close()
+            except Exception:
+                pass
+            self._start()
+            self._n = n
+            url = self.page.evaluate("u => window.renderView(u)", f"http://r3d.local/view{self._n}.bin")
         data = base64.b64decode(url.split(",", 1)[1])
         os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
         open(out, "wb").write(data)
