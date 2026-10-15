@@ -8,7 +8,8 @@ a wall, a building, the railway or the lake) take a skin:
 - a mesh every TER_SQUARE / 2 m (a fan of 8 triangles per square) on a bicubic surface through the terrain vertices (round instead of
   faceted, the same at the vertices), over the terrain everywhere (EPS m over the higher of the two ways
   the game may split a square); the terrain under its inner squares lowered by up to LOWER m (smoothly,
-  none on its edge) so the round surface stays over it; the edge of the skin lies on the terrain;
+  none on its edge) so the round surface stays over it, its heights smoothed under the skin; the skin cut
+  along a smooth line (a blurred mask), not in the steps of the squares, with its colours blurred;
 - its texture (earth, stones, roots and moss, drawn here) laid on the slope: every triangle takes the
   projection of the axis its face is turned to (as the terrain's side projection), TILE_M m per repeat;
 - its colour that of the terrain there (the base colour maps of the terrain materials, per vertex);
@@ -27,10 +28,16 @@ from config import LEVEL_NAME
 
 STEEP = 38.0                  # degrees, terrain vertices this steep (and more) take the skin
 REACH = 30.0                  # m from a road or path surface
-DILATE = 2                    # terrain squares of skin around the steep vertices
+DILATE = 3                    # terrain squares of skin around the steep vertices
 MIN_VERTS = 12                # smaller patches of steep vertices are left as they are
 LOWER = 0.25                  # m, the terrain under the inner squares of a skin lowered by this much
 EPS = 0.03                    # m, the skin over the terrain
+EDGE_BLUR = 2.0               # terrain squares, blur of the skin mask: its edge a smooth line
+EDGE_ISO = 0.55               # the skin cut where the blurred mask is under this
+EDGE_FADE = 0.3               # ... and down onto the terrain where it is under EDGE_ISO + this
+SMOOTH = 0.8                  # terrain squares, blur of the heights the skin is drawn through
+RING_BLUR = 1.2               # terrain squares, blur of the terrain under the skin
+COLOUR_BLUR = 1.5             # terrain squares, blur of the vertex colours
 TILE = 256                    # terrain vertices per side of a mesh tile
 TILE_M = 3.0                  # m of slope per repeat of the texture
 TEX_N = 512                   # pixels of the texture
@@ -156,11 +163,14 @@ def skin_mask(H, road, solid, sq):
     return S, steep
 
 
-def tile_skin(H, S, sq, core):
-    """Skin of a block: (lowered heights, lattice z (2m+1, 2n+1), squares (r, c) of the core window)."""
+def tile_skin(H, S, sq, core, sol):
+    """Skin of a block: (new terrain heights, changed vertices, squares (r, c) of the core window). The terrain
+    under it lowered under the inner squares and smoothed (not on sol)."""
     dch = ndi.distance_transform_cdt(S, metric="chessboard").astype(np.float64)
-    low = LOWER * np.clip((dch - 1) / 2, 0, 1)
-    Hn = H - low
+    Hn = H - LOWER * np.clip((dch - 1) / 2, 0, 1)
+    w = np.clip(dch / 2.0, 0, 1) * ~sol                 # its edge vertices half way: the ground beyond as it was
+    Hn = Hn + w * (ndi.gaussian_filter(H, RING_BLUR) - H)
+    low = np.abs(Hn - H) > 0.005
     sqm = S[:-1, :-1] & S[:-1, 1:] & S[1:, :-1] & S[1:, 1:]
     r0, r1, c0, c1 = core
     sqm_core = np.zeros_like(sqm)
@@ -177,7 +187,43 @@ def lattice(H, Hn, rr, cc):
     return keys, np.maximum(zs, split_max(Hn, R, C) + EPS)
 
 
-def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour):
+def clip(P, N, col, T, f):
+    """The triangles T cut along f = 0 (f per vertex), the parts where f >= 0 kept: new vertices on the cut
+    edges (positions, normals and colours interpolated)."""
+    s = f[T] >= 0
+    keep = T[s.all(1)]
+    mixed = T[s.any(1) & ~s.all(1)]
+    P, N, col = list(P), list(N), list(col)
+    out = [keep]
+    cache = {}
+
+    def cut(i, j):
+        k = (min(i, j), max(i, j))
+        if k not in cache:
+            t = f[i] / (f[i] - f[j])
+            P.append(P[i] + t * (P[j] - P[i]))
+            n = N[i] + t * (N[j] - N[i])
+            N.append(n / max(np.linalg.norm(n), 1e-9))
+            col.append(col[i] + t * (col[j] - col[i]))
+            cache[k] = len(P) - 1
+        return cache[k]
+    new = []
+    for tri in mixed:
+        poly = []
+        for e in range(3):
+            i, j = tri[e], tri[(e + 1) % 3]
+            if f[i] >= 0:
+                poly.append(i)
+            if (f[i] >= 0) != (f[j] >= 0):
+                poly.append(cut(i, j))
+        for e in range(1, len(poly) - 1):
+            new.append((poly[0], poly[e], poly[e + 1]))
+    if new:
+        out.append(np.array(new, np.int64))
+    return np.array(P), np.array(N), np.array(col), np.concatenate(out)
+
+
+def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None):
     """Triangles of the skin squares into mb, one add per projection axis."""
     span = int(keys[:, 1].max()) + 2
     lut = {int(k): i for i, k in enumerate(keys[:, 0] * span + keys[:, 1])}
@@ -200,9 +246,11 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour):
         p = [lut[(2 * r + a) * span + 2 * c + b] for a, b in ring]
         tris += [(ctr, p[i], p[(i + 1) % 8]) for i in range(8)]
     T = np.array(tris, np.int64)
+    col = np.column_stack([colour, np.ones(len(z))])
+    if wv is not None:
+        P, N, col, T = clip(P, N, col, T, wv - EDGE_ISO)
     fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
     axis = np.argmax(np.abs(fn), axis=1)                 # 0: x (u = y, v = z), 1: y (u = x, v = z), 2: z (u = x, v = y)
-    col = np.column_stack([colour, np.ones(len(z))])
     for ax, (ui, vi) in enumerate(((1, 2), (0, 2), (0, 1))):
         Ta = T[axis == ax]
         if not len(Ta):
@@ -265,8 +313,8 @@ def steep_skin_step(root, report=None):
     colours = BaseColours(zi, lv, names, n)
     q_new = q.copy()
     files, objs = {}, []
-    rep = {"tiles": 0, "squares": 0, "triangles": 0, "steep_vertices": 0, "lowered_vertices": 0,
-           "lowered_max_m": 0.0}
+    rep = {"tiles": 0, "squares": 0, "triangles": 0, "steep_vertices": 0, "changed_vertices": 0,
+           "changed_max_m": 0.0}
     m = int(np.ceil(REACH / sq)) + DILATE + 4
     for tr in range(0, n - 1, TILE):
         for tc in range(0, n - 1, TILE):
@@ -278,7 +326,7 @@ def steep_skin_step(root, report=None):
             core = (tr - a0, min(tr + TILE, n - 1) - a0, tc - b0, min(tc + TILE, n - 1) - b0)
             if not S[core[0]:core[1] + 1, core[2]:core[3] + 1].any():
                 continue
-            Hn, low, rr, cc = tile_skin(H, S, sq, core)
+            Hn, low, rr, cc = tile_skin(H, S, sq, core, sol)
             if not len(rr):
                 continue
             # the terrain lowered under the core's inner squares only (the margins belong to the next tiles)
@@ -287,15 +335,22 @@ def steep_skin_step(root, report=None):
             lo = low[cr, ccs]
             qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
             sub = q_new[a0:a1, b0:b1][cr, ccs]
-            q_new[a0:a1, b0:b1][cr, ccs] = np.where(lo > 0, qn, sub)
-            Hq = Z0 + np.where(low > 0, np.clip(np.rint((Hn - Z0) / MAXH * 65535.0), 0, 65535), q[a0:a1, b0:b1]) / 65535.0 * MAXH
-            keys, z = lattice(H, Hq, rr, cc)
+            q_new[a0:a1, b0:b1][cr, ccs] = np.where(lo, qn, sub)
+            Hq = Z0 + np.where(low, np.clip(np.rint((Hn - Z0) / MAXH * 65535.0), 0, 65535), q[a0:a1, b0:b1]) / 65535.0 * MAXH
+            keys, z = lattice(ndi.gaussian_filter(H, SMOOTH), Hq, rr, cc)       # rounded crest and toe
             R, C = keys[:, 0] / 2.0, keys[:, 1] / 2.0
-            lv_ = lay[a0:a1, b0:b1][np.rint(R).astype(int).clip(0, a1 - a0 - 1), np.rint(C).astype(int).clip(0, b1 - b0 - 1)]
-            col = colours(lv_, R + a0, C + b0)
+            # the edge of the skin: cut along a smooth line (the blurred mask at EDGE_ISO), not the staircase of
+            # the squares, and its colours blurred (no spikes of another colour)
+            wv = ndi.map_coordinates(ndi.gaussian_filter(S.astype(np.float64), EDGE_BLUR), [R, C], order=1)
+            fl = split_max(Hq, R, C) + EPS                  # down onto the terrain towards the cut: no lip
+            z = fl + np.clip((wv - EDGE_ISO) / EDGE_FADE, 0.0, 1.0) * (z - fl)
+            gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
+            cg = colours(lay[a0:a1, b0:b1].ravel(), (gr + a0).ravel(), (gc + b0).ravel()).reshape(a1 - a0, b1 - b0, 3)
+            col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
+                                   for k in range(3)])
             mb = bng.MeshBuilder()
             ox, oy = X0 + b0 * sq, Y0 + a0 * sq
-            ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col)
+            ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv)
             origin = np.array([ox + (b1 - b0) * sq / 2, oy + (a1 - a0) * sq / 2, float(np.median(z))])
             with tempfile.TemporaryDirectory() as tmp:
                 f = os.path.join(tmp, "s.dae")
@@ -309,8 +364,9 @@ def steep_skin_step(root, report=None):
             rep["squares"] += int(len(rr))
             rep["triangles"] += int(ntri)
             rep["steep_vertices"] += int(steep[core[0]:core[1], core[2]:core[3]].sum())
-            rep["lowered_vertices"] += int((lo > 0).sum())
-            rep["lowered_max_m"] = max(rep["lowered_max_m"], float(lo.max()) if lo.size else 0.0)
+            rep["changed_vertices"] += int(lo.sum())
+            dz = np.abs(Hn - H)[cr, ccs]
+            rep["changed_max_m"] = max(rep["changed_max_m"], float(dz.max()) if dz.size else 0.0)
     print("steep skin: %s" % rep, flush=True)
     if objs:
         col_img, nrm_img = bank_texture()
