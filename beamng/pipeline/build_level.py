@@ -904,6 +904,7 @@ FINISH = [
     ("direction_signs", "direction_signs", "direction_signs_step", {"report": True}),   # v3.0: at the roundabouts
     ("lake", "water", "lake_step", {"report": True}),
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+    ("facade_relief", "facade_relief", "facade_relief_step", {"report": True}),   # v3.0: copings and cornices
     ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, price totems
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
