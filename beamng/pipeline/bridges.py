@@ -36,6 +36,8 @@ PIER_H = 4.0
 PIER_W = 1.2
 LOW = 1.5
 EXTRA_W = 0.3          # m of deck beyond the carriageway on each side
+PARAPET_DROP = 0.6     # m of drop beside the deck edge that needs a parapet
+PARAPET_RUN = 2.0      # m the parapet goes on beyond it
 
 
 def load_overrides():
@@ -86,17 +88,29 @@ def deck_geometry(P, N, z, hw, ground, kind, typ, avoid=None):
     rise = np.array([0, 0, ph])
     par = []
     T = np.column_stack([N[:, 1], -N[:, 0]])
-    for E, sign in ((L, 1.0), (R, -1.0)):
+    sst = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
+    for E, sign, gE in ((L, 1.0, gL), (R, -1.0, gR)):
         inner = E - N * sign * PARAPET_W
-        for i in range(n - 1):
-            o0, o1 = np.r_[E[i], z[i]], np.r_[E[i + 1], z[i + 1]]
-            i0, i1 = np.r_[inner[i], z[i]], np.r_[inner[i + 1], z[i + 1]]
-            par.append(_quad(o0, o1, o1 + rise, o0 + rise, np.r_[N[i] * sign, 0.0]))
-            par.append(_quad(i0, i1, i1 + rise, i0 + rise, np.r_[-N[i] * sign, 0.0]))
-            par.append(_quad(o0 + rise, o1 + rise, i1 + rise, i0 + rise, up))
-        for i, s_ in ((0, -1.0), (n - 1, 1.0)):
-            o, ii = np.r_[E[i], z[i]], np.r_[inner[i], z[i]]
-            par.append(_quad(o, ii, ii + rise, o + rise, np.r_[T[i] * s_, 0.0]))
+        # v3.0: the parapet where there is a drop beside the deck (PARAPET_DROP m), carried PARAPET_RUN m on: where
+        # the deck lies on the ground at its ends, the approach road goes on wider than the deck, and a parapet
+        # there stood as a block on the road
+        need = (z - gE) > PARAPET_DROP
+        if need.any():
+            idx = np.flatnonzero(need)
+            near = np.abs(sst[:, None] - sst[idx][None, :]).min(1) <= PARAPET_RUN
+            need = near
+        for a, b in zip(*[np.flatnonzero(np.diff(np.r_[0, need.astype(int), 0]))[k::2] for k in (0, 1)]):
+            if b - a < 2:
+                continue
+            for i in range(a, b - 1):
+                o0, o1 = np.r_[E[i], z[i]], np.r_[E[i + 1], z[i + 1]]
+                i0, i1 = np.r_[inner[i], z[i]], np.r_[inner[i + 1], z[i + 1]]
+                par.append(_quad(o0, o1, o1 + rise, o0 + rise, np.r_[N[i] * sign, 0.0]))
+                par.append(_quad(i0, i1, i1 + rise, i0 + rise, np.r_[-N[i] * sign, 0.0]))
+                par.append(_quad(o0 + rise, o1 + rise, i1 + rise, i0 + rise, up))
+            for i, s_ in ((a, -1.0), (b - 1, 1.0)):
+                o, ii = np.r_[E[i], z[i]], np.r_[inner[i], z[i]]
+                par.append(_quad(o, ii, ii + rise, o + rise, np.r_[T[i] * s_, 0.0]))
     piers = []
     s = np.r_[0, np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))]
     if typ != "culvert" and s[-1] > PIER:

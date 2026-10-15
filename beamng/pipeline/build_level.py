@@ -466,7 +466,9 @@ def stage_walls(scene, ctx):
                      f"{L}/art/shapes/buildings/t_bld_plaster_r.data.png", vert_color=True, ground_type="CONCRETE")])
     # no cadastral wall across a road or along the way of a line (v2.0 network)
     free = walls.drive_free(ctx["network"], ctx.get("corridor")) if ctx.get("network") is not None else None
-    ctx["wall_samples"], ctx["wall_feet"] = walls.build(LEVEL_DIR, LEVEL_NAME, scene, free=free)
+    net = ctx.get("network")
+    decks = [f for _, f in net.deck_feet] if net is not None and getattr(net, "deck_feet", None) else None
+    ctx["wall_samples"], ctx["wall_feet"] = walls.build(LEVEL_DIR, LEVEL_NAME, scene, free=free, decks=decks)
     from config import NO_PHOTO
     ctx["rwall_samples"] = walls.build_roadside(LEVEL_DIR, LEVEL_NAME, scene, photo=not NO_PHOTO)
 
@@ -480,7 +482,7 @@ def stage_guardrails(scene, ctx):
 
 def stage_fences(scene, ctx):
     import fences
-    fences.build(LEVEL_DIR, LEVEL_NAME, scene)
+    fences.build(LEVEL_DIR, LEVEL_NAME, scene, feet=ctx.get("wall_feet"), ground=new_ground(ctx) if "H" in ctx else None)
 
 
 def stage_markings(scene, ctx):

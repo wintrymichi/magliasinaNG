@@ -83,6 +83,8 @@ def removed():
 
 
 MIN_PIECE_AREA = 0.25     # m^2, smaller pieces left over by that are dropped
+ALONG = 1.2               # m: a line wall this near a surface wall ...
+ALONG_SHARE = 0.6         # ... for this share of its length runs along it: the same wall
 MIN_PIECE_WIDTH = 0.08    # m, half the least width of a piece kept
 
 
@@ -92,8 +94,23 @@ def wall_footprints(av, skip_polys, taken=None):
     mostly inside one that swissBUILDINGS3D models (skip_polys) is left out. The survey has some walls twice (a
     line on a surface, two surfaces overlapping) and the game had two walls, one in the other: up to v2.8 the
     line was kept whole beside the surface, and a wall half along a roadside wall whole beside it."""
-    src = [(g, "poly", p) for g, p in av["SOSF"].get("muro", [])] + \
-          [(g.buffer(0.15, cap_style="flat", join_style="mitre"), "line", p) for g, p in av["SOLI"].get("muro", [])]
+    polys = [(g, "poly", p) for g, p in av["SOSF"].get("muro", [])]
+    lines = av["SOLI"].get("muro", [])
+    # v3.0: a line wall running along a surface wall (within ALONG m for ALONG_SHARE of its length) is the same wall
+    # drawn twice by the survey (the face of a retaining wall and its crest, a parapet on it): up to v3.0 only the
+    # part inside the surface went, and two walls stood side by side half a metre apart
+    if polys and lines:
+        ptree = shapely.STRtree([g for g, _, _ in polys])
+        kept = []
+        for g, p in lines:
+            near = ptree.query(g, predicate="dwithin", distance=ALONG)
+            if len(near) and g.length > 0:
+                zone = shapely.union_all([polys[i][0] for i in near]).buffer(ALONG)
+                if g.intersection(zone).length >= ALONG_SHARE * g.length:
+                    continue
+            kept.append((g, p))
+        lines = kept
+    src = polys + [(g.buffer(0.15, cap_style="flat", join_style="mitre"), "line", p) for g, p in lines]
     if skip_polys:
         sk = shapely.union_all(skip_polys)
         src = [(g, k, p) for g, k, p in src if g.intersection(sk).area < 0.5 * g.area]
@@ -274,9 +291,19 @@ def wall_geometry(ctx=None):
     seen = removed()
     gone_tree = shapely.STRtree(seen["remove"]) if seen["remove"] else None
     flush_tree = shapely.STRtree(seen["flush"]) if seen["flush"] else None
+    decks = ctx.get("decks")
     for wi, (g, kind, props) in enumerate(wall_footprints(ctx["av"], ctx["mauer"], ctx["rw_zone"])):
         if not on_dtm.contains(g):
             continue
+        if decks is not None and decks.intersects(g):
+            # v3.0: no survey wall on a bridge deck: the deck has its parapets (bridges.py), and the survey's
+            # parapets beside them, its walls across the deck and the abutments under its edge stood in and over
+            # it, at other heights (blocks at odd angles on the bridges)
+            g = g.difference(decks)
+            g = [q for q in polygons(g) if q.area >= MIN_PIECE_AREA and not q.buffer(-MIN_PIECE_WIDTH).is_empty]
+            if not g:
+                continue
+            g = g[0] if len(g) == 1 else MultiPolygon(g)
         if gone_tree is not None and len(gone_tree.query(g, predicate="dwithin", distance=0.05)):
             continue                                      # no longer there (markings_state.removed_walls)
         flush = flush_tree is not None and len(flush_tree.query(g, predicate="dwithin", distance=0.05)) > 0
@@ -400,8 +427,11 @@ def exterior_ribbon(w):
     return ring, zb, zt
 
 
-def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
-    """free: polygons no wall may stand in (drive_free)."""
+DECK_CLEAR = 0.45         # m around a bridge deck: no survey wall (its parapets stand on the deck's edge)
+
+
+def build(level_dir, level_name, scene, material="mp_wall_stone", free=None, decks=None):
+    """free: polygons no wall may stand in (drive_free); decks: the footprints of the bridge decks (bridges.py)."""
     import cv2
     import texturing
     builders = {}
@@ -411,6 +441,9 @@ def build(level_dir, level_name, scene, material="mp_wall_stone", free=None):
     ctx = _context()
     if free:
         ctx["free"], ctx["free_tree"] = free, shapely.STRtree([f[0] for f in free])
+    if decks:
+        ctx["decks"] = shapely.union_all([d.buffer(DECK_CLEAR) for d in decks])
+        shapely.prepare(ctx["decks"])
     for w in wall_geometry(ctx):
         poly, rings, allv, zbot, ztop, zlo = w["poly"], w["rings"], w["allv"], w["zbot"], w["ztop"], w["zlo"]
         samp, dmax = w["samp"], w["dmax"]

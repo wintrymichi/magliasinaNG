@@ -144,12 +144,43 @@ def fence_mesh(mb, P):
     mb.add("mp_fence_post", V, uvs=V[:, :2], normals=bng.flat_normals_soup(V))
 
 
-def build(level_dir, level_name, scene):
+CREST_R = 0.8            # m: a fence point this near a wall stands on its top
+
+
+def rebase(items, feet, ground):
+    """v3.0: the fences on the walls as built. fences.json holds the crests measured on the walls of v1.x; the walls
+    were measured again since (another top, the smoothed survey), and the chain-link stood in the wall or over it,
+    or half in the ground. Every point goes onto the top of the nearest wall within CREST_R m (its highest vertex
+    there), else onto the ground; a fence along another one (two crest lines of one wall) is laid once."""
+    import guardrail_mesh
+    from scipy.spatial import cKDTree
+    if feet:
+        P = np.concatenate([f[1] for f in feet])
+        Z = np.concatenate([f[3] for f in feet])
+        tree = cKDTree(P[:, :2])
+    out = []
+    for it in items:
+        Q = np.array(it["pts"], float)
+        z = ground(Q[:, 0], Q[:, 1])
+        if feet:
+            near = tree.query_ball_point(Q[:, :2], CREST_R)
+            z = np.array([Z[i].max() if len(i) else zg for i, zg in zip(near, z)])
+        Q[:, 2] = z
+        out.append({**it, "pts": Q})
+    runs, gone = guardrail_mesh.drop_doubles(out)
+    if gone:
+        print(f"fences laid twice, left out: {gone:.0f} m")
+    return [{**r, "pts": np.asarray(r["pts"]).tolist()} for r in runs]
+
+
+def build(level_dir, level_name, scene, feet=None, ground=None):
     import bng, guardrail_mesh
     f = os.path.join(WORK, "fences.json")
     if not os.path.exists(f):
         return
     items = json.load(open(f))
+    if ground is not None:
+        items = rebase(items, feet, ground)
     bng.write_materials(os.path.join(level_dir, "art", "shapes", "fences", "main.materials.json"), [
         bng.material("mp_chainlink", f"{CH}_b.color.dds", f"{CH}_nm.normal.dds", f"{CH}_r.data.dds",
                      alpha_test=40, double_sided=True, metallic=0.6, ground_type="METAL",
