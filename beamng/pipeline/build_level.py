@@ -903,6 +903,7 @@ FINISH = [
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
     ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
+    ("shopfronts", "shopfronts", "shopfronts_step", {"report": True}),      # v3.0: parody shop signs, awnings, props
 ]
 
 
