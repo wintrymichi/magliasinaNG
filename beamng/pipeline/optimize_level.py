@@ -312,7 +312,8 @@ def _run(entries, put, workers=None):
     jobs += [(n, [(n, np.zeros(3))]) for n in entries if n.lower().endswith(".dae") and n not in merged]
     tot = np.zeros(3)
     by_cat = {}
-    with Pool(workers or max(1, os.cpu_count() - 2)) as pool:
+    # v3.1: at most OPT_WORKERS processes (default 4): 14 on a 16-thread PC with 14 GB took all the memory
+    with Pool(workers or int(os.environ.get("OPT_WORKERS", max(1, min(4, os.cpu_count() - 2))))) as pool:
         k = 0
         for b in range(0, len(jobs), 64):             # in batches: the input is gigabytes of text
             batch = [(n, [(entries[m](), off) for m, off in members]) for n, members in jobs[b:b + 64]]

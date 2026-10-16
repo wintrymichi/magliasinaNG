@@ -64,7 +64,7 @@ OUT_TEST = 0.30              # m beyond an edge: carriageway there, the edge is 
 FLUSH_DZ = 0.04              # m: paved ground beyond the edge within this height goes on (a drive, a yard)
 JUNCTION_PAD = 4.0           # m beyond the carriageways meeting at a junction: no tracks, patches, cracks
 ROUNDABOUT_PAD = 10.0        # m around the ring of a roundabout
-RING_PAD = 2.5               # m about the ring's line: the AI road of the ring itself
+RING_PAD = 6.0               # m about the ring's line: the AI road of the ring itself
 WIDTH_JUMP = 1.25            # m: a station whose measured width differs this much from the road's median is cut
 MEASURE_MAX = 8.0            # m from the axis: the farthest an edge is looked for
 CONT_DZ = 0.10               # m between two samples 0.25 m apart across the road: still the same asphalt
@@ -326,10 +326,26 @@ def roundabouts():
     if not geoms:
         return None
     g = shapely.union_all(geoms)
-    on = shapely.union_all([r.buffer(RING_PAD) for r in rings]) if rings else shapely.Point(0, 0).buffer(0)
     shapely.prepare(g)
-    shapely.prepare(on)
-    return g, on
+    return g, (shapely.union_all(rings) if rings else None)
+
+
+def on_ring(P, T, ring):
+    """Whether an AI road (stations P, unit tangents T) runs round a roundabout's ring (the rings' lines): most of
+    its stations within RING_PAD m of a ring and running along it (not across it, as the entries do). The AI
+    road of a ring runs in its lane, a few metres off the line OpenStreetMap maps."""
+    import shapely
+    if ring is None:
+        return False
+    d = shapely.distance(ring, shapely.points(P))
+    near = d < RING_PAD
+    if near.mean() < RING_SHARE:
+        return False
+    Q = np.asarray([ring.interpolate(ring.project(shapely.Point(p))).coords[0] for p in P[near]])
+    Q2 = np.asarray([ring.interpolate(ring.project(shapely.Point(p)) + 1.0).coords[0] for p in P[near]])
+    Tr = Q2 - Q
+    Tr /= np.maximum(np.linalg.norm(Tr, axis=1, keepdims=True), 1e-9)
+    return float(np.mean(np.abs((Tr * T[near]).sum(1)) > 0.8)) >= RING_SHARE
 
 
 def measure(P, Nl, Sa, zhint):
@@ -441,7 +457,7 @@ def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
     Wloc = median_filter(np.where(ok, Ws, Wm), WIDTH_LOCAL, mode="nearest")
     keep = ok & ((np.abs(Ws - Wm) < WIDTH_JUMP) | (np.abs(Ws - Wloc) < WIDTH_JUMP))
     # the ring of a roundabout carries its own tracks and patches all round, across the mouths of its entries
-    ring = rb is not None and shapely.contains_xy(rb[1], Pd[:, 0], Pd[:, 1]).mean() >= RING_SHARE
+    ring = rb is not None and on_ring(Pd, T, rb[1])
     min_piece = 3 if ring else MIN_PIECE                              # the ring comes in short pieces between entries
     if ring:
         stats["ring_roads"] += 1
