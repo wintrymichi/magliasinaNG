@@ -5,14 +5,15 @@
 **The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 56 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano, Arosio and Novaggio.**
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
-![Version](https://img.shields.io/badge/version-3.0-blue)
+![Version](https://img.shields.io/badge/release-2.8-blue)
+![Next](https://img.shields.io/badge/next-3.0%20in%20test-yellow)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-56%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
 [![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey)](LICENSE)
 [![Website](https://img.shields.io/badge/website-wintrymichi.ch-00549b)](https://wintrymichi.ch)
 
-**[wintrymichi.ch](https://wintrymichi.ch)** · [Download v3.0](https://github.com/wintrymichi/magliasinaNG/releases/latest)
+**[wintrymichi.ch](https://wintrymichi.ch)** · [Download v2.8](https://github.com/wintrymichi/magliasinaNG/releases/latest)
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
 
@@ -28,9 +29,9 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 
 ## Quick start
 
-1. **Download** `magliaso_pura_v3.0.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
+1. **Download** `magliaso_pura_v2.8.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
 2. **Install it:** copy the zip, without unpacking it, to `Documents/BeamNG.drive/current/mods/` (or add it from the game's mod manager).
-3. **Remove older versions** of the map from the same folder (`magliaso_pura_v2.x.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
+3. **Remove older versions** of the map from the same folder (any other `magliaso_pura_v*.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
 4. **Play:** in the game choose *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*. You start at the Magliaso junction, at the foot of the cantonal road to Pura.
 
 **What you need:** BeamNG.drive 0.39 and 16 GB of RAM. The memory and loading figures below are those of v2.8; v3.0 will be measured in its in-game test. v2.8 was tested on BeamNG.drive 0.39 (native Linux build) with an RTX 4070: the game used 6.4 GB of memory at its peak. Under Windows with DirectX 12 it needs much more (v2.7 measured about 12 GB): if the game stalls, start it with DirectX 11 (`-gfx dx11`).
@@ -94,7 +95,7 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ### New in v3.0
 
-> v3.0 is built and checked automatically (`v3 build test` workflow); the in-game test and its screenshots come before the release. Full notes in [`beamng/RELEASE_v3.0.md`](beamng/RELEASE_v3.0.md) and [`CHANGELOG.md`](CHANGELOG.md).
+> v3.0 is not released yet: the latest release is still v2.8. v3.0 is built and checked automatically (`v3 build test` workflow); the in-game test and its screenshots come before the release. Full notes in [`beamng/RELEASE_v3.0.md`](beamng/RELEASE_v3.0.md) and [`CHANGELOG.md`](CHANGELOG.md).
 
 v3.0 polishes the v2.8 map up close and from afar, after the feedback that it looked "blocky, smeary, lacking detail". Same area, roads and buildings.
 
