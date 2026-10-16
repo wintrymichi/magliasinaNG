@@ -1601,7 +1601,8 @@ def m_flag_pole(tex, flag, H=3.4, W=0.7):
     hard, soft = Piece(), Piece()
     hard.bar((0, 0, 0.05), (0, 0, H), 0.04, tex.col(METAL))
     hard.box((-0.3, -0.3, 0), (0.3, 0.3, 0.06), tex.col(DARK_METAL), skip=("-z",))
-    soft.quad((0.02, 0, 0.7), (W, 0, 0.8), (W, 0, H - 0.2), (0.02, 0, H), flag)
+    # v3.1: the print reads from the street (+y; seen from there x runs to the left), not mirrored
+    soft.quad((W, 0, 0.8), (0.02, 0, 0.7), (0.02, 0, H), (W, 0, H - 0.2), flag)
     return hard, soft
 
 
