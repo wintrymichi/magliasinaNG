@@ -786,6 +786,18 @@ Z0 = MAXH = None
 WORKERS = int(os.environ.get("PATCH_WORKERS", min(os.cpu_count(), 4)))   # each holds the faces of the level (~1.5 GB)
 
 
+_BED = None
+
+
+def rail_bed():
+    """railway.bed_fn, once per process (the workers too)."""
+    global _BED
+    if _BED is None:
+        import railway
+        _BED = railway.bed_fn()
+    return _BED
+
+
 def block(args):
     """New heights of the vertices of one block: (rows, cols, z) of the vertices that change.
     Q: the heights as they were (block with PAD vertices around); QA: heights to check instead of
@@ -820,6 +832,11 @@ def block(args):
     rim = (D > 0) | ((D > -TER_SQUARE) & ndi.maximum_filter(D > 0, size=3))     # outside, or under the edge
     fill = (R - H >= TALL) & rim & (emb > H) & (emb - H <= EMB_MAX)
     aim = np.where(fill, np.maximum(aim, emb), aim)
+    # v3.0: nothing raised into the cutting of a railway (railway.bed_fn): beside the Strada Cantonale over the line
+    # along the lake the embankment of the road filled the bed of the tracks up to 3 m, in teeth along the rails
+    X, Y = np.meshgrid(xs, ys)
+    bed = rail_bed()(X, Y)
+    aim = np.where(np.isfinite(bed), np.minimum(aim, np.maximum(H, bed)), aim)
     if QA is not None:
         aim = Z0 + QA.astype(np.float64) / 65535.0 * MAXH
     moved = aim > H + 1e-4
