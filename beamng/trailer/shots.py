@@ -98,7 +98,7 @@ SHOTS = [
     dict(name="g02_gameplay_alto_malcantone", kind="gameplay", car="vivace", route=[[2280, 6304], [1395, 6440]],
          speed=14, secs=5, tod=AFTERNOON, group="drive"),
     # ---- 6 the end: sunset over the lake
-    view_orbit("e01_finale_tramonto", 45.9807, 8.8850, 520, 200, 200, 22, 28, 7, SUNSET, "end", d1=850),
+    view_orbit("e01_finale_tramonto", 45.9807, 8.8850, 520, 200, 200, 22, 28, 9, SUNSET, "end", d1=850),
     view_orbit("e02_finale_tramonto_alt", 45.96664, 8.87381, 620, 250, 235, 20, 24, 7, SUNSET, "end", d1=760),
 ]
 
