@@ -78,6 +78,9 @@ DISP = (1.1, 0.5, 1.6, 0.3)     # m: along the island, across, body height, head
 TOTEM = (2.0, 0.4, 5.5, 1.0)    # m: width, depth, height, plinth
 TOTEM_GAP = 0.7                 # m from the edge of the carriageway to the totem
 TOTEM_SEARCH = 25.0             # m along the road from the canopy
+CHARGING_ONLY = "magliaso:from_charging_station"   # tag of a station found by its charging point
+PUMP_OFF = 1.0                  # m from the face of a dispenser to the middle of its refuelling area
+PUMP_AREA = [2.0, 0.5, 1.0]     # the scale of the area (as the vanilla gas stations)
 LANE_CLEAR = 0.4                # m from an AI road's lane
 OBST_CLEAR = 0.4                # m from lamps, poles, trunks, furniture
 MAX_STEP = 0.6                  # m of ground under an island, the totem
@@ -158,12 +161,20 @@ def stations(roads):
     of those left out (off the terrain, away from the roads)."""
     ways, nodes = osm.load()
     pts = [(n["id"], n["x"], n["y"], n["tags"]) for n in nodes if n["tags"].get("amenity") == "fuel"]
+    # v3.1: a charging point a fuel company runs stands at its petrol station, which OpenStreetMap may not map
+    # (the Eni of Magliaso, by the FLP stop Magliaso Paese, is only its charging point): a station of its own,
+    # built only where the survey has its canopy (CHARGING_ONLY)
+    for n in nodes:
+        t = n["tags"]
+        if t.get("amenity") == "charging_station" and brand_of(t) != "local":
+            pts.append((n["id"], n["x"], n["y"], dict(t, amenity="fuel", **{CHARGING_ONLY: "yes"})))
     for w in ways:
         if w["tags"].get("amenity") == "fuel":
             xy = w["xy"]
             c = shapely.Polygon(xy).centroid if len(xy) >= 4 and np.allclose(xy[0], xy[-1]) else w["line"].centroid
             pts.append((w["id"], c.x, c.y, w["tags"]))
     out, why = [], {"osm": len(pts), "off_terrain": 0, "off_road": 0, "same_station": 0}
+    pts.sort(key=lambda p: CHARGING_ONLY in p[3])                  # the mapped stations first
     for sid, x, y, tags in pts:
         if not (TER_X0 < x < TER_X1 and TER_Y0 < y < TER_Y1):
             why["off_terrain"] += 1
@@ -173,6 +184,9 @@ def stations(roads):
             why["off_road"] += 1
             continue
         same = [s for s in out if math.hypot(s["x"] - x, s["y"] - y) < SAME_STATION]
+        if same and CHARGING_ONLY in tags:                         # the station is mapped: the charger is its
+            why["same_station"] += 1
+            continue
         if same:
             for k, v in tags.items():
                 same[0]["tags"].setdefault(k, v)
@@ -902,13 +916,54 @@ def new_canopy(ground, roads, p):
     return None
 
 
+def refuel_points(facilities, files, lv):
+    """v3.1: the stations as gas stations of the game (freeroam_facilities): for every side of every dispenser
+    a BeamNGGameplayArea where the car stops and a BeamNGPointOfInterest over it (the pump icon), named as
+    facilities/facilities.facilities.json lists them; the station's outline as a zone of facilities.sites.json.
+    Up to v3.0 the game found no gas station on the map, and a car could not be refuelled there."""
+    objs, gas, zones = [], [], []
+    for st, sid, rect, pumps in facilities:
+        node = f"fuel_{sid}"
+        pl = []
+        for k, (p, u, z) in enumerate(pumps, 1):
+            rot = [round(v, 6) for v in bng.rot_local_x_to(math.atan2(u[1], u[0]))]
+            area, icon = f"{node}_pump_area_{k}", f"{node}_pump_icon_{k}"
+            objs.append({"name": icon, "class": "BeamNGPointOfInterest", "persistentId": bng.pid(), "__parent": "fuel",
+                         "position": [round(float(p[0]), 3), round(float(p[1]), 3), round(float(z) + 1.75, 3)],
+                         "rotationMatrix": rot, "scale": [0.1, 0.1, 0.1]})
+            objs.append({"name": area, "class": "BeamNGGameplayArea", "persistentId": bng.pid(), "__parent": "fuel",
+                         "position": [round(float(p[0]), 3), round(float(p[1]), 3), round(float(z), 3)],
+                         "rotationMatrix": rot, "scale": PUMP_AREA})
+            pl.append([area, icon])
+        title = BRANDS[st["brand"]][1] + " " + str(st["tags"].get("addr:city") or st["tags"].get("name") or "").strip()
+        gas.append({"name": node, "title": title.strip(), "description": "Benzina, diesel" if "diesel" in st["grades"]
+                    else "Benzina", "preview": "fuel.jpg", "energyTypes": ["gasoline", "diesel", "unknown"], "pumps": pl})
+        Z = float(np.median([z for _, _, z in pumps]))
+        zones.append({"name": node, "color": [1, 1, 1], "customFields": {"values": {}, "names": {}, "tags": {}, "types": {}},
+                      "bot": {"active": False, "normal": [0, 0, -1], "pos": [0, 0, -10]},
+                      "top": {"active": False, "normal": [0, 0, 1], "pos": [0, 0, 10]},
+                      "vertices": [[round(float(x), 3), round(float(y), 3), round(Z, 3)]
+                                   for x, y in list(rect.exterior.coords)[:4]]})
+    if gas:
+        files[f"{lv}/facilities/facilities.facilities.json"] = json.dumps({"gasStations": gas}, indent=1).encode("utf-8")
+        files[f"{lv}/facilities.sites.json"] = json.dumps(
+            {"description": "The petrol stations of the map (fuel_stations.py)", "dir": f"/levels/{LEVEL_NAME}/",
+             "filename": "facilities.sites.json", "name": "facilities.sites.json", "locations": {},
+             "parkingSpots": [], "zones": zones}, indent=1).encode("utf-8")
+        import io
+        b = io.BytesIO()                                            # the picture of the stations: a price totem
+        prices_image(facilities[0][0]).convert("RGB").save(b, "JPEG", quality=85)
+        files[f"{lv}/facilities/fuel.jpg"] = b.getvalue()
+    return objs
+
+
 def fuel_stations_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     roads = Roads(zi, lv)
     sts, why = stations(roads)
-    rep = {"stations": len(sts), "left_out": why, "canopies_replaced": 0, "canopies_new": 0, "no_canopy": 0,
+    rep = {"stations": len(sts), "from_chargers": sum(CHARGING_ONLY in s["tags"] for s in sts), "left_out": why, "canopies_replaced": 0, "canopies_new": 0, "no_canopy": 0,
            "islands": 0, "dispensers": 0, "totems": 0, "triangles": 0}
     if not sts:
         print("fuel stations: none", flush=True)
@@ -918,6 +973,7 @@ def fuel_stations_step(root, report=None):
     ground = Ground(site, roads)
     M = Meshes(zi, lv, ["buildings", "buildings/details", "buildings/extras"], pts, CANOPY_R + 40.0)
     drop = {}                                                       # shape -> {list index: triangles}
+    facilities = []                                                 # v3.1: the game's gas stations
     files, objs, used_brands, done = {}, [], set(), []
     for st in sts:
         p = np.array([st["x"], st["y"]])
@@ -930,6 +986,9 @@ def fuel_stations_step(root, report=None):
         if cans:
             rect = shapely.union_all(polys).minimum_rotated_rectangle
             rep["canopies_replaced"] += 1
+        elif CHARGING_ONLY in st["tags"]:                           # a charger alone, no petrol station there
+            rep["chargers_without_canopy"] = rep.get("chargers_without_canopy", 0) + 1
+            continue
         else:
             rect = new_canopy(ground, roads, p)
             if rect is None:
@@ -953,6 +1012,7 @@ def fuel_stations_step(root, report=None):
                 "pump": f"mp_fuel_{sid}_pump", "totem": f"mp_fuel_{sid}_totem", "black": "mp_fuel_black",
                 "nozzle_0": "mp_fuel_nozzle_0", "nozzle_1": "mp_fuel_nozzle_1", "nozzle_2": "mp_fuel_nozzle_2"}
         B = Builder()
+        pumps = []
         canopy_mesh(B, rect, z_ceil, mats)
         # the islands: rows across the canopy, each along its long side
         n_rows = int(np.clip(round(Wc / ROW_PITCH), 1, 3))
@@ -966,6 +1026,9 @@ def fuel_stations_step(root, report=None):
             zg = float(np.median(ground.height(*grid_in(poly, 0.5).T)))
             nd = 2 if length >= TWO_PUMPS else 1
             island_mesh(B, ci, u, length, zg, (-0.5, 0.5), nd, z_ceil, mats)
+            for f in ([0.0] if nd == 1 else [-0.25, 0.25]):            # v3.1: where a car stops to refuel
+                for sg in (-1, 1):
+                    pumps.append((ci + u * f * length + v * sg * (DISP[1] / 2 + PUMP_OFF), u, zg + ISLAND_H))
             rep["islands"] += 1
             rep["dispensers"] += nd
         # the totem beside the road, at the side of the canopy nearest it
@@ -990,6 +1053,8 @@ def fuel_stations_step(root, report=None):
                 break
         used_brands.add(st["brand"])
         done.append(sid)
+        if pumps:
+            facilities.append((st, sid, rect, pumps))
         files[f"{lv}/{D}/t_fuel_{sid}_totem_b.color.png"] = _png(prices_image(st))
         files[f"{lv}/{D}/t_fuel_{sid}_pump_b.color.png"] = _png(pump_image(st))
         with tempfile.TemporaryDirectory() as tmp:
@@ -1013,6 +1078,8 @@ def fuel_stations_step(root, report=None):
         {"brands": used_brands, "stations": done})}, indent=1).encode("utf-8")
     files[f"{lv}/main/MissionGroup/props/fuel/items.level.json"] = \
         ("\n".join(json.dumps(o, separators=(",", ":")) for o in objs) + "\n").encode("utf-8")
+    objs += refuel_points(facilities, files, lv)
+    rep["refuel_stations"] = len(facilities)
     p_items = f"{lv}/main/MissionGroup/props/items.level.json"
     rows = read_items(zi, p_items)
     if not any(r.get("name") == "fuel" and r.get("class") == "SimGroup" for r in rows):

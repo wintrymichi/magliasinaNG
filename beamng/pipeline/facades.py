@@ -231,6 +231,12 @@ def shop_front(kind):
     return any(kind.startswith(k) for k in SHOP_FRONT)
 
 
+# m2: a "tower" of the survey with a larger footprint is a block of houses with a tower in it (Bedigliora: the
+# church tower, the church and the houses down the slope are one object of 90 x 87 m, drawn up to v3.0 as one
+# tower without a window); its houses take the style of houses, its tower (a part of the survey) a tower's
+TOWER_AREA = 120.0
+
+
 def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=False, key=None):
     """What a building looks like: kind, age class, material, tone, window family, shutter colour.
     measured: the plaster tone seen in the photos; shutter: (colour, share of the facade) seen there;
@@ -243,7 +249,7 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=F
     age = age_class(year)
     if kind in ("Sakrales Gebaeude", "Kapelle") or klass == 1272:
         use = "church"
-    elif kind in ("Sakraler Turm", "Turm"):
+    elif kind in ("Sakraler Turm", "Turm") and area <= TOWER_AREA:
         use = "tower"
     elif kind in ("Lagertank", "Treibhaus", "Flugdach", "Mauer gross"):
         use = "none"

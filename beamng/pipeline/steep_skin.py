@@ -13,7 +13,13 @@ a wall, a building, the railway or the lake) take a skin:
 - its texture (earth, stones, roots and moss, drawn here) laid on the slope: every triangle takes the
   projection of the axis its face is turned to (as the terrain's side projection), TILE_M m per repeat;
 - its colour that of the terrain there (the base colour maps of the terrain materials, per vertex);
-- with collision (the car rides on it where it leaves the road), in TILE x TILE vertex tiles.
+- with collision (the car rides on it where it leaves the road), in TILE x TILE vertex tiles;
+- v3.1: three detail levels per tile (the v3.0 skin, 18 million triangles drawn at every distance, cost more
+  frames than anything else on the map): near (LOD_PX[0] px on screen and more: about LOD_DIST[0] m) the
+  round skin as above; then two triangles per terrain square (LOD_LIFT[1] m higher, the plane of a square
+  over both ways the game may split it); then two per 2 x 2 squares; nothing beyond about LOD_DIST[2] m,
+  where the terrain under it is lowered by LOWER at most and looks the same. The far levels cast no shadow
+  (the terrain under them casts the same) on a material of their own (MAT_FAR).
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish steep_skin
 """
@@ -41,13 +47,18 @@ COLOUR_BLUR = 1.5             # terrain squares, blur of the vertex colours
 INSIDE_IN = 2.0               # half squares: the cut at least this far inside the outline of the skin squares
 INSIDE_FADE = 3.0             # half squares further in: the skin down onto the terrain over these
 INSIDE_BLUR = 1.5             # half squares, blur of the distance inside (a round line, not the staircase)
-TILE = 256                    # terrain vertices per side of a mesh tile
+TILE = 128                    # terrain vertices per side of a mesh tile (v3.0: 256; smaller tiles change
+                              # their detail level closer to the camera)
+LOD_DIST = (350.0, 1000.0, 3000.0)   # m: round skin, one quad per square, one per 2 x 2 squares, nothing
+LOD_LIFT = (0.0, 0.04, 0.12)  # m over the lattice heights of the level (the coarse planes stay over the terrain)
+PIX_K = 1000.0                # = optimize_level.PIX_K: pixels on screen per (radius / distance)
 TILE_M = 3.0                  # m of slope per repeat of the texture
 TEX_N = 512                   # pixels of the texture
 TEX_MEAN = 205.0              # mean sRGB of the texture: the vertex colours bring it to the terrain's
 FOOT_STEP = 0.5               # m between the samples of the shapes' footprints
 D = "art/shapes/terrain_skin"
 MAT = "mp_steep_bank"
+MAT_FAR = "mp_steep_bank_far"
 ROADS = ("roads",)
 SOLID = ("roads", "walls", "buildings", "railway")
 
@@ -91,7 +102,9 @@ def materials():
     t = f"/levels/{LEVEL_NAME}/{D}"
     m = bng.material(MAT, f"{t}/t_steep_bank_b.color.png", normal_map=f"{t}/t_steep_bank_nm.normal.png",
                      roughness=0.95, ground_type="DIRT", vert_color=True)
-    return [m]
+    far = bng.material(MAT_FAR, f"{t}/t_steep_bank_b.color.png", normal_map=f"{t}/t_steep_bank_nm.normal.png",
+                       roughness=0.95, ground_type="DIRT", vert_color=True, extra={"castShadows": False})
+    return [m, far]
 
 
 # ------------------------------------------------------------------------------------------------ terrain
@@ -239,8 +252,9 @@ def clip(P, N, col, T, f):
     return np.array(P), np.array(N), np.array(col), np.concatenate(out)
 
 
-def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None):
-    """Triangles of the skin squares into mb, one add per projection axis."""
+def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=()):
+    """Triangles of the skin squares into mb, one add per projection axis; lods: [(k, lift, MeshBuilder)] the
+    far detail levels (coarse_mesh), filled from the same lattice."""
     span = int(keys[:, 1].max()) + 2
     lut = {int(k): i for i, k in enumerate(keys[:, 0] * span + keys[:, 1])}
     P = np.column_stack([x0 + keys[:, 1] * sq / 2, y0 + keys[:, 0] * sq / 2, z])
@@ -263,8 +277,16 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None):
         tris += [(ctr, p[i], p[(i + 1) % 8]) for i in range(8)]
     T = np.array(tris, np.int64)
     col = np.column_stack([colour, np.ones(len(z))])
+    for k, lift, mbk in lods:
+        coarse_mesh(mbk, keys, P, N, col, rr, cc, wv if wv is not None else np.ones(len(z)), k, lift)
     if wv is not None:
         P, N, col, T = clip(P, N, col, T, wv - EDGE_ISO)
+    add_projected(mb, MAT, P, N, col, T)
+    return len(T)
+
+
+def add_projected(mb, mat, P, N, col, T):
+    """The triangles T into mb, one add per projection axis (each face takes the axis it is turned to)."""
     fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
     axis = np.argmax(np.abs(fn), axis=1)                 # 0: x (u = y, v = z), 1: y (u = x, v = z), 2: z (u = x, v = y)
     for ax, (ui, vi) in enumerate(((1, 2), (0, 2), (0, 1))):
@@ -273,7 +295,34 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None):
             continue
         used, inv = np.unique(Ta.ravel(), return_inverse=True)
         uv = np.column_stack([P[used, ui], P[used, vi]]) / TILE_M
-        mb.add(MAT, P[used], uvs=uv, normals=N[used], tris=inv.reshape(-1, 3), colors=col[used])
+        mb.add(mat, P[used], uvs=uv, normals=N[used], tris=inv.reshape(-1, 3), colors=col[used])
+
+
+def coarse_mesh(mb, keys, P, N, col, rr, cc, wv, k, lift):
+    """Far detail level: two triangles per k x k terrain squares of the skin (k = 1, 2), the corners at the
+    lattice heights (lift m higher), the diagonal that keeps the face over the other. Blocks whose lattice is
+    cut away entirely (wv under EDGE_ISO at all its points) or that miss a corner are left out."""
+    span = int(keys[:, 1].max()) + 2
+    lut = {int(a) * span + int(b): i for i, (a, b) in enumerate(keys)}
+    blocks = np.unique(np.column_stack([rr // k, cc // k]), axis=0)
+    tris = []
+    for R, C in blocks:
+        r0, c0 = 2 * k * R, 2 * k * C
+        q = [lut.get((r0 + a) * span + c0 + b, -1) for a, b in ((0, 0), (0, 2 * k), (2 * k, 2 * k), (2 * k, 0))]
+        if min(q) < 0 or max(wv[i] for i in q) < EDGE_ISO:
+            continue
+        z = P[q, 2]
+        if z[0] + z[2] >= z[1] + z[3]:                   # the higher diagonal: the faces over the other split
+            tris += [(q[0], q[1], q[2]), (q[0], q[2], q[3])]
+        else:
+            tris += [(q[0], q[1], q[3]), (q[1], q[2], q[3])]
+    if not tris:
+        return 0
+    T = np.array(tris, np.int64)
+    used, inv = np.unique(T.ravel(), return_inverse=True)
+    Pc = P[used].copy()
+    Pc[:, 2] += lift
+    add_projected(mb, MAT_FAR, Pc, N[used], col[used], inv.reshape(-1, 3))
     return len(T)
 
 
@@ -364,8 +413,9 @@ def steep_skin_step(root, report=None):
             col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
                                    for k in range(3)])
             mb = bng.MeshBuilder()
+            far = [(1, LOD_LIFT[1], bng.MeshBuilder()), (2, LOD_LIFT[2], bng.MeshBuilder())]
             ox, oy = X0 + b0 * sq, Y0 + a0 * sq
-            ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv)
+            ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far)
             if not ntri:                                    # nothing left inside the cut: the terrain as it was
                 continue
             sub = q_new[a0:a1, b0:b1][cr, ccs]
@@ -373,7 +423,12 @@ def steep_skin_step(root, report=None):
             origin = np.array([ox + (b1 - b0) * sq / 2, oy + (a1 - a0) * sq / 2, float(np.median(z))])
             with tempfile.TemporaryDirectory() as tmp:
                 f = os.path.join(tmp, "s.dae")
-                mb.write_dae(f, name=f"skin_{tr}_{tc}", origin=origin, weld=False)
+                # detail sizes from the radius of the tile's squares: near, middle and far as LOD_DIST
+                radius = 0.5 * float(np.hypot(core[1] - core[0], core[3] - core[2])) * sq
+                px = [max(2, int(round(radius * PIX_K / d))) for d in LOD_DIST]
+                lods = [(px[i + 1], mbk) for i, (_, _, mbk) in enumerate(far) if not mbk.empty()]
+                mb.write_dae(f, name=f"skin_{tr}_{tc}", origin=origin, detail=px[0], weld=False, lods=lods)
+                rep["triangles_far"] = rep.get("triangles_far", 0) + sum(m.triangle_count() for _, m in lods)
                 rel = f"{D}/skin_{tr:04d}_{tc:04d}.dae"
                 files[f"{lv}/{rel}"] = open(f, "rb").read()
             ob = bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=True, decal=False)
