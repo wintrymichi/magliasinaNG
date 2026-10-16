@@ -557,22 +557,24 @@ def grid_sample(G, xs, ys, x, y):
 def wall_side(poly, X, Y, G, xs, ys):
     """Per point (X, Y) outside the footprint poly: how much higher the ground is SIDE_PROBE m out on its side of
     the wall than SIDE_PROBE m out on the other side (beyond the wall's width), from the ground G; nan where the
-    point is on the outline or inside."""
+    point is on the outline or inside; and the ground SIDE_PROBE m out on its own side."""
     b = poly.boundary
     pts = shapely.points(np.column_stack([X, Y]))
     q = shapely.get_coordinates(shapely.line_interpolate_point(b, shapely.line_locate_point(b, pts)))
     v = np.column_stack([X, Y]) - q
     d = np.hypot(v[:, 0], v[:, 1])
     out = np.full(len(X), np.nan)
+    own = np.full(len(X), np.nan)
     ok = d > 0.05
     if not ok.any():
-        return out
+        return out, own
     v = v[ok] / d[ok, None]
     width = min(2.0 * poly.area / max(poly.length, 1e-6) * 2.0, 6.0)       # about the wall's thickness
     a = q[ok] + v * SIDE_PROBE
     o = q[ok] - v * (SIDE_PROBE + width)
-    out[ok] = grid_sample(G, xs, ys, a[:, 0], a[:, 1]) - grid_sample(G, xs, ys, o[:, 0], o[:, 1])
-    return out
+    own[ok] = grid_sample(G, xs, ys, a[:, 0], a[:, 1])
+    out[ok] = own[ok] - grid_sample(G, xs, ys, o[:, 0], o[:, 1])
+    return out, own
 
 
 def carve_terrain(feet, xs, ys, H):
@@ -625,12 +627,17 @@ def carve_terrain(feet, xs, ys, H):
         # (beyond the slope the DTM smears across it), not from the vertex's own height: on that smear a vertex
         # on the low side of a wall could read as on its high side, and went up to the ground behind the wall
         # there, out in front of the face (a row of spikes beside the wall, worst along the lake)
-        side = wall_side(poly, X, Y, H0.reshape(len(ys), nx), xs, ys)
+        side, own = wall_side(poly, X, Y, H0.reshape(len(ys), nx), xs, ys)
         known = np.isfinite(side)
         low[known & ~inside] = side[known & ~inside] < 0.5 * np.maximum(zt - zl, 0.0)[known & ~inside]
         d, u = ok & low, ok & ~low
         np.minimum.at(lo, flat[d], zl[d] - 0.02)
-        np.maximum.at(hi, flat[u], zg[u] - 0.05)
+        # v3.0: up to the ground behind the wall, but no higher than the ground SIDE_PROBE m out on the vertex's
+        # side: the ground behind a wall is the highest DTM within R_SEARCH of it, on a narrow terrace (the railway
+        # between the wall of the lake shore and the wall of the road above) the top of the next wall up, and the
+        # terrace went up to it in teeth along the track
+        cap_g = np.where(np.isfinite(own), np.maximum(own, h0), zg)
+        np.maximum.at(hi, flat[u], np.minimum(zg, cap_g)[u] - 0.05)
         np.minimum.at(top, flat[u], zt[u] - 0.05)
     down = np.isfinite(lo)
     Hf[down] = np.minimum(Hf[down], lo[down])
