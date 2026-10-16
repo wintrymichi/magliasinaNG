@@ -1,0 +1,297 @@
+== build_level start Thu Oct 15 22:47:33 UTC 2026
+corridor: 44 chunks
+drivable polygons 21920, ha {'road': 195.4, 'sidewalk': 7.4, 'island': 0.4, 'hard': 155.7, 'strip_road': 4.6, 'strip_path': 21.3}
+surfaces (OSM, swissTLM3D): {'lines': 6215, 'osm': 2430, 'changed': {'gravel->hard': 9, 'dirt->hard': 72, 'dirt->gravel': 205, 'dirt->cobble': 1, 'hard->cobble': 36, 'hard->gravel': 29, 'hard->dirt': 13, 'hard->sett': 56, 'gravel->dirt': 1}, 'ha': {'hard:gravel': 0.33, 'hard:hard': 155.2, 'hard:sett': 0.19, 'island:hard': 0.37, 'road:cobble': 0.63, 'road:dirt': 38.89, 'road:gravel': 9.96, 'road:hard': 145.14, 'road:sett': 0.78, 'sidewalk:hard': 7.43, 'strip_path:cobble': 0.01, 'strip_path:dirt': 19.01, 'strip_path:gravel': 1.36, 'strip_path:hard': 0.89, 'strip_path:sett': 0.01, 'strip_road:cobble': 0.01, 'strip_road:dirt': 0.0, 'strip_road:gravel': 0.41, 'strip_road:hard': 4.06, 'strip_road:sett': 0.12}, 'polygons_in_parts': 299}
+  network tiles 1/440, 0 triangles, 0 s
+  network tiles 26/440, 15925 triangles, 6 s
+  network tiles 51/440, 155150 triangles, 59 s
+  network tiles 76/440, 272569 triangles, 110 s
+  network tiles 101/440, 410769 triangles, 157 s
+  network tiles 126/440, 596342 triangles, 215 s
+  network tiles 151/440, 796616 triangles, 278 s
+  network tiles 176/440, 1071282 triangles, 356 s
+  network tiles 201/440, 1263407 triangles, 419 s
+  network tiles 226/440, 1570401 triangles, 513 s
+  network tiles 251/440, 1912057 triangles, 623 s
+  network tiles 276/440, 2224013 triangles, 721 s
+  network tiles 301/440, 2579230 triangles, 862 s
+  network tiles 326/440, 2972069 triangles, 986 s
+  network tiles 351/440, 3433596 triangles, 1138 s
+  network tiles 376/440, 3850253 triangles, 1273 s
+  network tiles 401/440, 4046003 triangles, 1341 s
+  network tiles 426/440, 4321593 triangles, 1451 s
+  network carve done, 1533 s
+chunk seams stitched: 70141
+road chunks 2932 triangles 11205542 stone faces 75220 bridges 182 carved vertices 3177535
+[stage roads: 1927 s]
+walls 21462 photo-textured 0 chunks 1530 triangles 3124118
+roadside walls 20 chunks 11 atlas pages 0
+[stage walls: 377 s]
+lake: level 270.48 m, Copernicus lake height 270.00, 47.5 km2 within 24 km
+water blocks 12 over 169 km2 (lake 15.7 km2), dry land below the lake covered: 0 cells
+lake level 270.4807434082031
+rivers: {'surveyed': 100, 'ha_surveyed': 33.5, 'polygons': 58, 'ha': 33.0, 'under_bridges_m2': 73.0, 'fords': 0, 'chunks': 438, 'triangles_before_trim': 441878, 'ha_bed_lowered': 32.5}
+[stage water: 170 s]
+rivers: terrain lowered under the water at 132873 vertices
+railway: terrain lowered under the tracks at 16027 vertices
+base colour map Grass: 10.6 % of its pixels from the orthophoto
+base colour map GardenGrass: 7.1 % of its pixels from the orthophoto
+base colour map Gravel: 0.4 % of its pixels from the orthophoto
+base colour map Rock: 0.2 % of its pixels from the orthophoto
+base colour map Moss: 0.0 % of its pixels from the orthophoto
+base colour map Mud: 1.0 % of its pixels from the orthophoto
+base colour map Concrete: 2.1 % of its pixels from the orthophoto
+base colour map Asphalt: 3.9 % of its pixels from the orthophoto
+rivers: 449077 triangles, 26.9 ha of water, 6.7 ha under or at the terrain left out
+terrain z0 218.0 maxHeight 1438.0
+[stage terrain: 195 s]
+railway: {'tracks': 78, 'km': np.float64(13.86), 'level_crossing_m': 2388.0, 'bridge_m': np.float64(4.45), 'covered_m': 190.0, 'sleepers': 18550} meshes 24
+[stage railway: 83 s]
+[stage sky: 0 s]
+backdrop triangles 761424
+[stage backdrop: 27 s]
+blocks of several houses 1293 houses 4843
+building photo facades 0 atlas pages 0 buildings with a passage 280 stats {'openings': 168250, 'gwr': 9779, 'measured': 3592, 'roofs': {np.str_('tegole'): 4405, np.str_('flat'): 4586, np.str_('piode'): 1357, np.str_('metal'): 2065, np.str_('coppi'): 1307}, 'use': {'house': 6983, 'garage': 1097, 'work': 350, 'church': 78, 'shed': 3823, 'rural': 811, 'public': 231, 'none': 107, 'tower': 3}, 'stone': 480, 'shops': 178, 'soffit_m2': 188453.64727801696, 'parts': 4843, 'chimneys': 3483, 'lit_windows': 47139, 'balconies': 6019, 'photo_facades': 0, 'passages': 280}
+building tiles 684 triangles 2453655
+[stage buildings: 794 s]
+guard rails laid twice, left out: 30 m
+guard rails seen in the panoramas: 293 runs, 9.73 km
+guardrails 322 runs: {'italy_guardrails_basic': 4316, 'italy_guardrails_basic_end_cw': 322, 'italy_guardrails_basic_end_ccw': 322}
+[stage guardrails: 48 s]
+fences laid twice, left out: 327 m
+rails of the fences on a guard rail already laid, left out: 11 m
+rails of the fences: {'italy_guardrails_basic': 14, 'italy_guardrails_basic_end_cw': 3, 'italy_guardrails_basic_end_ccw': 3}
+fences 46 in 16 chunks
+[stage fences: 1 s]
+road paint taken over from the reference level: 1 objects
+network paint cleaned: {'crossings': 99, 'crossings_osm': 10, 'strips': 3424, 'marks': 956, 'dropped': 1320, 'lines_in': 1256, 'lines_out': 1219, 'polygons_in': 6208}
+network paint: 4228 strips (62.6 km), 4563 polygons, 9536 vertices off the road left out, 157 meshes
+[stage markings: 142 s]
+main route: 4 nodes moved sideways onto one surface (max 4.5 m)
+one-way AI roads: {'roundabout': 47, 'separated': 12, 'osm': 120}
+AI roads closed to general traffic (drivability 0.1): 30
+AI roads 2999
+[stage ai: 28 s]
+route objects taken over from the reference level: 84
+OSM signs and furniture: {'stop': 43, 'give_way': 61, 'bench': 151, 'waste_basket': 21, 'street_lamp': 0, 'bus_stop': 136, 'shelter': 8, 'left_out': 97}
+[stage props: 126 s]
+trees outside the cadastral survey dropped: 82324
+tops under a taller crown dropped: 933 of 444208
+trees: 82240 within 30 m of the roads and 5 m of the paths, 29187, 20130 up to 100 m, 26049 of 279144 farther (tallest per 38 m cell)
+palms: 329
+photo shrubs 169
+off the paved surfaces: dropped {'tree': 1966, 'bush': 273, 'hedge': 56} | shrubs and hedges moved back 13890
+far trees: 285588 of 285669 left out by the thinning (81 with the crown over a path or over the cap)
+forest items 447188 types 38
+{'far_narrow_a': 71102, 'far_narrow_b': 65974, 'far_narrow_c': 64160, 'far_broad_c': 26231, 'tree_beech_forest_b': 24182, 'far_broad_b': 22291, 'tree_aspen_small_a': 21520, 'tree_beech_large_b': 20013, 'far_broad_a': 17943, 'tree_beech_forest_a': 15716, 'tree_oak_large_b': 10372, 'tree_oak_forest_b': 10253, 'tree_douglasfir_small_b': 7725, 'tree_oak_large_a': 7318, 'tree_oak_forest_a': 7112, 'far_fir_c': 6002, 'far_fir_b': 5985, 'holm_oak': 5948, 'far_fir_a': 5900, 'tree_aspen_forest_a': 5871, 'tree_oak_large_c': 3696, 'tree_oak_sml_a': 2764, 'fluffy_bush': 2648, 'tree_aspen_large_b': 2609, 'tree_beech_bush_c': 2105, 'tree_douglasfir_large_b': 1951, 'tree_oak_bush_b': 1451, 'tree_douglasfir_small_a': 1425, 'tree_douglasfir_large_a': 1358, 'generibush': 1138, 'tree_beech_small_c': 982, 'tree_beech_bush_e': 975, 'cypress_hedge_3m': 850, 'tree_oak_sml_b': 404, 'cypress_tree': 360, 'tree_beech_small_b': 349, 'palm_trachycarpus': 329, 'tree_beech_small_d': 176}
+vineyards: {'vineyards': 476, 'rows': 10809, 'rows_km': 449.7, 'from_photo': 192, 'from_walls': 34, 'steep_km': 14.4, 'full_km': 329.1, 'posts': 69503, 'chunks': 765, 'triangles_near': 2501850, 'triangles_far': 248328, 'vertices': 4132332, 'detail_near': [3, 401], 'detail_far': [1, 80], 'triangles': 2750178}
+[stage vegetation: 655 s]
+groundcover: {'covers': 4, 'max_elements': 490000, 'radius_m': 120.0, 'triangles_per_clump': 2}
+[stage groundcover: 0 s]
+spawn points ['spawn_magliaso', 'spawn_mid', 'spawn_pura', 'spawn_agno', 'spawn_caslano', 'spawn_bioggio', 'spawn_gravesano', 'spawn_magliaso_paese', 'spawn_manno', 'spawn_pura_paese', 'spawn_aranno', 'spawn_arosio', 'spawn_astano', 'spawn_banco', 'spawn_bedigliora', 'spawn_bosco_luganese', 'spawn_breno', 'spawn_cademario', 'spawn_cassina_d_agno', 'spawn_castelrotto', 'spawn_cimo', 'spawn_fescoggia', 'spawn_miglieglia', 'spawn_molinazzo_di_monteggio', 'spawn_monteggio', 'spawn_mugena', 'spawn_neggio', 'spawn_novaggio', 'spawn_ponte_tresa', 'spawn_purasca', 'spawn_sessa', 'spawn_vernate', 'spawn_vezio']
+[stage spawns: 4 s]
+canopy: 447188 forest items, 4729081 drivable faces, 5823841 solid faces, 0 faces of ground behind walls (76 s)
+  tile 1/1081, moved 0, swapped 0, scaled 0, removed 0 (80 s)
+  tile 101/1081, moved 597, swapped 35, scaled 10, removed 14 (137 s)
+  tile 201/1081, moved 1124, swapped 76, scaled 13, removed 26 (197 s)
+  tile 301/1081, moved 1645, swapped 124, scaled 18, removed 39 (263 s)
+  tile 401/1081, moved 1993, swapped 156, scaled 24, removed 52 (315 s)
+  tile 501/1081, moved 2399, swapped 187, scaled 30, removed 62 (381 s)
+  tile 601/1081, moved 2866, swapped 214, scaled 40, removed 71 (450 s)
+  tile 701/1081, moved 3347, swapped 234, scaled 44, removed 83 (522 s)
+  tile 801/1081, moved 3800, swapped 256, scaled 48, removed 89 (596 s)
+  tile 901/1081, moved 4608, swapped 303, scaled 53, removed 110 (695 s)
+  tile 1001/1081, moved 5009, swapped 324, scaled 57, removed 124 (767 s)
+canopy: {'items': 447188, 'moved': 5252, 'swapped': 343, 'scaled': 60, 'removed': 133, 'in_profile_before': [4207, 793, 407], 'trunks_in_solids_before': 159, 'trunks_in_solids_moved': 126, 'trunks_in_solids_removed': 33, 'trunks_near_roads_before': 502, 'floating_before': 53223, 'buried_before': 717, 'items_after': 447055} (827 s)
+[stage canopy: 827 s]
+== finish: optimize (optimize_level.level_step)
+64/2205 16s
+128/2205 28s
+192/2205 42s
+256/2205 50s
+320/2205 57s
+384/2205 81s
+448/2205 103s
+512/2205 126s
+576/2205 150s
+640/2205 176s
+704/2205 209s
+768/2205 220s
+832/2205 227s
+896/2205 234s
+960/2205 245s
+1024/2205 275s
+1088/2205 282s
+1152/2205 286s
+1216/2205 292s
+1280/2205 294s
+1344/2205 295s
+1408/2205 296s
+1472/2205 296s
+1536/2205 296s
+1600/2205 296s
+1664/2205 297s
+1728/2205 297s
+1792/2205 297s
+1856/2205 297s
+1920/2205 298s
+1984/2205 298s
+2048/2205 298s
+2112/2205 298s
+2176/2205 299s
+2205/2205 299s
+backdrop         1 ->    1 shapes  vertices    383,788 ->    383,788 (100%)  detail 2-2
+buildings      684 ->  351 shapes  vertices  4,867,117 ->  4,866,765 (100%)  detail 2-135
+fences          16 ->    8 shapes  vertices     19,082 ->     19,058 (100%)  detail 7-507
+props            2 ->    2 shapes  vertices     16,712 ->     16,712 (100%)  detail 2-2
+railway         24 ->   24 shapes  vertices    747,444 ->    747,274 (100%)  detail 20-214
+roads         3090 ->  571 shapes  vertices 11,989,966 -> 11,803,854 (98%)  detail 2-753
+trees            1 ->    1 shapes  vertices        142 ->        142 (100%)  detail 2-2
+vineyards       36 ->   36 shapes  vertices      2,366 ->      2,366 (100%)  detail 2-52
+walls         1541 ->  340 shapes  vertices  3,867,795 ->  3,861,773 (100%)  detail 2-291
+water          429 ->  133 shapes  vertices    322,692 ->    322,692 (100%)  detail 2-109
+vertices 22,217,104 -> 22,024,424  triangles 18,842,308  299s
+[finish optimize: 303 s]
+== finish: grass (groundcover.grass_step)
+groundcover: GroundCover objects and materials written
+[finish grass: 4 s]
+== finish: unpaved (network_mesh.unpaved_step)
+top faces: 1156666 of the unpaved, 4583153 in all
+388 blocks with unpaved faces
+terrain vertices raised: 951253, by median 0.18 m, 95th percentile 0.53 m, at most 0.99 m
+edge vertices lowered onto the terrain: 718909, in 391 shapes
+[finish unpaved: 418 s]
+== finish: bridge_fill (bridge_fill.bridge_fill_step)
+bridge fill: {'places': [{'name': 'Magliasina, Via Cantonale and its slip road (Magliaso - Caslano)', 'decks': 2, 'fill_m2': 338.4, 'faces_cut': 337}], 'skipped': [], 'props_moved': 0, 'plants_removed': 2, 'seconds': 50}
+[finish bridge_fill: 50 s]
+== finish: markings (markings_rules.markings_rules_step)
+road faces 3375417, carriageway 1666408 (55 s)
+AI roads 2709 (63 s)
+edges measured (82 s)
+context (93 s)
+junctions 1967, crossings (128 s)
+paint laid (253 s)
+markings by the rules: {"km": {"edge": 124.42, "guide": 2.78, "junction": 0.11, "leit": 13.47, "long": 0.6, "safe": 8.01, "warn": 3.08, "wind": 0.25}, "count": {"arrow": 42, "crossing": 72, "crossing_bars": 384, "give_way_line": 147, "signal_stop_line": 4, "stop_line": 35, "stop_text": 35, "zone30_text": 46}, "meshes": 158, "seconds": 293}
+[finish markings: 293 s]
+== finish: road_wear (road_wear.road_wear_step)
+road wear: edges 510.3 km (99 s)
+road wear: {'roads': 1851, 'junctions': 5381, 'meshes': 213, 'seconds': 189, 'track_km': 250.6, 'edge_km': 510.3, 'variation_km': 166.3, 'cracks_km': 21.4}
+[finish road_wear: 189 s]
+== finish: shoulders (road_shoulders.shoulders_step)
+road shoulders: {'edge_km': 1703.7, 'edge_km_lower_ground': 1096.1, 'edge_km_embankment': 31.3, 'drop_p50_p90': [0.16, 0.51], 'vertices_trimmed': 124873, 'vertices_raised': 685916, 'mean_lift': 0.07, 'max_lift': 1.2, 'faces_km': np.float64(143.83), 'seconds': 478}
+[finish shoulders: 478 s]
+== finish: islands (islands.islands_step)
+islands: {'islands': 131, 'island_m2': 3869, 'signs': 168, 'shapes_rewritten': 40, 'seconds': 99}
+[finish islands: 99 s]
+== finish: far_trees (far_trees.far_trees_step)
+tops under a taller crown left out: 933
+trees measured 443275: road and path surfaces 6634972 / 1105184 points, forest items 161571; far tree candidates 231375
+forest fill: 300466 far trees on 60.0 km2 of forest outside the survey (one every 14 m), 25280 conifers
+forest gap fill: 208615 far trees in the gaps of the woods of the survey (grid 8 m)
+forest fill: 509081 far trees outside the survey
+far trees: 740430 of 740456 left out by the thinning (26 with the crown over a path or over the cap)
+740430 far trees {'far_fir_b': 9994, 'far_narrow_a': 133485, 'far_broad_a': 123168, 'far_narrow_c': 98029, 'far_broad_c': 106360, 'far_fir_c': 41932, 'far_broad_b': 110819, 'far_narrow_b': 109145, 'far_fir_a': 7498}
+[finish far_trees: 137 s]
+== finish: signs (signs_net.signs_step)
+680 signs planned: Counter({'rule': 634, 'osm': 46})
+existing: 461 pole points, 104 STOP/give-way plates, 67 panorama plates
+roads 2245461 carriageway faces, 4554210 faces (59 s)
+buildings and walls near the signs (118 s)
+{'placed': {'2.30+text+4.27': 1, '2.53+text+4.30': 1, '2.59.2': 17, '2.59.1': 9, '2.59.3': 3, '2.59.3+text': 1, '1.07+5.01+text': 1, '2.59.1+2.03+text+2.16': 1, '2.01+text': 3, '2.20': 1, 'city_limit': 2, '4.09+2.16': 1, '4.09+2.19+2.18': 1, '2.59.1+2.02+5.01': 1, '2.01+5.01+text': 1, '2.01+5.01': 1, '2.30': 6, '2.01': 2, 'village_end': 7, 'village_begin': 8, '4.08': 31, 'roundabout': 40, '2.02': 31, '4.11': 120}, 'left_out': {'4.17': 1, '4.08': 3, '4.09+1.07': 1, '2.01+text': 1, '2.01': 1, '2.02': 2, '2.30': 1}, 'outside_map': {'city_limit': 6, '4.17': 1, '2.01': 1, '2.05': 1, '2.45+5.03': 2, '2.30': 21, '2.30+text': 1, '2.02': 49, '4.08': 52, 'roundabout': 30, '2.59.1': 18, '2.59.2': 28, 'village_begin': 4, 'village_end': 5, '4.11': 159}, 'outside_map_total': 378, 'left_out_double': {'plate_3.02': 27, '4.11': 2}, 'replaced_panorama': 6, 'old_plate_triangles_turned': 2070, 'panorama_plates_removed': 62, 'old_textures_resized': 232, 'panorama_plates': {'removed_unknown': 10, 'drawn_2.59.1': 2, 'kept_back': 5, 'removed_info': 4, 'removed_bus_stop': 6, 'drawn_4.11': 2, 'removed_island_2.33': 5, 'removed_not_a_sign': 5, 'drawn_2.53': 1, 'drawn_1.01': 1, 'drawn_2.02': 1, 'removed_tourist': 2, 'drawn_4.32': 2, 'removed_direction': 1, 'drawn_3.01': 1, 'removed_hiking': 2, 'removed_street_name': 4, 'drawn_4.17': 2, 'removed_direction_advance': 1}, 'panorama_opacity_maps': 67, 'placed_total': 290, 'left_out_total': 10}
+written in 143 s
+[finish signs: 144 s]
+== finish: paved_edges (network_mesh.paved_edges_step)
+keep-out: 6.0 km2 around guard rails, fences, walls, buildings, railway, parapets
+before: {'edges_km': 318.9, 'over_terrain_m': {'p10': 0.1, 'median': 0.172, 'p75': 0.224, 'p90': 0.267}, 'share_over_0.15m': 0.616, 'share_over_0.3m': 0.035, 'terrain_over_the_faces_inside': {'share': 3e-05, 'max_m': 2.675}}
+top faces: 1500410 of these, 4554210 in all
+346 blocks with unpaved faces
+terrain vertices in the keep-out left as they were: 608577
+terrain vertices raised: 1075585, by median 0.11 m, 95th percentile 0.29 m, at most 0.99 m
+edge vertices lowered onto the terrain: 0, in 0 shapes
+after: {'edges_km': 318.9, 'over_terrain_m': {'p10': 0.051, 'median': 0.068, 'p75': 0.081, 'p90': 0.104}, 'share_over_0.15m': 0.039, 'share_over_0.3m': 0.008, 'terrain_over_the_faces_inside': {'share': 3e-05, 'max_m': 2.675}}
+terrain vertices raised: {'vertices': 1075585, 'median_m': 0.11, 'p95_m': 0.285, 'max_m': 0.987, 'in_keep_out': 0}
+[finish paved_edges: 874 s]
+== finish: wall_fill (walls.wall_fill_step)
+terrain vertices without game grass: {'Grass -> GrassVerge': 14284, 'GardenGrass -> GardenGrassVerge': 70311}, {'over_wall_top': 84595} (squares crossed by a wall 555168)
+written in 48 s
+[finish wall_fill: 48 s]
+== finish: wall_doubles (walls.double_faces_step)
+steep faces: 3271040 of walls, 146638 of roads
+{'road_faces': 146638, 'wall_faces': 3271040, 'road_faces_in_a_wall': 23128, 'road_faces_in_a_wall_m2': 10757, 'wall_faces_in_a_road_face': 33, 'wall_faces_in_a_road_face_m2': 14, 'wall_faces_in_a_wall': 7311, 'wall_faces_in_a_wall_m2': 1028}
+shapes rewritten: 504, written in 768 s
+[finish wall_doubles: 769 s]
+== finish: wall_feet (walls.wall_feet_step)
+wall feet: {'shapes': 344, 'feet_lowered': 642067, 'lowered_m_p50': 0.145, 'lowered_m_max': 2.8, 'seconds': 43}
+[finish wall_feet: 43 s]
+== finish: understory (understory.understory_step)
+forest floor vertices: 39988674, near roads, paths, walls, buildings, railway: {'ForestFloor -> ForestFloorVerge': 777905, 'ForestFloor2 -> ForestFloor2Verge': 16612}
+written in 119 s
+[finish understory: 120 s]
+== finish: lamps (lamps.lamps_step)
+faces: 2248842 carriageway, 2317909 other road, 380171 roofs, 1005223 wall tops; 971784 obstacle points
+new street lamps: 1872 ({'tried': 8174, 'carriageway': 636, 'step': 616, 'building': 2178, 'wall': 2293, 'railway': 6, 'clear': 57, 'gap': 516})
+written in 109 s: 1945 lamps (1872 new), 1945 lights
+[finish lamps: 109 s]
+== finish: roadside (poles.roadside_step)
+delineators: 504, wooden poles: 605 in 482 spans ({'tried': 4464, 'carriageway': 122, 'step': 658, 'building': 187, 'wall': 341, 'railway': 101, 'clear': 212, 'cable': 73, 'short_line': 1734})
+written in 107 s
+[finish roadside: 107 s]
+== finish: catenary (railway.catenary_step)
+sleepers: 11506 (7333 metre gauge)
+electrified track chains: 19, 8.1 km (1718 m FLP, 1659 m FLP, 1028 m FLP, 825 m FLP, 753 m FLP, 580 m FLP, 360 m FLP, 240 m SBB)
+masts: 168 over 8.1 km of track; spans median 50 m, 4 over 75 m without wires; places skipped: {'road': 62, 'building': 6, 'wall': 99, 'track': 120}
+written in 87 s: 23 mast tiles, 20 wire tiles
+[finish catenary: 87 s]
+== finish: signs_more (signs_more.signs_more_step)
+151 signs planned: Counter({'4.17': 110, '1.15': 13, '1.16': 8, '1.04': 6, '1.02': 4, '1.13': 4, '1.01': 3, '1.03': 3})
+roads 2245461 carriageway faces, 4554210 faces (52 s)
+buildings and walls near the signs (95 s)
+{'planned': {'1.01': 3, '1.04': 6, '1.02': 4, '1.03': 3, '1.15': 13, '1.16': 8, '1.13': 4, '4.17': 110}, 'placed': {'1.02': 1, '1.03': 3, '1.04': 2, '1.15': 10, '1.16': 8, '1.13': 3, '4.17': 59}, 'placed_total': 86, 'left_out': {'4.17': 1}, 'outside_map': {'1.01': 3, '1.04': 4, '1.02': 3, '1.15': 3, '1.13': 1, '4.17': 50}, 'moved_back': 4, 'new_textures': 9}
+written in 105 s
+[finish signs_more: 105 s]
+== finish: direction_signs (direction_signs.direction_signs_step)
+direction signs: {'roundabouts_exits': 35, 'placed': 35, 'no_room': 0, 'pointers': 62, 'seconds': 70}
+[finish direction_signs: 70 s]
+== finish: lake (water.lake_step)
+water level 270.48 m, 25 piers mapped on the Swiss side
+piers: 24 (13 fixed, 11 floating, 960 m), 1 not over the water; boats: 165
+written in 5 s: 12 pier tiles, 4 boat tiles
+[finish lake: 5 s]
+== finish: house_details (buildings_mesh.house_details_step)
+50 building shapes, 15 s
+100 building shapes, 26 s
+150 building shapes, 35 s
+200 building shapes, 46 s
+/root/venv/lib/python3.13/site-packages/shapely/constructive.py:246: RuntimeWarning: divide by zero encountered in buffer
+  return lib.buffer(
+/root/venv/lib/python3.13/site-packages/shapely/constructive.py:246: RuntimeWarning: invalid value encountered in buffer
+  return lib.buffer(
+250 building shapes, 60 s
+300 building shapes, 74 s
+350 building shapes, 93 s
+houses 7611: gutters 232 km, 29820 downpipes, 2000 aerials, 1549 dishes, 418 roofs with panels (16890 m2)
+written in 106 s: 217 detail tiles, 58 panel tiles, 444150 triangles
+[finish house_details: 106 s]
+== finish: facade_relief (facade_relief.facade_relief_step)
+facade relief: {'buildings': 331, 'edges': 27361, 'edges_without_wall': 26159, 'coping_km': 151.3, 'triangles': 383054, 'seconds': 61}
+[finish facade_relief: 61 s]
+== finish: house_extras (house_extras.house_extras_step)
+house extras: {'windows': 108279, 'flower_boxes': 12580, 'balcony_boxes': 3788, 'woodpiles': 135, 'unknown_side': 4030}
+written in 152 s: 204 tiles, 213864 triangles
+[finish house_extras: 152 s]
+== finish: fuel_stations (fuel_stations.fuel_stations_step)
+fuel stations: {'stations': 8, 'left_out': {'osm': 17, 'off_terrain': 0, 'off_road': 9, 'same_station': 0}, 'canopies_replaced': 7, 'canopies_new': 0, 'no_canopy': 1, 'islands': 11, 'dispensers': 22, 'totems': 7, 'triangles': 7254, 'seconds': 81}
+[finish fuel_stations: 81 s]
+== finish: street_life (street_life.street_life_step)
+== finish: street_life (street_life.street_life_step)
+street life: {'bin': 1620, 'post_box': 452, 'recycling': 24, 'picnic': 23, 'trashbags': 400, 'bench': 567, 'table': 77, 'umbrella': 77, 'chair': 154, 'terraces': 63, 'planter_round': 788, 'planter_square': 426, 'planter': 152, 'mirror': 32, 'hydrant': 342, 'house_bin': 1337, 'garden_table': 166, 'garden_chair': 332, 'drum': 1188, 'pallet': 1483, 'yard_props': 6589, 'yards': 2470, 'dumpster': 451}; left out: {'carriageway': 5513, 'wall': 2137, 'slope': 2357, 'step': 157, 'clear': 536, 'building': 14679, 'props': 991, 'railway': 75}
+written in 307 s: 11936 objects
+[finish street_life: 322 s]
+== finish: shopfronts (shopfronts.shopfronts_step)
+shop fronts: 268 places, geometry read in 82 s
+shop fronts: 162 places used, left out {'no shop front': 119, 'Italy': 150, 'no building': 91, 'no street façade': 12, 'no room on the façade': 3}; {'light_boxes': 81, 'signs': 137, 'glass_doors': 14, 'pilasters': 18, 'big_stores': 14, 'cornices': 9, 'canopies': 11, 'trolley_shelters': 9, 'trolleys': 47, 'gas_cages': 11, 'ice_chests': 21, 'crate_stacks': 21, 'bins': 15, 'flower_stands': 2, 'plant_pots': 36, 'projecting_signs': 38, 'tables': 92, 'chairs': 184, 'umbrellas': 55, 'boards': 63, 'post_boxes': 6, 'flags': 40, 'awnings': 23, 'fruit_stands': 10, 'benches': 3, 'barber_poles': 6, 'barrels': 2, 'news_stands': 2, 'bike_racks': 1}
+written in 103 s: 187 tiles, 36272 triangles {'awning': 2174, 'front': 3872, 'prop': 28690, 'soft': 1536}
+[finish shopfronts: 104 s]
+== finish: vineyards_ground (vineyards.ground_step)
+vineyards on the terrain: {'shapes': 765, 'moved': 623, 'max_move_m': 1.961}
+[finish vineyards_ground: 27 s]
