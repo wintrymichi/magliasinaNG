@@ -786,7 +786,24 @@ Z0 = MAXH = None
 WORKERS = int(os.environ.get("PATCH_WORKERS", min(os.cpu_count(), 4)))   # each holds the faces of the level (~1.5 GB)
 
 
-_BED = None
+_BED = _RD = None
+RAIL_CLEAR = 8.0      # m from the axis of a track where the edges of the roads raise no ground
+
+
+def rail_dist():
+    """f(x, y): distance to the nearest track axis (railway.tracks, bridges included), once per process."""
+    global _RD
+    if _RD is None:
+        import railway
+        from scipy.spatial import cKDTree
+        P = [railway.resample(Q, 0.5)[0][:, :2] for _, Q in railway.tracks()]
+        if not P:
+            _RD = lambda x, y: np.full(np.shape(x), np.inf)
+        else:
+            tree = cKDTree(np.concatenate(P))
+            _RD = lambda x, y: tree.query(np.column_stack([np.ravel(x), np.ravel(y)]),
+                                          distance_upper_bound=50.0)[0].reshape(np.shape(x))
+    return _RD
 
 
 def rail_bed():
@@ -837,6 +854,9 @@ def block(args):
     X, Y = np.meshgrid(xs, ys)
     bed = rail_bed()(X, Y)
     aim = np.where(np.isfinite(bed), np.minimum(aim, np.maximum(H, bed)), aim)
+    # and no ground raised within RAIL_CLEAR m of a track at all: a pavement of the Strada Cantonale sloping down
+    # over the line (the survey's surface fitted on the slope) raised the ground beside the rails by 2-3 m
+    aim = np.where(rail_dist()(X, Y) < RAIL_CLEAR, H, aim)
     if QA is not None:
         aim = Z0 + QA.astype(np.float64) / 65535.0 * MAXH
     moved = aim > H + 1e-4
