@@ -540,6 +540,7 @@ def near_vertices(samples, xs, ys, radius):
 LOW_SIDE = 0.25        # a vertex lower than this fraction of the wall height over the wall foot is on its low side
 
 
+RING_OVER = 0.5       # m, a vertex of the next ring out on the low side of a wall this much over the ground there goes down (carve_terrain)
 SIDE_PROBE = 3.0      # m out from the wall where the ground of either side is read (wall_side)
 
 
@@ -554,9 +555,9 @@ def grid_sample(G, xs, ys, x, y):
             + G[r0 + 1, c0 + 1] * tc * tr)
 
 
-def wall_side(poly, X, Y, G, xs, ys):
+def wall_side(poly, X, Y, G, xs, ys, probe=SIDE_PROBE):
     """Per point (X, Y) outside the footprint poly: how much higher the ground is SIDE_PROBE m out on its side of
-    the wall than SIDE_PROBE m out on the other side (beyond the wall's width), from the ground G; nan where the
+    the wall than SIDE_PROBE (probe) m out on the other side (beyond the wall's width), from the ground G; nan where the
     point is on the outline or inside; and the ground SIDE_PROBE m out on its own side."""
     b = poly.boundary
     pts = shapely.points(np.column_stack([X, Y]))
@@ -570,8 +571,8 @@ def wall_side(poly, X, Y, G, xs, ys):
         return out, own
     v = v[ok] / d[ok, None]
     width = min(2.0 * poly.area / max(poly.length, 1e-6) * 2.0, 6.0)       # about the wall's thickness
-    a = q[ok] + v * SIDE_PROBE
-    o = q[ok] - v * (SIDE_PROBE + width)
+    a = q[ok] + v * probe
+    o = q[ok] - v * (probe + width)
     own[ok] = grid_sample(G, xs, ys, a[:, 0], a[:, 1])
     out[ok] = own[ok] - grid_sample(G, xs, ys, o[:, 0], o[:, 1])
     return out, own
@@ -602,6 +603,7 @@ def carve_terrain(feet, xs, ys, H):
     lo = np.full(Hf.shape, np.inf)
     hi = np.full(Hf.shape, -np.inf)
     top = np.full(Hf.shape, np.inf)
+    ring_lo = np.full(Hf.shape, np.inf)
     for poly, allv, zlo, ztop, zgr in feet:
         x0, y0, x1, y1 = poly.bounds
         c0, c1 = max(int(np.floor((x0 - sq - xs[0]) / sq)), 0), min(int(np.ceil((x1 + sq - xs[0]) / sq)), nx - 1)
@@ -612,6 +614,21 @@ def carve_terrain(feet, xs, ys, H):
         C, R = C.ravel(), R.ravel()
         X, Y = xs[C], ys[R]
         hit = shapely.intersects(shapely.box(X - sq, Y - sq, X + sq, Y + sq), poly.boundary)
+        # v3.0: the next ring of vertices out, on the low side of the wall: the carve of a pavement on top of the
+        # wall (one terrain step from them) set them to its height, up to 2-3 m over the ground at the foot of the
+        # wall, and the vertices between them and the face went down to the foot: single white teeth one terrain
+        # step out from the face (along the railway under Magliaso, about 2500 vertices over the map)
+        ring = shapely.intersects(shapely.box(X - 2 * sq, Y - 2 * sq, X + 2 * sq, Y + 2 * sq), poly.boundary) & ~hit
+        ring &= ~shapely.contains_xy(poly, X, Y)
+        if ring.any():
+            j = cKDTree(allv).query(np.column_stack([X[ring], Y[ring]]))[1]
+            zl, zt = zlo[j], ztop[j]
+            fr = R[ring] * nx + C[ring]
+            # read beyond them: the raised vertices are SIDE_PROBE m out from the face themselves
+            side, own = wall_side(poly, X[ring], Y[ring], H0.reshape(len(ys), nx), xs, ys, SIDE_PROBE + 2 * sq)
+            d = np.isfinite(zl) & np.isfinite(zt) & np.isfinite(own) & (zl > H0[fr] - 30.0) \
+                & (side < 0.5 * np.maximum(zt - zl, 0.0)) & (H0[fr] > np.maximum(own, zl) + RING_OVER)
+            np.minimum.at(ring_lo, fr[d], np.maximum(own, zl)[d])
         if not hit.any():
             continue
         C, R, X, Y = C[hit], R[hit], X[hit], Y[hit]
@@ -643,6 +660,8 @@ def carve_terrain(feet, xs, ys, H):
     Hf[down] = np.minimum(Hf[down], lo[down])
     up = np.isfinite(hi) & ~down
     Hf[up] = np.maximum(Hf[up], hi[up])
+    rl = np.isfinite(ring_lo) & ~down & ~up
+    Hf[rl] = np.minimum(Hf[rl], ring_lo[rl])
     # v3.0: nor over the top of the wall on its high side (the ground carved for a pavement at the edge of the
     # Strada Cantonale over the lower wall of the railway along the lake stood up to 2 m over its top, a saw of
     # terrain teeth along the wall, one terrain step from the vertices at its foot)
