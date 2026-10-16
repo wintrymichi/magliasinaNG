@@ -28,7 +28,7 @@ EYE = 1.7          # on foot
 SV_EYE = 2.2       # the Street View camera over the ground (work/camera_height.json)
 
 # times of day (calibrate in the scout pass: the sun of the level is not the real one)
-DAWN, MORNING, DAY, AFTERNOON, GOLDEN, DUSK, NIGHT = 0.77, 0.85, 0.02, 0.12, 0.24, 0.29, 0.40
+DAWN, MORNING, DAY, AFTERNOON, GOLDEN, SUNSET, DUSK = 0.77, 0.85, 0.02, 0.12, 0.24, 0.265, 0.29
 
 
 def ll(lat, lon):
@@ -97,11 +97,9 @@ SHOTS = [
          speed=16, secs=6, tod=DAY, group="drive"),
     dict(name="g02_gameplay_alto_malcantone", kind="gameplay", car="vivace", route=[[2280, 6304], [1395, 6440]],
          speed=14, secs=5, tod=AFTERNOON, group="drive"),
-    # ---- 6 dusk and night, the end
-    dict(name="n01_magliaso_lampioni", kind="walk", start=[1530, -888], end=[1530 + 0.6135 * 10, -888 - 0.7897 * 10],
-         side=2.5, secs=6, tod=NIGHT, group="night", fov=62),
-    view_orbit("n02_magliaso_notte", 45.9807, 8.8850, 450, 200, 210, 22, 26, 7, DUSK, "night"),
-    view_orbit("e01_finale_lago", 45.9807, 8.8850, 520, 200, 200, 24, 30, 9, GOLDEN, "end", d1=900),
+    # ---- 6 the end: sunset over the lake
+    view_orbit("e01_finale_tramonto", 45.9807, 8.8850, 520, 200, 200, 22, 28, 7, SUNSET, "end", d1=850),
+    view_orbit("e02_finale_tramonto_alt", 45.96664, 8.87381, 620, 250, 235, 20, 24, 7, SUNSET, "end", d1=760),
 ]
 
 for s in SHOTS:
