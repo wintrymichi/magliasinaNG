@@ -773,6 +773,8 @@ def canopy_mesh(B, rect, z_ceil, mats):
         L = float(np.hypot(*(b - a)))
         out = (a + b) / 2 - c
         out = out / max(np.hypot(*out), 1e-9)
+        if (b - a) @ np.array([-out[1], out[0]]) < 0:      # a on the left of someone looking at the side: the name reads
+            a, b = b, a
         a2, b2 = a + out * FASCIA_T, b + out * FASCIA_T
         z0, z1 = z_ceil - FASCIA_DROP, zt + FASCIA_H - SLAB - FASCIA_DROP
         # u: the logo strip centred on the side, the plain ends of the strip beyond it
