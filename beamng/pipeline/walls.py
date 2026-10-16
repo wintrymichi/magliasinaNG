@@ -86,6 +86,9 @@ MIN_PIECE_AREA = 0.25     # m^2, smaller pieces left over by that are dropped
 ALONG = 1.2               # m: a line wall this near a surface wall ...
 ALONG_SHARE = 0.6         # ... for this share of its length runs along it: the same wall
 MIN_PIECE_WIDTH = 0.08    # m, half the least width of a piece kept
+PAIR_GAP = 1.0            # m: two line walls of the survey parallel and this close are the two faces of one wall
+PAIR_ANGLE = 15.0         # degrees between them at most
+PAIR_SHARE = 0.5          # of the shorter one's length running along the other
 
 
 def wall_footprints(av, skip_polys, taken=None):
@@ -110,7 +113,7 @@ def wall_footprints(av, skip_polys, taken=None):
                     continue
             kept.append((g, p))
         lines = kept
-    src = polys + [(g.buffer(0.15, cap_style="flat", join_style="mitre"), "line", p) for g, p in lines]
+    src = polys + paired_lines(lines)
     if skip_polys:
         sk = shapely.union_all(skip_polys)
         src = [(g, k, p) for g, k, p in src if g.intersection(sk).area < 0.5 * g.area]
@@ -143,6 +146,71 @@ def wall_footprints(av, skip_polys, taken=None):
             g = rest[0] if len(rest) == 1 else MultiPolygon(rest)
         out.append((g, k, p))
         add(g)
+    return out
+
+
+def _direction(line, at):
+    """Unit direction (2,) of a line near the point at."""
+    s = line.project(at)
+    a = np.asarray(line.interpolate(max(s - 1.0, 0)).coords[0])
+    b = np.asarray(line.interpolate(min(s + 1.0, line.length)).coords[0])
+    d = b - a
+    return d / max(np.hypot(*d), 1e-9)
+
+
+def paired_lines(lines):
+    """[(footprint, "line", properties)] of the line walls of the survey. v3.1: the survey often draws a wall as
+    its two faces, two lines a few decimetres apart, and every line was a wall 0.30 m thick: two low walls side by
+    side along the roads (2,290 pairs, 55 km on the v3.0 level). Lines parallel within PAIR_ANGLE and within
+    PAIR_GAP m of each other for PAIR_SHARE of the shorter one are joined into one wall that fills the space
+    between them (the union of the lines closed over half their gap); the others as before, 0.30 m thick."""
+    if not lines:
+        return []
+    G = [g for g, _ in lines]
+    tree = shapely.STRtree(G)
+    a_i, b_i = tree.query(G, predicate="dwithin", distance=PAIR_GAP)
+    parent = list(range(len(G)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    gap = {}
+    cmax = np.cos(np.radians(PAIR_ANGLE))
+    for a, b in zip(a_i, b_i):
+        if a >= b:
+            continue
+        ga, gb = G[a], G[b]
+        if ga.length < 1.0 or gb.length < 1.0 or ga.intersects(gb):
+            continue
+        short, other = (ga, gb) if ga.length <= gb.length else (gb, ga)
+        along = short.intersection(other.buffer(PAIR_GAP, cap_style="flat")).length
+        if along < PAIR_SHARE * short.length:
+            continue
+        mid = short.interpolate(0.5, normalized=True)
+        if abs(float(_direction(short, mid) @ _direction(other, mid))) < cmax:
+            continue
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+        r = find(b)
+        gap[r] = max(gap.get(r, 0.0), gap.pop(ra, 0.0) if ra != r else 0.0, float(short.distance(other)),
+                     float(other.hausdorff_distance(short)) if other.length < 2 * short.length else 0.0)
+    groups = {}
+    for i in range(len(G)):
+        groups.setdefault(find(i), []).append(i)
+    out = []
+    for r, idx in groups.items():
+        if len(idx) == 1:
+            g, p = lines[idx[0]]
+            out.append((g.buffer(0.15, cap_style="flat", join_style="mitre"), "line", p))
+            continue
+        rad = min(gap.get(r, PAIR_GAP), PAIR_GAP) / 2 + 0.06
+        u = shapely.union_all([G[i].buffer(0.05, cap_style="flat") for i in idx])
+        g = u.buffer(rad, join_style="mitre").buffer(-rad, join_style="mitre")
+        g = shapely.union_all([g, shapely.union_all([G[i] for i in idx]).buffer(0.15, cap_style="flat", join_style="mitre")])
+        out.append((shapely.make_valid(g), "line", lines[idx[0]][1]))
     return out
 
 
