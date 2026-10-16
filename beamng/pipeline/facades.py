@@ -235,6 +235,8 @@ def shop_front(kind):
 # church tower, the church and the houses down the slope are one object of 90 x 87 m, drawn up to v3.0 as one
 # tower without a window); its houses take the style of houses, its tower (a part of the survey) a tower's
 TOWER_AREA = 120.0
+# register classes of offices, shops, hotels, schools, hospitals, halls...: the "public" style (windows on every floor)
+PUBLIC = (1220, 1230, 1231, 1241, 1261, 1262, 1263, 1264, 1265, 1211, 1212, 1130, 1275, 1273, 1274)
 
 
 def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=False, key=None):
@@ -257,9 +259,13 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=F
         # a small storage building or workshop: in the villages the old ones are rustici and sheds, not
         # workshops with ribbon windows
         use = "rural" if age in ("old", "interwar", "mid", None) and area >= 15 else "shed"
-    elif klass in (1251, 1252) or (cat == 1060 and area > 400 and klass not in (1271, 1276, 1277, 1278)):
+    elif klass in (1251, 1252) or (cat == 1060 and area > 400 and klass not in (1271, 1276, 1277, 1278) + PUBLIC
+                                   and not (shop and klass is None)):
+        # v3.1: not the offices, shops, hotels... of the register (class in PUBLIC) nor a building with a shop of
+        # OSM in it: they were drawn as windowless sheds (the building of the Panetteria Magliasino, an office
+        # and shop block of 1996 at the FLP stop Magliaso Paese)
         use = "work"
-    elif klass in (1220, 1230, 1231, 1241, 1261, 1262, 1263, 1264, 1265, 1211, 1212, 1130, 1275, 1273, 1274) and area > 60:
+    elif (klass in PUBLIC or (cat == 1060 and shop)) and area > 60:
         use = "public"
     elif klass == 1242 or (cat == 1060 and area < 45):
         use = "garage"

@@ -10,6 +10,9 @@ parking space (amenity=parking_space) gets spots:
   PARALLEL_LEN m each;
 - a wider one: rows of spots across its long axis, SPOT_W m wide and SPOT_LEN m deep, in pairs back to back
   with an aisle of AISLE m between the pairs (as a car park is painted).
+The spots on a paved surface are painted as in Switzerland: white lines PAINT_W m wide, the two sides and the
+back of the bays across a car park, the whole outline of the bays along a street (art/shapes/roads/
+parking_paint_*.dae in MissionGroup/roads/markings, the road paint's material).
 A spot is kept only inside its car park (EDGE m in from its outline), never on an AI road's lane (LANE_CLEAR m
 beyond its half width), never on a building, a wall or a lamp post, and only on ground that is level enough
 (MAX_TILT across the spot); its height that of the paved surface there, else the terrain. The spots go into
@@ -19,14 +22,14 @@ player and moves them along as the player drives.
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish parking
 """
-import json, math, os, time, zipfile
+import json, math, os, re, shutil, tempfile, time, zipfile
 import numpy as np
 import shapely
 from scipy.spatial import cKDTree
 import bng
 import osm
 from config import LEVEL_NAME
-from markings_net import read_items, shape_tris, up_faces
+from markings_net import LIFT, read_items, shape_tris, up_faces
 from road_mesh import TriSurface
 
 KINDS = (None, "surface", "street_side", "lane", "layby", "sheds", "carports")   # amenity=parking kept
@@ -43,6 +46,10 @@ MAX_TILT = 0.12                             # rise over run across a spot at mos
 PROBABILITY = 0.6                           # of a spot being taken when the game fills the spots near the player
 MIN_AREA = 25.0                             # m2: smaller car parks are left out
 SITES = "city.sites.json"
+PAINT_W = 0.12                              # m, the white lines of the bays
+PAINT_MAT = "mp_road_paint"                 # markings_rules.PAINT["white"]
+PAINT_TILE = 512.0                          # m, a mesh of paint per tile
+PAINT_SHAPE = re.compile(r"art/shapes/roads/parking_paint_[-+]\d+_[-+]\d+\.dae$")
 
 
 def spot_rects(poly):
@@ -118,6 +125,47 @@ class Ground:
         zt = self.terrain(x, y)
         zs = self.S.height(x, y, "near", zhint=zt)
         return np.where(np.isfinite(zs) & (np.abs(zs - zt) < 1.5), zs, zt)
+
+    def paved(self, x, y):
+        """Height of the paved surface (NaN where there is none)."""
+        zt = self.terrain(x, y)
+        zs = self.S.height(x, y, "near", zhint=zt)
+        return np.where(np.isfinite(zs) & (np.abs(zs - zt) < 1.5), zs, np.nan)
+
+
+def bay_lines(c, d, L, W, parallel):
+    """Segments ((2,), (2,)) of the paint of a bay: its two long sides and its back (the end away from the
+    aisle), or its whole outline along a street."""
+    n = np.array([-d[1], d[0]])
+    a, b = c - d * L / 2, c + d * L / 2                       # a: the aisle end (the car's front faces d)
+    p = [a + n * W / 2, b + n * W / 2, b - n * W / 2, a - n * W / 2]
+    segs = [(p[0], p[1]), (p[3], p[2]), (p[1], p[2])]
+    if parallel:
+        segs.append((p[0], p[3]))
+    return segs
+
+
+def paint_mesh(segs, ground, builders):
+    """White strips PAINT_W m wide along the segments, LIFT m over the paved surface, into builders per tile."""
+    for A, B in segs:
+        L = float(np.hypot(*(B - A)))
+        if L < 0.3:
+            continue
+        k = max(1, int(np.ceil(L / 0.5)))
+        P = A[None] + (B - A)[None] * np.linspace(0, 1, k + 1)[:, None]
+        t = (B - A) / L
+        nrm = np.array([-t[1], t[0]]) * PAINT_W / 2
+        Lp, Rp = P + nrm, P - nrm
+        zl, zr = ground.paved(Lp[:, 0], Lp[:, 1]), ground.paved(Rp[:, 0], Rp[:, 1])
+        ok = np.isfinite(zl) & np.isfinite(zr)
+        for i in range(k):
+            if not (ok[i] and ok[i + 1]):
+                continue
+            a, b = np.r_[Rp[i], zr[i] + LIFT], np.r_[Rp[i + 1], zr[i + 1] + LIFT]
+            c_, d_ = np.r_[Lp[i + 1], zl[i + 1] + LIFT], np.r_[Lp[i], zl[i] + LIFT]
+            V = np.array([a, b, c_, a, c_, d_])
+            key = tuple(np.floor(P[i] / PAINT_TILE).astype(int).tolist())
+            builders.setdefault(key, bng.MeshBuilder()).add(PAINT_MAT, V, uvs=V[:, :2], normals=np.repeat([[0, 0, 1.0]], 6, 0))
 
 
 def obstacles(zi, lv, near_pts, near_r):
@@ -201,7 +249,7 @@ def parking_step(root, report=None):
     rmax = max((math.hypot(*np.ptp(np.asarray(p.exterior.coords), axis=0)) / 2 for _, _, p in parks), default=0)
     otree, opts = obstacles(zi, lv, cent, rmax + 2.0)
     rep = {"car_parks": len(parks), "spots": 0, "left_out": {"lane": 0, "obstacle": 0, "outside": 0, "tilt": 0}}
-    spots = []
+    spots, segs, seg_seen = [], [], set()
     for a, wid, poly in parks:
         inner = poly.buffer(-EDGE + 0.05)
         cands = []
@@ -236,6 +284,12 @@ def parking_step(root, report=None):
                 rep["left_out"]["tilt"] += 1
                 continue
             z = float(ground.height([c[0]], [c[1]])[0])
+            if np.isfinite(ground.paved([c[0]], [c[1]])[0]):
+                for A, B in bay_lines(c, d, L + 0.4, W + 0.3, L > 5.0 and a != "parking_space" and W < 2.5):
+                    key = (round(float(A[0] + B[0]), 1), round(float(A[1] + B[1]), 1))   # a side two bays share once
+                    if key not in seg_seen:
+                        seg_seen.add(key)
+                        segs.append((A, B))
             spots.append({"name": f"parking_{wid}_{len(spots)}", "pos": [round(float(c[0]), 3), round(float(c[1]), 3), round(z, 3)],
                           "rot": [round(v, 6) for v in quat_z(d)], "scl": [round(W + 0.3, 2), round(L + 0.4, 2), 3],
                           "isMultiSpot": False, "color": [1, 1, 1],
@@ -248,12 +302,35 @@ def parking_step(root, report=None):
     if name in zi.NameToInfo:                                 # keep the zones and locations of an earlier file
         old = json.loads(zi.read(name))
         sites["zones"], sites["locations"] = old.get("zones", []), old.get("locations", {})
-    data = json.dumps(sites, indent=1).encode("utf-8")
+    new_files = {name: json.dumps(sites, indent=1).encode("utf-8")}
+    # the white bays
+    builders = {}
+    paint_mesh(segs, ground, builders)
+    rep["paint_lines"] = len(segs)
+    mk_items = f"{lv}/main/MissionGroup/roads/markings/items.level.json"
+    mk = [o for o in read_items(zi, mk_items) if not PAINT_SHAPE.search(o.get("shapeName", ""))]
+    parent = next((o["__parent"] for o in mk if "__parent" in o), "markings")
+    tmp = tempfile.mkdtemp(prefix="magliaso_parking_")
+    try:
+        for (tx, ty), mb in sorted(builders.items()):
+            rel = f"art/shapes/roads/parking_paint_{tx:+03d}_{ty:+03d}.dae"
+            origin = np.array([(tx + 0.5) * PAINT_TILE, (ty + 0.5) * PAINT_TILE, 0.0])
+            f = os.path.join(tmp, "p.dae")
+            mb.write_dae(f, name=f"parking_paint_{tx}_{ty}", origin=origin)
+            new_files[f"{lv}/{rel}"] = open(f, "rb").read()
+            ob = bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=False, decal=False)
+            ob["__parent"] = parent
+            mk.append(ob)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    new_files[mk_items] = ("\n".join(json.dumps(o, separators=(",", ":")) for o in mk) + "\n").encode("utf-8")
+    now = time.localtime()[:6]
     with zi.writer() as zo:
         for i in zi.infolist():
-            if i.filename != name:
+            if i.filename not in new_files and not PAINT_SHAPE.search(i.filename):
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
-        zo.writestr(zipfile.ZipInfo(name, time.localtime()[:6]), data, compress_type=zipfile.ZIP_DEFLATED)
+        for n, data in sorted(new_files.items()):
+            zo.writestr(zipfile.ZipInfo(n, now), data, compress_type=zipfile.ZIP_DEFLATED)
     rep["seconds"] = round(time.time() - t0)
     print("parking:", rep, flush=True)
     if report:
