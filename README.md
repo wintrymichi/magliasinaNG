@@ -118,15 +118,14 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 | Agno, lakeside | 70 | **78** | | Cantonal road, hairpin | 64 | 66 |
 | Caslano | 133 | 136 | | Over Magliaso and the lake | 59 | **65** |
 | Novaggio | 89 | 92 | | Over Novaggio | 67 | **73** |
-| Bedigliora | 74 | 76 | | | | |
+| Bedigliora | 74 | 76 | | **Average of the 13** | **92** | **95** |
 
 Most of the remaining cost is the trees near the roads (the game's own models, the same as in v2.8): hiding the whole forest gives 13–25 FPS more. They are left as they are, so the woods keep their look.
 
 | | |
 |---|---|
 | ![The Eni of Magliaso Paese](beamng/verifica/screenshots/v3.0/new-eni-magliaso-paese.jpg)<br>*The Eni of Magliaso Paese, by the FLP stop (a parody brand)* | ![Parking bays and the petrol station](beamng/verifica/screenshots/v3.0/new-eni-and-parking-bays.jpg)<br>*White parking bays in front of it* |
-| ![Parking bays at the FLP station of Magliaso](beamng/verifica/screenshots/v3.0/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* | |
-| ![Tyre tracks through the hairpin](beamng/verifica/screenshots/v3.0/new-wear-hairpin.jpg)<br>*Tyre tracks through the hairpin of the cantonal road* | ![Tyre tracks through the hairpin, the other way](beamng/verifica/screenshots/v3.0/new-wear-hairpin-2.jpg)<br>*The same hairpin from the valley side* |
+| ![Parking bays at the FLP station of Magliaso](beamng/verifica/screenshots/v3.0/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* | ![Tyre tracks through the hairpin](beamng/verifica/screenshots/v3.0/new-wear-hairpin.jpg)<br>*Tyre tracks through the hairpin of the cantonal road* |
 
 **From the driver's seat**
 
@@ -137,7 +136,7 @@ Most of the remaining cost is the trees near the roads (the game's own models, t
 | ![The roundabout of Magliaso, other way](beamng/verifica/screenshots/v3.0/cockpit-roundabout-magliaso-2.jpg)<br>*The roundabout of Magliaso, the other way* | ![Agno along the lake](beamng/verifica/screenshots/v3.0/cockpit-agno-lakeside.jpg)<br>*Agno along the lake* |
 | ![The Penudria](beamng/verifica/screenshots/v3.0/cockpit-penudria.jpg)<br>*The Penudria, Gravesano – Arosio* | ![Miglieglia – Novaggio](beamng/verifica/screenshots/v3.0/cockpit-miglieglia-novaggio.jpg)<br>*Miglieglia – Novaggio* |
 | ![Novaggio – Miglieglia](beamng/verifica/screenshots/v3.0/cockpit-novaggio-miglieglia.jpg)<br>*Novaggio – Miglieglia, tyre tracks in the bend* | ![Caslano](beamng/verifica/screenshots/v3.0/cockpit-caslano.jpg)<br>*Caslano* |
-| ![Behind the car on the cantonal road](beamng/verifica/screenshots/v3.0/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | |
+| ![Behind the car on the cantonal road](beamng/verifica/screenshots/v3.0/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | ![Tyre tracks through the hairpin, the other way](beamng/verifica/screenshots/v3.0/new-wear-hairpin-2.jpg)<br>*The same hairpin from the valley side* |
 
 **Passages and landscapes**
 
@@ -202,7 +201,6 @@ v3.0 polishes the v2.8 map up close and from afar, after the feedback that it lo
 | ![Sessa](beamng/verifica/screenshots/08_sessa.jpg)<br>*Sessa* | ![The pass above Gravesano towards Arosio (the Penudria)](beamng/verifica/screenshots/09_passo_arosio.jpg)<br>*The pass above Gravesano towards Arosio (the Penudria)* |
 | ![Caslano and Via Torrazza along the lake](beamng/verifica/screenshots/10_caslano_torrazza.jpg)<br>*Caslano and Via Torrazza along the lake* | ![Magliaso, a street towards the old town](beamng/verifica/screenshots/11_magliaso_strada.jpg)<br>*Magliaso, a street towards the old town* |
 | ![The cantonal road towards Pura](beamng/verifica/screenshots/12_pura_cantonale.jpg)<br>*The cantonal road towards Pura* | ![Agno, a street in the old town](beamng/verifica/screenshots/13_agno_via.jpg)<br>*Agno, a street in the old town* |
-| ![The pass above Gravesano towards Arosio](beamng/verifica/screenshots/14_passo_tornante.jpg)<br>*The pass above Gravesano towards Arosio* |  |
 
 ## How the map is made
 
