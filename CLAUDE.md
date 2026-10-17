@@ -16,7 +16,21 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   committing, or generated data ends up in the commit.
 - The cloud container idles when no turn is active: keep a foreground wait loop while a build runs
   (`timeout 590 bash -c 'until grep -qE "BUILD DONE|Traceback" LOG; do sleep 20; done'`).
+- `optimize_level` used os.cpu_count() - 2 processes (14) and the OOM killer took the build and the Claude session on
+  the 14 GB PC (2026-10-17): now OPT_WORKERS (default 4). Keep PATCH_WORKERS=2 and nothing else heavy meanwhile.
+- `pgrep -f`/`pkill -f` with a pattern in your own command line stops your own shell: use "[r]un_build" style patterns.
 - Push work often. An earlier session lost the fuel stations module because it was never pushed.
+
+## Testing in the game on the PC
+
+- The monitor may be off (OLED, black window on top): run the game in a virtual KWin session, it renders on the RTX:
+  `kwin_wayland --virtual --xwayland --width 2560 --height 1440 --socket wl-mng --exit-with-session <script>` with
+  `SDL_VIDEODRIVER=x11` (the plain launch hung at startup with the screen off). Measure before/after in the same setup.
+- An extension name `magliaso_v31` loads `lua/ge/extensions/magliaso/v31.lua` (the underscore is a folder).
+- `gz()` (getSurfaceHeightBelow) hits roofs: give cameras near buildings absolute heights.
+- The game's sites (`city.sites.json`, `facilities.sites.json`) need an `oldId` on every spot and zone, or the level
+  stops loading with a Lua error.
+- Restore the player's mod zip, temp cache and remove every test file from the user folder at the end.
 
 ## Terrain fixes
 

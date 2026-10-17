@@ -64,8 +64,12 @@ OUT_TEST = 0.30              # m beyond an edge: carriageway there, the edge is 
 FLUSH_DZ = 0.04              # m: paved ground beyond the edge within this height goes on (a drive, a yard)
 JUNCTION_PAD = 4.0           # m beyond the carriageways meeting at a junction: no tracks, patches, cracks
 ROUNDABOUT_PAD = 10.0        # m around the ring of a roundabout
+RING_PAD = 9.0               # m about the ring's line: the AI road of the ring itself
 WIDTH_JUMP = 1.25            # m: a station whose measured width differs this much from the road's median is cut
 MEASURE_MAX = 8.0            # m from the axis: the farthest an edge is looked for
+CONT_DZ = 0.10               # m between two samples 0.25 m apart across the road: still the same asphalt
+WIDTH_LOCAL = 15             # stations (30 m): a road widening through a bend follows its own local median
+RING_SHARE = 0.6             # of an AI road's stations on a roundabout's ring: the ring itself
 CROSS_IN = 0.4               # m: a band is cut where it lies this far inside the carriageway of another AI road
 CROSS_ANGLE = 25.0           # degrees
 MIN_PIECE = 6                # stations: shorter pieces of a band are left out
@@ -307,8 +311,9 @@ class Carriageways:
 
 
 def roundabouts():
-    """Shapely geometry of the roundabouts of OpenStreetMap, ROUNDABOUT_PAD m around their rings (None
-    without the extract)."""
+    """Shapely geometries of the roundabouts of OpenStreetMap: ROUNDABOUT_PAD m around their rings (where
+    the entries carry no wear) and RING_PAD m about the rings themselves (an AI road along it is the ring);
+    None without the extract."""
     import shapely
     import osm
     if not osm.available():
@@ -322,25 +327,49 @@ def roundabouts():
         return None
     g = shapely.union_all(geoms)
     shapely.prepare(g)
-    return g
+    return g, (shapely.union_all(rings) if rings else None)
+
+
+def on_ring(P, T, ring):
+    """Whether an AI road (stations P, unit tangents T) runs round a roundabout's ring (the rings' lines): most of
+    its stations within RING_PAD m of a ring and running along it (not across it, as the entries do). The AI
+    road of a ring runs in its lane, a few metres off the line OpenStreetMap maps."""
+    import shapely
+    if ring is None:
+        return False
+    d = shapely.distance(ring, shapely.points(P))
+    near = d < RING_PAD
+    if near.mean() < RING_SHARE:
+        return False
+    Q = np.asarray([ring.interpolate(ring.project(shapely.Point(p))).coords[0] for p in P[near]])
+    Q2 = np.asarray([ring.interpolate(ring.project(shapely.Point(p)) + 1.0).coords[0] for p in P[near]])
+    Tr = Q2 - Q
+    Tr /= np.maximum(np.linalg.norm(Tr, axis=1, keepdims=True), 1e-9)
+    return float(np.mean(np.abs((Tr * T[near]).sum(1)) > 0.8)) >= RING_SHARE
 
 
 def measure(P, Nl, Sa, zhint):
     """Distance from the axis points P (n, 2) to the edge of the asphalt on the left and on the right (along
-    the normals Nl), at most MEASURE_MAX; NaN where the axis itself is off the asphalt."""
+    the normals Nl), at most MEASURE_MAX; NaN where the axis itself is off the asphalt. The asphalt goes on
+    while every sample is within CONT_DZ of the one before it (not of the axis: on the cross fall of a banked
+    hairpin the far side of the road is half a metre under the axis, and was taken for its edge)."""
     offs = np.arange(0.0, MEASURE_MAX + 0.01, 0.25)
     n = len(P)
-    on = np.zeros((2, n, len(offs)), bool)
+    out = np.full((2, n), np.nan)
     for si, sg in enumerate((1.0, -1.0)):
         Q = P[:, None, :] + sg * Nl[:, None, :] * offs[None, :, None]
-        z = Sa.height(Q[..., 0].ravel(), Q[..., 1].ravel(), "near", zhint=np.repeat(zhint, len(offs)))
-        on[si] = (np.isfinite(z) & (np.abs(z - np.repeat(zhint, len(offs))) < 0.4)).reshape(n, len(offs))
-    out = np.full((2, n), np.nan)
-    for si in range(2):
-        first_off = np.argmin(on[si], axis=1)                         # the first sample off the asphalt
-        all_on = on[si].all(1)
-        d = np.where(all_on, MEASURE_MAX, offs[np.maximum(first_off, 1) - 1] + 0.125)
-        out[si] = np.where(on[si][:, 0], d, np.nan)
+        z = Sa.height(Q[..., 0].ravel(), Q[..., 1].ravel(), "near",
+                      zhint=np.repeat(zhint, len(offs))).reshape(n, len(offs))
+        alive = np.isfinite(z[:, 0]) & (np.abs(z[:, 0] - zhint) < 0.4)
+        on_axis = alive.copy()
+        d = np.zeros(n)
+        zprev = np.where(alive, z[:, 0], zhint)
+        for j in range(1, len(offs)):
+            step = np.isfinite(z[:, j]) & (np.abs(z[:, j] - zprev) < CONT_DZ)
+            alive &= step
+            d[alive] = offs[j]
+            zprev = np.where(alive, z[:, j], zprev)
+        out[si] = np.where(on_axis, np.minimum(d + 0.125, MEASURE_MAX), np.nan)
     return out[0], out[1]
 
 
@@ -359,13 +388,13 @@ def road_bands(road, rng):
     return nodes, lanes, spans, rng.uniform(-0.3, 0.3)
 
 
-def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s):
+def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
     """Triangles and texture coordinates of a band of widths (n,) about the points C (n, 2) (heights zc) on the
     asphalt Sa, only where keep (n,) is true; u across the band, v along it."""
     tris, uvs = [], []
     e = np.flatnonzero(np.diff(np.r_[0, keep.astype(int), 0]))
     for a, b in zip(e[::2], e[1::2]):
-        if b - a < MIN_PIECE:
+        if b - a < (min_piece or MIN_PIECE):
             continue
         rows = []
         for k in (1, 0, -1):                                          # left side, middle, right side
@@ -399,19 +428,21 @@ def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
     P = nodes[:, :2]
     seg = np.hypot(*np.diff(P, axis=0).T)
     s = np.r_[0, np.cumsum(seg)]
-    if s[-1] < 3 * STEP:
+    if s[-1] < 2 * STEP:
         return []
     sd = np.linspace(0, s[-1], int(np.ceil(s[-1] / STEP)) + 1)
     Pd = np.column_stack([np.interp(sd, s, P[:, 0]), np.interp(sd, s, P[:, 1])])
     zd = np.interp(sd, s, nodes[:, 2])
     T = np.gradient(Pd, axis=0)
+    if len(T) >= 5:                                                   # no kinks at the corners of the AI nodes
+        T = uniform_filter1d(T, 5, axis=0, mode="nearest")
     T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
     Nl = np.column_stack([-T[:, 1], T[:, 0]])
     za = Sa.height(Pd[:, 0], Pd[:, 1], "near", zhint=zd)
     za = np.where(np.isfinite(za) & (np.abs(za - zd) < 1.5), za, np.nan)
     dl, dr = measure(Pd, Nl, Sa, np.where(np.isfinite(za), za, zd))
     ok = np.isfinite(za) & np.isfinite(dl) & np.isfinite(dr)
-    if ok.sum() < MIN_PIECE:
+    if ok.sum() < 3:
         return []
     # smoothed widths: a median over 7 stations (14 m) where measured
     W = dl + dr
@@ -421,15 +452,24 @@ def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
     dl_s = np.where(ok, median_filter(np.where(ok, dl, Wm / 2), 7, mode="nearest"), np.nan)
     dr_s = np.where(ok, median_filter(np.where(ok, dr, Wm / 2), 7, mode="nearest"), np.nan)
     Ws = dl_s + dr_s
-    keep = ok & (np.abs(Ws - Wm) < WIDTH_JUMP)
-    # not in a junction, nor on a roundabout and its entries
-    if len(junc):
-        d, j = jtree.query(Pd)
-        keep &= d > junc[j, 2]
-    if rb is not None:
-        keep &= ~shapely.contains_xy(rb, Pd[:, 0], Pd[:, 1])
-    keep &= ~cw.inside_other(Pd, k)
-    if keep.sum() < MIN_PIECE:
+    # a jump of the width (a lay-by, the mouth of a side road) is cut; the widening of a bend, which lasts
+    # as long as the bend, follows the local median and is kept (tight bends had no wear at all)
+    Wloc = median_filter(np.where(ok, Ws, Wm), WIDTH_LOCAL, mode="nearest")
+    keep = ok & ((np.abs(Ws - Wm) < WIDTH_JUMP) | (np.abs(Ws - Wloc) < WIDTH_JUMP))
+    # the ring of a roundabout carries its own tracks and patches all round, across the mouths of its entries
+    ring = rb is not None and on_ring(Pd, T, rb[1])
+    min_piece = 3 if ring else MIN_PIECE                              # the ring comes in short pieces between entries
+    if ring:
+        stats["ring_roads"] += 1
+    else:
+        # not in a junction, nor on a roundabout and its entries
+        if len(junc):
+            d, j = jtree.query(Pd)
+            keep &= d > junc[j, 2]
+        if rb is not None:
+            keep &= ~shapely.contains_xy(rb[0], Pd[:, 0], Pd[:, 1])
+        keep &= ~cw.inside_other(Pd, k)
+    if keep.sum() < min_piece:
         return []
     mid = (dl_s - dr_s) / 2                                           # the middle of the asphalt, left of the axis
     zc = np.where(np.isfinite(za), za, zd)
@@ -442,7 +482,7 @@ def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
         zq = np.where(np.isfinite(zq) & (np.abs(zq - zc) < 0.4), zq, zc)
         if not inside.any():
             return
-        t, uv = strip(C, width, zq, Nl, Sa, inside, lift, per_m * float(np.nanmedian(width[inside])), sd)
+        t, uv = strip(C, width, zq, Nl, Sa, inside, lift, per_m * float(np.nanmedian(width[inside])), sd, min_piece)
         if len(t):
             out.append((mat, t, uv))
             stats[mat[8:] + "_m"] += float(len(t) / 4 * STEP)
@@ -475,7 +515,7 @@ def road_wear_step(root, report=None):
     Sall = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in markings_net.CARRIAGE_MATS]))
     other = [up_faces(t) for m, t in surf.items() if m in PAVED]
     Sp = TriSurface(np.concatenate(other) if other else np.zeros((0, 3, 3)))
-    stats = {"roads": 0, "track_m": 0.0, "edge_m": 0.0, "variation_m": 0.0, "cracks_m": 0.0}
+    stats = {"roads": 0, "ring_roads": 0, "track_m": 0.0, "edge_m": 0.0, "variation_m": 0.0, "cracks_m": 0.0}
     builders = {}
 
     def add(mat, t, uv):

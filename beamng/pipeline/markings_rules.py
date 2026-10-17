@@ -877,6 +877,9 @@ def pre_announce(a, s_near, paint):
 
 
 # a stroke font for the road texts: polylines in a unit box (x across from left to right, y away from the reader)
+GLYPH_PX = 160          # px of a glyph drawn from the font
+GLYPH_TOL = 0.006       # of GLYPH_PX: the tolerance of its traced outline
+GLYPH_CUT = 0.02        # of a glyph's width: the slit that opens a hole (an O, a 0) into a simple ring
 GLYPHS = {
     "S": [[(1, .85), (.8, 1), (.2, 1), (0, .85), (0, .62), (.2, .5), (.8, .5), (1, .38), (1, .15), (.8, 0), (.2, 0), (0, .15)]],
     "T": [[(0, 1), (1, 1)], [(.5, 1), (.5, 0)]],
@@ -890,15 +893,62 @@ GLYPHS = {
 }
 
 
+def glyph_shape(ch, px=GLYPH_PX):
+    """Outline of a character in a unit box (x across 0..1, y along the road 0..1, the foot at 0) as a shapely
+    geometry, from a bold sans font drawn and traced (v3.0 review: the letters were strokes of a polyline font, thin
+    and angular next to the painted ones); holes cut open so every piece is a simple polygon (the paint takes
+    rings). None without a font."""
+    import cv2
+    from PIL import Image, ImageDraw
+    from signs_ch import _font
+    f = _font(px)
+    im = Image.new("L", (px * 2, px * 2), 0)
+    ImageDraw.Draw(im).text((px // 2, px // 4), ch, font=f, fill=255)
+    a = np.asarray(im)
+    ys, xs = np.nonzero(a > 127)
+    if not len(xs):
+        return None
+    a = a[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+    h, w = a.shape
+    cs, hier = cv2.findContours((a > 127).astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if hier is None:
+        return None
+    polys = []
+    for i, c in enumerate(cs):
+        if hier[0][i][3] != -1:
+            continue
+        def norm(c):
+            c = cv2.approxPolyDP(c, GLYPH_TOL * px, True).reshape(-1, 2).astype(float)
+            return np.column_stack([(c[:, 0] + 0.5) / w, 1.0 - (c[:, 1] + 0.5) / h])
+        holes = [norm(cs[j]) for j in range(len(cs)) if hier[0][j][3] == i and len(cs[j]) >= 3]
+        outer = norm(c)
+        if len(outer) < 3:
+            continue
+        g = shapely.Polygon(outer, [hh for hh in holes if len(hh) >= 3]).buffer(0)
+        for hh in holes:                                      # a hole: cut the glyph open through it
+            cx = float(np.mean(hh[:, 0]))
+            g = g.difference(shapely.box(cx - GLYPH_CUT / 2, -1, cx + GLYPH_CUT / 2, 0.5 * (1 + np.mean(hh[:, 1]))))
+        polys += [p for p in getattr(g, "geoms", [g]) if isinstance(p, shapely.Polygon) and p.area > 1e-4]
+    return shapely.MultiPolygon(polys) if polys else None
+
+
 def text_polys(text, origin, fwd, height, width, stroke=0.16, gap=0.2):
     """Polygons of `text` on the road: letters `height` m along `fwd` (away from the reader), the row
-    `width` m across, centred on `origin` (the middle of the row's near side)."""
+    `width` m across, centred on `origin` (the middle of the row's near side). v3.0 review: the glyphs of a bold
+    font (glyph_shape), stretched along the road as painted letters are; the stroke font where none."""
     right = np.array([fwd[1], -fwd[0]])
     n = len(text)
     lw = (width - gap * (n - 1)) / n
     out = []
     for k, ch in enumerate(text):
         x0 = -width / 2 + k * (lw + gap)
+        g = glyph_shape(ch)
+        if g is not None:
+            for p in g.geoms:
+                Q = np.asarray(p.exterior.coords)[:-1]
+                P = origin + right[None] * (x0 + Q[:, :1] * lw) + fwd[None] * (Q[:, 1:2] * height)
+                out.append(shapely.Polygon(P))
+            continue
         segs = []
         for pl in GLYPHS.get(ch, []):
             P = np.array([origin + right * (x0 + x * (lw - stroke) + stroke / 2) + fwd * (y * (height - stroke) + stroke / 2)

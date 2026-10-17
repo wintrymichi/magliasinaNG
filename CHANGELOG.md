@@ -4,6 +4,22 @@ What changed in each version of the map, newest first. The release notes that go
 
 ## v3.0 (not released yet)
 
+### The review round (2026-10-16/17)
+
+The fixes and additions after the first test build, built from scratch on a PC (`run_build.sh` as the `v3 build test` workflow) and tested in the game: [`beamng/verifica/v3.0/ingame_test_report.md`](beamng/verifica/v3.0/ingame_test_report.md), screenshots in [`beamng/verifica/screenshots/v3.0/`](beamng/verifica/screenshots/v3.0).
+
+- **Frame rate:** the steep skin in three detail levels per 192 m tile, the far ones without shadows (`steep_skin.py`): +1 % to +12 % FPS at 13 fixed places, peak memory 10.3 GB instead of 11.1 GB of the first test build.
+- **Road wear through roundabouts and tight bends** (`road_wear.py`): the ring roads of 33 roundabouts keep their tracks and patches all round; the width of the road measured by continuity across it and a bend's widening kept.
+- **Eni Magliaso Paese** (`fuel_stations.py`): a charging point of a fuel company marks a station where the survey has its canopy.
+- **Refuelling:** the petrol stations are gas stations of the game (pump areas and icons, `facilities/`, `facilities.sites.json`). The first test build wrote the stations without their pump areas (no refuelling, and the game's marker interaction raised an error every frame while driving); fixed and checked in the game (the *Refuel vehicle* prompt at the pumps, no error while driving). The stations show as the parody brand and the village.
+- **Parked cars and white bays** (`parking.py`, new): 11,069 spots in `city.sites.json`, 6,474 painted lines.
+- **Bus shelters** (`bus_shelters.py`, new): the game's shelter with its bench at 40 more stops.
+- **Windows:** the survey's "tower" larger than a tower is a block of houses (Bedigliora); offices and shops of the register no longer drawn as sheds (`facades.py`).
+- **Double walls:** two line walls of the survey parallel within 1 m are the faces of one wall (`walls.py`, 2,290 pairs).
+- **Road lettering** from a bold font (`markings_rules.text_polys`); feather flags of the car dealers read the right way.
+- **Build:** at most `OPT_WORKERS` (default 4) processes in `optimize_level` (14 took all the memory of a 14 GB PC).
+
+
 Built and checked automatically on GitHub Actions (`v3 build test`: zip 542 MB, no sign or guard rail drawn twice); the in-game test is still to do. Release notes: [`beamng/RELEASE_v3.0.md`](beamng/RELEASE_v3.0.md).
 
 - **Trees, not shrubs:** no tree model is shrunk below 0.75 of its size any more, each tree takes the model closest to its height, and false tops under taller crowns are dropped (about 25,000 trees of v2.8 looked like shrubs).
