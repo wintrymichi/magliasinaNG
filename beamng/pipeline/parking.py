@@ -284,13 +284,14 @@ def parking_step(root, report=None):
                 rep["left_out"]["tilt"] += 1
                 continue
             z = float(ground.height([c[0]], [c[1]])[0])
+            # (oldId below: the game's sites index their spots by it and stop loading the level without it)
             if np.isfinite(ground.paved([c[0]], [c[1]])[0]):
                 for A, B in bay_lines(c, d, L + 0.4, W + 0.3, L > 5.0 and a != "parking_space" and W < 2.5):
                     key = (round(float(A[0] + B[0]), 1), round(float(A[1] + B[1]), 1))   # a side two bays share once
                     if key not in seg_seen:
                         seg_seen.add(key)
                         segs.append((A, B))
-            spots.append({"name": f"parking_{wid}_{len(spots)}", "pos": [round(float(c[0]), 3), round(float(c[1]), 3), round(z, 3)],
+            spots.append({"name": f"parking_{wid}_{len(spots)}", "oldId": len(spots) + 1, "pos": [round(float(c[0]), 3), round(float(c[1]), 3), round(z, 3)],
                           "rot": [round(v, 6) for v in quat_z(d)], "scl": [round(W + 0.3, 2), round(L + 0.4, 2), 3],
                           "isMultiSpot": False, "color": [1, 1, 1],
                           "customFields": {"names": ["probability"], "tags": {}, "types": {"probability": "number"},

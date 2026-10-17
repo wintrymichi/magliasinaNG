@@ -939,7 +939,7 @@ def refuel_points(facilities, files, lv):
         gas.append({"name": node, "title": title.strip(), "description": "Benzina, diesel" if "diesel" in st["grades"]
                     else "Benzina", "preview": "fuel.jpg", "energyTypes": ["gasoline", "diesel", "unknown"], "pumps": pl})
         Z = float(np.median([z for _, _, z in pumps]))
-        zones.append({"name": node, "color": [1, 1, 1], "customFields": {"values": {}, "names": {}, "tags": {}, "types": {}},
+        zones.append({"name": node, "oldId": len(zones) + 1, "color": [1, 1, 1], "customFields": {"values": {}, "names": {}, "tags": {}, "types": {}},
                       "bot": {"active": False, "normal": [0, 0, -1], "pos": [0, 0, -10]},
                       "top": {"active": False, "normal": [0, 0, 1], "pos": [0, 0, 10]},
                       "vertices": [[round(float(x), 3), round(float(y), 3), round(Z, 3)]
