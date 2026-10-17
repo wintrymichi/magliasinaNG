@@ -71,7 +71,7 @@ def main(argv):
     tri, is_path, _ = road_tops(lv)
     S = TriSurface(tri[~is_path])
     places = json.load(open(drive_f))["places"] if os.path.exists(drive_f) else []
-    steps = [p for p in places if p["what"] in ("STEP", "HOLE")]
+    steps = [p for p in places if p["what"] in ("STEP", "HOLE") and p.get("cls") != "path"]
     boxes = {}
     for name, cx, cy, half in AREAS:
         boxes[name] = (cx - half, cy - half, cx + half, cy + half)
