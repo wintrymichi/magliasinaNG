@@ -161,7 +161,7 @@ def stations(roads):
     of those left out (off the terrain, away from the roads)."""
     ways, nodes = osm.load()
     pts = [(n["id"], n["x"], n["y"], n["tags"]) for n in nodes if n["tags"].get("amenity") == "fuel"]
-    # v3.1: a charging point a fuel company runs stands at its petrol station, which OpenStreetMap may not map
+    # v3.0 review: a charging point a fuel company runs stands at its petrol station, which OpenStreetMap may not map
     # (the Eni of Magliaso, by the FLP stop Magliaso Paese, is only its charging point): a station of its own,
     # built only where the survey has its canopy (CHARGING_ONLY)
     for n in nodes:
@@ -933,7 +933,7 @@ def village_of(zi, lv, x, y):
 
 
 def refuel_points(facilities, files, lv, zi):
-    """v3.1: the stations as gas stations of the game (freeroam_facilities): for every side of every dispenser
+    """v3.0 review: the stations as gas stations of the game (freeroam_facilities): for every side of every dispenser
     a BeamNGGameplayArea where the car stops and a BeamNGPointOfInterest over it (the pump icon), named as
     facilities/facilities.facilities.json lists them; the station's outline as a zone of facilities.sites.json.
     Up to v3.0 the game found no gas station on the map, and a car could not be refuelled there."""
@@ -991,7 +991,7 @@ def fuel_stations_step(root, report=None):
     ground = Ground(site, roads)
     M = Meshes(zi, lv, ["buildings", "buildings/details", "buildings/extras"], pts, CANOPY_R + 40.0)
     drop = {}                                                       # shape -> {list index: triangles}
-    facilities = []                                                 # v3.1: the game's gas stations
+    facilities = []                                                 # v3.0 review: the game's gas stations
     files, objs, used_brands, done = {}, [], set(), []
     for st in sts:
         p = np.array([st["x"], st["y"]])
@@ -1044,7 +1044,7 @@ def fuel_stations_step(root, report=None):
             zg = float(np.median(ground.height(*grid_in(poly, 0.5).T)))
             nd = 2 if length >= TWO_PUMPS else 1
             island_mesh(B, ci, u, length, zg, (-0.5, 0.5), nd, z_ceil, mats)
-            for f in ([0.0] if nd == 1 else [-0.25, 0.25]):            # v3.1: where a car stops to refuel
+            for f in ([0.0] if nd == 1 else [-0.25, 0.25]):            # v3.0 review: where a car stops to refuel
                 for sg in (-1, 1):
                     pumps.append((ci + u * f * length + v * sg * (DISP[1] / 2 + PUMP_OFF), u, zg + ISLAND_H))
             rep["islands"] += 1

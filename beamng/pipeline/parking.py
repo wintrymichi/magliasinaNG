@@ -1,4 +1,4 @@
-"""Parking spots for the game's parked cars (v3.1), in the built level.
+"""Parking spots for the game's parked cars (v3.0 review), in the built level.
 
 Up to v3.0 the car parks of the map were empty asphalt: the game fills a level with parked cars (the "parked
 vehicles" of its traffic) only on the parking spots of the level's city.sites.json, and the level had none.

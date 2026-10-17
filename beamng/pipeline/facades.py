@@ -261,7 +261,7 @@ def style_of(b, rec, area, height, roof_rgb, measured=None, shutter=None, shop=F
         use = "rural" if age in ("old", "interwar", "mid", None) and area >= 15 else "shed"
     elif klass in (1251, 1252) or (cat == 1060 and area > 400 and klass not in (1271, 1276, 1277, 1278) + PUBLIC
                                    and not (shop and klass is None)):
-        # v3.1: not the offices, shops, hotels... of the register (class in PUBLIC) nor a building with a shop of
+        # v3.0 review: not the offices, shops, hotels... of the register (class in PUBLIC) nor a building with a shop of
         # OSM in it: they were drawn as windowless sheds (the building of the Panetteria Magliasino, an office
         # and shop block of 1996 at the FLP stop Magliaso Paese)
         use = "work"

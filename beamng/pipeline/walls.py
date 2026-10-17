@@ -159,7 +159,7 @@ def _direction(line, at):
 
 
 def paired_lines(lines):
-    """[(footprint, "line", properties)] of the line walls of the survey. v3.1: the survey often draws a wall as
+    """[(footprint, "line", properties)] of the line walls of the survey. v3.0 review: the survey often draws a wall as
     its two faces, two lines a few decimetres apart, and every line was a wall 0.30 m thick: two low walls side by
     side along the roads (2,290 pairs, 55 km on the v3.0 level). Lines parallel within PAIR_ANGLE and within
     PAIR_GAP m of each other for PAIR_SHARE of the shorter one are joined into one wall that fills the space

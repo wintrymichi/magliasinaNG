@@ -895,7 +895,7 @@ GLYPHS = {
 
 def glyph_shape(ch, px=GLYPH_PX):
     """Outline of a character in a unit box (x across 0..1, y along the road 0..1, the foot at 0) as a shapely
-    geometry, from a bold sans font drawn and traced (v3.1: the letters were strokes of a polyline font, thin
+    geometry, from a bold sans font drawn and traced (v3.0 review: the letters were strokes of a polyline font, thin
     and angular next to the painted ones); holes cut open so every piece is a simple polygon (the paint takes
     rings). None without a font."""
     import cv2
@@ -934,7 +934,7 @@ def glyph_shape(ch, px=GLYPH_PX):
 
 def text_polys(text, origin, fwd, height, width, stroke=0.16, gap=0.2):
     """Polygons of `text` on the road: letters `height` m along `fwd` (away from the reader), the row
-    `width` m across, centred on `origin` (the middle of the row's near side). v3.1: the glyphs of a bold
+    `width` m across, centred on `origin` (the middle of the row's near side). v3.0 review: the glyphs of a bold
     font (glyph_shape), stretched along the road as painted letters are; the stroke font where none."""
     right = np.array([fwd[1], -fwd[0]])
     n = len(text)

@@ -6,7 +6,7 @@
 
 ![BeamNG.drive 0.39](https://img.shields.io/badge/BeamNG.drive-0.39-orange)
 ![Version](https://img.shields.io/badge/release-2.8-blue)
-![Next](https://img.shields.io/badge/next-3.1%20tested%20in%20game-yellow)
+![Next](https://img.shields.io/badge/next-3.0%20tested%20in%20game-yellow)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-56%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
@@ -17,7 +17,7 @@
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
 
-![Magliaso and Lake Lugano in v3.1, in the game](beamng/verifica/screenshots/v3.1/overview-magliaso-lake.jpg)
+![Magliaso and Lake Lugano in v3.0, in the game](beamng/verifica/screenshots/v3.0/overview-magliaso-lake.jpg)
 
 </div>
 
@@ -34,7 +34,7 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 3. **Remove older versions** of the map from the same folder (any other `magliaso_pura_v*.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
 4. **Play:** in the game choose *Freeroam* → *Malcantone - Magliaso, Pura e dintorni*. You start at the Magliaso junction, at the foot of the cantonal road to Pura.
 
-**What you need:** BeamNG.drive 0.39 and 16 GB of RAM. v3.1, measured in its in-game test (native Linux build, RTX 4070, 14 GB RAM): loads in about 80 s with a warm cache, 10.3 GB of memory at its peak (v3.0: 11.1 GB). v2.8 was tested on BeamNG.drive 0.39 (native Linux build) with an RTX 4070: the game used 6.4 GB of memory at its peak. Under Windows with DirectX 12 it needs much more (v2.7 measured about 12 GB): if the game stalls, start it with DirectX 11 (`-gfx dx11`).
+**What you need:** BeamNG.drive 0.39 and 16 GB of RAM. v3.0, measured in its in-game test (native Linux build, RTX 4070, 14 GB RAM): loads in about 80 s with a warm cache, 10.3 GB of memory at its peak (the first v3.0 test build: 11.1 GB). v2.8 was tested on BeamNG.drive 0.39 (native Linux build) with an RTX 4070: the game used 6.4 GB of memory at its peak. Under Windows with DirectX 12 it needs much more (v2.7 measured about 12 GB): if the game stalls, start it with DirectX 11 (`-gfx dx11`).
 
 **Loading time:** v2.8 loaded in about 130 s in the test. The first time is the slowest, because the game converts the map's shapes and tree pictures and keeps them in its cache.
 
@@ -88,30 +88,30 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 | **Markings** | detected in the 10 cm orthophoto and, since v2.7, redrawn as they are painted in Switzerland: 4,240 strips (62.7 km), smooth lines, regular dashes, standard yellow pedestrian crossings |
 | **Road signs** | since v2.7 Swiss signs on the whole network (286 new: crossings, roundabouts, one-way streets, zones, speed limits, village limits, signs mapped in OpenStreetMap), plus STOP and give-way signs, bus stops and the cantonal road's plates |
 | **AI traffic** | complete network with one-way streets, roundabouts and dual carriageways |
-| **Villages** (v3.0, v3.1) | shop fronts with signs and awnings on the shops, bars and restaurants OpenStreetMap records, 8 petrol stations with canopy, pumps and price totem, registered as the game's gas stations (v3.1), 11,069 parking spots with white bays for the game's parked cars (v3.1), shelters with benches at the bus stops, about 13,000 props of street life (bins, hydrants, café terraces, planters, mirrors, letter boxes, pallets), flower boxes and woodpiles at the houses |
+| **Villages** (v3.0) | shop fronts with signs and awnings on the shops, bars and restaurants OpenStreetMap records, 8 petrol stations with canopy, pumps and price totem, registered as the game's gas stations, 11,069 parking spots with white bays for the game's parked cars, shelters with benches at the bus stops, about 13,000 props of street life (bins, hydrants, café terraces, planters, mirrors, letter boxes, pallets), flower boxes and woodpiles at the houses |
 | **Spawn points** | 30, one in every village |
 
 ## Gallery
 
-### New in v3.1
+### v3.0 in the game: the review round
 
-> v3.1 is not released yet: the latest release is still v2.8. v3.1 is v3.0 with the fixes and additions of its first review. It was built on a PC from scratch and **tested in the game** (BeamNG.drive 0.39.4, native Linux, RTX 4070, 2560 × 1440, Ultra): the frame rate at 13 fixed places before and after, and the screenshots below. Full test in [`beamng/verifica/v3.1/ingame_test_report.md`](beamng/verifica/v3.1/ingame_test_report.md), all screenshots in [`beamng/verifica/screenshots/v3.1/`](beamng/verifica/screenshots/v3.1).
+> v3.0 is not released yet: the latest release is still v2.8. After the first v3.0 test build (the `v3 build test` workflow) came a review round with the fixes and additions below. It was built on a PC from scratch and **tested in the game** (BeamNG.drive 0.39.4, native Linux, RTX 4070, 2560 × 1440, Ultra): the frame rate at 13 fixed places before and after, and the screenshots below. Full test in [`beamng/verifica/v3.0/ingame_test_report.md`](beamng/verifica/v3.0/ingame_test_report.md), all screenshots in [`beamng/verifica/screenshots/v3.0/`](beamng/verifica/screenshots/v3.0).
 
 **What changed**
 
-- **More frames, same look.** The smooth skin of the steep banks (18 million triangles, drawn whole at every distance in v3.0) now has three detail levels: the round skin near the camera, coarser planes farther out, nothing beyond 3 km, where the terrain under it looks the same; the far levels cast no shadow. +1 % to +12 % FPS at the same places (table below), and 0.8 GB less memory at the peak.
+- **More frames, same look.** The smooth skin of the steep banks (18 million triangles, drawn whole at every distance in the first test build) now has three detail levels: the round skin near the camera, coarser planes farther out, nothing beyond 3 km, where the terrain under it looks the same; the far levels cast no shadow. +1 % to +12 % FPS at the same places (table below), and 0.8 GB less memory at the peak.
 - **Tyre tracks through the roundabouts and the tight bends.** The wear was cut on purpose 10 m around every roundabout, and dropped in the hairpins where the measured width of the road jumped. Now the ring of 33 roundabouts carries its tracks all round, and the width is measured along the asphalt (the cross fall of a hairpin no longer ends it).
 - **The Eni of Magliaso Paese**, by the FLP stop, now stands with its canopy, pumps and totem: OpenStreetMap maps it only as a charging point. Any charging point run by a fuel company marks a station where the survey has its canopy.
-- **Refuelling at the pumps.** The 8 petrol stations of the map are registered as gas stations of the game, with a refuelling area and icon on both sides of every dispenser (the first v3.1 test build had the stations without their pump areas: no refuelling, and an error every frame while driving; fixed and checked in the game: the car stopped at a pump of the Eni of Magliaso gets the game's *Refuel vehicle* prompt, petrol and diesel, and no error while driving).
+- **Refuelling at the pumps.** The 8 petrol stations of the map are registered as gas stations of the game, with a refuelling area and icon on both sides of every dispenser (the first review build had the stations without their pump areas: no refuelling, and an error every frame while driving; fixed and checked in the game: the car stopped at a pump of the Eni of Magliaso gets the game's *Refuel vehicle* prompt, petrol and diesel, and no error while driving).
 - **Parked cars and Swiss parking bays.** 11,069 parking spots in 469 car parks of OpenStreetMap, where the game's traffic puts its parked cars, and the bays painted white as in Switzerland (6,474 lines).
 - **Bus shelters.** 40 more bus stops have the game's shelter with its bench, where there is room beside the road.
 - **No more windowless blocks.** In Bedigliora the church tower, the church and the houses down the slope are one object of the survey classed as a tower, and they were drawn as one tower without a window; offices and shop blocks of the register were drawn as sheds. Both now have their windows.
 - **One wall instead of two.** The survey often draws a wall as its two faces, and every line was a wall: two low walls side by side along many roads (2,290 pairs, 55 km). They are now one wall of the right thickness.
 - **Road lettering.** "ZONE 30" and "STOP" are drawn from a bold font instead of thin angular strokes; the car dealers' flags read the right way.
 
-**Frame rate, v3.0 → v3.1** (free camera at the same place and direction, 5 s average, textures loaded):
+**Frame rate, first test build → v3.0** (free camera at the same place and direction, 5 s average, textures loaded):
 
-| Place | v3.0 | v3.1 | | Place | v3.0 | v3.1 |
+| Place | test build | v3.0 | | Place | test build | v3.0 |
 |---|---:|---:|---|---|---:|---:|
 | Magliaso junction | 101 | 102 | | Breno | 79 | 82 |
 | Pura | 81 | 86 | | Arosio | 120 | 121 |
@@ -125,34 +125,34 @@ Most of the remaining cost is the trees near the roads (the game's own models, t
 
 | | |
 |---|---|
-| ![Bedigliora before: the church block drawn as one windowless tower](beamng/verifica/screenshots/v3.1/new-bedigliora-before.jpg)<br>*Bedigliora in v3.0: the church block drawn as a tower without windows* | ![Bedigliora in v3.1](beamng/verifica/screenshots/v3.1/new-bedigliora-after.jpg)<br>*Bedigliora in v3.1: the same block with the windows of its houses* |
-| ![The Eni of Magliaso Paese](beamng/verifica/screenshots/v3.1/new-eni-magliaso-paese.jpg)<br>*The Eni of Magliaso Paese, by the FLP stop (a parody brand)* | ![Parking bays and the petrol station](beamng/verifica/screenshots/v3.1/new-eni-and-parking-bays.jpg)<br>*White parking bays in front of it* |
-| ![Parking bays at the FLP station of Magliaso](beamng/verifica/screenshots/v3.1/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* | ![Bedigliora village](beamng/verifica/screenshots/v3.1/new-bedigliora-village.jpg)<br>*Bedigliora from above* |
-| ![Tyre tracks through the hairpin](beamng/verifica/screenshots/v3.1/new-wear-hairpin.jpg)<br>*Tyre tracks through the hairpin of the cantonal road* | ![Tyre tracks through the hairpin, the other way](beamng/verifica/screenshots/v3.1/new-wear-hairpin-2.jpg)<br>*The same hairpin from the valley side* |
+| ![Bedigliora before: the church block drawn as one windowless tower](beamng/verifica/screenshots/v3.0/new-bedigliora-before.jpg)<br>*Bedigliora in the first test build: the church block drawn as a tower without windows* | ![Bedigliora in v3.0](beamng/verifica/screenshots/v3.0/new-bedigliora-after.jpg)<br>*Bedigliora in v3.0: the same block with the windows of its houses* |
+| ![The Eni of Magliaso Paese](beamng/verifica/screenshots/v3.0/new-eni-magliaso-paese.jpg)<br>*The Eni of Magliaso Paese, by the FLP stop (a parody brand)* | ![Parking bays and the petrol station](beamng/verifica/screenshots/v3.0/new-eni-and-parking-bays.jpg)<br>*White parking bays in front of it* |
+| ![Parking bays at the FLP station of Magliaso](beamng/verifica/screenshots/v3.0/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* | ![Bedigliora village](beamng/verifica/screenshots/v3.0/new-bedigliora-village.jpg)<br>*Bedigliora from above* |
+| ![Tyre tracks through the hairpin](beamng/verifica/screenshots/v3.0/new-wear-hairpin.jpg)<br>*Tyre tracks through the hairpin of the cantonal road* | ![Tyre tracks through the hairpin, the other way](beamng/verifica/screenshots/v3.0/new-wear-hairpin-2.jpg)<br>*The same hairpin from the valley side* |
 
 **From the driver's seat**
 
 | | |
 |---|---|
-| ![Cantonal road Magliaso–Pura, guard rail](beamng/verifica/screenshots/v3.1/cockpit-cantonale-guardrail.jpg)<br>*Cantonal road Magliaso–Pura, along the guard rail* | ![Cantonal road down to Magliaso](beamng/verifica/screenshots/v3.1/cockpit-cantonale-down-to-magliaso.jpg)<br>*Down the cantonal road towards Magliaso* |
-| ![Cantonal road, stone wall](beamng/verifica/screenshots/v3.1/cockpit-cantonale-stone-wall.jpg)<br>*Halfway up the cantonal road, stone wall* | ![The roundabout of Magliaso](beamng/verifica/screenshots/v3.1/cockpit-roundabout-magliaso.jpg)<br>*Into the roundabout of Magliaso* |
-| ![The roundabout of Magliaso, other way](beamng/verifica/screenshots/v3.1/cockpit-roundabout-magliaso-2.jpg)<br>*The roundabout of Magliaso, the other way* | ![Agno along the lake](beamng/verifica/screenshots/v3.1/cockpit-agno-lakeside.jpg)<br>*Agno along the lake* |
-| ![The Penudria](beamng/verifica/screenshots/v3.1/cockpit-penudria.jpg)<br>*The Penudria, Gravesano – Arosio* | ![Miglieglia – Novaggio](beamng/verifica/screenshots/v3.1/cockpit-miglieglia-novaggio.jpg)<br>*Miglieglia – Novaggio* |
-| ![Novaggio – Miglieglia](beamng/verifica/screenshots/v3.1/cockpit-novaggio-miglieglia.jpg)<br>*Novaggio – Miglieglia, tyre tracks in the bend* | ![Caslano](beamng/verifica/screenshots/v3.1/cockpit-caslano.jpg)<br>*Caslano* |
-| ![Behind the car on the cantonal road](beamng/verifica/screenshots/v3.1/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | ![Behind the car at Arosio](beamng/verifica/screenshots/v3.1/chase-arosio.jpg)<br>*Behind the car at Arosio* |
+| ![Cantonal road Magliaso–Pura, guard rail](beamng/verifica/screenshots/v3.0/cockpit-cantonale-guardrail.jpg)<br>*Cantonal road Magliaso–Pura, along the guard rail* | ![Cantonal road down to Magliaso](beamng/verifica/screenshots/v3.0/cockpit-cantonale-down-to-magliaso.jpg)<br>*Down the cantonal road towards Magliaso* |
+| ![Cantonal road, stone wall](beamng/verifica/screenshots/v3.0/cockpit-cantonale-stone-wall.jpg)<br>*Halfway up the cantonal road, stone wall* | ![The roundabout of Magliaso](beamng/verifica/screenshots/v3.0/cockpit-roundabout-magliaso.jpg)<br>*Into the roundabout of Magliaso* |
+| ![The roundabout of Magliaso, other way](beamng/verifica/screenshots/v3.0/cockpit-roundabout-magliaso-2.jpg)<br>*The roundabout of Magliaso, the other way* | ![Agno along the lake](beamng/verifica/screenshots/v3.0/cockpit-agno-lakeside.jpg)<br>*Agno along the lake* |
+| ![The Penudria](beamng/verifica/screenshots/v3.0/cockpit-penudria.jpg)<br>*The Penudria, Gravesano – Arosio* | ![Miglieglia – Novaggio](beamng/verifica/screenshots/v3.0/cockpit-miglieglia-novaggio.jpg)<br>*Miglieglia – Novaggio* |
+| ![Novaggio – Miglieglia](beamng/verifica/screenshots/v3.0/cockpit-novaggio-miglieglia.jpg)<br>*Novaggio – Miglieglia, tyre tracks in the bend* | ![Caslano](beamng/verifica/screenshots/v3.0/cockpit-caslano.jpg)<br>*Caslano* |
+| ![Behind the car on the cantonal road](beamng/verifica/screenshots/v3.0/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | ![Behind the car at Arosio](beamng/verifica/screenshots/v3.0/chase-arosio.jpg)<br>*Behind the car at Arosio* |
 
 **Passages and landscapes**
 
 | | |
 |---|---|
-| ![Magliaso and the lake](beamng/verifica/screenshots/v3.1/overview-magliaso-lake.jpg)<br>*Magliaso, the Magliasina and the lake* | ![Agno and the lake](beamng/verifica/screenshots/v3.1/overview-agno-lake.jpg)<br>*Agno and the Vedeggio plain* |
-| ![The hairpins of the cantonal road](beamng/verifica/screenshots/v3.1/overview-cantonale-hairpins.jpg)<br>*The hairpins of the cantonal road above Magliaso* | ![Magliaso Paese](beamng/verifica/screenshots/v3.1/overview-magliaso-paese.jpg)<br>*Magliaso Paese* |
-| ![Pura](beamng/verifica/screenshots/v3.1/overview-pura.jpg)<br>*Pura* | ![Novaggio and Miglieglia](beamng/verifica/screenshots/v3.1/overview-novaggio-miglieglia.jpg)<br>*Novaggio, Miglieglia and the Alto Malcantone* |
-| ![Caslano and the lake](beamng/verifica/screenshots/v3.1/overview-caslano-lake.jpg)<br>*Caslano and the Torrazza* | ![Ponte Tresa](beamng/verifica/screenshots/v3.1/overview-ponte-tresa.jpg)<br>*Ponte Tresa and the border bridge* |
+| ![Magliaso and the lake](beamng/verifica/screenshots/v3.0/overview-magliaso-lake.jpg)<br>*Magliaso, the Magliasina and the lake* | ![Agno and the lake](beamng/verifica/screenshots/v3.0/overview-agno-lake.jpg)<br>*Agno and the Vedeggio plain* |
+| ![The hairpins of the cantonal road](beamng/verifica/screenshots/v3.0/overview-cantonale-hairpins.jpg)<br>*The hairpins of the cantonal road above Magliaso* | ![Magliaso Paese](beamng/verifica/screenshots/v3.0/overview-magliaso-paese.jpg)<br>*Magliaso Paese* |
+| ![Pura](beamng/verifica/screenshots/v3.0/overview-pura.jpg)<br>*Pura* | ![Novaggio and Miglieglia](beamng/verifica/screenshots/v3.0/overview-novaggio-miglieglia.jpg)<br>*Novaggio, Miglieglia and the Alto Malcantone* |
+| ![Caslano and the lake](beamng/verifica/screenshots/v3.0/overview-caslano-lake.jpg)<br>*Caslano and the Torrazza* | ![Ponte Tresa](beamng/verifica/screenshots/v3.0/overview-ponte-tresa.jpg)<br>*Ponte Tresa and the border bridge* |
 
-### New in v3.0
+### New in v3.0 (everything since v2.8)
 
-> v3.0 is not released yet: the latest release is still v2.8. v3.0 is built and checked automatically (`v3 build test` workflow); the in-game test and its screenshots come before the release. Full notes in [`beamng/RELEASE_v3.0.md`](beamng/RELEASE_v3.0.md) and [`CHANGELOG.md`](CHANGELOG.md).
+> The whole of v3.0 compared with v2.8; its in-game test and screenshots are in the section above. Full notes in [`beamng/RELEASE_v3.0.md`](beamng/RELEASE_v3.0.md) and [`CHANGELOG.md`](CHANGELOG.md).
 
 v3.0 polishes the v2.8 map up close and from afar, after the feedback that it looked "blocky, smeary, lacking detail". Same area, roads and buildings.
 
@@ -245,7 +245,7 @@ flowchart LR
 cd beamng/pipeline
 python build_level.py                          # the whole level, with the finishing steps
 python build_level.py --finish lamps signs     # only some finishing steps, again, on the built level
-python package.py magliaso_pura_v3.1           # the mod zip and its digest
+python package.py magliaso_pura_v3.0           # the mod zip and its digest
 ```
 
 How to run the pipeline yourself, the environment variables, the coordinate system and the role of every script are in [`beamng/README.md`](beamng/README.md).
@@ -282,7 +282,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | Tunnels are not built: roads and the railway stop at the portals. | [#19](https://github.com/wintrymichi/magliasinaNG/issues/19) |
 | One-way streets only where OpenStreetMap records them. | [#20](https://github.com/wintrymichi/magliasinaNG/issues/20) |
 | Road signs only where OpenStreetMap maps them or records the rule that needs them: warning, direction and parking signs nobody mapped are missing; 35 plates of the cantonal road keep a single colour; no railway overhead line. | [#21](https://github.com/wintrymichi/magliasinaNG/issues/21) |
-| v3.1: tested in the game (frame rate, memory, the new features). The façade of the Panetteria Magliasino at Magliaso Paese (a block of the survey made of several houses) still has no windows on its street side. On the Strada Cantonale between Magliaso and Agno, at the foot of some retaining walls on the hill side, the ground rises in a slope against the wall as in the terrain model. The twin bridges of the Strada Cantonale over the Magliasina keep the two decks of v1.1 with the gap between them. 92 bus stops have no room for a shelter beside the road. The parked cars need the game's traffic with parked vehicles on. The AI driver stopped at a few spots in v2.8 (Mugena, Vezio, Miglieglia, Pura): spots to look at, not roads you cannot drive (see *Quality and verification*). | — |
+| v3.0: tested in the game (frame rate, memory, the new features). The façade of the Panetteria Magliasino at Magliaso Paese (a block of the survey made of several houses) still has no windows on its street side. On the Strada Cantonale between Magliaso and Agno, at the foot of some retaining walls on the hill side, the ground rises in a slope against the wall as in the terrain model. The twin bridges of the Strada Cantonale over the Magliasina keep the two decks of v1.1 with the gap between them. 92 bus stops have no room for a shelter beside the road. The parked cars need the game's traffic with parked vehicles on. The AI driver stopped at a few spots in v2.8 (Mugena, Vezio, Miglieglia, Pura): spots to look at, not roads you cannot drive (see *Quality and verification*). | — |
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
 
 ## Repository layout
@@ -366,8 +366,8 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── fences.py                         # Railings and fences on roadside wall crests, from panoramas
 │   │   ├── final_screenshots.py              # Final in-game check views: signs, markings, tracks (v2.7)
 │   │   ├── forest_fill.py                    # Far trees on the woods outside the cadastral survey (v3.0)
-│   │   ├── bus_shelters.py                   # Shelters with a bench at the bus stops (v3.1)
-│   │   ├── fuel_stations.py                  # Petrol stations: canopies, pump islands, price totems (v3.0); refuelling (v3.1)
+│   │   ├── bus_shelters.py                   # Shelters with a bench at the bus stops (v3.0)
+│   │   ├── fuel_stations.py                  # Petrol stations: canopies, pump islands, price totems, refuelling (v3.0)
 │   │   ├── geo.py                            # Raster helpers: LV95 tile mosaics and the local Grid class
 │   │   ├── groundcover.py                    # GroundCover grass and flowers (v2.6) and shrubs (v2.8)
 │   │   ├── guardrail_mesh.py                 # Guard rails from the game's Italy models along the runs (v2.8)
@@ -431,7 +431,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── road_mesh.py                      # Road surface meshes from the cadastral paved polygons
 │   │   ├── road_profile.py                   # Carriageway edges and width along the cantonal road
 │   │   ├── road_strip.py                     # Straightened orthophoto strip of the cantonal road
-│   │   ├── parking.py                        # Parking spots for the parked cars and white bays (v3.1)
+│   │   ├── parking.py                        # Parking spots for the parked cars and white bays (v3.0)
 │   │   ├── road_wear.py                      # Tyre tracks, patches and dusty edges on the asphalt (v3.0)
 │   │   ├── roadheight.py                     # Fitted heights of the paved surfaces (road_surface.npz)
 │   │   ├── roadside_tour.py                  # Sites and before/after views of the roadside check (v2.8)

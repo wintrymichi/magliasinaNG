@@ -1,24 +1,24 @@
-# magliaso_pura v3.1 – in-game test (2026-10-17)
+# magliaso_pura v3.0 – in-game test of the review round (2026-10-17)
 
 BeamNG.drive 0.39.4, native Linux build, RTX 4070, 14 GB RAM, 2560 × 1440, Ultra preset (textures Normal, shadows High).
 The game ran in a virtual KWin session (`kwin_wayland --virtual --xwayland`, no monitor), the same for both versions.
 
-Zips: v3.0 = the `v3 build test` artifact of `main` (run 38921057526, md5 62e0a51a…); v3.1 = this branch, built from scratch
+Zips: "test build" = the first v3.0 build, the `v3 build test` artifact of `main` (run 38921057526, md5 62e0a51a…); "v3.0" = this branch, built from scratch
 on the PC (`run_build.sh` + `build_level.py --finish`, package digest 19405e64…).
 
 ## Load and memory
 
-| | v3.0 | v3.1 |
+| | test build | v3.0 |
 |---|---:|---:|
 | load to world ready (warm cache) | 56 s | 78 s |
 | peak RSS | 11.1 GB | 10.3 GB |
 
-The first v3.1 load stopped with a Lua error: the game indexes the parking spots of `city.sites.json` by `oldId`
+The first load of the review build stopped with a Lua error: the game indexes the parking spots of `city.sites.json` by `oldId`
 (fixed in `parking.py` and `fuel_stations.py`). The game then found 8 gas stations (`freeroam_facilities`), but the zip
 had none of their pump areas (`fuel_stations.refuel_points` ran after the items file was written): no refuelling, and
 while a car drives `gameplay/markerInteraction` raised "kdtreebox2d.lua:219 attempt to compare nil with number" every
 frame (the NaN box of a station without pumps; found by the trailer session). Fixed in the code and in the built level
-(104 pump areas and icons, `magliaso_pura_v3.1_fix.zip`); checked again in the game on 2026-10-17: 8 stations with 4-8 pumps each, the car stopped in a pump area of the
+(104 pump areas and icons, `magliaso_pura_v3.1_fix.zip`, the local file name of this build); checked again in the game on 2026-10-17: 8 stations with 4-8 pumps each, the car stopped in a pump area of the
 Eni of Magliaso Paese gets the *Refuel vehicle* prompt (gasoline, diesel), no kdtreebox2d error after 20 s of AI driving.
 The FPS above were measured
 without a car driving, so that error did not weigh on them.
@@ -27,7 +27,7 @@ without a car driving, so that error did not weigh on them.
 
 Free camera at fixed places and directions (`fps.lua`, frames counted over 5 s after a warm-up pass over every place):
 
-| Place | v3.0 | v3.1 | change |
+| Place | test build | v3.0 | change |
 |---|---:|---:|---:|
 | Magliaso junction | 101 | 102 | +1 % |
 | Pura | 81 | 86 | +6 % |
@@ -43,7 +43,7 @@ Free camera at fixed places and directions (`fps.lua`, frames counted over 5 s a
 | over Novaggio | 67 | 73 | +9 % |
 | cantonal road hairpin | 64 | 66 | +3 % |
 
-Where the frames go (v3.0, on the real screen, hiding one group at a time): the whole forest 13–25 FPS (the far trees
+Where the frames go (test build, on the real screen, hiding one group at a time): the whole forest 13–25 FPS (the far trees
 alone 2–9), the steep skin 2–12, everything else (buildings, street life, vineyards, grass, lamps) within 1–3.
 
 ## Checked
@@ -53,7 +53,7 @@ alone 2–9), the steep skin 2–12, everything else (buildings, street life, vi
 - Tyre tracks through the hairpin of the cantonal road; 33 roundabout rings with wear (Magliaso included, after the
   second fix: its AI ring runs 6–7 m off the ring OpenStreetMap maps).
 - "ZONE 30" from the font at Magliaso Paese.
-- Cockpit views on the main drives (ETK 800), chase views, landscapes: `beamng/verifica/screenshots/v3.1/`.
+- Cockpit views on the main drives (ETK 800), chase views, landscapes: `beamng/verifica/screenshots/v3.0/`.
 
 ## Still open
 

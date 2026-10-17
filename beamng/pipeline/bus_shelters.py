@@ -1,4 +1,4 @@
-"""Bus shelters with their bench (v3.1), in the built level.
+"""Bus shelters with their bench (v3.0 review), in the built level.
 
 Up to v3.0 a bus stop of the map was its pole with the yellow sign (props_osm.py); only the 38 stops where
 OpenStreetMap records a shelter (shelter=yes) had one, drawn there. Most stops of the area have no shelter tag at

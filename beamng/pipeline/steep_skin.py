@@ -14,7 +14,7 @@ a wall, a building, the railway or the lake) take a skin:
   projection of the axis its face is turned to (as the terrain's side projection), TILE_M m per repeat;
 - its colour that of the terrain there (the base colour maps of the terrain materials, per vertex);
 - with collision (the car rides on it where it leaves the road), in TILE x TILE vertex tiles;
-- v3.1: three detail levels per tile (the v3.0 skin, 18 million triangles drawn at every distance, cost more
+- v3.0 review: three detail levels per tile (the v3.0 skin, 18 million triangles drawn at every distance, cost more
   frames than anything else on the map): near (LOD_PX[0] px on screen and more: about LOD_DIST[0] m) the
   round skin as above; then two triangles per terrain square (LOD_LIFT[1] m higher, the plane of a square
   over both ways the game may split it); then two per 2 x 2 squares; nothing beyond about LOD_DIST[2] m,
