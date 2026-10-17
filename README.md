@@ -621,6 +621,12 @@ The views are named `NNNN_<panoId>_<direction>_p<pitch>.jpg`: the direction is r
 
 **3D reconstruction.** The `viste/` work with COLMAP, RealityCapture and Metashape (known intrinsics: fx = fy = 800 px, cx = 800, cy = 600, no distortion; the GPS positions in `cameras.json` serve as georeferencing); Metashape also accepts the spherical panoramas ("Spherical" camera); for Gaussian Splatting or NeRF go through the `viste/` with COLMAP first.
 
+## Credits
+
+- [**wintrymichi**](https://github.com/wintrymichi): creator and maintainer of the map.
+- [**LoJaeggli09**](https://github.com/LoJaeggli09) (Elia Jaeggli): the v2.8 additions (street lamps, catenary, piers and boats, house details, roadside furniture, the release workflow).
+- [**ginobaby**](https://github.com/ginobaby) (popular cat): the first v3 build (smooth curved roads and walls, the v3 polish).
+
 ## Licence
 
 The map, the mod and this repository are **free for non-commercial use** under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). You can play, share and modify them, provided you give appropriate credit, indicate any changes, and comply with the licence terms.
