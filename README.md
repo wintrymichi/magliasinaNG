@@ -624,6 +624,7 @@ The views are named `NNNN_<panoId>_<direction>_p<pitch>.jpg`: the direction is r
 ## Credits
 
 - [**wintrymichi**](https://github.com/wintrymichi): creator and maintainer of the map.
+- [**LoJaeggli09**](https://github.com/LoJaeggli09) (Elia Jaeggli): the v2.8 additions (street lamps, catenary, piers and boats, house details, roadside furniture, the release workflow).
 - [**ginobaby**](https://github.com/ginobaby) (popular cat): the first v3 build (smooth curved roads and walls, the v3 polish).
 
 ## Licence
