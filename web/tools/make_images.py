@@ -9,17 +9,14 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "beamng", "verifica", "screenshots")
 OUT = os.path.join(ROOT, "web", "img")
-FILES = [
-    "v2.8/driver-cantonale-magliaso-pura-1.jpg", "v2.8/driver-miglieglia-novaggio-stone-wall.jpg",
-    "v2.8/chase-cantonale-near-pura.jpg", "v2.8/chase-breno-hairpin-valley-view.jpg", "v2.8/chase-mugena-vezio-stone-wall.jpg",
-    "v2.8/overview-novaggio-miglieglia-malcantone.jpg", "v2.8/overview-magliaso-lake.jpg",
-    "14_passo_tornante.jpg", "12_pura_cantonale.jpg", "13_agno_via.jpg", "11_magliaso_strada.jpg",
-    "01_magliaso_lago.jpg", "05_ponte_tresa.jpg", "09_passo_arosio.jpg", "10_caslano_torrazza.jpg",
-    "02_agno_nucleo.jpg", "03_cademario.jpg", "08_sessa.jpg",
-    "v2.7/signs_roundabout.jpg", "v2.7/signs_cantonale_pointer.jpg", "v2.7/markings_crossing.jpg",
-    "v2.7/signs_village50.jpg", "v2.7/unpaved_arosio.jpg", "v2.7/unpaved_cademario.jpg",
-    "v2.7/fartrees_gravesano_pass.jpg", "v2.7/markings_roundabout.jpg",
-]
+FILES = ["v3.0/" + f + ".jpg" for f in [
+    "overview-novaggio-miglieglia", "cockpit-cantonale-guardrail", "chase-cantonale", "cockpit-penudria",
+    "cockpit-miglieglia-novaggio", "cockpit-agno-lakeside", "overview-magliaso-lake", "new-eni-magliaso-paese",
+    "new-eni-and-parking-bays", "new-parking-bays-flp-magliaso", "new-wear-hairpin", "overview-cantonale-hairpins",
+    "cockpit-roundabout-magliaso", "cockpit-cantonale-stone-wall", "cockpit-novaggio-miglieglia", "cockpit-caslano",
+    "overview-caslano-lake", "overview-pura", "overview-magliaso-paese", "overview-agno-lake", "overview-ponte-tresa",
+    "cockpit-cantonale-down-to-magliaso", "new-wear-hairpin-2", "cockpit-roundabout-magliaso-2",
+]]
 
 
 def save(im, path, width):
