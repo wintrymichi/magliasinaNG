@@ -916,7 +916,23 @@ def new_canopy(ground, roads, p):
     return None
 
 
-def refuel_points(facilities, files, lv):
+_VILLAGES = {}
+
+
+def village_of(zi, lv, x, y):
+    """Name of the village nearest (x, y): the spawn points of the level, one per village."""
+    if lv not in _VILLAGES:
+        pts = [(o["name"][6:].replace("_", " ").title().replace(" D ", " d'").replace("Paese", "").strip(), o["position"][:2])
+               for o in read_items(zi, f"{lv}/main/MissionGroup/PlayerDropPoints/items.level.json")
+               if o.get("name", "").startswith("spawn_") and o["name"] not in ("spawn_mid", "spawn_pura", "spawn_magliaso")]
+        _VILLAGES[lv] = pts
+    pts = _VILLAGES[lv]
+    if not pts:
+        return ""
+    return min(pts, key=lambda p: math.hypot(p[1][0] - x, p[1][1] - y))[0]
+
+
+def refuel_points(facilities, files, lv, zi):
     """v3.1: the stations as gas stations of the game (freeroam_facilities): for every side of every dispenser
     a BeamNGGameplayArea where the car stops and a BeamNGPointOfInterest over it (the pump icon), named as
     facilities/facilities.facilities.json lists them; the station's outline as a zone of facilities.sites.json.
@@ -935,8 +951,10 @@ def refuel_points(facilities, files, lv):
                          "position": [round(float(p[0]), 3), round(float(p[1]), 3), round(float(z), 3)],
                          "rotationMatrix": rot, "scale": PUMP_AREA})
             pl.append([area, icon])
-        title = BRANDS[st["brand"]][1] + " " + str(st["tags"].get("addr:city") or st["tags"].get("name") or "").strip()
-        gas.append({"name": node, "title": title.strip(), "description": "Benzina, diesel" if "diesel" in st["grades"]
+        # the parody brand and the village (never the real name of OSM)
+        # (the game shows the name: "Gas Station <name>")
+        title = BRANDS[st["brand"]][1] + " " + village_of(zi, lv, st["x"], st["y"])
+        gas.append({"name": title.strip() or node, "description": "Benzina, diesel" if "diesel" in st["grades"]
                     else "Benzina", "preview": "fuel.jpg", "energyTypes": ["gasoline", "diesel", "unknown"], "pumps": pl})
         Z = float(np.median([z for _, _, z in pumps]))
         zones.append({"name": node, "oldId": len(zones) + 1, "color": [1, 1, 1], "customFields": {"values": {}, "names": {}, "tags": {}, "types": {}},
@@ -1076,7 +1094,7 @@ def fuel_stations_step(root, report=None):
     files[f"{lv}/{D}/t_fuel_bands_b.color.png"] = _png(bands_image())
     files[f"{lv}/{D}/fuel.materials.json"] = json.dumps({m["name"]: m for m in materials(
         {"brands": used_brands, "stations": done})}, indent=1).encode("utf-8")
-    objs += refuel_points(facilities, files, lv)
+    objs += refuel_points(facilities, files, lv, zi)
     files[f"{lv}/main/MissionGroup/props/fuel/items.level.json"] = \
         ("\n".join(json.dumps(o, separators=(",", ":")) for o in objs) + "\n").encode("utf-8")
     rep["refuel_stations"] = len(facilities)

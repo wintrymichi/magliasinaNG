@@ -18,7 +18,9 @@ The first v3.1 load stopped with a Lua error: the game indexes the parking spots
 had none of their pump areas (`fuel_stations.refuel_points` ran after the items file was written): no refuelling, and
 while a car drives `gameplay/markerInteraction` raised "kdtreebox2d.lua:219 attempt to compare nil with number" every
 frame (the NaN box of a station without pumps; found by the trailer session). Fixed in the code and in the built level
-(104 pump areas and icons, `magliaso_pura_v3.1_fix.zip`); not yet checked again in the game. The FPS above were measured
+(104 pump areas and icons, `magliaso_pura_v3.1_fix.zip`); checked again in the game on 2026-10-17: 8 stations with 4-8 pumps each, the car stopped in a pump area of the
+Eni of Magliaso Paese gets the *Refuel vehicle* prompt (gasoline, diesel), no kdtreebox2d error after 20 s of AI driving.
+The FPS above were measured
 without a car driving, so that error did not weigh on them.
 
 ## Frame rate
