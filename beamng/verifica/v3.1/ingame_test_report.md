@@ -14,7 +14,12 @@ on the PC (`run_build.sh` + `build_level.py --finish`, package digest 19405e64â€
 | peak RSS | 11.1 GB | 10.3 GB |
 
 The first v3.1 load stopped with a Lua error: the game indexes the parking spots of `city.sites.json` by `oldId`
-(fixed in `parking.py` and `fuel_stations.py`). The game then found 8 gas stations (`freeroam_facilities`).
+(fixed in `parking.py` and `fuel_stations.py`). The game then found 8 gas stations (`freeroam_facilities`), but the zip
+had none of their pump areas (`fuel_stations.refuel_points` ran after the items file was written): no refuelling, and
+while a car drives `gameplay/markerInteraction` raised "kdtreebox2d.lua:219 attempt to compare nil with number" every
+frame (the NaN box of a station without pumps; found by the trailer session). Fixed in the code and in the built level
+(104 pump areas and icons, `magliaso_pura_v3.1_fix.zip`); not yet checked again in the game. The FPS above were measured
+without a car driving, so that error did not weigh on them.
 
 ## Frame rate
 
