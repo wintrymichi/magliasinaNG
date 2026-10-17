@@ -27,8 +27,9 @@ HANDLE = 1.5
 EYE = 1.7          # on foot
 SV_EYE = 2.2       # the Street View camera over the ground (work/camera_height.json)
 
-# times of day (calibrate in the scout pass: the sun of the level is not the real one)
-DAWN, MORNING, DAY, AFTERNOON, GOLDEN, SUNSET, DUSK = 0.77, 0.85, 0.02, 0.12, 0.24, 0.265, 0.29
+# times of day of the level's clock (scouted: 0.79 a pink dawn, 0.24 golden, 0.256 the sun on the western ridge,
+# 0.265 already after sunset)
+DAWN, MORNING, DAY, AFTERNOON, GOLDEN, SUNSET, DUSK = 0.79, 0.85, 0.02, 0.12, 0.24, 0.256, 0.29
 
 
 def ll(lat, lon):
@@ -42,36 +43,50 @@ def view_orbit(name, lat, lon, dist, az0, az1, el0, el1, secs, tod, group, fov=5
                 el=[el0, el1], fov=fov, secs=secs, tod=tod, group=group)
 
 
+def cantonale(d0, d1, step=60.0):
+    """Waypoints along the cantonal road (Magliaso roundabout -> Pura -> Curio), from the Street View track of
+    work/poses.json: its points between route distances d0 and d1 (m), one every `step` metres."""
+    from config import WORK
+    P = sorted((p for p in json.load(open(os.path.join(WORK, "poses.json"))) if p.get("main_run")),
+               key=lambda p: p["route_dist"])
+    out, nxt = [], d0
+    for p in P:
+        if d0 <= p["route_dist"] <= d1 and p["route_dist"] >= nxt:
+            out.append([round(p["pos"][0], 1), round(p["pos"][1], 1)])
+            nxt = p["route_dist"] + step
+    return out
+
+
+def road(name, start, end, dist, secs, tod, group, side=2.5, skip=0, fov=62, ahead=25):
+    """A walk at eye height along the game's AI road from `start` towards `end` (map.getPath), `dist` metres
+    after `skip`, `side` metres right of the road's centre line, looking `ahead` metres down the road."""
+    return dict(name=name, kind="road", start=start, end=end, dist=dist, skip=skip, side=side, ahead=ahead,
+                secs=secs, tod=tod, group=group, fov=fov)
+
+
 SHOTS = [
-    # ---- 1 opening: dawn over the lake
+    # ---- 1 opening: morning over the lake
     view_orbit("a01_lago_alba", 45.9807, 8.8850, 640, 206, 196, 20, 23, 9, DAWN, "open", d1=500),
     view_orbit("a02_caslano_torrazza", 45.96664, 8.87381, 620, 255, 240, 22, 22, 7, MORNING, "open"),
     # ---- 2 landscapes from above
     view_orbit("a03_novaggio", 46.0100, 8.8530, 380, 128, 108, 26, 24, 6, MORNING, "land"),
-    view_orbit("a04_penudria", 46.04195, 8.90913, 460, 150, 140, 40, 30, 7, DAY, "land", d1=400),
-    view_orbit("a05_agno_nucleo", 45.9990, 8.9018, 240, 155, 175, 30, 28, 6, AFTERNOON, "land"),
-    view_orbit("a06_ponte_tresa", 45.9678, 8.8570, 360, 225, 225, 24, 26, 6, AFTERNOON, "land", d1=290),
+    view_orbit("a04_penudria", 46.04195, 8.90913, 430, 150, 135, 32, 26, 7, DAY, "land", d1=380),
     view_orbit("a07_cademario", 46.0226, 8.8905, 340, 150, 165, 28, 26, 6, GOLDEN, "land"),
-    dict(name="a08_tornante_top", kind="orbit", centre=[650, -960], dist=[45, 45], az=[0, 70], el=[60, 55],
-         fov=55, secs=6, tod=DAY, group="land"),
-    # ---- 3 on foot (driver's eye without the car, as if walking)
+    dict(name="a09_breno", kind="orbit", centre=[40, 4540], dist=[300, 260], az=[200, 180], el=[28, 24],
+         fov=50, secs=6, tod=AFTERNOON, group="land"),
+    # ---- 3 on foot: eye height along the village streets (the AI road, pavement side)
     dict(name="w01_magliaso_cantonale", kind="walk", start=[747, -1094], end=[747 - 0.6585 * 14, -1094 - 0.7526 * 14],
          side=4.2, secs=7, tod=MORNING, group="foot", fov=62),
-    dict(name="w02_agno_nucleo", kind="walk", start=[2473, 728], end=[2473 - 0.56 * 10, 728 + 0.8285 * 10],
-         side=0.0, secs=7, tod=AFTERNOON, group="foot", fov=62),
+    road("r01_magliaso_paese", [1000, -965], [1500, -890], 16, 6, MORNING, "foot", side=4.0),
+    road("r05_magliaso_tramonto", [1450, -897], [1000, -965], 16, 6, GOLDEN, "foot", side=4.0),
+    road("r04_magliaso_negozi", [1560, -880], [1700, -620], 9, 6, AFTERNOON, "foot", side=3.0),
     dict(name="w03_bedigliora", kind="walk", start=[-2047, 1178], end=[-2047 + 0.6644 * 10, 1178 - 0.7474 * 10],
          side=0.0, secs=6, tod=GOLDEN, group="foot", fov=62),
-    dict(name="w04_novaggio", kind="walk", start=[-1057, 2064], end=[-1057 + 0.5906 * 10, 2064 + 0.8069 * 10],
-         side=2.5, secs=6, tod=AFTERNOON, group="foot", fov=62),
-    dict(name="w05_breno", kind="walk", start=[-20, 4659], end=[-20 + 0.7313 * 10, 4659 - 0.682 * 10],
-         side=2.5, secs=6, tod=GOLDEN, group="foot", fov=62),
     dict(name="w06_negozi_magliaso", kind="orbit", centre=[1658, -690], dist=[24, 22], az=[200, 160], el=[4, 4],
          look_dz=2.0, fov=60, secs=6, tod=AFTERNOON, group="foot"),
-    dict(name="w07_benzinaio_eni", kind="orbit", centre=[1530, -888], dist=[26, 22], az=[120, 80], el=[5, 5],
-         look_dz=2.0, fov=60, secs=6, tod=DUSK, group="foot", note="check the Eni canopy is in frame (scout)"),
     # ---- 4 reality vs game: the Street View panorama's place, direction and height (sv_frames.py)
-    *[dict(name="c%02d_%s" % (i + 1, k), kind="still", pano=p, yaw=y, pitch=-2.0, fov=72, secs=4.5, tod=DAY,
-           group="real")
+    *[dict(name="c%02d_%s" % (i + 1, k), kind="still", pano=p, yaw=y, pitch=-2.0, fov=72, secs=0.5, handle=0.0,
+           tod=DAY, group="real")
       for i, (k, p, y) in enumerate([
           ("tornante_cantonale", "FZK_W5VIhAhWucqwaC91bQ", "fwd"),
           ("rotonda_magliaso", "HTc-dh-_Bma9-6FsTiOrdA", "fwd"),
@@ -81,25 +96,25 @@ SHOTS = [
           ("agno", "27Q6k3C8qh0APD1C9MclVg", "fwd"),
           ("magliaso_paese", "5Bek8_9Ou8MLlY6XGJQilA", "fwd"),
           ("negozi_magliaso", "_6-4SJnHkldFQXg7uOko9Q", "fwd")])],
-    # ---- 5 driving: cinematics with an AI car, then a few seconds of gameplay
-    dict(name="d01_cantonale_chase_low", kind="follow", rig="chase_low", car="etk800", route=[[747, -1094], [300, -700]],
-         speed=14, secs=6, tod=GOLDEN, group="drive", fov=55),
-    dict(name="d02_tornante_front34", kind="follow", rig="front34", car="etk800", route=[[700, -1010], [560, -880]],
-         speed=10, secs=6, tod=GOLDEN, group="drive", fov=45),
+    # ---- 5 driving: cinematics with an AI car (ETK 800, constant speed along waypoints), then gameplay
+    dict(name="d01_cantonale_chase_low", kind="follow", rig="chase_low", car="etk800", route=cantonale(140, 560),
+         speed=10, secs=6, tod=GOLDEN, group="drive", fov=55),
+    dict(name="d02_magliaso_front34", kind="follow", rig="front34", car="etk800",
+         route=[[1450, -897], [1250, -930], [1000, -965]], speed=11, secs=6, tod=GOLDEN, group="drive", fov=45),
     dict(name="d03_penudria_heli", kind="follow", rig="heli", car="etk800", route=[ll(46.0405, 8.9095), ll(46.0435, 8.9115)], speed=12, secs=8, tod=AFTERNOON, group="drive", fov=50),
-    dict(name="d04_breno_side", kind="follow", rig="side", car="vivace", route=[[-20, 4659], [400, 4300]],
-         speed=12, secs=5, tod=GOLDEN, group="drive", fov=50),
-    dict(name="d05_mugena_tele", kind="follow", rig="tele", car="etk800", route=[[1395, 6440], [917, 6049]],
-         speed=13, secs=6, tod=GOLDEN, group="drive", fov=22),
-    dict(name="d06_lungolago_chase", kind="follow", rig="chase_low", car="vivace", route=[[1141, -2328], [1600, -1700]],
-         speed=13, secs=5, tod=AFTERNOON, group="drive", fov=55, traffic=6),
-    dict(name="g01_gameplay_cantonale", kind="gameplay", car="etk800", route=[[324, -1118], [-300, 225]],
-         speed=16, secs=6, tod=DAY, group="drive"),
-    dict(name="g02_gameplay_alto_malcantone", kind="gameplay", car="vivace", route=[[2280, 6304], [1395, 6440]],
-         speed=14, secs=5, tod=AFTERNOON, group="drive"),
-    # ---- 6 the end: sunset over the lake
-    view_orbit("e01_finale_tramonto", 45.9807, 8.8850, 520, 200, 200, 22, 28, 9, SUNSET, "end", d1=850),
-    view_orbit("e02_finale_tramonto_alt", 45.96664, 8.87381, 620, 250, 235, 20, 24, 7, SUNSET, "end", d1=760),
+    dict(name="d04_cantonale_heli", kind="follow", rig="heli", car="etk800", route=cantonale(1380, 2100),
+         speed=13, secs=7, tod=GOLDEN, group="drive", fov=50),
+    dict(name="d06_magliaso_side", kind="follow", rig="side", car="etk800", route=[[1000, -965], [1250, -930], [1500, -890]],
+         speed=12, secs=5, tod=AFTERNOON, group="drive", fov=50),
+    dict(name="g01_gameplay_cantonale", kind="gameplay", car="etk800", route=cantonale(1300, 2100),
+         speed=14, secs=6, tod=DAY, group="drive"),
+    dict(name="g02_gameplay_magliaso", kind="gameplay", car="etk800", route=[[1000, -965], [1250, -930], [1500, -890]],
+         speed=12, secs=5, tod=AFTERNOON, group="drive"),
+    # ---- 6 the end: sunset over the lake (camera over the water, looking west into the sun)
+    dict(name="e01_finale_tramonto", kind="orbit", centre=[-200, -2300], dist=[1000, 850], az=[120, 112],
+         el=[11, 13], fov=55, secs=9, tod=SUNSET, group="end"),
+    dict(name="e02_tramonto_magliaso", kind="orbit", centre=[900, -1250], dist=[1100, 935], az=[105, 97],
+         el=[9, 11], fov=55, secs=9, tod=SUNSET, group="end"),
 ]
 
 for s in SHOTS:
@@ -136,8 +151,13 @@ def main(args):
     scout = "--scout" in args
     names = [a for a in args if not a.startswith("--")]
     shots = [s for s in SHOTS if not names or s["name"] in names or s["group"] in names]
+    if "--todtest" in args:      # the level's own clock: the first and the last shot at a few times of day
+        base = {s["name"]: s for s in SHOTS}
+        for n, tods in (("a01_lago_alba", (0.78, 0.79, 0.80)), ("e01_finale_tramonto", (0.25, 0.262))):
+            shots += [dict(base[n], name="t_%s_%03d" % (n[:3], round(t * 1000)), tod=t, group="todtest") for t in tods]
     resolve_panos(shots)
-    json.dump({"scout": scout, "fps": 60, "shots": shots}, open(OUT, "w"), indent=1)
+    json.dump({"scout": scout, "fps": 60, "video": [2560, 1440], "preroll": 6,
+               "timescale": 0.25 if scout else 0.02, "shots": shots}, open(OUT, "w"), indent=1)
     print(OUT, len(shots), "shots", "(scout)" if scout else "")
 
 

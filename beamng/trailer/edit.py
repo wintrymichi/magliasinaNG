@@ -7,7 +7,8 @@ edl.json (beamng/trailer/edl.json): the clips in order, each with
   compare    instead of shot: a `still` shot shown against its Street View frame (a wipe, then both)
   black      instead of shot: black (title cards on black)
   trans      how it starts: cut | dissolve | fadeblack (with "tdur" s)
-  title      text over the clip: {"text", "sub", "at": s into the clip, "dur", "pos": centre|lower|upper}
+  title      text over the clip: {"text", "sub", "at": s into the clip, "dur", "pos": centre|lower|upper|bottom}
+             ("titles": a list of them, one after the other)
 and at the top: "start" (where the music starts, s), "end" (the last bar), "fade_out" (s).
 Clips are drawn at 2560 x 1440, 60 fps; --draft makes a quick 960 x 540 check.
 The grade is a soft filmic look (lifted blacks, warm highlights, cooler shadows, a light vignette and grain).
@@ -76,13 +77,14 @@ def title_png(title, w, h, path):
         return sum(d.textlength(c, font=f) for c in txt) + sp * max(0, len(txt) - 1)
     heights = [f.getbbox("Ag")[3] for _, f, _ in lines]
     total = sum(heights) + int(22 * s) * (len(lines) - 1)
-    y = {"centre": (h - total) // 2, "lower": int(h * 0.74), "upper": int(h * 0.12)}[title.get("pos", "centre")]
+    y = {"centre": (h - total) // 2, "lower": int(h * 0.74), "upper": int(h * 0.12),
+         "bottom": int(h * 0.92) - total}[title.get("pos", "centre")]
     shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     ds = ImageDraw.Draw(shadow)
     for (txt, f, sp), lh in zip(lines, heights):
         x = (w - spaced_w(txt, f, sp)) / 2
         for c in txt:
-            ds.text((x + 2 * s, y + 2 * s), c, font=f, fill=(0, 0, 0, 150))
+            ds.text((x + 2 * s, y + 2 * s), c, font=f, fill=(0, 0, 0, 210))
             d.text((x, y), c, font=f, fill=(255, 255, 255, 235))
             x += d.textlength(c, font=f) + sp
         y += lh + int(22 * s)
@@ -90,11 +92,19 @@ def title_png(title, w, h, path):
     out.save(path)
 
 
+def cover(im, w, h):
+    """Scaled to fill w x h without stretching, the overflow cropped evenly (a game window short of 16:9)."""
+    k = max(w / im.width, h / im.height)
+    im = im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
+    x, y = (im.width - w) // 2, (im.height - h) // 2
+    return im.crop((x, y, x + w, y + h))
+
+
 def compare_frames(game, sv, n, w, h, outdir, label_sv, label_game):
     """Street View on the left, the game on the right: a wipe from the right in the first second, a thin
     divider, a label on each side."""
-    A = Image.open(sv).convert("RGB").resize((w, h), Image.LANCZOS)
-    B = Image.open(game).convert("RGB").resize((w, h), Image.LANCZOS)
+    A = cover(Image.open(sv).convert("RGB"), w, h)
+    B = cover(Image.open(game).convert("RGB"), w, h)
     s = h / 1440
     f = font(int(26 * s), "Regular")
     for i in range(n):
@@ -120,7 +130,7 @@ def compare_frames(game, sv, n, w, h, outdir, label_sv, label_game):
 
 def render_clip(c, k, args, tmp, w, h):
     """One clip of the EDL, graded, with its title, to tmp/clip_k.mp4 (dur + transition overlaps)."""
-    n = int(round(c["_len"] * FPS))
+    n = int(math.ceil(c["_len"] * FPS)) + 3          # a few spare frames at the tail: the next transition drops them
     seq = os.path.join(tmp, "seq%03d" % k)
     os.makedirs(seq, exist_ok=True)
     if "shot" in c:
@@ -135,24 +145,25 @@ def render_clip(c, k, args, tmp, w, h):
         meta = json.load(open(os.path.join(args["sv"], "sv_frames.json")))
         date = (meta.get(c["compare"], {}).get("date") or "")[:4]
         compare_frames(fr[len(fr) // 2][1], os.path.join(args["sv"], c["compare"] + ".png"), n, w, h, seq,
-                       "STREET VIEW %s  ·  © Google" % date, "IN GAME  ·  MAGLIASINANG V3")
+                       "STREET VIEW %s  ·  © Google" % date, "IN GAME  ·  MAGLIASINANG V3.1")
     else:                                               # black
         Image.new("RGB", (w, h)).save(os.path.join(seq, "black.png"))
         for i in range(n):
             os.symlink(os.path.join(seq, "black.png"), os.path.join(seq, "%05d.png" % i))
-    vf = [f"scale={w}:{h}:flags=lanczos"]
+    vf = [f"scale={w}:{h}:flags=lanczos:force_original_aspect_ratio=increase,crop={w}:{h}"]
     if "compare" not in c and "black" not in c:
         vf.append(GRADE)
     inputs = ["-framerate", str(FPS), "-i", os.path.join(seq, "%05d.png")]
     fc = "[0:v]" + ",".join(vf) + "[v]"
-    if c.get("title"):
-        tp = os.path.join(tmp, "title%03d.png" % k)
-        title_png(c["title"], w, h, tp)
-        at = c["_pre"] + c["title"].get("at", 0.5)
-        dur = c["title"].get("dur", max(1.0, c["_dur"] - c["title"].get("at", 0.5) - 0.5))
+    titles = c.get("titles") or ([c["title"]] if c.get("title") else [])
+    for j, ti in enumerate(titles):                     # one or more texts over the clip, each fading in and out
+        tp = os.path.join(tmp, "title%03d_%d.png" % (k, j))
+        title_png(ti, w, h, tp)
+        at = c["_pre"] + ti.get("at", 0.5)
+        dur = ti.get("dur", max(1.0, c["_dur"] - ti.get("at", 0.5) - 0.5))
         inputs += ["-loop", "1", "-framerate", str(FPS), "-t", str(c["_len"]), "-i", tp]
-        fc += (f";[1:v]format=rgba,fade=t=in:st={at:.3f}:d=0.8:alpha=1,"
-               f"fade=t=out:st={at + dur - 0.8:.3f}:d=0.8:alpha=1[t];[v][t]overlay=0:0[v]")
+        fc += (f";[{j + 1}:v]format=rgba,fade=t=in:st={at:.3f}:d=0.8:alpha=1,"
+               f"fade=t=out:st={at + dur - 0.8:.3f}:d=0.8:alpha=1[t{j}];[v][t{j}]overlay=0:0[v]")
     out = os.path.join(tmp, "clip%03d.mp4" % k)
     run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", fc, "-map", "[v]", "-frames:v", str(n),
          "-r", str(FPS), "-c:v", "libx264", "-preset", "veryfast", "-crf", "12", "-pix_fmt", "yuv420p", out])
@@ -160,8 +171,10 @@ def render_clip(c, k, args, tmp, w, h):
 
 
 def plan(edl, beats):
-    grid_bar = beats.get("downbeats", [])
-    grid_beat = beats.get("beats", [])
+    """Clip times are trailer times; the beat grid is in music time, shifted by the music's start."""
+    st = edl.get("start", 0.0)
+    grid_bar = [b - st for b in beats.get("downbeats", []) if b >= st]
+    grid_beat = [b - st for b in beats.get("beats", []) if b >= st]
     clips = edl["clips"]
     for c in clips:
         c["_t"] = snap(c["t"], grid_beat if c.get("snap") == "beat" else grid_bar)
@@ -220,7 +233,10 @@ def main():
              "-c:a", "aac", "-b:a", "320k", out])
         print(out, "%.1f s" % total)
     finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+        if not os.environ.get("TRAILER_KEEP_TMP"):
+            shutil.rmtree(tmp, ignore_errors=True)
+        else:
+            print("kept", tmp)
 
 
 if __name__ == "__main__":
