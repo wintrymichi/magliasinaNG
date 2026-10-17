@@ -1,0 +1,669 @@
+{
+ "trees_on_or_by_roads": {
+  "far_broad_a": 5,
+  "far_broad_b": 7,
+  "far_broad_c": 4,
+  "far_fir_c": 1,
+  "far_narrow_a": 3,
+  "far_narrow_b": 2,
+  "far_narrow_c": 1,
+  "holm_oak": 1,
+  "tree_aspen_small_a": 8,
+  "tree_beech_forest_a": 1,
+  "tree_beech_large_b": 1,
+  "tree_beech_small_b": 2,
+  "tree_beech_small_c": 1,
+  "tree_douglasfir_large_b": 1,
+  "tree_oak_forest_b": 1,
+  "tree_oak_large_a": 2,
+  "tree_oak_sml_b": 1
+ },
+ "trees_total": 42,
+ "far_trees": 23,
+ "areas": {
+  "astano_banco": {
+   "edges": {
+    "edges_km": 46.69,
+    "median_m": 0.072,
+    "p90_m": 0.387,
+    "share_over_0.15m": 0.29,
+    "share_over_0.3m": 0.149
+   },
+   "edge_worst": [
+    [
+     -2062.763,
+     2068.2439999999997,
+     0.9998335689798523
+    ],
+    [
+     -2937.483,
+     2350.038,
+     0.9996215920414215
+    ],
+    [
+     -2129.0510000000004,
+     2675.3199999999997,
+     0.999421712806452
+    ]
+   ],
+   "steps": 4,
+   "holes": 0,
+   "worst": [
+    {
+     "what": "STEP",
+     "x": -1909.2,
+     "y": 2450.0,
+     "z": 735.55,
+     "value": 0.152,
+     "seg": 1208,
+     "class": "3m Strasse",
+     "name": "Via Selva Bella",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": -2002.8,
+     "y": 2429.8,
+     "z": 717.79,
+     "value": 0.062,
+     "seg": 3314,
+     "class": "3m Strasse",
+     "name": "",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": -2821.5,
+     "y": 2407.3,
+     "z": 595.39,
+     "value": 0.056,
+     "seg": 2314,
+     "class": "4m Strasse",
+     "name": "",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": -2817.1,
+     "y": 2409.2,
+     "z": 596.29,
+     "value": 0.052,
+     "seg": 2314,
+     "class": "4m Strasse",
+     "name": "",
+     "cls": "minor"
+    }
+   ],
+   "trees": 0,
+   "far_trees": 0
+  },
+  "vezio": {
+   "edges": {
+    "edges_km": 8.85,
+    "median_m": 0.065,
+    "p90_m": 0.104,
+    "share_over_0.15m": 0.067,
+    "share_over_0.3m": 0.017
+   },
+   "edge_worst": [
+    [
+     1396.725,
+     6183.3060000000005,
+     0.9831437399861898
+    ],
+    [
+     839.6600000000001,
+     5930.346,
+     0.9754771526561399
+    ],
+    [
+     929.887,
+     5849.717000000001,
+     0.9590988713928255
+    ]
+   ],
+   "steps": 37,
+   "holes": 55,
+   "worst": [
+    {
+     "what": "HOLE",
+     "x": 1021.7,
+     "y": 6082.0,
+     "z": 772.51,
+     "value": 1.0,
+     "seg": 343,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "HOLE",
+     "x": 1035.8,
+     "y": 6077.9,
+     "z": 772.31,
+     "value": 1.0,
+     "seg": 343,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "HOLE",
+     "x": 1040.1,
+     "y": 6077.7,
+     "z": 772.26,
+     "value": 1.0,
+     "seg": 343,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "HOLE",
+     "x": 1053.8,
+     "y": 6080.0,
+     "z": 772.08,
+     "value": 1.0,
+     "seg": 343,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "HOLE",
+     "x": 1060.0,
+     "y": 6082.7,
+     "z": 771.98,
+     "value": 1.0,
+     "seg": 343,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "HOLE",
+     "x": 1020.0,
+     "y": 6082.3,
+     "z": 772.53,
+     "value": 1.0,
+     "seg": 1654,
+     "class": "3m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    }
+   ],
+   "trees": 14,
+   "far_trees": 14
+  },
+  "mugena": {
+   "edges": {
+    "edges_km": 8.37,
+    "median_m": 0.065,
+    "p90_m": 0.226,
+    "share_over_0.15m": 0.164,
+    "share_over_0.3m": 0.074
+   },
+   "edge_worst": [
+    [
+     1829.49,
+     6266.173000000001,
+     0.9986164688672261
+    ],
+    [
+     1396.725,
+     6183.3060000000005,
+     0.9831437399861898
+    ],
+    [
+     1710.209,
+     6224.822,
+     0.9812714752049487
+    ]
+   ],
+   "steps": 4,
+   "holes": 0,
+   "worst": [
+    {
+     "what": "STEP",
+     "x": 1557.8,
+     "y": 6360.7,
+     "z": 817.53,
+     "value": 0.148,
+     "seg": 318,
+     "class": "3m Strasse",
+     "name": "Stráda da Caròcc",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 1519.8,
+     "y": 6313.3,
+     "z": 800.23,
+     "value": 0.114,
+     "seg": 3555,
+     "class": "3m Strasse",
+     "name": "Stráda da Caròcc",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 1513.5,
+     "y": 6231.3,
+     "z": 806.54,
+     "value": 0.08,
+     "seg": 318,
+     "class": "3m Strasse",
+     "name": "Stráda da Caròcc",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 1515.1,
+     "y": 6323.1,
+     "z": 801.3,
+     "value": 0.055,
+     "seg": 5117,
+     "class": "3m Strasse",
+     "name": "",
+     "cls": "minor"
+    }
+   ],
+   "trees": 2,
+   "far_trees": 2
+  },
+  "arosio": {
+   "edges": {
+    "edges_km": 23.2,
+    "median_m": 0.127,
+    "p90_m": 0.487,
+    "share_over_0.15m": 0.469,
+    "share_over_0.3m": 0.233
+   },
+   "edge_worst": [
+    [
+     2329.904,
+     6262.058,
+     0.9992610050586563
+    ],
+    [
+     2179.5060000000003,
+     6184.516,
+     0.9991584650797449
+    ],
+    [
+     2275.3289999999997,
+     6349.49,
+     0.9984900086187736
+    ]
+   ],
+   "steps": 2,
+   "holes": 0,
+   "worst": [
+    {
+     "what": "STEP",
+     "x": 2173.3,
+     "y": 6393.8,
+     "z": 851.12,
+     "value": 0.251,
+     "seg": 314,
+     "class": "4m Strasse",
+     "name": "Via alla Chiesa di San Michele",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 2280.8,
+     "y": 6292.6,
+     "z": 862.25,
+     "value": 0.071,
+     "seg": 5663,
+     "class": "4m Strasse",
+     "name": "Via alla Chiesa di San Michele",
+     "cls": "minor"
+    }
+   ],
+   "trees": 0,
+   "far_trees": 0
+  },
+  "fescoggia": {
+   "edges": {
+    "edges_km": 9.32,
+    "median_m": 0.091,
+    "p90_m": 0.467,
+    "share_over_0.15m": 0.411,
+    "share_over_0.3m": 0.204
+   },
+   "edge_worst": [
+    [
+     565.598,
+     5424.709,
+     0.9993097986891826
+    ],
+    [
+     380.418,
+     5358.1900000000005,
+     0.9975350335798794
+    ],
+    [
+     486.9,
+     5340.201,
+     0.9927637123449813
+    ]
+   ],
+   "steps": 2,
+   "holes": 2,
+   "worst": [
+    {
+     "what": "HOLE",
+     "x": 776.9,
+     "y": 5710.9,
+     "z": 799.07,
+     "value": 1.0,
+     "seg": 5632,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "HOLE",
+     "x": 780.0,
+     "y": 5709.3,
+     "z": 799.03,
+     "value": 1.0,
+     "seg": 5632,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 504.1,
+     "y": 5411.6,
+     "z": 840.34,
+     "value": 0.248,
+     "seg": 3537,
+     "class": "4m Strasse",
+     "name": "Via San Silvestro",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 773.8,
+     "y": 5706.4,
+     "z": 799.48,
+     "value": 0.13,
+     "seg": 5632,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
+     "cls": "minor"
+    }
+   ],
+   "trees": 0,
+   "far_trees": 0
+  },
+  "breno": {
+   "edges": {
+    "edges_km": 18.53,
+    "median_m": 0.102,
+    "p90_m": 0.469,
+    "share_over_0.15m": 0.45,
+    "share_over_0.3m": 0.222
+   },
+   "edge_worst": [
+    [
+     -383.86400000000003,
+     4720.198,
+     0.9999714418019039
+    ],
+    [
+     67.78,
+     4822.121999999999,
+     0.9998194254935697
+    ],
+    [
+     -36.09200000000001,
+     4583.197,
+     0.9994457218072057
+    ]
+   ],
+   "steps": 2,
+   "holes": 0,
+   "worst": [
+    {
+     "what": "STEP",
+     "x": 8.2,
+     "y": 4595.2,
+     "z": 798.54,
+     "value": 0.456,
+     "seg": 5216,
+     "class": "3m Strasse",
+     "name": "",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 75.9,
+     "y": 4615.1,
+     "z": 798.7,
+     "value": 0.064,
+     "seg": 6095,
+     "class": "Platz",
+     "name": "",
+     "cls": "minor"
+    }
+   ],
+   "trees": 0,
+   "far_trees": 0
+  },
+  "miglieglia": {
+   "edges": {
+    "edges_km": 17.78,
+    "median_m": 0.072,
+    "p90_m": 0.413,
+    "share_over_0.15m": 0.358,
+    "share_over_0.3m": 0.179
+   },
+   "edge_worst": [
+    [
+     -976.387,
+     3491.054,
+     0.9984530613841116
+    ],
+    [
+     -1275.166,
+     3689.5860000000002,
+     0.9983240047198478
+    ],
+    [
+     -1140.51,
+     3401.7439999999997,
+     0.9963974583165509
+    ]
+   ],
+   "steps": 4,
+   "holes": 0,
+   "worst": [
+    {
+     "what": "STEP",
+     "x": -1068.4,
+     "y": 3518.0,
+     "z": 704.56,
+     "value": 0.1,
+     "seg": 3287,
+     "class": "4m Strasse",
+     "name": "",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": -914.9,
+     "y": 3800.9,
+     "z": 712.92,
+     "value": 0.087,
+     "seg": 3568,
+     "class": "3m Strasse",
+     "name": "Via Bisada",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": -914.8,
+     "y": 3798.3,
+     "z": 712.88,
+     "value": 0.087,
+     "seg": 3568,
+     "class": "3m Strasse",
+     "name": "Via Bisada",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": -976.2,
+     "y": 3552.0,
+     "z": 704.53,
+     "value": 0.068,
+     "seg": 3867,
+     "class": "3m Strasse",
+     "name": "Via Canavee",
+     "cls": "minor"
+    }
+   ],
+   "trees": 0,
+   "far_trees": 0
+  }
+ },
+ "worst_minor": [
+  {
+   "what": "STEP",
+   "x": -2399.5,
+   "y": 32.8,
+   "z": 409.21,
+   "value": 2.595,
+   "seg": 3686,
+   "class": "4m Strasse",
+   "name": "Castelrotto nucleo",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": -2401.1,
+   "y": 31.1,
+   "z": 408.99,
+   "value": 2.53,
+   "seg": 3686,
+   "class": "4m Strasse",
+   "name": "Castelrotto nucleo",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": -2399.1,
+   "y": 40.9,
+   "z": 409.93,
+   "value": 2.064,
+   "seg": 3686,
+   "class": "4m Strasse",
+   "name": "Castelrotto nucleo",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 1132.5,
+   "y": -285.1,
+   "z": 436.46,
+   "value": 0.984,
+   "seg": 954,
+   "class": "4m Strasse",
+   "name": "Via Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 1979.7,
+   "y": 3336.6,
+   "z": 739.69,
+   "value": 0.963,
+   "seg": 3080,
+   "class": "4m Strasse",
+   "name": "Via Cantonale",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": -1383.6,
+   "y": 1589.7,
+   "z": 573.09,
+   "value": 0.905,
+   "seg": 6167,
+   "class": "3m Strasse",
+   "name": "",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 1270.3,
+   "y": -415.5,
+   "z": 387.92,
+   "value": 0.867,
+   "seg": 980,
+   "class": "4m Strasse",
+   "name": "Via Giuseppe Soldati",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 2202.1,
+   "y": 2033.5,
+   "z": 437.09,
+   "value": 0.734,
+   "seg": 707,
+   "class": "3m Strasse",
+   "name": "Via Mondonico",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 805.6,
+   "y": 5928.4,
+   "z": 780.81,
+   "value": 0.713,
+   "seg": 2763,
+   "class": "4m Strasse",
+   "name": "Stradón da Vésc",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 4025.2,
+   "y": 5713.5,
+   "z": 332.86,
+   "value": 0.64,
+   "seg": 2884,
+   "class": "4m Strasse",
+   "name": "Via San Pietro",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 1321.3,
+   "y": 458.2,
+   "z": 581.74,
+   "value": 0.537,
+   "seg": 4808,
+   "class": "3m Strasse",
+   "name": "",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": 1321.8,
+   "y": 460.9,
+   "z": 582.1,
+   "value": 0.522,
+   "seg": 4808,
+   "class": "3m Strasse",
+   "name": "",
+   "cls": "minor"
+  }
+ ]
+}
