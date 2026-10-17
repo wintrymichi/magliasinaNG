@@ -222,13 +222,14 @@ def main():
         start = edl.get("start", 0.0) + t_first
         fade = edl.get("fade_out", 3.0)
         audio = (f"[{len(files)}:a]atrim=start={start:.3f}:duration={total:.3f},asetpts=PTS-STARTPTS,"
-                 f"afade=t=in:d=1.5,afade=t=out:st={total - fade:.3f}:d={fade:.3f},loudnorm=I=-14:TP=-1.5[a]")
+                 f"afade=t=in:d=1.5,afade=t=out:st={total - fade:.3f}:d={fade:.3f},loudnorm=I=-14:TP=-1.5,aresample=48000[a]")
         fc.append(audio)
         vlast = last if len(files) > 1 else "[0:v]"
         fc.append(f"{vlast}fade=t=in:d=1.0,fade=t=out:st={total - 1.5:.3f}:d=1.5[vout]")
         run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-i", music, "-filter_complex", ";".join(fc),
              "-map", "[vout]", "-map", "[a]", "-t", f"{total:.3f}", "-r", str(FPS),
              "-c:v", "libx264", "-preset", "slow" if not draft else "veryfast", "-crf", "16" if not draft else "23",
+             "-maxrate", "30M", "-bufsize", "45M",          # 90 s stays under 400 MB
              "-profile:v", "high", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
              "-c:a", "aac", "-b:a", "320k", out])
         print(out, "%.1f s" % total)
