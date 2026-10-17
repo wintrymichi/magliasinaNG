@@ -28,6 +28,7 @@ STEPS_PER_AREA = 6
 WORST_MINOR = 12
 TREE_GAP = 1.0           # m from the edge of a road top face
 VIEW_BACK = 9.0          # m before a step, the driver's eye
+EDGE_OUT = 0.3           # m beyond the outer edge of a road face: the terrain the edge is measured against
 
 
 def items_on_roads(lv, S):
@@ -49,6 +50,37 @@ def items_on_roads(lv, S):
             per[name] = int(near.sum())
             hits += [(float(x), float(y), float(z), name) for x, y, z in P[near]]
     return per, hits
+
+
+def edge_steps(tri, S, ter, box):
+    """The outer edges of the road top faces in a box (x0, y0, x1, y1): their height over the terrain EDGE_OUT m
+    beyond them. {km, median, p90, share over 0.15 m, share over 0.3 m} and the worst places."""
+    import unpaved_tour
+    x0, y0, x1, y1 = box
+    c = tri.mean(1)
+    t = tri[(c[:, 0] >= x0 - 5) & (c[:, 0] <= x1 + 5) & (c[:, 1] >= y0 - 5) & (c[:, 1] <= y1 + 5)]
+    if not len(t):
+        return {}, []
+    mid, _, n, ln = unpaved_tour.edges(t)
+    q = mid[:, :2] + 0.10 * n
+    m = np.isnan(S.height(q[:, 0], q[:, 1], "low")) & (ln > 0.2) & (mid[:, 0] >= x0) & (mid[:, 0] <= x1) \
+        & (mid[:, 1] >= y0) & (mid[:, 1] <= y1)
+    p = mid[m, :2] + EDGE_OUT * n[m]
+    gap = mid[m, 2] - terrain_top(ter, p[:, 0], p[:, 1])
+    real = gap < 1.0                                   # higher: a wall or a bridge, not a step to drive over
+    g, L, P = gap[real], ln[m][real], mid[m][real]
+    if not len(g):
+        return {}, []
+    res = {"edges_km": round(float(L.sum()) / 1000, 2), "median_m": round(float(np.median(g)), 3),
+           "p90_m": round(float(np.percentile(g, 90)), 3),
+           "share_over_0.15m": round(float(L[g > 0.15].sum() / L.sum()), 3),
+           "share_over_0.3m": round(float(L[g > 0.3].sum() / L.sum()), 3)}
+    worst = [(float(P[i, 0]), float(P[i, 1]), float(g[i])) for i in np.argsort(-g)[:200]]
+    out = []
+    for w in worst:                                     # one per 30 m
+        if all(math.hypot(w[0] - o[0], w[1] - o[1]) > 30 for o in out):
+            out.append(w)
+    return res, out[:3]
 
 
 def heading_at(S, x, y):
@@ -75,6 +107,7 @@ def main(argv):
     boxes = {}
     for name, cx, cy, half in AREAS:
         boxes[name] = (cx - half, cy - half, cx + half, cy + half)
+    ter = pr.Terrain(lv)
     per, hits = items_on_roads(lv, S)
     H = np.array([(x, y) for x, y, _, _ in hits]).reshape(-1, 2)
     far = np.array([n.startswith("far_") for *_, n in hits], bool)
@@ -84,13 +117,18 @@ def main(argv):
         inb = [p for p in steps if x0 <= p["x"] <= x1 and y0 <= p["y"] <= y1]
         inb.sort(key=lambda p: -p["value"])
         m = (H[:, 0] >= x0) & (H[:, 0] <= x1) & (H[:, 1] >= y0) & (H[:, 1] <= y1) if len(H) else np.zeros(0, bool)
-        summary["areas"][name] = {"steps": len([p for p in inb if p["what"] == "STEP"]),
+        edges, edge_worst = edge_steps(tri[~is_path], S, ter, (x0, y0, x1, y1))
+        summary["areas"][name] = {"edges": edges, "edge_worst": edge_worst,
+                                  "steps": len([p for p in inb if p["what"] == "STEP"]),
                                   "holes": len([p for p in inb if p["what"] == "HOLE"]),
                                   "worst": inb[:STEPS_PER_AREA], "trees": int(m.sum()),
                                   "far_trees": int((m & far).sum()) if len(H) else 0}
         for k, p in enumerate(inb[:STEPS_PER_AREA]):
             views.append((f"{name}_step{k}", p["x"], p["y"], f"{name}: {p['what']} {100 * p['value']:.0f} cm "
                                                              f"{p.get('name') or ''} ({p['x']:.0f}, {p['y']:.0f})", False))
+        for k, (ex, ey, eg) in enumerate(edge_worst[:2]):
+            views.append((f"{name}_edge{k}", ex, ey, f"{name}: road edge {100 * eg:.0f} cm over the ground "
+                                                    f"({ex:.0f}, {ey:.0f})", False))
         if m.any():
             P = H[m]
             cnt = [(int((np.hypot(*(P - q).T) < 40).sum()), tuple(q)) for q in P]
@@ -109,7 +147,6 @@ def main(argv):
     from review_map import contact_sheets
     import review_map
     entries = []
-    ter = pr.Terrain(lv)
     with Renderer(lv, textured=True) as r:
         for key, x, y, cap, trees in views:
             z = S.height([x], [y], "high")[0]
