@@ -125,9 +125,8 @@ Most of the remaining cost is the trees near the roads (the game's own models, t
 
 | | |
 |---|---|
-| ![Bedigliora before: the church block drawn as one windowless tower](beamng/verifica/screenshots/v3.0/new-bedigliora-before.jpg)<br>*Bedigliora in the first test build: the church block drawn as a tower without windows* | ![Bedigliora in v3.0](beamng/verifica/screenshots/v3.0/new-bedigliora-after.jpg)<br>*Bedigliora in v3.0: the same block with the windows of its houses* |
 | ![The Eni of Magliaso Paese](beamng/verifica/screenshots/v3.0/new-eni-magliaso-paese.jpg)<br>*The Eni of Magliaso Paese, by the FLP stop (a parody brand)* | ![Parking bays and the petrol station](beamng/verifica/screenshots/v3.0/new-eni-and-parking-bays.jpg)<br>*White parking bays in front of it* |
-| ![Parking bays at the FLP station of Magliaso](beamng/verifica/screenshots/v3.0/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* | ![Bedigliora village](beamng/verifica/screenshots/v3.0/new-bedigliora-village.jpg)<br>*Bedigliora from above* |
+| ![Parking bays at the FLP station of Magliaso](beamng/verifica/screenshots/v3.0/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* | |
 | ![Tyre tracks through the hairpin](beamng/verifica/screenshots/v3.0/new-wear-hairpin.jpg)<br>*Tyre tracks through the hairpin of the cantonal road* | ![Tyre tracks through the hairpin, the other way](beamng/verifica/screenshots/v3.0/new-wear-hairpin-2.jpg)<br>*The same hairpin from the valley side* |
 
 **From the driver's seat**
@@ -139,7 +138,7 @@ Most of the remaining cost is the trees near the roads (the game's own models, t
 | ![The roundabout of Magliaso, other way](beamng/verifica/screenshots/v3.0/cockpit-roundabout-magliaso-2.jpg)<br>*The roundabout of Magliaso, the other way* | ![Agno along the lake](beamng/verifica/screenshots/v3.0/cockpit-agno-lakeside.jpg)<br>*Agno along the lake* |
 | ![The Penudria](beamng/verifica/screenshots/v3.0/cockpit-penudria.jpg)<br>*The Penudria, Gravesano – Arosio* | ![Miglieglia – Novaggio](beamng/verifica/screenshots/v3.0/cockpit-miglieglia-novaggio.jpg)<br>*Miglieglia – Novaggio* |
 | ![Novaggio – Miglieglia](beamng/verifica/screenshots/v3.0/cockpit-novaggio-miglieglia.jpg)<br>*Novaggio – Miglieglia, tyre tracks in the bend* | ![Caslano](beamng/verifica/screenshots/v3.0/cockpit-caslano.jpg)<br>*Caslano* |
-| ![Behind the car on the cantonal road](beamng/verifica/screenshots/v3.0/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | ![Behind the car at Arosio](beamng/verifica/screenshots/v3.0/chase-arosio.jpg)<br>*Behind the car at Arosio* |
+| ![Behind the car on the cantonal road](beamng/verifica/screenshots/v3.0/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | |
 
 **Passages and landscapes**
 
