@@ -9,7 +9,8 @@ edl.json (beamng/trailer/edl.json): the clips in order, each with
   trans      how it starts: cut | dissolve | fadeblack (with "tdur" s)
   title      text over the clip: {"text", "sub", "at": s into the clip, "dur", "pos": centre|lower|upper|bottom}
              ("titles": a list of them, one after the other)
-and at the top: "start" (where the music starts, s), "end" (the last bar), "fade_out" (s).
+and at the top: "start" (where the music starts, s), "end" (the last bar), "fade_out" (s), "game_label" (the
+game's side of the comparisons).
 Clips are drawn at 2560 x 1440, 60 fps; --draft makes a quick 960 x 540 check.
 The grade is a soft filmic look (lifted blacks, warm highlights, cooler shadows, a light vignette and grain).
 """
@@ -145,7 +146,7 @@ def render_clip(c, k, args, tmp, w, h):
         meta = json.load(open(os.path.join(args["sv"], "sv_frames.json")))
         date = (meta.get(c["compare"], {}).get("date") or "")[:4]
         compare_frames(fr[len(fr) // 2][1], os.path.join(args["sv"], c["compare"] + ".png"), n, w, h, seq,
-                       "STREET VIEW %s  ·  © Google" % date, "IN GAME  ·  MAGLIASINANG V3.1")
+                       "STREET VIEW %s  ·  © Google" % date, args["game_label"])
     else:                                               # black
         Image.new("RGB", (w, h)).save(os.path.join(seq, "black.png"))
         for i in range(n):
@@ -203,7 +204,8 @@ def main():
     try:
         files = []
         for k, c in enumerate(clips):
-            files.append(render_clip(c, k, {"frames": frames, "sv": sv}, tmp, w, h))
+            files.append(render_clip(c, k, {"frames": frames, "sv": sv,
+                                             "game_label": edl.get("game_label", "IN GAME  ·  MAGLIASINANG V3")}, tmp, w, h))
             print("clip %2d %-28s %6.2f s at %6.2f" % (k, c.get("shot") or c.get("compare") or "black", c["_dur"], c["_t"]), flush=True)
         # the transitions: xfade on every boundary (a cut is a one-frame fade)
         inputs, fc, last, off = [], [], "[0:v]", 0.0
@@ -229,7 +231,7 @@ def main():
         run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-i", music, "-filter_complex", ";".join(fc),
              "-map", "[vout]", "-map", "[a]", "-t", f"{total:.3f}", "-r", str(FPS),
              "-c:v", "libx264", "-preset", "slow" if not draft else "veryfast", "-crf", "16" if not draft else "23",
-             "-maxrate", "30M", "-bufsize", "45M",          # 90 s stays under 400 MB
+             "-maxrate", "26M", "-bufsize", "39M",          # 2 min stay under 400 MB
              "-profile:v", "high", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
              "-c:a", "aac", "-b:a", "320k", out])
         print(out, "%.1f s" % total)

@@ -65,13 +65,19 @@ def road(name, start, end, dist, secs, tod, group, side=2.5, skip=0, fov=62, ahe
 
 
 SHOTS = [
-    # ---- 1 opening: morning over the lake
+    # ---- 1 opening: dawn over Novaggio, the Malcantone valley behind (a01 was the cut of v3.1)
+    dict(name="a00_novaggio_alba", kind="orbit", centre=[-1000, 2000], dist=[620, 520], az=[20, 8], el=[15, 13],
+         fov=50, secs=9, tod=DAWN, group="open"),
+    # morning over the lake
     view_orbit("a01_lago_alba", 45.9807, 8.8850, 640, 206, 196, 20, 23, 9, DAWN, "open", d1=500),
     view_orbit("a02_caslano_torrazza", 45.96664, 8.87381, 620, 255, 240, 22, 22, 7, MORNING, "open"),
     # ---- 2 landscapes from above
     view_orbit("a03_novaggio", 46.0100, 8.8530, 380, 128, 108, 26, 24, 6, MORNING, "land"),
     view_orbit("a04_penudria", 46.04195, 8.90913, 430, 150, 135, 32, 26, 7, DAY, "land", d1=380),
     view_orbit("a07_cademario", 46.0226, 8.8905, 340, 150, 165, 28, 26, 6, GOLDEN, "land"),
+    # low over the woods above Novaggio, the village and the valley ahead (a07 was the cut of v3.1)
+    dict(name="a10_boschi_novaggio", kind="path", keys=[dict(pos=[-1650, 2550, 60], look=[-1050, 2100, 0]),
+         dict(pos=[-1450, 2450, 50], look=[-1050, 2100, 0])], fov=50, secs=8, tod=GOLDEN, group="land"),
     dict(name="a09_breno", kind="orbit", centre=[40, 4540], dist=[300, 260], az=[200, 180], el=[28, 24],
          fov=50, secs=6, tod=AFTERNOON, group="land"),
     # ---- 3 on foot: eye height along the village streets (the AI road, pavement side)
@@ -95,7 +101,11 @@ SHOTS = [
           ("penudria", "ZiXC4KoAMxP_8LzDl1XOCQ", "fwd"),
           ("agno", "27Q6k3C8qh0APD1C9MclVg", "fwd"),
           ("magliaso_paese", "5Bek8_9Ou8MLlY6XGJQilA", "fwd"),
-          ("negozi_magliaso", "_6-4SJnHkldFQXg7uOko9Q", "fwd")])],
+          ("negozi_magliaso", "_6-4SJnHkldFQXg7uOko9Q", "fwd"),
+          ("lungolago_agno", "iPML-47Lc2JjmztTLDXfHg", "back"),
+          ("ponte_tresa", "QQEuhk3GfZMf94tIV-4P3A", "fwd"),
+          ("novaggio_entrata", "NcNyVX0nBd3Cv3vI6poFpg", "fwd"),
+          ("novaggio_paese", "slxBjbx93RNutAqMgsKn0Q", "back")])],
     # ---- 5 driving: cinematics with an AI car (ETK 800, constant speed along waypoints), then gameplay
     dict(name="d01_cantonale_chase_low", kind="follow", rig="chase_low", car="etk800", route=cantonale(140, 560),
          speed=10, secs=6, tod=GOLDEN, group="drive", fov=55),
@@ -113,6 +123,9 @@ SHOTS = [
     # ---- 6 the end: sunset over the lake (camera over the water, looking west into the sun)
     dict(name="e01_finale_tramonto", kind="orbit", centre=[-200, -2300], dist=[1000, 850], az=[120, 112],
          el=[11, 13], fov=55, secs=9, tod=SUNSET, group="end"),
+    # the end of v3: sunset behind Novaggio, the drone pulling back from the east
+    dict(name="e03_novaggio_tramonto", kind="orbit", centre=[-1000, 2000], dist=[450, 650], az=[120, 112],
+         el=[12, 16], fov=55, secs=10, tod=SUNSET, group="end"),
     dict(name="e02_tramonto_magliaso", kind="orbit", centre=[900, -1250], dist=[1100, 935], az=[105, 97],
          el=[9, 11], fov=55, secs=9, tod=SUNSET, group="end"),
 ]

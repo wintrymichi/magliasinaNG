@@ -27,6 +27,9 @@ pausing and resuming the physics every frame locked the game up, and stepping it
 driver, so cars run in continuous slow motion; the AI needs waypoints along the wanted road (`cantonale()` in
 shots.py follows the Street View track), or it takes the shortest way through any alley. The level's clock:
 0.79 pink dawn, 0.24 golden light, 0.256 the sun on the western ridge, 0.265 already after sunset.
+On a real KDE desktop the borderless window loses the panel's height (frames 2560 x 1327) and asking the game for
+fullscreen from the extension fails (320 x 240, or ignored): shoot in a virtual KWin session (`kwin_wayland --virtual
+--xwayland --width 2560 --height 1440`). The v2 cut (1:55) starts the music 14 bars earlier, at 172.664 s.
 v3.1 has no pump objects for its gas stations: `gameplay_markerInteraction` throws every frame while a car
 drives, so the extension unloads it for the shoot.
 
