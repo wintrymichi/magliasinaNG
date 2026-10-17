@@ -11,7 +11,8 @@ edl.json (beamng/trailer/edl.json): the clips in order, each with
              ("titles": a list of them, one after the other)
 and at the top: "start" (where the music starts, s), "end" (the last bar), "fade_out" (s), "game_label" (the
 game's side of the comparisons).
-Clips are drawn at 2560 x 1440, 60 fps; --draft makes a quick 960 x 540 check.
+Clips are drawn at 2560 x 1440, 60 fps; --draft makes a quick 960 x 540 check. TRAILER_RESUME=<work dir> reuses the
+clips an interrupted run left there (delete the ones to redo).
 The grade is a soft filmic look (lifted blacks, warm highlights, cooler shadows, a light vignette and grain).
 """
 import bisect, csv, json, math, os, shutil, subprocess, sys, tempfile
@@ -133,7 +134,8 @@ def render_clip(c, k, args, tmp, w, h):
     """One clip of the EDL, graded, with its title, to tmp/clip_k.mp4 (dur + transition overlaps)."""
     n = int(math.ceil(c["_len"] * FPS)) + 3          # a few spare frames at the tail: the next transition drops them
     seq = os.path.join(tmp, "seq%03d" % k)
-    os.makedirs(seq, exist_ok=True)
+    shutil.rmtree(seq, ignore_errors=True)           # a resumed run: the half-written frames of this clip
+    os.makedirs(seq)
     if "shot" in c:
         fr = shot_frames(args["frames"], c["shot"])
         t0 = fr[0][0]
@@ -200,10 +202,15 @@ def main():
     beats = json.load(open(beats_p))
     clips, end = plan(edl, beats)
     t_first = clips[0]["_t"]
-    tmp = tempfile.mkdtemp(prefix="trailer_")
+    resume = os.environ.get("TRAILER_RESUME")      # the work dir of an interrupted run: its clipNNN.mp4 are reused
+    tmp = resume or tempfile.mkdtemp(prefix="trailer_")
     try:
         files = []
         for k, c in enumerate(clips):
+            done = os.path.join(tmp, "clip%03d.mp4" % k)
+            if resume and os.path.exists(done):
+                files.append(done)
+                continue
             files.append(render_clip(c, k, {"frames": frames, "sv": sv,
                                              "game_label": edl.get("game_label", "IN GAME  ·  MAGLIASINANG V3")}, tmp, w, h))
             print("clip %2d %-28s %6.2f s at %6.2f" % (k, c.get("shot") or c.get("compare") or "black", c["_dur"], c["_t"]), flush=True)
@@ -236,7 +243,7 @@ def main():
              "-c:a", "aac", "-b:a", "320k", out])
         print(out, "%.1f s" % total)
     finally:
-        if not os.environ.get("TRAILER_KEEP_TMP"):
+        if not os.environ.get("TRAILER_KEEP_TMP") and not resume:
             shutil.rmtree(tmp, ignore_errors=True)
         else:
             print("kept", tmp)

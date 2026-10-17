@@ -7,7 +7,7 @@
   {"t": 0.0, "black": true, "title": {"text": "Malcantone", "sub": "Ticino, Switzerland  ·  BeamNG.drive", "at": 0.4, "dur": 2.6}},
   {"t": 3.6, "shot": "a00_novaggio_alba", "trans": "fadeblack", "tdur": 1.0, "title": {"text": "MagliasinaNG v3.0", "pos": "lower", "at": 1.2, "dur": 3.6}},
   {"t": 8.89, "shot": "a02_caslano_torrazza", "trans": "dissolve", "tdur": 0.8},
-  {"t": 12.45, "shot": "a03_novaggio", "title": {"text": "51 km² rebuilt from open data", "pos": "lower", "at": 0.4, "dur": 3.0}},
+  {"t": 12.45, "shot": "a04_penudria", "title": {"text": "51 km² rebuilt from open data", "pos": "lower", "at": 0.4, "dur": 3.0}},
   {"t": 15.98, "shot": "a09_breno", "trans": "dissolve", "tdur": 0.6},
   {"t": 19.37, "shot": "a10_boschi_novaggio", "title": {"text": "Woods on every mountain", "sub": "every tree at its real height", "pos": "lower", "at": 0.5, "dur": 5.0}},
   {"t": 26.54, "shot": "w01_magliaso_cantonale", "title": {"text": "The game's own look", "sub": "Italy's asphalt, stone walls and cobbles, worn by the traffic", "pos": "lower", "at": 0.3, "dur": 3.2}},
