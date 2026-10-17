@@ -1,0 +1,112 @@
+# Renders and numbers of the places reported after the v3.0 release (steps on the narrow roads, the step below
+# Astano, trees on the road at Vezio) on the RELEASED v3.0 level, without the game: the network and its profile
+# are built from the downloads (cached), the drive test runs over the level, fix_review.py renders the places.
+# The renders and numbers are committed to beamng/verifica/fix_review/release/ on the branch, so they can be
+# looked at without downloading artifacts. The level after the fixes is reviewed the same way by
+# fix_build.yml (the whole build, then the same script).
+# review stamp: 1
+name: fix review (released v3.0)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-e0btjw]
+    paths: [.github/workflows/fix_review.yml]
+
+concurrency:
+  group: fix-review-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0 playwright==1.55.0
+          python -m playwright install --with-deps chromium
+
+      - name: Downloads from earlier runs
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/magliasinaNG/bm/data
+          key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
+          restore-keys: v3-data-
+
+      - name: Released level v3.0
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist" "$MAGLIASO_BEAMNG_USER"
+          gh release download v3.0 --pattern magliaso_pura_v3.0.zip --dir "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+          unzip -q "$MAGLIASO_ROOT/dist/magliaso_pura_v3.0.zip" -d "$MAGLIASO_BEAMNG_USER"
+          ls "$MAGLIASO_BEAMNG_USER" "$MAGLIASO_BEAMNG_USER/levels"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_worldcover.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+
+      - name: Rasters and network
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python network.py
+          python network_surface.py
+
+      - name: Drive test and renders
+        working-directory: beamng/pipeline
+        run: |
+          O=../verifica/fix_review/release
+          rm -rf "$O"; mkdir -p "$O"
+          python drive_test.py || true
+          cp ../verifica/drive_test.json "$O/drive_test.json"
+          git checkout -- ../verifica/drive_test.json
+          python fix_review.py "$O" --drive "$O/drive_test.json"
+          ls -la "$O"
+
+      - name: Commit the renders
+        run: |
+          git checkout -- beamng/dati || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/verifica/fix_review
+          git commit -m "fix review: renders of the released v3.0" || exit 0
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 5; done
