@@ -908,7 +908,7 @@ def block(args):
     if not ch.any():
         return None
     rr, cc = np.nonzero(ch)
-    return r0 + rr, c0 + cc, Z[core][rr, cc]
+    return r0 + rr, c0 + cc, Z[core][rr, cc], D[core][rr, cc]
 
 
 def terrain_top(Zt, x, y):
@@ -1043,18 +1043,19 @@ def in_cells(cells, x, y):
     return (cells[i] == c) if len(cells) else np.zeros(len(c), bool)
 
 
-def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
+def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_lift=0.0):
     """mats: the materials whose surroundings are raised and whose outer edges go down (default UNPAVED);
     edge_drop: the deepest an edge goes down (0: the faces stay as they are, only the terrain is raised);
     keep_out: sorted 1 m cell ids (cell_ids) whose faces raise no terrain and whose terrain vertices stay as they
-    were (v2.8, network_mesh.paved_edges_step)."""
+    were (v2.8, network_mesh.paved_edges_step); keep_out_lift > 0 (v3.0 fix round): there the faces raise the
+    vertices within SHOULDER m of them by up to this much (m), the others stay as they were."""
     global UN, ALL, Z0, MAXH, QT
     mats = UNPAVED if mats is None else tuple(mats)
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     objs = read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json")
     un, al = top_faces(zi, objs, mats)
-    if keep_out is not None:                    # no terrain raised to the faces there
+    if keep_out is not None and keep_out_lift <= 0:     # no terrain raised to the faces there
         c = un.mean(1)
         un = un[~in_cells(keep_out, c[:, 0], c[:, 1])]
     print("top faces: %d of %s, %d in all" % (len(un), "the unpaved" if mats == UNPAVED else "these", len(al)))
@@ -1071,6 +1072,7 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     cc = np.floor((un[:, :, 0].mean(1) - TER_X0) / TER_SQUARE / BLOCK).astype(int)
     keys = sorted(set(zip(cr.tolist(), cc.tolist())))
     q0 = q.copy()
+    dist = np.full(q.shape, np.inf, np.float32) if keep_out is not None else None    # m from the faces, raised vertices
     tmp = tempfile.mkdtemp(prefix="unpaved_")
 
     ex = pool(tmp, un, al)
@@ -1086,10 +1088,12 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
         out = q0.copy()
         for res in ex.map(block, jobs, chunksize=2):
             if res is not None:
-                rr, cc, z = res
+                rr, cc, z, dd = res
                 qn = np.floor((z - Z0) / MAXH * 65535.0).astype(np.int64)    # down: never over a face
                 up = qn > q0[rr, cc]
                 out[rr[up], cc[up]] = qn[up].astype(np.uint16)
+                if keep_out is not None:
+                    dist[rr[up], cc[up]] = np.minimum(dist[rr[up], cc[up]], dd[up])
         return out
     print("%d blocks with unpaved faces" % len(keys))
     q = run(None)
@@ -1097,6 +1101,15 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     if keep_out is not None:                    # the ground there as it was, also where a face farther off raised it
         rr, cc = np.nonzero(q != q0)
         back = in_cells(keep_out, TER_X0 + cc * TER_SQUARE, TER_Y0 + rr * TER_SQUARE)
+        if keep_out_lift > 0:
+            # v3.0 fix round: but the trench of the carve beside the road (0.1 m under the lowest face within one
+            # terrain step) filled there too, where the edge stands at most keep_out_lift m over the ground within
+            # SHOULDER m of it: a real step (a wall, a kerb, a plinth, the bank behind a guard rail) is higher, and
+            # a vertex that would rise more stays as it was, not raised part of the way
+            lift = (q[rr, cc].astype(np.float64) - q0[rr, cc]) / 65535.0 * MAXH
+            ok = (dist[rr, cc] <= SHOULDER) & (lift <= keep_out_lift)
+            print("terrain vertices in the keep-out raised to the edge of the road beside them: %d" % (back & ok).sum())
+            back &= ~ok
         q[rr[back], cc[back]] = q0[rr[back], cc[back]]
         print("terrain vertices in the keep-out left as they were: %d" % back.sum())
     ch = q != q0
@@ -1166,6 +1179,11 @@ PAVED = tuple(m for g in osm_surface.MATS.values() for c, m in g.items()
               if c in ("hard", "sett", "cobble") and not m.startswith("mp_path_")) + ("mp_road_asphalt_fresh", "mp_sidewalk")
 PAVED_EDGE_DROP = 0.0       # m: the faces stay as they are
 KEEP_OUT = 2.0              # m around guard rails, fences, walls, buildings, railway, parapets
+# v3.0 fix round: in the keep-out the ground within SHOULDER m of a paved edge rises to it where that is at most this
+# much (m). Up to v3.0 it stayed as the carve left it: 530 of 973 km of edges, most of those in the villages (houses,
+# walls and fences on both sides of the narrow roads of Vezio, Arosio, Mugena ...), kept the v2.7 slab with a trench
+# beside it, median 0.21 m, and a wheel leaving the asphalt dropped off and hit the edge coming back.
+KEEP_OUT_LIFT = 0.35
 SAMPLE = 0.5                # m between the samples along the edges of their faces
 KEEP_GROUPS = ("roads/guardrails", "roads/fences", "walls", "buildings", "railway", "level_objects/Water")
 PARAPET = ("mp_bridge_parapet",)
@@ -1277,7 +1295,7 @@ def paved_edges_step(root, report=None):
     before = measure(zi, keep)
     print("before:", before, flush=True)
     q0 = pw.read_ter(zi.read(f"{lv}/theTerrain.ter"))[1].copy()
-    pu.unpaved_step(root, mats=PAVED, edge_drop=PAVED_EDGE_DROP, keep_out=keep)
+    pu.unpaved_step(root, mats=PAVED, edge_drop=PAVED_EDGE_DROP, keep_out=keep, keep_out_lift=KEEP_OUT_LIFT)
     zi = bng.LevelFiles(root)
     after = measure(zi, keep)
     print("after:", after, flush=True)
@@ -1286,7 +1304,7 @@ def paved_edges_step(root, report=None):
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump({"materials": list(PAVED), "edge_drop_m": PAVED_EDGE_DROP,
-                   "terrain_under_faces_m": pu.EPS, "keep_out_m": KEEP_OUT, "keep_out_km2": round(len(keep) / 1e6, 2),
+                   "terrain_under_faces_m": pu.EPS, "keep_out_m": KEEP_OUT, "keep_out_lift_m": KEEP_OUT_LIFT, "keep_out_km2": round(len(keep) / 1e6, 2),
                    "paved_outer_edges_before": before, "paved_outer_edges_after": after,
                    "terrain_vertices_raised": raised}, open(report, "w"), indent=1)
     return 0
