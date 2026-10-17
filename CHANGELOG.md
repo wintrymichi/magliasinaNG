@@ -2,7 +2,7 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
-## v3.0 (not released yet)
+## v3.0 (17 October 2026)
 
 ### The review round (2026-10-16/17)
 

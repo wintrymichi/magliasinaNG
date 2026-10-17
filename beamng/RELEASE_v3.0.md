@@ -1,6 +1,35 @@
 BeamNG.drive (0.39) map of the **Malcantone**, version 3.0: the [v2.8](https://github.com/wintrymichi/magliasinaNG/releases/tag/v2.8) map polished up close and from afar, after the feedback on r/BeamNG ("blocky, smeary, lacking detail"). Trees that are trees, woods on every mountain around the map, ground coloured from the aerial photo, the asphalt, walls and paving of the game's Italy level with the wear of the traffic, smooth curves, and the villages lived in: bins, hydrants, recycling points, café terraces, planters, mirrors at blind exits, flower boxes at the windows, woodpiles at the rustici. Same area, roads and buildings.
 
-<!-- screenshots: added after the in-game test, when michi gives the go -->
+> In-game screenshots of this zip (BeamNG.drive 0.39.4, native Linux, RTX 4070, 2560 × 1440, Ultra). All in [`beamng/verifica/screenshots/v3.0/`](https://github.com/wintrymichi/magliasinaNG/tree/main/beamng/verifica/screenshots/v3.0), the test in [`beamng/verifica/v3.0/ingame_test_report.md`](https://github.com/wintrymichi/magliasinaNG/blob/main/beamng/verifica/v3.0/ingame_test_report.md).
+
+| | |
+|---|---|
+| ![Driver's view: the cantonal road Magliaso–Pura along the guard rail](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-cantonale-guardrail.jpg)<br>*Driver's view: the cantonal road Magliaso–Pura along the guard rail* | ![Driver's view: down the cantonal road towards Magliaso](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-cantonale-down-to-magliaso.jpg)<br>*Driver's view: down the cantonal road towards Magliaso* |
+| ![Driver's view: halfway up the cantonal road, stone wall](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-cantonale-stone-wall.jpg)<br>*Driver's view: halfway up the cantonal road, stone wall* | ![Driver's view: into the roundabout of Magliaso](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-roundabout-magliaso.jpg)<br>*Driver's view: into the roundabout of Magliaso* |
+| ![Driver's view: the roundabout of Magliaso, the other way](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-roundabout-magliaso-2.jpg)<br>*Driver's view: the roundabout of Magliaso, the other way* | ![Driver's view: Agno along the lake](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-agno-lakeside.jpg)<br>*Driver's view: Agno along the lake* |
+| ![Driver's view: the Penudria, Gravesano – Arosio](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-penudria.jpg)<br>*Driver's view: the Penudria, Gravesano – Arosio* | ![Driver's view: Miglieglia – Novaggio](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-miglieglia-novaggio.jpg)<br>*Driver's view: Miglieglia – Novaggio* |
+| ![Driver's view: Novaggio – Miglieglia, tyre tracks in the bend](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-novaggio-miglieglia.jpg)<br>*Driver's view: Novaggio – Miglieglia, tyre tracks in the bend* | ![Driver's view: Caslano](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/cockpit-caslano.jpg)<br>*Driver's view: Caslano* |
+| ![Behind the car on the cantonal road](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/chase-cantonale.jpg)<br>*Behind the car on the cantonal road* | ![Tyre tracks through the hairpin of the cantonal road](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/new-wear-hairpin.jpg)<br>*Tyre tracks through the hairpin of the cantonal road* |
+| ![The same hairpin from the valley side](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/new-wear-hairpin-2.jpg)<br>*The same hairpin from the valley side* | ![The Eni of Magliaso Paese by the FLP stop (a parody brand); refuel at its pumps](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/new-eni-magliaso-paese.jpg)<br>*The Eni of Magliaso Paese by the FLP stop (a parody brand); refuel at its pumps* |
+| ![White parking bays in front of it](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/new-eni-and-parking-bays.jpg)<br>*White parking bays in front of it* | ![The park and ride of the FLP station Magliaso](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/new-parking-bays-flp-magliaso.jpg)<br>*The park and ride of the FLP station Magliaso* |
+| ![Novaggio, Miglieglia and the Alto Malcantone](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-novaggio-miglieglia.jpg)<br>*Novaggio, Miglieglia and the Alto Malcantone* | ![Magliaso, the Magliasina and the lake](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-magliaso-lake.jpg)<br>*Magliaso, the Magliasina and the lake* |
+| ![Agno and the Vedeggio plain](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-agno-lake.jpg)<br>*Agno and the Vedeggio plain* | ![The hairpins of the cantonal road above Magliaso](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-cantonale-hairpins.jpg)<br>*The hairpins of the cantonal road above Magliaso* |
+| ![Magliaso Paese](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-magliaso-paese.jpg)<br>*Magliaso Paese* | ![Pura](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-pura.jpg)<br>*Pura* |
+| ![Caslano and the Torrazza](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-caslano-lake.jpg)<br>*Caslano and the Torrazza* | ![Ponte Tresa and the border bridge](https://raw.githubusercontent.com/wintrymichi/magliasinaNG/main/beamng/verifica/screenshots/v3.0/overview-ponte-tresa.jpg)<br>*Ponte Tresa and the border bridge* |
+
+**Tested in the game:** loads in about 80 s (warm cache), 10.3 GB of memory at its peak; 64–138 FPS at 13 fixed places at 2560 × 1440 Ultra on an RTX 4070.
+
+## Since the first test build
+
+- **More frames, same look:** the steep banks' skin in three detail levels, the far ones without shadows: +1 % to +12 % FPS, 0.8 GB less memory.
+- **Tyre tracks through the roundabouts and the tight bends** (33 roundabout rings).
+- **The Eni of Magliaso Paese**, by the FLP stop, with canopy, pumps and totem.
+- **Refuelling:** the 8 petrol stations are gas stations of the game: stop at a pump and refuel (petrol, diesel).
+- **Parked cars and white bays:** 11,069 parking spots in the car parks for the game's parked vehicles (turn them on in the traffic settings), the bays painted white as in Switzerland.
+- **Bus shelters** with their bench at 40 more stops.
+- **Windows** on the church block of Bedigliora (drawn as one windowless tower) and on the offices and shops of the register (drawn as sheds).
+- **One wall instead of two** where the survey draws a wall as its two faces (2,290 pairs, 55 km).
+- **"ZONE 30" and "STOP"** lettered from a font.
 
 **Installation:** copy `magliaso_pura_v3.0.zip` to `Documents/BeamNG.drive/current/mods/` (or install it from the mod manager) and remove the previous versions: the level is still called `magliaso_pura`.
 
@@ -57,3 +86,5 @@ At the windows of the houses (`house_extras.py`): flower boxes with geraniums (r
 ## Known
 
 Still to fix from v2.8: pale slabs on the Magliasina bridge abutments, pale patches in the grass at Agno, pale jagged bands on some stone wall caps, the AI driver stopping at a few spots (Mugena, Vezio, Miglieglia, Pura).
+
+Also known in v3.0: the street façade of the Panetteria Magliasino at Magliaso Paese still has no windows; 92 bus stops have no room for a shelter; the parked cars appear only with the game's parked vehicles turned on in the traffic settings.
