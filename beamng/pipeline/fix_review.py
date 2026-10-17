@@ -22,13 +22,16 @@ from check_level import road_tops, terrain_top
 HERE = os.path.dirname(os.path.abspath(__file__))
 DRIVE = os.path.join(os.path.dirname(HERE), "verifica", "drive_test.json")
 # (name, centre x, y, half size m): the boxes of the places reported (centres at the villages' bus stops)
-AREAS = [("astano_banco", -2650.0, 2050.0, 750.0), ("vezio", 960.0, 6070.0, 450.0), ("mugena", 1670.0, 6250.0, 300.0),
+AREAS = [("astano", -3700.0, 2150.0, 500.0), ("astano_banco", -2650.0, 2050.0, 750.0), ("vezio", 960.0, 6070.0, 450.0), ("mugena", 1670.0, 6250.0, 300.0),
          ("arosio", 2270.0, 6300.0, 400.0), ("fescoggia", 480.0, 5370.0, 350.0), ("breno", -60.0, 4600.0, 400.0),
          ("miglieglia", -1000.0, 3560.0, 400.0)]
+# places reported by name: always rendered (the step after the hairpin below Astano, Via Agostino de Marchi)
+PLACES = [("astano_hairpin", -3709.0, 2139.0, "Astano: step after the hairpin, Via Agostino de Marchi")]
 STEPS_PER_AREA = 6
 WORST_MINOR = 12
 TREE_GAP = 1.0           # m from the edge of a road top face
 VIEW_BACK = 9.0          # m before a step, the driver's eye
+EDGE_WORST_MAX = 0.6     # m: the worst edges shown are the ones under this (higher: walls, not steps)
 EDGE_OUT = 0.3           # m beyond the outer edge of a road face: the terrain the edge is measured against
 
 
@@ -76,7 +79,7 @@ def edge_steps(tri, S, ter, box):
            "p90_m": round(float(np.percentile(g, 90)), 3),
            "share_over_0.15m": round(float(L[g > 0.15].sum() / L.sum()), 3),
            "share_over_0.3m": round(float(L[g > 0.3].sum() / L.sum()), 3)}
-    worst = [(float(P[i, 0]), float(P[i, 1]), float(g[i])) for i in np.argsort(-g)[:200]]
+    worst = [(float(P[i, 0]), float(P[i, 1]), float(g[i])) for i in np.argsort(-g)[:2000] if g[i] < EDGE_WORST_MAX][:200]
     out = []
     for w in worst:                                     # one per 30 m
         if all(math.hypot(w[0] - o[0], w[1] - o[1]) > 30 for o in out):
@@ -113,7 +116,7 @@ def main(argv):
     H = np.array([(x, y) for x, y, _, _ in hits]).reshape(-1, 2)
     far = np.array([n.startswith("far_") for *_, n in hits], bool)
     summary = {"trees_on_or_by_roads": per, "trees_total": len(hits), "far_trees": int(far.sum()), "areas": {}}
-    views = []
+    views = [(n, x, y, cap, True) for n, x, y, cap in PLACES]
     for name, (x0, y0, x1, y1) in boxes.items():
         inb = [p for p in steps if x0 <= p["x"] <= x1 and y0 <= p["y"] <= y1]
         inb.sort(key=lambda p: -p["value"])

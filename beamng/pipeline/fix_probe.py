@@ -1,0 +1,105 @@
+"""Why a road has a step at a place: the cells of network_mesh.Network.tile_surface around it (heights, the line
+and polygon each cell takes its height from, which neighbours are linked) next to the top faces of the built
+level, as pictures and numbers (v3.0 fix round, a development aid like fix_review.py).
+For each place a 40 x 40 m window: <out>/<name>.png (the cells' heights before the seams are relaxed, after, the
+lines, and the built level's top faces, the jumps over JUMP m between neighbours drawn on each) and <out>/probe.json
+(the largest jumps: heights, lines, polygons, their classes, how far apart along the line the two cells project,
+linked or not).
+    python fix_probe.py <out folder> [--level <folder>]
+"""
+import json, os, sys
+import numpy as np
+from config import LEVEL_DIR, WORK
+from geo import Grid
+import network_mesh as nm
+
+PLACES = [("astano_hairpin", -3709.0, 2139.0), ("selva_bella", -1909.0, 2450.0), ("arosio", 2173.0, 6394.0),
+          ("fescoggia", 504.0, 5412.0), ("breno", 8.0, 4595.0), ("mugena", 1558.0, 6361.0),
+          ("vezio_hole", 1030.0, 6080.0), ("stradon_bridge", 806.0, 5928.0), ("castelrotto", -2400.0, 33.0)]
+HALF = 20.0
+JUMP = 0.08
+
+
+def main(argv):
+    out = argv[0]
+    lv = argv[argv.index("--level") + 1] if "--level" in argv else LEVEL_DIR
+    os.makedirs(out, exist_ok=True)
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from check_level import road_tops
+    from road_mesh import TriSurface
+    tri, is_path, _ = road_tops(lv)
+    S = TriSurface(tri)
+    net = nm.Network()
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    cap = {}
+    orig = nm.relax_seams
+
+    def spy(Z, G, owner, LR, LD, fixed_cells=None, folds=None):
+        cap.update(Z=Z.copy(), G=G.copy(), owner=owner.copy(), LR=LR.copy(), LD=LD.copy(), folds=folds)
+        return orig(Z, G, owner, LR, LD, fixed_cells, folds)
+    nm.relax_seams = spy
+    res = {}
+    for name, x, y in PLACES:
+        cap.clear()
+        x0, y0, x1, y1 = x - HALF, y - HALF, x + HALF, y + HALF
+        Sf, ids = net.tile_surface(x0, y0, x1, y1, dtm)
+        if Sf is None or not cap:
+            res[name] = "no surface"
+            continue
+        Z0, G, own, LR, LD = cap["Z"], cap["G"], cap["owner"], cap["LR"], cap["LD"]
+        Z1 = np.where(own >= 0, np.asarray(Sf.Z), np.nan)
+        n = Z0.shape[0]
+        xs = x0 + (np.arange(Z0.shape[1]) + 0.5) * nm.RES
+        ys = y1 - (np.arange(n) + 0.5) * nm.RES
+        X, Y = np.meshgrid(xs, ys)
+        Zl = S.height(X.ravel(), Y.ravel(), "high").reshape(X.shape)
+        jumps = []
+        for axis, L in ((1, LR), (0, LD)):
+            a = (slice(None), slice(0, -1)) if axis == 1 else (slice(0, -1), slice(None))
+            b = (slice(None), slice(1, None)) if axis == 1 else (slice(1, None), slice(None))
+            both = (own[a] >= 0) & (own[b] >= 0)
+            for lab, Z in (("cells", Z0), ("level", Zl)):
+                d = np.abs(Z[a] - Z[b])
+                m = (both if lab == "cells" else np.isfinite(d)) & (d > JUMP)
+                for r, c in zip(*np.nonzero(m)):
+                    r2, c2 = (r, c + 1) if axis == 1 else (r + 1, c)
+                    g1, g2 = int(G[r, c]), int(G[r2, c2])
+                    jumps.append({"what": lab, "x": round(float(xs[c]), 1), "y": round(float(ys[r]), 1),
+                                  "dz": round(float(d[r, c]), 3), "z": [round(float(Z[r, c]), 2), round(float(Z[r2, c2]), 2)],
+                                  "lines": [g1, g2],
+                                  "line_names": [net.segs[g]["name"] if g >= 0 else str(g) for g in (g1, g2)],
+                                  "line_classes": [net.segs[g]["class"] if g >= 0 else str(g) for g in (g1, g2)],
+                                  "polys": [int(own[r, c]), int(own[r2, c2])],
+                                  "poly_cls": [net.polys[int(own[r, c])]["cls"] if own[r, c] >= 0 else "-",
+                                               net.polys[int(own[r2, c2])]["cls"] if own[r2, c2] >= 0 else "-"],
+                                  "linked": bool(L[r, c]),
+                                  "fold": bool(lab == "cells" and cap.get("folds") is not None
+                                               and cap["folds"][0 if axis == 1 else 1][r, c])})
+        jumps.sort(key=lambda j: -j["dz"])
+        res_folds = int(sum(f.sum() for f in cap["folds"])) if cap.get("folds") is not None else 0
+        res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "jumps": jumps[:40],
+                     "n_jumps_cells": sum(1 for j in jumps if j["what"] == "cells"),
+                     "n_jumps_level": sum(1 for j in jumps if j["what"] == "level")}
+        fig, ax = plt.subplots(1, 4, figsize=(24, 6.4))
+        ext = (x0, x1, y0, y1)
+        for k, (Z, t) in enumerate(((Z0, "cells, before relax"), (Z1, "cells, after"), (np.where(own >= 0, G, np.nan),
+                                                                                       "line of every cell"), (Zl, "level top faces"))):
+            im = ax[k].imshow(Z, extent=ext, origin="upper", cmap="tab20" if k == 2 else "terrain", interpolation="nearest")
+            plt.colorbar(im, ax=ax[k], fraction=0.046)
+            ax[k].set_title(t)
+            for j in jumps:
+                if (k == 3) == (j["what"] == "level"):
+                    ax[k].plot(j["x"], j["y"], ".", ms=3, color="lime" if j.get("fold") else ("red" if j["linked"] else "blue"))
+            ax[k].plot(x, y, "k+", ms=14)
+        fig.suptitle(f"{name} ({x:.0f}, {y:.0f}): red jumps between linked cells, blue unlinked, green folds of one line (> {JUMP} m)")
+        fig.tight_layout()
+        fig.savefig(os.path.join(out, f"{name}.png"), dpi=70)
+        plt.close(fig)
+        print(name, res[name]["n_jumps_cells"], res[name]["n_jumps_level"], flush=True)
+    json.dump(res, open(os.path.join(out, "probe.json"), "w"), indent=1, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
