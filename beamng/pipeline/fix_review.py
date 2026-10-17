@@ -9,7 +9,8 @@ hairpin down to Banco, far trees near and on the road at Vezio.
   (far_* are the far trees, far_trees.py / forest_fill.py), and a view of the worst cluster of each area;
 - summary.json with the counts, and a contact sheet sheet_NN.jpg of the views.
 Run it on the level before and after a fix with the same arguments: the views are the same.
-    python fix_review.py <out folder> [--level <folder>] [--drive <drive_test.json>]
+    python fix_review.py <out folder> [--level <folder>] [--drive <drive_test.json>] [--views <views.json>]
+--views: the views.json of an earlier review, rendered again first (same names), then this level's own places.
 """
 import glob, json, math, os, sys
 import numpy as np
@@ -141,6 +142,11 @@ def main(argv):
     for k, p in enumerate(minor[:WORST_MINOR]):
         views.append((f"minor_step{k:02d}", p["x"], p["y"], f"minor: STEP {100 * p['value']:.0f} cm "
                                                            f"{p.get('name') or ''} ({p['x']:.0f}, {p['y']:.0f})", False))
+    if "--views" in argv:              # the views of an earlier review first (before / after a fix), then the new ones
+        old = [tuple(v) for v in json.load(open(argv[argv.index("--views") + 1]))]
+        seen = {(round(v[1]), round(v[2])) for v in old}
+        views = old + [("new_" + v[0],) + tuple(v[1:]) for v in views if (round(v[1]), round(v[2])) not in seen]
+    json.dump(views, open(os.path.join(out, "views.json"), "w"), indent=0, ensure_ascii=False)
     json.dump(summary, open(os.path.join(out, "summary.json"), "w"), indent=1, ensure_ascii=False)
     print(json.dumps({k: v for k, v in summary.items() if k not in ("areas", "worst_minor")}, indent=1))
     from render3d import Renderer, Camera
