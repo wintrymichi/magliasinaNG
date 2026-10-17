@@ -17,7 +17,7 @@
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
 
-![Magliaso and Lake Lugano in v3.0, in the game](beamng/verifica/screenshots/v3.0/overview-magliaso-lake.jpg)
+![Novaggio, Miglieglia and the Alto Malcantone in v3.0, in the game](beamng/verifica/screenshots/v3.0/overview-novaggio-miglieglia.jpg)
 
 </div>
 
