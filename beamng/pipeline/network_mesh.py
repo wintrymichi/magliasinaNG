@@ -419,10 +419,31 @@ class Network:
         """Height function of a strip polygon: the surface of its own line (nearest station of its
         lines where that finds none)."""
         own = self.polys[pid].get("own")
+        others = sorted(k for k in self.polys[pid]["segs"] if k != own and not self.path[k]) if own is not None else []
 
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
             z = self.heights(x, y, np.full(len(x), pid), own=own)
+            if others and not self.path[own]:
+                # v3.0 fix round: near the end nodes of its line a strip takes the weighted mean of its line's surface
+                # and those of the roads meeting there, each weighted by how near the point is to it in half widths (the
+                # same weights in every strip of the junction, so where two strips overlap they agree). Up to v3.0 each
+                # kept its own line's height and two strips meeting at a junction overlapped 0.6 m apart (under the
+                # church of Arosio). Full within JUNCTION_R0 m of the node, fading out at JUNCTION_R1.
+                ends = self.node_xy[[self.n0[own], self.n1[own]]]
+                d = np.min(np.hypot(x[:, None] - ends[:, 0], y[:, None] - ends[:, 1]), axis=1)
+                f = np.clip((JUNCTION_R1 - d) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
+                k = (f > 0) & np.isfinite(z)
+                if k.any():
+                    Pk = np.full(int(k.sum()), pid)
+                    num, den = np.zeros(int(k.sum())), np.zeros(int(k.sum()))
+                    for line in [own] + others:
+                        zl, _, ul, el, _ = self.heights(x[k], y[k], Pk, own=line, with_u=True)
+                        wl = np.where(np.isfinite(zl), np.exp(-2.0 * ul ** 2) / (1.0 + el), 0.0)
+                        num += wl * np.nan_to_num(zl)
+                        den += wl
+                    zb = np.where(den > 1e-9, num / np.maximum(den, 1e-12), z[k])
+                    z[k] = z[k] + f[k] * (zb - z[k])
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)
