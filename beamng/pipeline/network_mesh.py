@@ -78,6 +78,7 @@ PATH_YIELD = 10.0
 # v3.0 fix round: the cells within BRIDGE_HEAD m of the end of a bridge (its head, past the end of the line leading to it)
 # keep their line's height: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 BRIDGE_HEAD = 8.0
+STRIP_BLEND_M = 2.0    # m outside a road's carriageway where its weight in a junction strip (strip_height) is a quarter
 STEP_DZ_PIN = 0.05     # m, cells pinned to two different strips that differ more are left free (_pin_strips)
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
@@ -426,7 +427,7 @@ class Network:
             z = self.heights(x, y, np.full(len(x), pid), own=own)
             if others and not self.path[own]:
                 # v3.0 fix round: near the end nodes of its line a strip takes the weighted mean of its line's surface
-                # and those of the roads meeting there, each weighted by how near the point is to it in half widths (the
+                # and those of the roads meeting there, each weighted by how far the point is outside its carriageway (the
                 # same weights in every strip of the junction, so where two strips overlap they agree). Up to v3.0 each
                 # kept its own line's height and two strips meeting at a junction overlapped 0.6 m apart (under the
                 # church of Arosio). Full within JUNCTION_R0 m of the node, fading out at JUNCTION_R1.
@@ -439,7 +440,10 @@ class Network:
                     num, den = np.zeros(int(k.sum())), np.zeros(int(k.sum()))
                     for line in [own] + others:
                         zl, _, ul, el, _ = self.heights(x[k], y[k], Pk, own=line, with_u=True)
-                        wl = np.where(np.isfinite(zl), np.exp(-2.0 * ul ** 2) / (1.0 + el), 0.0)
+                        sg = self.segs[line]
+                        hw = max(0.5 * float(np.median(self.w[sg["first"]:sg["first"] + sg["n"]])), 0.3)
+                        dm = np.hypot(np.maximum(ul * hw - hw, 0.0), el)       # m outside its carriageway
+                        wl = np.where(np.isfinite(zl), 1.0 / (1.0 + (dm / STRIP_BLEND_M) ** 2) ** 2, 0.0)
                         num += wl * np.nan_to_num(zl)
                         den += wl
                     zb = np.where(den > 1e-9, num / np.maximum(den, 1e-12), z[k])
