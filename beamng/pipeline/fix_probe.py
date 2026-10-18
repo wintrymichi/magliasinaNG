@@ -15,7 +15,8 @@ import network_mesh as nm
 
 PLACES = [("astano_hairpin", -3709.0, 2139.0), ("selva_bella", -1909.0, 2450.0), ("arosio", 2173.0, 6394.0),
           ("fescoggia", 504.0, 5412.0), ("breno", 8.0, 4595.0), ("mugena", 1558.0, 6361.0),
-          ("vezio_hole", 1030.0, 6080.0), ("stradon_bridge", 806.0, 5928.0), ("castelrotto", -2400.0, 33.0)]
+          ("vezio_hole", 1030.0, 6080.0), ("stradon_bridge", 806.0, 5928.0), ("castelrotto", -2400.0, 33.0),
+          ("mugena_bridge", 1130.0, 6314.0)]
 HALF = 20.0
 JUMP = 0.08
 
@@ -60,9 +61,9 @@ def main(argv):
             a = (slice(None), slice(0, -1)) if axis == 1 else (slice(0, -1), slice(None))
             b = (slice(None), slice(1, None)) if axis == 1 else (slice(1, None), slice(None))
             both = (own[a] >= 0) & (own[b] >= 0)
-            for lab, Z in (("cells", Z0), ("level", Zl)):
+            for lab, Z in (("cells", Z0), ("relaxed", Z1), ("level", Zl)):
                 d = np.abs(Z[a] - Z[b])
-                m = (both if lab == "cells" else np.isfinite(d)) & (d > JUMP)
+                m = (both if lab != "level" else np.isfinite(d)) & (d > JUMP)
                 for r, c in zip(*np.nonzero(m)):
                     r2, c2 = (r, c + 1) if axis == 1 else (r + 1, c)
                     g1, g2 = int(G[r, c]), int(G[r2, c2])
@@ -75,7 +76,7 @@ def main(argv):
                                   "poly_cls": [net.polys[int(own[r, c])]["cls"] if own[r, c] >= 0 else "-",
                                                net.polys[int(own[r2, c2])]["cls"] if own[r2, c2] >= 0 else "-"],
                                   "linked": bool(L[r, c]),
-                                  "fold": bool(lab == "cells" and cap.get("folds") is not None
+                                  "fold": bool(lab != "level" and cap.get("folds") is not None
                                                and cap["folds"][0 if axis == 1 else 1][r, c])})
         jumps.sort(key=lambda j: -j["dz"])
         # the seams between the polygons' cells and the strips beside them (strips: meshed apart at their line's height)
@@ -90,8 +91,10 @@ def main(argv):
         res_strip = {"cells": int(len(strip_seams)), "max_m": round(float(strip_seams.max()), 3) if len(strip_seams) else 0.0,
                      "over_0.08": int((strip_seams > JUMP).sum())}
         res_folds = int(sum(f.sum() for f in cap["folds"])) if cap.get("folds") is not None else 0
-        res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "strip_seams": res_strip, "jumps": jumps[:40],
+        res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "strip_seams": res_strip,
+                     "jumps": [j for j in jumps if j["what"] != "relaxed"][:30] + [j for j in jumps if j["what"] == "relaxed"][:30],
                      "n_jumps_cells": sum(1 for j in jumps if j["what"] == "cells"),
+                     "n_jumps_relaxed": sum(1 for j in jumps if j["what"] == "relaxed"),
                      "n_jumps_level": sum(1 for j in jumps if j["what"] == "level")}
         fig, ax = plt.subplots(1, 4, figsize=(24, 6.4))
         ext = (x0, x1, y0, y1)
@@ -101,7 +104,7 @@ def main(argv):
             plt.colorbar(im, ax=ax[k], fraction=0.046)
             ax[k].set_title(t)
             for j in jumps:
-                if (k == 3) == (j["what"] == "level"):
+                if j["what"] == ("cells", "relaxed", None, "level")[k]:
                     ax[k].plot(j["x"], j["y"], ".", ms=3, color="lime" if j.get("fold") else ("red" if j["linked"] else "blue"))
             ax[k].plot(x, y, "k+", ms=14)
         fig.suptitle(f"{name} ({x:.0f}, {y:.0f}): red jumps between linked cells, blue unlinked, green folds of one line (> {JUMP} m)")
