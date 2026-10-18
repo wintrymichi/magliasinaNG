@@ -36,9 +36,9 @@ def main(argv):
     cap = {}
     orig = nm.relax_seams
 
-    def spy(Z, G, owner, LR, LD, fixed_cells=None, folds=None):
+    def spy(Z, G, owner, LR, LD, fixed_cells=None, folds=None, *rest):
         cap.update(Z=Z.copy(), G=G.copy(), owner=owner.copy(), LR=LR.copy(), LD=LD.copy(), folds=folds)
-        return orig(Z, G, owner, LR, LD, fixed_cells, folds)
+        return orig(Z, G, owner, LR, LD, fixed_cells, folds, *rest)
     nm.relax_seams = spy
     res = {}
     for name, x, y in PLACES:
