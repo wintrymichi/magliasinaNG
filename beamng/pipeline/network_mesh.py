@@ -235,7 +235,7 @@ class Network:
         return st
 
     # ------------------------------------------------------------------ heights
-    def heights(self, X, Y, P, with_seg=False, own=None, with_u=False, junction=JUNCTION_BLEND):
+    def heights(self, X, Y, P, with_seg=False, own=None, with_u=False):
         """Heights at points (X, Y) inside polygons P (index into self.polys); NaN where no line
         of the polygon is near (squares, car parks). with_seg: also the line that gave each height
         (-1 for none).
@@ -336,7 +336,7 @@ class Network:
         dn = np.where(shared >= 0, np.hypot(Xb - self.node_xy[sn, 0], Yb - self.node_xy[sn, 1]), np.inf)
         fj = np.clip((JUNCTION_R1 - dn) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
         agree = np.abs(np.nan_to_num(h_o) - zb[:, None]) <= BLEND_DZ
-        wt = wt * np.where(agree, 1.0, fj if junction else 0.0)
+        wt = wt * np.where(agree, 1.0, fj if JUNCTION_BLEND else 0.0)
         wt[np.arange(n), best] = np.where(has, np.maximum(wt[np.arange(n), best], 1e-12), 0.0)
         ws = wt.sum(1)
         if getattr(self, "explain", False):           # fix_probe.py: the candidates of every point
@@ -366,35 +366,7 @@ class Network:
         px, py = xs[c], ys[r]
         sn = np.maximum(shared, 0)
         d = np.hypot(px - self.node_xy[sn, 0], py - self.node_xy[sn, 1])
-        hit = ok & (d < JUNCTION_R0)
-        # v3.0 fix round: or one line between them joins an end node of each, both near the pair (a side street meeting
-        # the next piece of a street split at a node: under the church of Arosio the cells of the two were left with a
-        # 0.6 m wall between them)
-        rest = np.flatnonzero(~hit)
-        if len(rest):
-            if not hasattr(self, "_end_pairs"):
-                self._end_pairs = {(int(min(p, q)), int(max(p, q))) for p, q in zip(self.n0, self.n1)}
-            for i in rest:
-                for na in (a0[i], a1[i]):
-                    if np.hypot(px[i] - self.node_xy[na, 0], py[i] - self.node_xy[na, 1]) >= JUNCTION_R0:
-                        continue
-                    for nb in (b0[i], b1[i]):
-                        if (int(min(na, nb)), int(max(na, nb))) in self._end_pairs and \
-                                np.hypot(px[i] - self.node_xy[nb, 0], py[i] - self.node_xy[nb, 1]) < JUNCTION_R0:
-                            hit[i] = True
-        out[r[hit], c[hit]] = True
-        return out
-
-    def _joined(self, ga, b):
-        """Whether the lines ga (array) and the line b are joined through one line between an end node of each (a
-        street split at a node, met by a side street at the next one)."""
-        if not hasattr(self, "_end_pairs"):
-            self._end_pairs = {(int(min(p, q)), int(max(p, q))) for p, q in zip(self.n0, self.n1)}
-        ends_b = (int(self.n0[b]), int(self.n1[b]))
-        out = np.zeros(len(ga), bool)
-        for i, a in enumerate(np.asarray(ga)):
-            out[i] = any((min(na, nb), max(na, nb)) in self._end_pairs
-                         for na in (int(self.n0[a]), int(self.n1[a])) for nb in ends_b)
+        out[r[ok & (d < JUNCTION_R0)], c[ok & (d < JUNCTION_R0)]] = True
         return out
 
     def _pin_strips(self, box, x0, y1, W, H, m, Z, G):
@@ -424,7 +396,7 @@ class Network:
             g = G[rr[k], cc[k]]
             gi = np.maximum(g, 0)
             meet = (g == line) | (g < 0) | (self.n0[gi] == self.n0[line]) | (self.n0[gi] == self.n1[line]) \
-                | (self.n1[gi] == self.n0[line]) | (self.n1[gi] == self.n1[line]) | self._joined(gi, line)
+                | (self.n1[gi] == self.n0[line]) | (self.n1[gi] == self.n1[line])
             zs = self.strip_height(int(pid))(X[k], Y[k])
             ok = meet & np.isfinite(zs) & (np.abs(zs - Z[rr[k], cc[k]]) < JUNCTION_DZ)
             Z[rr[k][ok], cc[k][ok]] = zs[ok]
@@ -441,10 +413,6 @@ class Network:
             clash[b] |= c
         Z[clash] = Z_own[clash]
         pin &= ~clash
-        if getattr(self, "explain", False):
-            self.pin_explained = dict(near=near.copy(), near_line=np.array([self.polys[int(i)].get("own", -1) if i >= 0 else -1
-                                                                            for i in near.ravel()]).reshape(H, W),
-                                      pid_of=pid_of.copy(), clash=clash.copy(), Z_strip=np.where(pid_of >= 0, Z, np.nan))
         return pin
 
     def strip_height(self, pid):
@@ -455,18 +423,6 @@ class Network:
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
             z = self.heights(x, y, np.full(len(x), pid), own=own)
-            if own is not None:
-                # v3.0 fix round: near the end nodes of its line a strip takes the blend of the lines meeting there (their
-                # weights fading with the distance from the node, JUNCTION_R0-R1), the same surface the strip of every one
-                # of them takes there: up to v3.0 each kept its own line's height, and two strips meeting at a junction
-                # overlapped 0.6 m apart (under the church of Arosio)
-                ends = self.node_xy[[self.n0[own], self.n1[own]]]
-                d = np.min(np.hypot(x[:, None] - ends[:, 0], y[:, None] - ends[:, 1]), axis=1)
-                w = np.clip((JUNCTION_R1 - d) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
-                k = (w > 0) & np.isfinite(z)
-                if k.any():
-                    zj = self.heights(x[k], y[k], np.full(int(k.sum()), pid), junction=True)
-                    z[k] = z[k] + w[k] * np.nan_to_num(zj - z[k])
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)
@@ -550,7 +506,6 @@ class Network:
         pin = self._pin_strips(box, x0, y1, W, H, m & ~main_cell, Z, G)     # a main road does not bend to a strip
         if getattr(self, "explain", False):
             self.tile_explained.update(pin=pin.copy(), Z_pinned=Z.copy(), G_final=G.copy())
-            self.tile_explained.update(getattr(self, "pin_explained", {}))
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
