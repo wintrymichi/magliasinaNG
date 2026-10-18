@@ -18,15 +18,10 @@
     "edges_km": 26.51,
     "median_m": 0.062,
     "p90_m": 0.344,
-    "share_over_0.15m": 0.16,
+    "share_over_0.15m": 0.159,
     "share_over_0.3m": 0.11
    },
    "edge_worst": [
-    [
-     -4028.12,
-     2176.965,
-     0.599722515429221
-    ],
     [
      -4023.23,
      2099.605,
@@ -36,9 +31,14 @@
      -4182.584000000001,
      2139.904,
      0.5995344468698249
+    ],
+    [
+     -4095.5330000000004,
+     2101.309,
+     0.5993061756438465
     ]
    ],
-   "steps": 2,
+   "steps": 1,
    "holes": 0,
    "worst": [
     {
@@ -46,21 +46,10 @@
      "x": -3709.0,
      "y": 2139.3,
      "z": 602.62,
-     "value": 0.109,
+     "value": 0.085,
      "seg": 1716,
      "class": "4m Strasse",
      "name": "Via Agostino de Marchi",
-     "cls": "minor"
-    },
-    {
-     "what": "STEP",
-     "x": -3513.0,
-     "y": 2255.2,
-     "z": 667.35,
-     "value": 0.073,
-     "seg": 1688,
-     "class": "3m Strasse",
-     "name": "ai Vezzán",
      "cls": "minor"
     }
    ],
@@ -71,9 +60,9 @@
    "edges": {
     "edges_km": 46.75,
     "median_m": 0.063,
-    "p90_m": 0.269,
+    "p90_m": 0.268,
     "share_over_0.15m": 0.158,
-    "share_over_0.3m": 0.098
+    "share_over_0.3m": 0.097
    },
    "edge_worst": [],
    "steps": 1,
@@ -96,9 +85,9 @@
   },
   "vezio": {
    "edges": {
-    "edges_km": 14.59,
+    "edges_km": 14.58,
     "median_m": 0.065,
-    "p90_m": 0.417,
+    "p90_m": 0.416,
     "share_over_0.15m": 0.179,
     "share_over_0.3m": 0.132
    },
@@ -119,7 +108,7 @@
      0.5989426600735896
     ]
    ],
-   "steps": 2,
+   "steps": 3,
    "holes": 0,
    "worst": [
     {
@@ -131,6 +120,17 @@
      "seg": 2761,
      "class": "4m Strasse",
      "name": "Stradón da Mügéna",
+     "cls": "minor"
+    },
+    {
+     "what": "STEP",
+     "x": 834.3,
+     "y": 5930.4,
+     "z": 779.99,
+     "value": 0.059,
+     "seg": 4295,
+     "class": "4m Strasse",
+     "name": "Stradón da Vésc",
      "cls": "minor"
     },
     {
@@ -154,7 +154,7 @@
     "median_m": 0.069,
     "p90_m": 0.501,
     "share_over_0.15m": 0.24,
-    "share_over_0.3m": 0.181
+    "share_over_0.3m": 0.182
    },
    "edge_worst": [
     [
@@ -173,31 +173,19 @@
      0.5995308985560541
     ]
    ],
-   "steps": 1,
+   "steps": 0,
    "holes": 0,
-   "worst": [
-    {
-     "what": "STEP",
-     "x": 1557.2,
-     "y": 6355.6,
-     "z": 817.11,
-     "value": 0.061,
-     "seg": 318,
-     "class": "3m Strasse",
-     "name": "Stráda da Caròcc",
-     "cls": "minor"
-    }
-   ],
+   "worst": [],
    "trees": 0,
    "far_trees": 0
   },
   "arosio": {
    "edges": {
-    "edges_km": 23.43,
+    "edges_km": 23.44,
     "median_m": 0.072,
-    "p90_m": 0.43,
+    "p90_m": 0.429,
     "share_over_0.15m": 0.199,
-    "share_over_0.3m": 0.138
+    "share_over_0.3m": 0.137
    },
    "edge_worst": [
     [
@@ -216,21 +204,9 @@
      0.5997632866782396
     ]
    ],
-   "steps": 1,
+   "steps": 0,
    "holes": 0,
-   "worst": [
-    {
-     "what": "STEP",
-     "x": 2173.3,
-     "y": 6393.8,
-     "z": 851.12,
-     "value": 0.46,
-     "seg": 314,
-     "class": "4m Strasse",
-     "name": "Via alla Chiesa di San Michele",
-     "cls": "minor"
-    }
-   ],
+   "worst": [],
    "trees": 0,
    "far_trees": 0
   },
@@ -239,7 +215,7 @@
     "edges_km": 9.4,
     "median_m": 0.066,
     "p90_m": 0.402,
-    "share_over_0.15m": 0.172,
+    "share_over_0.15m": 0.171,
     "share_over_0.3m": 0.127
    },
    "edge_worst": [
@@ -249,14 +225,14 @@
      0.599521721764404
     ],
     [
-     329.43,
-     5395.283,
-     0.5994149262709243
-    ],
-    [
      511.298,
      5333.0,
      0.5976104837153571
+    ],
+    [
+     470.123,
+     5412.719,
+     0.5967882527736492
     ]
    ],
    "steps": 0,
@@ -312,7 +288,7 @@
    "edges": {
     "edges_km": 17.79,
     "median_m": 0.061,
-    "p90_m": 0.29,
+    "p90_m": 0.291,
     "share_over_0.15m": 0.145,
     "share_over_0.3m": 0.102
    },
@@ -363,7 +339,7 @@
      "x": -976.2,
      "y": 3552.0,
      "z": 704.53,
-     "value": 0.074,
+     "value": 0.071,
      "seg": 3867,
      "class": "3m Strasse",
      "name": "Via Canavee",
@@ -380,7 +356,7 @@
    "x": -2399.5,
    "y": 32.8,
    "z": 409.21,
-   "value": 2.52,
+   "value": 2.526,
    "seg": 3686,
    "class": "4m Strasse",
    "name": "Castelrotto nucleo",
@@ -391,7 +367,7 @@
    "x": -2401.1,
    "y": 31.1,
    "z": 408.99,
-   "value": 2.441,
+   "value": 2.437,
    "seg": 3686,
    "class": "4m Strasse",
    "name": "Castelrotto nucleo",
@@ -402,7 +378,7 @@
    "x": 1979.7,
    "y": 3336.6,
    "z": 739.69,
-   "value": 0.991,
+   "value": 0.99,
    "seg": 3080,
    "class": "4m Strasse",
    "name": "Via Cantonale",
@@ -413,7 +389,7 @@
    "x": 1132.5,
    "y": -285.1,
    "z": 436.46,
-   "value": 0.976,
+   "value": 0.977,
    "seg": 954,
    "class": "4m Strasse",
    "name": "Via Cantonale",
@@ -454,17 +430,6 @@
   },
   {
    "what": "STEP",
-   "x": 2173.3,
-   "y": 6393.8,
-   "z": 851.12,
-   "value": 0.46,
-   "seg": 314,
-   "class": "4m Strasse",
-   "name": "Via alla Chiesa di San Michele",
-   "cls": "minor"
-  },
-  {
-   "what": "STEP",
    "x": -5371.6,
    "y": 109.3,
    "z": 296.85,
@@ -476,24 +441,24 @@
   },
   {
    "what": "STEP",
-   "x": -1262.6,
-   "y": -1833.9,
-   "z": 364.05,
-   "value": 0.422,
-   "seg": 3801,
+   "x": 3349.3,
+   "y": 5362.6,
+   "z": 431.39,
+   "value": 0.342,
+   "seg": 5167,
    "class": "3m Strasse",
    "name": "",
    "cls": "minor"
   },
   {
    "what": "STEP",
-   "x": -1470.7,
-   "y": 1644.9,
-   "z": 570.13,
-   "value": 0.333,
-   "seg": 4696,
-   "class": "3m Strasse",
-   "name": "",
+   "x": 1981.6,
+   "y": 3338.1,
+   "z": 739.48,
+   "value": 0.321,
+   "seg": 3080,
+   "class": "4m Strasse",
+   "name": "Via Cantonale",
    "cls": "minor"
   },
   {
@@ -501,10 +466,21 @@
    "x": -624.0,
    "y": 1123.4,
    "z": 553.75,
-   "value": 0.321,
+   "value": 0.303,
    "seg": 2991,
    "class": "3m Strasse",
    "name": "Via Mulino",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": -1383.6,
+   "y": 1589.7,
+   "z": 573.09,
+   "value": 0.259,
+   "seg": 6167,
+   "class": "3m Strasse",
+   "name": "",
    "cls": "minor"
   }
  ]

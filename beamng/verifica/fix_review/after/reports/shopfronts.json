@@ -100,14 +100,14 @@
   "props": 1,
   "leaves": 1
  },
- "seconds": 95,
+ "seconds": 84,
  "where": {
   "n13305345993": [
    "electronics",
    "Green Web Solutians",
    -1027.26,
    2091.37,
-   638.46,
+   638.45,
    -0.75,
    0.67
   ],
@@ -989,7 +989,7 @@
    "Taverna dei Pescatori",
    169.07,
    -3238.54,
-   274.58,
+   274.57,
    -1.0,
    -0.02
   ],

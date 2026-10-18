@@ -414,16 +414,16 @@ false
 ],
 [
 "new_astano_edge0",
--4028.12,
-2176.965,
-"astano: road edge 60 cm over the ground (-4028, 2177)",
+-4023.23,
+2099.605,
+"astano: road edge 60 cm over the ground (-4023, 2100)",
 false
 ],
 [
 "new_astano_edge1",
--4023.23,
-2099.605,
-"astano: road edge 60 cm over the ground (-4023, 2100)",
+-4182.584000000001,
+2139.904,
+"astano: road edge 60 cm over the ground (-4183, 2140)",
 false
 ],
 [
@@ -435,6 +435,13 @@ false
 ],
 [
 "new_vezio_step1",
+834.3,
+5930.4,
+"vezio: STEP 6 cm Stradón da Vésc (834, 5930)",
+false
+],
+[
+"new_vezio_step2",
 1118.3,
 6304.8,
 "vezio: STEP 6 cm Stradón da Vésc (1118, 6305)",
@@ -452,13 +459,6 @@ false
 917.8389999999999,
 6095.164,
 "vezio: road edge 60 cm over the ground (918, 6095)",
-false
-],
-[
-"new_mugena_step0",
-1557.2,
-6355.6,
-"mugena: STEP 6 cm Stráda da Caròcc (1557, 6356)",
 false
 ],
 [
@@ -484,9 +484,9 @@ false
 ],
 [
 "new_fescoggia_edge1",
-329.43,
-5395.283,
-"fescoggia: road edge 60 cm over the ground (329, 5395)",
+511.298,
+5333.0,
+"fescoggia: road edge 60 cm over the ground (511, 5333)",
 false
 ],
 [
@@ -518,31 +518,31 @@ false
 false
 ],
 [
-"new_minor_step08",
+"new_minor_step07",
 -5371.6,
 109.3,
 "minor: STEP 46 cm Via Roncaccio (-5372, 109)",
 false
 ],
 [
+"new_minor_step08",
+3349.3,
+5362.6,
+"minor: STEP 34 cm  (3349, 5363)",
+false
+],
+[
 "new_minor_step09",
--1262.6,
--1833.9,
-"minor: STEP 42 cm  (-1263, -1834)",
+1981.6,
+3338.1,
+"minor: STEP 32 cm Via Cantonale (1982, 3338)",
 false
 ],
 [
 "new_minor_step10",
--1470.7,
-1644.9,
-"minor: STEP 33 cm  (-1471, 1645)",
-false
-],
-[
-"new_minor_step11",
 -624.0,
 1123.4,
-"minor: STEP 32 cm Via Mulino (-624, 1123)",
+"minor: STEP 30 cm Via Mulino (-624, 1123)",
 false
 ]
 ]

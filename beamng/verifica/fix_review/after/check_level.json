@@ -19,23 +19,22 @@
  "trunks_near_roads": 4,
  "shrubs_on_surface": 0,
  "network_holes": 414,
- "network_off_profile": 545,
- "network_bumps": 39605,
+ "network_off_profile": 547,
+ "network_bumps": 39577,
  "network_stations": 308294,
  "network_above_ground": 126,
  "terrain_over_road_max_m": 1.621,
  "network_off_profile_max_m": 3.553,
- "network_bump_max_m": 4.295,
+ "network_bump_max_m": 4.298,
  "road_faces_under_water": 0,
  "terrain_pits": 0,
  "terrain_pit_max_m": 0.0,
  "terrain_carve_cliffs": 0,
  "terrain_carve_cliff_max_m": 0.0,
- "road_obstacles": 38,
+ "road_obstacles": 36,
  "path_obstacles": 153,
  "obstacles_by_kind": {
-  "strade: ponte o gradino": 1,
-  "strade: guardrail": 14,
+  "strade: guardrail": 13,
   "strade: edificio": 2,
   "strade: oggetto": 21,
   "sentieri: ponte o gradino": 116,
@@ -48,7 +47,7 @@
  "building_walls_inward_m2": 0.0,
  "road_faces_under_ground": 375,
  "road_faces_under_ground_max_m": 2.164,
- "road_seams": 153,
+ "road_seams": 152,
  "road_seams_max_m": 0.864,
  "ai_roads": 2999,
  "ai_components": 34,
@@ -421,7 +420,7 @@
   "/levels/jungle_rock_island/art/shapes/buildings/Ind_metal_trim_nm.normal.png",
   "/levels/jungle_rock_island/art/shapes/buildings/ind_metal_trim_s.color.png"
  ],
- "level_size_mb": 5889.3,
+ "level_size_mb": 5889.1,
  "failed": [
   "crowns_in_profile",
   "forest_buried",
@@ -611,7 +610,7 @@
    "x": 3723.7,
    "y": 4650.6,
    "z": 333.57,
-   "score": 4.295
+   "score": 4.298
   },
   {
    "what": "strada staccata dal terreno",
@@ -1093,13 +1092,6 @@
   },
   {
    "what": "pianta interrata",
-   "x": 721.8,
-   "y": 4404.8,
-   "z": 632.68,
-   "score": 3.271
-  },
-  {
-   "what": "pianta interrata",
    "x": -541.2,
    "y": -1148.2,
    "z": 547.71,
@@ -1125,6 +1117,13 @@
    "y": 1653.2,
    "z": 587.3,
    "score": 3.255
+  },
+  {
+   "what": "pianta interrata",
+   "x": 721.8,
+   "y": 4404.8,
+   "z": 632.68,
+   "score": 3.253
   },
   {
    "what": "pianta interrata",
@@ -1301,7 +1300,7 @@
    "x": -44.2,
    "y": 4442.1,
    "z": 761.12,
-   "score": 2.653
+   "score": 2.652
   },
   {
    "what": "strada fuori profilo",
@@ -1407,8 +1406,8 @@
    "what": "strada staccata dal terreno",
    "x": 3007.1,
    "y": 3905.2,
-   "z": 530.11,
-   "score": 2.469
+   "z": 530.12,
+   "score": 2.472
   },
   {
    "what": "strada staccata dal terreno",
@@ -1422,7 +1421,7 @@
    "x": 3005.9,
    "y": 3903.6,
    "z": 530.58,
-   "score": 2.435
+   "score": 2.438
   },
   {
    "what": "strada staccata dal terreno",
@@ -1476,13 +1475,6 @@
    "cosa": "carreggiata"
   },
   {
-   "what": "strada fuori profilo",
-   "x": -38.4,
-   "y": 4443.4,
-   "z": 761.42,
-   "score": 2.339
-  },
-  {
    "what": "strada staccata dal terreno",
    "x": -4465.8,
    "y": 115.8,
@@ -1490,11 +1482,18 @@
    "score": 2.338
   },
   {
+   "what": "strada fuori profilo",
+   "x": -38.4,
+   "y": 4443.4,
+   "z": 761.42,
+   "score": 2.338
+  },
+  {
    "what": "strada staccata dal terreno",
    "x": -38.4,
    "y": 4443.4,
    "z": 761.42,
-   "score": 2.336
+   "score": 2.335
   },
   {
    "what": "chioma nella sagoma della strada",
@@ -1636,8 +1635,8 @@
    "what": "gradino o dosso",
    "x": 4167.1,
    "y": 5512.1,
-   "z": 347.77,
-   "score": 2.047
+   "z": 347.78,
+   "score": 2.048
   },
   {
    "what": "strada fuori profilo",
@@ -1712,15 +1711,6 @@
   },
   {
    "what": "ostacolo sulla strada",
-   "x": -1289.1,
-   "y": -1786.1,
-   "z": 361.29,
-   "score": 2.0,
-   "cosa": "ponte o gradino",
-   "az": 264.3
-  },
-  {
-   "what": "ostacolo sulla strada",
    "x": 2401.4,
    "y": 1308.2,
    "z": 283.59,
@@ -1750,7 +1740,7 @@
    "what": "ostacolo sulla strada",
    "x": 1497.1,
    "y": 429.8,
-   "z": 534.01,
+   "z": 533.92,
    "score": 2.0,
    "cosa": "guardrail",
    "az": 233.7
@@ -1759,7 +1749,7 @@
    "what": "ostacolo sulla strada",
    "x": 2396.2,
    "y": 1316.8,
-   "z": 283.56,
+   "z": 283.57,
    "score": 2.0,
    "cosa": "guardrail",
    "az": 1.3
@@ -1958,8 +1948,8 @@
    "what": "strada staccata dal terreno",
    "x": 4167.1,
    "y": 5512.1,
-   "z": 347.77,
-   "score": 1.885
+   "z": 347.78,
+   "score": 1.886
   },
   {
    "what": "pianta sospesa",
@@ -2036,8 +2026,8 @@
    "what": "strada fuori profilo",
    "x": 4167.1,
    "y": 5512.1,
-   "z": 347.77,
-   "score": 1.846
+   "z": 347.78,
+   "score": 1.847
   },
   {
    "what": "pianta sospesa",
@@ -2071,7 +2061,7 @@
    "what": "gradino o dosso",
    "x": 2239.0,
    "y": 1076.1,
-   "z": 296.71,
+   "z": 296.72,
    "score": 1.836
   },
   {
@@ -2338,6 +2328,13 @@
    "score": 1.643
   },
   {
+   "what": "gradino o dosso",
+   "x": -47.0,
+   "y": -631.5,
+   "z": 395.62,
+   "score": 1.64
+  },
+  {
    "what": "pianta sospesa",
    "x": 2924.2,
    "y": 358.8,
@@ -2349,14 +2346,7 @@
    "x": 2403.8,
    "y": 2453.4,
    "z": 403.15,
-   "score": 1.633
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -47.0,
-   "y": -631.5,
-   "z": 395.63,
-   "score": 1.63
+   "score": 1.634
   },
   {
    "what": "strada fuori profilo",
@@ -2502,17 +2492,17 @@
   },
   {
    "what": "gradino o dosso",
-   "x": 30.9,
-   "y": -986.8,
-   "z": 389.89,
-   "score": 1.585
-  },
-  {
-   "what": "gradino o dosso",
    "x": 3573.5,
    "y": 5342.5,
    "z": 395.49,
    "score": 1.585
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 30.9,
+   "y": -986.8,
+   "z": 389.89,
+   "score": 1.582
   },
   {
    "what": "strada sotto il terreno",
@@ -2543,13 +2533,6 @@
    "score": 1.578
   },
   {
-   "what": "strada fuori profilo",
-   "x": 1874.0,
-   "y": 3353.8,
-   "z": 777.84,
-   "score": 1.576
-  },
-  {
    "what": "strada sotto il terreno",
    "x": -1316.7,
    "y": -1655.3,
@@ -2576,6 +2559,13 @@
    "y": 3598.7,
    "z": 438.72,
    "score": 1.551
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 1874.0,
+   "y": 3353.8,
+   "z": 777.81,
+   "score": 1.55
   },
   {
    "what": "strada sotto il terreno",
@@ -2639,13 +2629,6 @@
    "y": -1647.3,
    "z": 293.47,
    "score": 1.531
-  },
-  {
-   "what": "strada staccata dal terreno",
-   "x": 1874.0,
-   "y": 3353.8,
-   "z": 777.84,
-   "score": 1.53
   },
   {
    "what": "strada sotto il terreno",
@@ -2733,6 +2716,13 @@
    "score": 1.504
   },
   {
+   "what": "strada staccata dal terreno",
+   "x": 1874.0,
+   "y": 3353.8,
+   "z": 777.81,
+   "score": 1.504
+  },
+  {
    "what": "strada sotto il terreno",
    "x": -5945.1,
    "y": 498.3,
@@ -2772,13 +2762,6 @@
    "x": -2124.7,
    "y": 2041.3,
    "z": 572.95,
-   "score": 1.497
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 2279.8,
-   "y": 1813.0,
-   "z": 386.22,
    "score": 1.495
   },
   {
@@ -2787,6 +2770,20 @@
    "y": 244.7,
    "z": 372.81,
    "score": 1.495
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3573.2,
+   "y": 5741.7,
+   "z": 377.38,
+   "score": 1.494
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 2279.8,
+   "y": 1813.0,
+   "z": 386.21,
+   "score": 1.493
   },
   {
    "what": "strada sotto il terreno",
@@ -2808,13 +2805,6 @@
    "y": -1002.8,
    "z": 299.69,
    "score": 1.487
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3573.2,
-   "y": 5741.7,
-   "z": 377.38,
-   "score": 1.486
   },
   {
    "what": "strada sotto il terreno",
@@ -2977,7 +2967,7 @@
    "x": -228.2,
    "y": 4469.1,
    "z": 742.83,
-   "score": 1.451
+   "score": 1.45
   },
   {
    "what": "strada sotto il terreno",
@@ -3297,6 +3287,13 @@
    "y": 1112.7,
    "z": 558.6,
    "score": 1.362
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -4733.8,
+   "y": -167.1,
+   "z": 257.34,
+   "score": 1.36
   }
  ]
 }

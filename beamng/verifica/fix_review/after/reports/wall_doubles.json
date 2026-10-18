@@ -1,8 +1,8 @@
 {
- "road_faces": 150275,
+ "road_faces": 150215,
  "wall_faces": 1904318,
- "road_faces_in_a_wall": 23372,
- "road_faces_in_a_wall_m2": 10951,
+ "road_faces_in_a_wall": 23358,
+ "road_faces_in_a_wall_m2": 10944,
  "wall_faces_in_a_road_face": 112,
  "wall_faces_in_a_road_face_m2": 44,
  "wall_faces_in_a_wall": 3365,

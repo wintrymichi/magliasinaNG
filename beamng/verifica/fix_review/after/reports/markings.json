@@ -21,8 +21,8 @@
  "safe_m": 7995.7778571428535,
  "leit_m": 13484.965145209377,
  "junction_m": 107.88822843822832,
- "edge_m": 124701.02241706382,
- "guide_m": 2671.0,
+ "edge_m": 124699.32241706383,
+ "guide_m": 2672.0,
  "centre_main": 444,
  "centre_minor": 0,
  "long_m": 601.9724049717754,
@@ -32,7 +32,7 @@
  "junctions": 1967,
  "off_road_left_out": 1931,
  "km": {
-  "edge": 124.44,
+  "edge": 124.43,
   "guide": 2.78,
   "junction": 0.11,
   "leit": 13.47,
@@ -58,5 +58,5 @@
  },
  "meshes": 158,
  "old_meshes": 158,
- "seconds": 142
+ "seconds": 175
 }

@@ -45,10 +45,10 @@
   }
  },
  "terrain_vertices_raised": {
-  "vertices": 2333779,
+  "vertices": 2333817,
   "median_m": 0.154,
   "p95_m": 1.382,
   "max_m": 2.984,
-  "in_keep_out": 659923
+  "in_keep_out": 659892
  }
 }

@@ -1,12 +1,12 @@
 {
  "car_parks": 469,
- "spots": 11071,
+ "spots": 11070,
  "left_out": {
   "lane": 779,
-  "obstacle": 423,
+  "obstacle": 425,
   "outside": 6462,
-  "tilt": 961
+  "tilt": 960
  },
- "paint_lines": 6507,
- "seconds": 1692
+ "paint_lines": 6504,
+ "seconds": 1639
 }

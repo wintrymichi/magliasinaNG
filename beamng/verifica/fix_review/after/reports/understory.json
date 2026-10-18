@@ -1,7 +1,7 @@
 {
- "forest_floor_vertices": 39986277,
+ "forest_floor_vertices": 39986274,
  "to_verge": {
-  "ForestFloor -> ForestFloorVerge": 780985,
+  "ForestFloor -> ForestFloorVerge": 780982,
   "ForestFloor2 -> ForestFloor2Verge": 16724
  },
  "floor_colour_before": {

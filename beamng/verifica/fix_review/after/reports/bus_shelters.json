@@ -1,10 +1,10 @@
 {
  "stops": 212,
- "shelters": 39,
+ "shelters": 38,
  "left_out": {
   "off_road": 70,
-  "no_room": 93,
+  "no_room": 94,
   "italy": 10
  },
- "seconds": 530
+ "seconds": 358
 }
