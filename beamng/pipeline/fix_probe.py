@@ -45,7 +45,10 @@ def main(argv):
     for name, x, y in PLACES:
         cap.clear()
         x0, y0, x1, y1 = x - HALF, y - HALF, x + HALF, y + HALF
+        net.explain = True
         Sf, ids = net.tile_surface(x0, y0, x1, y1, dtm)
+        net.explain = False
+        tex = getattr(net, "tile_explained", None)
         if Sf is None or not cap:
             res[name] = "no surface"
             continue
@@ -93,6 +96,9 @@ def main(argv):
             P = np.array([[j["x"], j["y"]]])
             j["candidates"] = []
             r0, c0 = int(round((y1 - j["y"]) / nm.RES - 0.5)), int(round((j["x"] - x0) / nm.RES - 0.5))
+            if tex is not None:
+                j["tile"] = {k: [v[r0, c0].item(), v[r0, min(c0 + 1, v.shape[1] - 1)].item(),
+                                 v[min(r0 + 1, v.shape[0] - 1), c0].item()] for k, v in tex.items()}
             for rr_, cc_ in ((r0, c0), (r0, c0 + 1), (r0 + 1, c0)):
                 if not (0 <= rr_ < own.shape[0] and 0 <= cc_ < own.shape[1]) or own[rr_, cc_] < 0:
                     continue

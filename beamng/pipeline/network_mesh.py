@@ -472,6 +472,9 @@ class Network:
         Gc = np.maximum(G, 0)
         at_bridge = (G >= 0) & (U <= OFF_LINE) & (E <= REACH) & np.where(A <= 0.01, self.n0_bridge[Gc], self.n1_bridge[Gc])
         off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge
+        if getattr(self, "explain", False):           # fix_probe.py: why a cell left its line
+            self.tile_explained = dict(Z=Z.copy(), G=G.copy(), U=U.copy(), E=E.copy(), A=A.copy(), Ds=Ds.copy(),
+                                       Dlo=Dlo.copy(), off=off.copy(), at_bridge=at_bridge.copy())
         Z[off] = np.nan
         G[off] = -1
         # squares and car parks: smoothed DTM, corrected to meet the roads around
