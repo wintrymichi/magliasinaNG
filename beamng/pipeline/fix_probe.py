@@ -87,6 +87,26 @@ def main(argv):
                                   "fold": bool(lab != "level" and cap.get("folds") is not None
                                                and cap["folds"][0 if axis == 1 else 1][r, c])})
         jumps.sort(key=lambda j: -j["dz"])
+        # the candidate lines of the two cells of the largest jumps after relaxing: line, height, half widths, overrun, weight
+        net.explain = True
+        for j in [j for j in jumps if j["what"] == "relaxed"][:4]:
+            P = np.array([[j["x"], j["y"]]])
+            j["candidates"] = []
+            r0, c0 = int(round((y1 - j["y"]) / nm.RES - 0.5)), int(round((j["x"] - x0) / nm.RES - 0.5))
+            for rr_, cc_ in ((r0, c0), (r0, c0 + 1), (r0 + 1, c0)):
+                if not (0 <= rr_ < own.shape[0] and 0 <= cc_ < own.shape[1]) or own[rr_, cc_] < 0:
+                    continue
+                net.heights(np.array([xs[cc_]]), np.array([ys[rr_]]), np.array([own[rr_, cc_]]), with_seg=True, with_u=True)
+                ex = net.explained
+                j["candidates"].append({"cell": [round(float(xs[cc_]), 2), round(float(ys[rr_]), 2)],
+                                        "best": int(ex["best"][0]),
+                                        "lines": [[int(ex["seg"][0, i]), net.segs[int(ex["seg"][0, i])]["class"],
+                                                   net.segs[int(ex["seg"][0, i])]["kind"],
+                                                   round(float(ex["h"][0, i]), 2), round(float(ex["u"][0, i]), 2),
+                                                   round(float(ex["e"][0, i]), 2), round(float(ex["wt"][0, i]), 4),
+                                                   bool(net.n0_bridge[int(ex["seg"][0, i])]), bool(net.n1_bridge[int(ex["seg"][0, i])])]
+                                                  for i in range(ex["seg"].shape[1]) if ex["ok"][0, i]]})
+        net.explain = False
         # the seams between the polygons' cells and the strips beside them (strips: meshed apart at their line's height)
         import shapely
         Zp = np.where(own >= 0, np.asarray(Sf.Z), np.nan)

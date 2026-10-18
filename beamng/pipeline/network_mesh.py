@@ -346,6 +346,8 @@ class Network:
         wt = wt * np.where(agree, 1.0, fj if JUNCTION_BLEND else 0.0)
         wt[np.arange(n), best] = np.where(has, np.maximum(wt[np.arange(n), best], 1e-12), 0.0)
         ws = wt.sum(1)
+        if getattr(self, "explain", False):           # fix_probe.py: the candidates of every point
+            self.explained = dict(seg=seg_o, h=h_o, u=u, e=e_o, wt=wt, ok=ok_o, best=best)
         good = has & (ws > 0)
         out[good] = (wt * np.nan_to_num(h_o)).sum(1)[good] / ws[good]
         segs_out[good] = seg_o[np.arange(n), best][good]
