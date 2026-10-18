@@ -4,6 +4,11 @@ What changed in each version of the map, newest first. The release notes that go
 
 ## v3.0 (17 October 2026)
 
+### Fixes after the release (2026-10-18)
+
+- **Road wear takes the shadows** (`italy_mats.OVERLAY`): the tyre tracks, patches, cracked stretches and dusty edges are drawn with Italy's flags for the same textures (translucent with depth writes). Without them the game drew them in a pass without shadows: the cracked stretches stayed very light under cars, trees and walls. Checked in the game on the same patch (car shadow: luma 103 against 203 of the lit patch; before 190 against 203).
+- **Road wear without breaks** (`road_wear.py`): the AI roads that go on as one another are joined before the wear is laid (1,996 points: bridges, changes of name, the road going straight on through a T or a crossing), and the bands go on past a jump of the width up to 40 m long (lay-bys, the mouths of side roads). Tyre tracks 270 → 319 km.
+
 ### The review round (2026-10-16/17)
 
 The fixes and additions after the first test build, built from scratch on a PC (`run_build.sh` as the `v3 build test` workflow) and tested in the game: [`beamng/verifica/v3.0/ingame_test_report.md`](beamng/verifica/v3.0/ingame_test_report.md), screenshots in [`beamng/verifica/screenshots/v3.0/`](beamng/verifica/screenshots/v3.0).

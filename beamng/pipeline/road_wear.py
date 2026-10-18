@@ -20,10 +20,14 @@ of 64 pixels across. Now:
   (italy_asphalt_overlay_light), in every lane two tyre tracks TRACK_W m wide TRACK_GAP m apart (Italy's
   m_asphalt_trackwear; one pair in the middle of a road narrower than NARROW m), and on stretches of CRACK_LEN m
   now and then (one about every CRACK_EVERY m) Italy's cracked and patched asphalt (italy_road_cracks);
-  none of them inside a junction (JUNCTION_PAD m beyond the carriageways of the roads that meet there), on a
-  roundabout and its entries (ROUNDABOUT_PAD m around the ring OpenStreetMap maps), where the measured
-  width jumps (a lay-by, a widening, the mouth of a side road) or where they would leave the asphalt.
-Every layer at its own height, LIFT m over the top faces of the asphalt (the height of the face under it,
+  none of them inside a junction a road ends at (JUNCTION_PAD m beyond the carriageways of the roads that meet
+  there), on a roundabout and its entries (ROUNDABOUT_PAD m around the ring OpenStreetMap maps), where the
+  measured width jumps for longer than BRIDGE_JUMP stations or where they would leave the asphalt. The AI roads
+  that go on as one another (split at a bridge, a junction, a change of name) are joined first, so the bands
+  run on through those points, through a T for the road that goes straight on and past a lay-by or the mouth
+  of a side road (the first v3.0 broke them for 15 m at 1157 such points and 410 width jumps).
+Every layer at its own height, LIFT m over the top faces of the asphalt, translucent with depth writes as Italy
+draws them (italy_mats.OVERLAY: they take the shadows) (the height of the face under it,
 never the deck of a bridge above it). One mesh per TILE m tile in MissionGroup/roads/markings, without
 collision; the textures in art/shapes/roads. Everything else is copied as it is.
 
