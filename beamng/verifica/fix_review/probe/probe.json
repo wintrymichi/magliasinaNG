@@ -201,6 +201,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -3705.8,
+    "y": 2144.2,
+    "dz": 1.568,
+    "z": [
+     604.4,
+     602.83
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -3704.2,
     "y": 2144.2,
@@ -234,12 +266,12 @@
    },
    {
     "what": "level",
-    "x": -3705.8,
+    "x": -3705.2,
     "y": 2144.2,
-    "dz": 1.418,
+    "dz": 1.479,
     "z": [
-     604.41,
-     602.99
+     604.33,
+     602.85
     ],
     "lines": [
      2329,
@@ -298,12 +330,12 @@
    },
    {
     "what": "level",
-    "x": -3705.2,
+    "x": -3704.8,
     "y": 2144.2,
-    "dz": 1.335,
+    "dz": 1.343,
     "z": [
-     604.34,
-     603.01
+     604.22,
+     602.87
     ],
     "lines": [
      2329,
@@ -394,12 +426,12 @@
    },
    {
     "what": "level",
-    "x": -3704.8,
+    "x": -3704.2,
     "y": 2144.2,
-    "dz": 1.211,
+    "dz": 1.178,
     "z": [
-     604.24,
-     603.03
+     604.08,
+     602.9
     ],
     "lines": [
      2329,
@@ -432,38 +464,6 @@
     "z": [
      603.81,
      602.75
-    ],
-    "lines": [
-     2329,
-     3127
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     254,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -3704.2,
-    "y": 2144.2,
-    "dz": 1.065,
-    "z": [
-     604.12,
-     603.05
     ],
     "lines": [
      2329,
@@ -553,6 +553,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -3703.8,
+    "y": 2144.2,
+    "dz": 1.004,
+    "z": [
+     603.94,
+     602.94
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -3701.8,
     "y": 2143.8,
@@ -614,38 +646,6 @@
      "road"
     ],
     "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -3703.8,
-    "y": 2144.2,
-    "dz": 0.91,
-    "z": [
-     603.99,
-     603.08
-    ],
-    "lines": [
-     2329,
-     3127
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     254,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
     "fold": false
    },
    {
@@ -713,6 +713,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -3703.2,
+    "y": 2144.2,
+    "dz": 0.83,
+    "z": [
+     603.8,
+     602.97
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -3700.8,
     "y": 2143.8,
@@ -774,38 +806,6 @@
      "road"
     ],
     "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -3703.2,
-    "y": 2144.2,
-    "dz": 0.755,
-    "z": [
-     603.86,
-     603.1
-    ],
-    "lines": [
-     2329,
-     3127
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     254,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
     "fold": false
    },
    {
@@ -969,12 +969,12 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -3699.8,
-    "y": 2143.8,
-    "dz": 0.611,
+    "what": "relaxed",
+    "x": -3707.2,
+    "y": 2144.2,
+    "dz": 1.805,
     "z": [
-     603.39,
+     604.58,
      602.78
     ],
     "lines": [
@@ -997,17 +997,273 @@
      "road",
      "road"
     ],
-    "linked": true,
+    "linked": false,
     "fold": false
    },
    {
-    "what": "level",
+    "what": "relaxed",
+    "x": -3706.8,
+    "y": 2144.2,
+    "dz": 1.733,
+    "z": [
+     604.53,
+     602.79
+    ],
+    "lines": [
+     2329,
+     4201
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3706.2,
+    "y": 2144.2,
+    "dz": 1.655,
+    "z": [
+     604.47,
+     602.82
+    ],
+    "lines": [
+     2329,
+     4201
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3705.8,
+    "y": 2144.2,
+    "dz": 1.584,
+    "z": [
+     604.41,
+     602.83
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3705.2,
+    "y": 2144.2,
+    "dz": 1.478,
+    "z": [
+     604.32,
+     602.85
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3704.8,
+    "y": 2144.2,
+    "dz": 1.365,
+    "z": [
+     604.23,
+     602.86
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3704.2,
+    "y": 2144.2,
+    "dz": 1.244,
+    "z": [
+     604.13,
+     602.88
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3703.8,
+    "y": 2144.2,
+    "dz": 1.106,
+    "z": [
+     604.01,
+     602.9
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3703.2,
+    "y": 2144.2,
+    "dz": 0.951,
+    "z": [
+     603.87,
+     602.92
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": -3702.8,
     "y": 2144.2,
-    "dz": 0.6,
+    "dz": 0.787,
     "z": [
-     603.73,
-     603.13
+     603.72,
+     602.93
     ],
     "lines": [
      2329,
@@ -1033,45 +1289,13 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3702.2,
-    "y": 2143.8,
-    "dz": 0.319,
-    "z": [
-     603.43,
-     603.11
-    ],
-    "lines": [
-     2329,
-     3127
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     254,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
+    "what": "relaxed",
     "x": -3702.8,
     "y": 2143.8,
-    "dz": 0.299,
+    "dz": 0.418,
     "z": [
-     603.13,
-     603.43
+     602.93,
+     603.35
     ],
     "lines": [
      3127,
@@ -1097,13 +1321,141 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3709.2,
-    "y": 2141.8,
-    "dz": 0.289,
+    "what": "relaxed",
+    "x": -3702.2,
+    "y": 2143.8,
+    "dz": 0.384,
     "z": [
-     602.91,
-     602.62
+     603.35,
+     602.96
+    ],
+    "lines": [
+     2329,
+     3127
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3701.8,
+    "y": 2144.2,
+    "dz": 0.202,
+    "z": [
+     603.39,
+     603.19
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3703.8,
+    "y": 2146.2,
+    "dz": 0.191,
+    "z": [
+     604.62,
+     604.43
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3702.2,
+    "y": 2144.2,
+    "dz": 0.191,
+    "z": [
+     603.54,
+     603.35
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3699.8,
+    "y": 2142.2,
+    "dz": 0.181,
+    "z": [
+     602.99,
+     602.81
     ],
     "lines": [
      4201,
@@ -1129,29 +1481,29 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3709.2,
-    "y": 2141.2,
-    "dz": 0.286,
+    "what": "relaxed",
+    "x": -3702.8,
+    "y": 2144.2,
+    "dz": 0.178,
     "z": [
-     602.62,
-     602.9
+     603.72,
+     603.54
     ],
     "lines": [
-     4201,
-     4201
+     2329,
+     2329
     ],
     "line_names": [
-     "Via Agostino de Marchi",
-     "Via Agostino de Marchi"
+     "",
+     ""
     ],
     "line_classes": [
-     "4m Strasse",
-     "4m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     283,
-     283
+     254,
+     254
     ],
     "poly_cls": [
      "road",
@@ -1161,29 +1513,29 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3708.8,
-    "y": 2141.2,
-    "dz": 0.286,
+    "what": "relaxed",
+    "x": -3701.2,
+    "y": 2144.2,
+    "dz": 0.173,
     "z": [
-     602.9,
-     602.62
+     603.27,
+     603.09
     ],
     "lines": [
-     4201,
-     4201
+     2329,
+     2329
     ],
     "line_names": [
-     "Via Agostino de Marchi",
-     "Via Agostino de Marchi"
+     "",
+     ""
     ],
     "line_classes": [
-     "4m Strasse",
-     "4m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     283,
-     283
+     254,
+     254
     ],
     "poly_cls": [
      "road",
@@ -1193,29 +1545,29 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3708.8,
-    "y": 2140.8,
-    "dz": 0.284,
+    "what": "relaxed",
+    "x": -3701.8,
+    "y": 2144.8,
+    "dz": 0.169,
     "z": [
-     602.62,
-     602.9
+     603.56,
+     603.39
     ],
     "lines": [
-     4201,
-     4201
+     2329,
+     2329
     ],
     "line_names": [
-     "Via Agostino de Marchi",
-     "Via Agostino de Marchi"
+     "",
+     ""
     ],
     "line_classes": [
-     "4m Strasse",
-     "4m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     283,
-     283
+     254,
+     254
     ],
     "poly_cls": [
      "road",
@@ -1225,29 +1577,29 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3708.2,
-    "y": 2140.2,
-    "dz": 0.284,
+    "what": "relaxed",
+    "x": -3703.8,
+    "y": 2146.2,
+    "dz": 0.167,
     "z": [
-     602.62,
-     602.9
+     604.62,
+     604.45
     ],
     "lines": [
-     4201,
-     4201
+     2329,
+     2329
     ],
     "line_names": [
-     "Via Agostino de Marchi",
-     "Via Agostino de Marchi"
+     "",
+     ""
     ],
     "line_classes": [
-     "4m Strasse",
-     "4m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     283,
-     283
+     254,
+     254
     ],
     "poly_cls": [
      "road",
@@ -1257,29 +1609,317 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -3708.2,
-    "y": 2140.8,
-    "dz": 0.284,
+    "what": "relaxed",
+    "x": -3702.8,
+    "y": 2146.2,
+    "dz": 0.166,
     "z": [
-     602.9,
-     602.62
+     604.32,
+     604.15
     ],
     "lines": [
-     4201,
-     4201
+     2329,
+     2329
     ],
     "line_names": [
-     "Via Agostino de Marchi",
-     "Via Agostino de Marchi"
+     "",
+     ""
     ],
     "line_classes": [
-     "4m Strasse",
-     "4m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     283,
-     283
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3702.2,
+    "y": 2144.8,
+    "dz": 0.163,
+    "z": [
+     603.7,
+     603.54
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3702.2,
+    "y": 2143.8,
+    "dz": 0.161,
+    "z": [
+     603.35,
+     603.19
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3701.8,
+    "y": 2145.8,
+    "dz": 0.159,
+    "z": [
+     603.87,
+     603.71
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3701.2,
+    "y": 2144.8,
+    "dz": 0.159,
+    "z": [
+     603.43,
+     603.27
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3702.8,
+    "y": 2145.8,
+    "dz": 0.157,
+    "z": [
+     604.15,
+     604.0
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3701.8,
+    "y": 2145.2,
+    "dz": 0.156,
+    "z": [
+     603.71,
+     603.56
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3702.8,
+    "y": 2144.8,
+    "dz": 0.154,
+    "z": [
+     603.85,
+     603.7
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3703.2,
+    "y": 2144.2,
+    "dz": 0.154,
+    "z": [
+     603.87,
+     603.72
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -3703.8,
+    "y": 2145.8,
+    "dz": 0.154,
+    "z": [
+     604.43,
+     604.27
+    ],
+    "lines": [
+     2329,
+     2329
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     254,
+     254
     ],
     "poly_cls": [
      "road",
@@ -1290,7 +1930,8 @@
    }
   ],
   "n_jumps_cells": 358,
-  "n_jumps_level": 232
+  "n_jumps_relaxed": 360,
+  "n_jumps_level": 214
  },
  "selva_bella": {
   "cells": 1205,
@@ -1301,6 +1942,38 @@
    "over_0.08": 0
   },
   "jumps": [
+   {
+    "what": "level",
+    "x": -1905.2,
+    "y": 2441.2,
+    "dz": 1.806,
+    "z": [
+     736.02,
+     734.22
+    ],
+    "lines": [
+     1208,
+     5775
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
    {
     "what": "cells",
     "x": -1905.2,
@@ -1334,6 +2007,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -1904.8,
+    "y": 2440.8,
+    "dz": 1.765,
+    "z": [
+     734.33,
+     736.1
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -1905.8,
     "y": 2441.2,
@@ -1353,6 +2058,70 @@
     "line_classes": [
      "3m Strasse",
      "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -1904.2,
+    "y": 2440.8,
+    "dz": 1.724,
+    "z": [
+     736.1,
+     734.37
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -1904.8,
+    "y": 2441.2,
+    "dz": 1.721,
+    "z": [
+     736.05,
+     734.33
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
     ],
     "polys": [
      526,
@@ -1430,6 +2199,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -1903.8,
+    "y": 2440.8,
+    "dz": 1.422,
+    "z": [
+     736.12,
+     734.7
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -1903.8,
     "y": 2440.8,
@@ -1494,6 +2295,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -1903.2,
+    "y": 2440.8,
+    "dz": 1.12,
+    "z": [
+     736.15,
+     735.03
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -1904.8,
     "y": 2441.2,
@@ -1526,6 +2359,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": -1900.2,
+    "y": 2439.8,
+    "dz": 1.066,
+    "z": [
+     736.35,
+     735.29
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -1898.8,
     "y": 2439.2,
@@ -1533,6 +2398,38 @@
     "z": [
      736.44,
      735.42
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -1901.8,
+    "y": 2440.2,
+    "dz": 1.003,
+    "z": [
+     736.25,
+     735.25
     ],
     "lines": [
      1208,
@@ -1718,6 +2615,38 @@
     "fold": true
    },
    {
+    "what": "level",
+    "x": -1899.8,
+    "y": 2439.8,
+    "dz": 0.849,
+    "z": [
+     736.38,
+     735.53
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": -1909.2,
     "y": 2445.2,
@@ -1769,6 +2698,38 @@
     "line_classes": [
      "-2",
      "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -1902.8,
+    "y": 2440.8,
+    "dz": 0.835,
+    "z": [
+     736.18,
+     735.35
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
     ],
     "polys": [
      526,
@@ -1910,24 +2871,120 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -1909.8,
-    "y": 2445.2,
-    "dz": 0.777,
+    "what": "level",
+    "x": -1901.2,
+    "y": 2440.2,
+    "dz": 0.778,
     "z": [
-     734.84,
-     735.62
+     736.28,
+     735.5
     ],
     "lines": [
      1208,
-     1208
+     -2
     ],
     "line_names": [
      "Via Selva Bella",
-     "Via Selva Bella"
+     "-2"
     ],
     "line_classes": [
      "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1905.2,
+    "y": 2441.2,
+    "dz": 1.804,
+    "z": [
+     736.02,
+     734.22
+    ],
+    "lines": [
+     1208,
+     5775
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1905.8,
+    "y": 2441.2,
+    "dz": 1.751,
+    "z": [
+     736.0,
+     734.25
+    ],
+    "lines": [
+     1208,
+     5775
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1906.2,
+    "y": 2441.2,
+    "dz": 1.685,
+    "z": [
+     734.31,
+     736.0
+    ],
+    "lines": [
+     5775,
+     1208
+    ],
+    "line_names": [
+     "",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "2m Weg",
      "3m Strasse"
     ],
     "polys": [
@@ -1938,11 +2995,395 @@
      "road",
      "road"
     ],
-    "linked": true,
-    "fold": true
+    "linked": false,
+    "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": -1906.2,
+    "y": 2441.8,
+    "dz": 1.632,
+    "z": [
+     735.95,
+     734.31
+    ],
+    "lines": [
+     1208,
+     5775
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1903.8,
+    "y": 2440.8,
+    "dz": 1.244,
+    "z": [
+     736.15,
+     734.9
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1904.2,
+    "y": 2440.8,
+    "dz": 1.203,
+    "z": [
+     735.33,
+     734.13
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1898.8,
+    "y": 2439.2,
+    "dz": 1.12,
+    "z": [
+     736.44,
+     735.32
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1904.8,
+    "y": 2441.2,
+    "dz": 1.109,
+    "z": [
+     736.05,
+     734.94
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1900.2,
+    "y": 2439.8,
+    "dz": 0.91,
+    "z": [
+     736.35,
+     735.44
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1903.2,
+    "y": 2440.8,
+    "dz": 0.899,
+    "z": [
+     736.17,
+     735.27
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1901.8,
+    "y": 2440.2,
+    "dz": 0.891,
+    "z": [
+     736.25,
+     735.36
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1903.8,
+    "y": 2440.2,
+    "dz": 0.84,
+    "z": [
+     734.9,
+     734.06
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1904.2,
+    "y": 2440.8,
+    "dz": 0.817,
+    "z": [
+     735.33,
+     736.15
+    ],
+    "lines": [
+     -2,
+     1208
+    ],
+    "line_names": [
+     "-2",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "-2",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1904.8,
+    "y": 2440.8,
+    "dz": 0.786,
+    "z": [
+     734.94,
+     734.16
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1902.8,
+    "y": 2439.8,
+    "dz": 0.782,
+    "z": [
+     734.77,
+     733.98
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": -1904.2,
     "y": 2440.2,
     "dz": 0.776,
@@ -1974,7 +3415,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1904.2,
     "y": 2441.2,
     "dz": 0.774,
@@ -2006,25 +3447,25 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -1909.8,
-    "y": 2445.8,
-    "dz": 0.773,
+    "what": "relaxed",
+    "x": -1901.8,
+    "y": 2439.8,
+    "dz": 0.749,
     "z": [
-     735.61,
-     734.84
+     735.36,
+     734.61
     ],
     "lines": [
-     1208,
-     1208
+     -2,
+     -2
     ],
     "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
+     "-2",
+     "-2"
     ],
     "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
+     "-2",
+     "-2"
     ],
     "polys": [
      526,
@@ -2035,42 +3476,10 @@
      "road"
     ],
     "linked": true,
-    "fold": true
-   },
-   {
-    "what": "cells",
-    "x": -1901.8,
-    "y": 2439.2,
-    "dz": 0.773,
-    "z": [
-     734.65,
-     733.88
-    ],
-    "lines": [
-     -2,
-     5775
-    ],
-    "line_names": [
-     "-2",
-     ""
-    ],
-    "line_classes": [
-     "-2",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1903.2,
     "y": 2440.2,
     "dz": 0.747,
@@ -2102,57 +3511,25 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -1901.8,
+    "what": "relaxed",
+    "x": -1899.8,
     "y": 2439.8,
-    "dz": 0.745,
+    "dz": 0.74,
     "z": [
-     735.39,
-     734.65
+     736.38,
+     735.64
     ],
     "lines": [
-     -2,
+     1208,
      -2
     ],
     "line_names": [
-     "-2",
+     "Via Selva Bella",
      "-2"
     ],
     "line_classes": [
-     "-2",
+     "3m Strasse",
      "-2"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1900.8,
-    "y": 2438.8,
-    "dz": 0.74,
-    "z": [
-     734.52,
-     733.78
-    ],
-    "lines": [
-     -2,
-     5775
-    ],
-    "line_names": [
-     "-2",
-     ""
-    ],
-    "line_classes": [
-     "-2",
-     "2m Weg"
     ],
     "polys": [
      526,
@@ -2166,7 +3543,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1902.8,
     "y": 2440.2,
     "dz": 0.729,
@@ -2198,7 +3575,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1905.2,
     "y": 2440.8,
     "dz": 0.72,
@@ -2230,25 +3607,57 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -1910.2,
-    "y": 2445.8,
+    "what": "relaxed",
+    "x": -1901.2,
+    "y": 2440.2,
+    "dz": 0.71,
+    "z": [
+     736.28,
+     735.57
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1900.2,
+    "y": 2439.2,
     "dz": 0.706,
     "z": [
-     734.91,
-     735.61
+     735.44,
+     734.74
     ],
     "lines": [
-     1208,
-     1208
+     -2,
+     -2
     ],
     "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
+     "-2",
+     "-2"
     ],
     "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
+     "-2",
+     "-2"
     ],
     "polys": [
      526,
@@ -2259,42 +3668,10 @@
      "road"
     ],
     "linked": true,
-    "fold": true
+    "fold": false
    },
    {
-    "what": "cells",
-    "x": -1910.2,
-    "y": 2446.2,
-    "dz": 0.702,
-    "z": [
-     735.61,
-     734.91
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": true
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1902.8,
     "y": 2440.8,
     "dz": 0.701,
@@ -2326,141 +3703,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -1900.2,
-    "y": 2439.2,
-    "dz": 0.701,
-    "z": [
-     735.52,
-     734.82
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1899.2,
-    "y": 2439.2,
-    "dz": 0.687,
-    "z": [
-     735.96,
-     735.27
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1900.8,
-    "y": 2439.2,
-    "dz": 0.686,
-    "z": [
-     735.21,
-     734.52
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1901.2,
-    "y": 2439.8,
-    "dz": 0.679,
-    "z": [
-     735.61,
-     734.93
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1902.2,
     "y": 2440.2,
-    "dz": 0.678,
+    "dz": 0.693,
     "z": [
      735.75,
-     735.08
+     735.06
     ],
     "lines": [
      -2,
@@ -2486,13 +3735,77 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": -1900.8,
+    "y": 2439.2,
+    "dz": 0.692,
+    "z": [
+     735.14,
+     734.45
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -1899.2,
+    "y": 2439.2,
+    "dz": 0.692,
+    "z": [
+     735.86,
+     735.17
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": -1902.2,
     "y": 2439.8,
-    "dz": 0.676,
+    "dz": 0.687,
     "z": [
-     735.08,
-     734.4
+     735.06,
+     734.37
     ],
     "lines": [
      -2,
@@ -2518,45 +3831,13 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": -1901.2,
-    "y": 2440.2,
-    "dz": 0.664,
+    "y": 2439.8,
+    "dz": 0.684,
     "z": [
-     736.28,
-     735.61
-    ],
-    "lines": [
-     1208,
-     -2
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "-2"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "-2"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1898.8,
-    "y": 2438.8,
-    "dz": 0.663,
-    "z": [
-     735.42,
-     734.76
+     735.57,
+     734.88
     ],
     "lines": [
      -2,
@@ -2583,7 +3864,8 @@
    }
   ],
   "n_jumps_cells": 176,
-  "n_jumps_level": 34
+  "n_jumps_relaxed": 210,
+  "n_jumps_level": 195
  },
  "arosio": {
   "cells": 2843,
@@ -2851,38 +4133,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 2171.8,
-    "y": 6392.2,
-    "dz": 0.481,
-    "z": [
-     851.69,
-     851.2
-    ],
-    "lines": [
-     -1,
-     308
-    ],
-    "line_names": [
-     "-1",
-     "Via alla Chiesa di San Michele"
-    ],
-    "line_classes": [
-     "-1",
-     "4m Strasse"
-    ],
-    "polys": [
-     -1,
-     1578
-    ],
-    "poly_cls": [
-     "-",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": 2170.2,
     "y": 6399.8,
@@ -3139,6 +4389,38 @@
     "fold": true
    },
    {
+    "what": "level",
+    "x": 2161.2,
+    "y": 6385.2,
+    "dz": 0.385,
+    "z": [
+     853.78,
+     853.39
+    ],
+    "lines": [
+     304,
+     312
+    ],
+    "line_names": [
+     "Brisch",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 2161.2,
     "y": 6384.8,
@@ -3203,6 +4485,38 @@
     "fold": true
    },
    {
+    "what": "level",
+    "x": 2171.8,
+    "y": 6392.2,
+    "dz": 0.368,
+    "z": [
+     851.69,
+     851.32
+    ],
+    "lines": [
+     -1,
+     308
+    ],
+    "line_names": [
+     "-1",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "-1",
+     "4m Strasse"
+    ],
+    "polys": [
+     -1,
+     1578
+    ],
+    "poly_cls": [
+     "-",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 2162.8,
     "y": 6385.2,
@@ -3264,38 +4578,6 @@
      "hard"
     ],
     "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2171.8,
-    "y": 6392.8,
-    "dz": 0.334,
-    "z": [
-     851.65,
-     851.31
-    ],
-    "lines": [
-     -1,
-     308
-    ],
-    "line_names": [
-     "-1",
-     "Via alla Chiesa di San Michele"
-    ],
-    "line_classes": [
-     "-1",
-     "4m Strasse"
-    ],
-    "polys": [
-     -1,
-     1578
-    ],
-    "poly_cls": [
-     "-",
-     "road"
-    ],
-    "linked": false,
     "fold": false
    },
    {
@@ -3555,25 +4837,25 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 2178.8,
-    "y": 6395.8,
-    "dz": 0.308,
+    "what": "relaxed",
+    "x": 2172.2,
+    "y": 6392.2,
+    "dz": 0.466,
     "z": [
-     851.15,
-     850.84
+     851.51,
+     851.04
     ],
     "lines": [
-     301,
-     301
+     308,
+     308
     ],
     "line_names": [
-     "Möi",
-     "Möi"
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
     ],
     "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
+     "4m Strasse",
+     "4m Strasse"
     ],
     "polys": [
      1578,
@@ -3587,7 +4869,391 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 2161.2,
+    "y": 6384.8,
+    "dz": 0.429,
+    "z": [
+     853.83,
+     853.4
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.8,
+    "y": 6392.2,
+    "dz": 0.413,
+    "z": [
+     851.44,
+     851.03
+    ],
+    "lines": [
+     308,
+     308
+    ],
+    "line_names": [
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2161.2,
+    "y": 6384.8,
+    "dz": 0.382,
+    "z": [
+     853.83,
+     853.44
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2173.2,
+    "y": 6407.8,
+    "dz": 0.337,
+    "z": [
+     853.94,
+     853.61
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2173.8,
+    "y": 6407.2,
+    "dz": 0.331,
+    "z": [
+     853.64,
+     853.31
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.8,
+    "y": 6407.8,
+    "dz": 0.33,
+    "z": [
+     853.9,
+     853.57
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2161.8,
+    "y": 6385.2,
+    "dz": 0.33,
+    "z": [
+     853.73,
+     853.4
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.2,
+    "y": 6407.8,
+    "dz": 0.324,
+    "z": [
+     853.86,
+     853.54
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2173.2,
+    "y": 6407.2,
+    "dz": 0.32,
+    "z": [
+     853.61,
+     853.29
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2162.2,
+    "y": 6385.2,
+    "dz": 0.319,
+    "z": [
+     853.68,
+     853.36
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.8,
+    "y": 6407.2,
+    "dz": 0.311,
+    "z": [
+     853.57,
+     853.26
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2174.2,
+    "y": 6406.8,
+    "dz": 0.311,
+    "z": [
+     853.34,
+     853.02
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": 2172.2,
     "y": 6407.2,
     "dz": 0.306,
@@ -3619,103 +5285,7 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 2162.8,
-    "y": 6385.2,
-    "dz": 0.306,
-    "z": [
-     853.62,
-     853.32
-    ],
-    "lines": [
-     312,
-     312
-    ],
-    "line_names": [
-     "Möi",
-     "Möi"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1584,
-     1584
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": true
-   },
-   {
-    "what": "cells",
-    "x": 2174.2,
-    "y": 6406.8,
-    "dz": 0.305,
-    "z": [
-     853.35,
-     853.04
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2173.2,
-    "y": 6407.2,
-    "dz": 0.304,
-    "z": [
-     853.61,
-     853.3
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": 2171.8,
     "y": 6407.2,
     "dz": 0.303,
@@ -3747,13 +5317,13 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 2173.2,
+    "what": "relaxed",
+    "x": 2173.8,
     "y": 6406.8,
-    "dz": 0.302,
+    "dz": 0.301,
     "z": [
-     853.3,
-     853.0
+     853.31,
+     853.01
     ],
     "lines": [
      -2,
@@ -3779,80 +5349,80 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 2162.2,
-    "y": 6385.8,
-    "dz": 0.301,
+    "what": "relaxed",
+    "x": 2175.8,
+    "y": 6406.2,
+    "dz": 0.297,
     "z": [
-     853.62,
-     853.32
+     853.04,
+     852.74
     ],
     "lines": [
-     312,
-     312
+     -2,
+     -2
     ],
     "line_names": [
-     "Möi",
-     "Möi"
+     "-2",
+     "-2"
     ],
     "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
+     "-2",
+     "-2"
     ],
     "polys": [
-     1584,
-     1584
+     8458,
+     8458
     ],
     "poly_cls": [
-     "road",
-     "road"
+     "hard",
+     "hard"
     ],
     "linked": true,
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 2172.2,
-    "y": 6393.8,
-    "dz": 0.299,
+    "what": "relaxed",
+    "x": 2173.2,
+    "y": 6406.8,
+    "dz": 0.294,
     "z": [
-     851.6,
-     851.31
+     853.29,
+     852.99
     ],
     "lines": [
-     301,
-     308
+     -2,
+     -2
     ],
     "line_names": [
-     "Möi",
-     "Via alla Chiesa di San Michele"
+     "-2",
+     "-2"
     ],
     "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
+     "-2",
+     "-2"
     ],
     "polys": [
-     1578,
-     1578
+     8458,
+     8458
     ],
     "poly_cls": [
-     "road",
-     "road"
+     "hard",
+     "hard"
     ],
     "linked": true,
-    "fold": true
+    "fold": false
    },
    {
-    "what": "cells",
-    "x": 2178.2,
-    "y": 6396.2,
-    "dz": 0.298,
+    "what": "relaxed",
+    "x": 2170.2,
+    "y": 6399.8,
+    "dz": 0.29,
     "z": [
-     851.27,
-     850.97
+     851.71,
+     852.0
     ],
     "lines": [
-     301,
+     312,
      301
     ],
     "line_names": [
@@ -3871,12 +5441,365 @@
      "road",
      "road"
     ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.8,
+    "y": 6406.8,
+    "dz": 0.289,
+    "z": [
+     853.26,
+     852.97
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.2,
+    "y": 6406.8,
+    "dz": 0.284,
+    "z": [
+     853.23,
+     852.95
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2171.8,
+    "y": 6406.8,
+    "dz": 0.283,
+    "z": [
+     853.2,
+     852.92
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2175.2,
+    "y": 6406.2,
+    "dz": 0.277,
+    "z": [
+     853.03,
+     852.75
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2174.8,
+    "y": 6406.2,
+    "dz": 0.27,
+    "z": [
+     853.03,
+     852.76
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2174.2,
+    "y": 6406.2,
+    "dz": 0.269,
+    "z": [
+     853.02,
+     852.75
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2173.8,
+    "y": 6406.2,
+    "dz": 0.265,
+    "z": [
+     853.01,
+     852.74
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2173.2,
+    "y": 6406.2,
+    "dz": 0.262,
+    "z": [
+     852.99,
+     852.73
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.2,
+    "y": 6406.2,
+    "dz": 0.261,
+    "z": [
+     852.95,
+     852.69
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2172.8,
+    "y": 6406.2,
+    "dz": 0.261,
+    "z": [
+     852.97,
+     852.71
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2171.8,
+    "y": 6406.2,
+    "dz": 0.26,
+    "z": [
+     852.92,
+     852.66
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     8458,
+     8458
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
     "linked": true,
     "fold": false
    }
   ],
   "n_jumps_cells": 289,
-  "n_jumps_level": 199
+  "n_jumps_relaxed": 255,
+  "n_jumps_level": 189
  },
  "fescoggia": {
   "cells": 2752,
@@ -4560,38 +6483,6 @@
     "fold": true
    },
    {
-    "what": "level",
-    "x": 523.8,
-    "y": 5398.2,
-    "dz": 0.543,
-    "z": [
-     839.71,
-     839.17
-    ],
-    "lines": [
-     4346,
-     4346
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": 500.2,
     "y": 5413.2,
@@ -4752,38 +6643,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 523.2,
-    "y": 5397.8,
-    "dz": 0.515,
-    "z": [
-     839.69,
-     839.17
-    ],
-    "lines": [
-     4346,
-     4346
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": 511.2,
     "y": 5414.2,
@@ -4912,13 +6771,45 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 495.2,
+    "what": "relaxed",
+    "x": 494.8,
     "y": 5395.2,
-    "dz": 0.471,
+    "dz": 0.274,
     "z": [
-     836.25,
-     835.77
+     835.85,
+     836.13
+    ],
+    "lines": [
+     3535,
+     3534
+    ],
+    "line_names": [
+     "Piazzòra da Fescògia",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 494.8,
+    "y": 5395.8,
+    "dz": 0.265,
+    "z": [
+     836.12,
+     835.85
     ],
     "lines": [
      3534,
@@ -4944,20 +6835,52 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 511.8,
-    "y": 5409.8,
-    "dz": 0.468,
+    "what": "relaxed",
+    "x": 495.2,
+    "y": 5395.2,
+    "dz": 0.262,
     "z": [
-     840.8,
-     840.33
+     836.13,
+     835.86
     ],
     "lines": [
-     4341,
-     4346
+     3534,
+     3535
     ],
     "line_names": [
-     "Stráda da Lótt",
+     "Prò",
+     "Piazzòra da Fescògia"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 521.8,
+    "y": 5398.8,
+    "dz": 0.22,
+    "z": [
+     839.49,
+     839.27
+    ],
+    "lines": [
+     3531,
+     3531
+    ],
+    "line_names": [
+     "Via San Silvestro",
      "Via San Silvestro"
     ],
     "line_classes": [
@@ -4976,28 +6899,28 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 501.8,
-    "y": 5411.8,
-    "dz": 0.467,
+    "what": "relaxed",
+    "x": 522.8,
+    "y": 5398.8,
+    "dz": 0.219,
     "z": [
-     839.76,
-     840.23
+     839.16,
+     839.37
     ],
     "lines": [
-     3534,
-     3537
+     4346,
+     4346
     ],
     "line_names": [
-     "Prò",
+     "Via San Silvestro",
      "Via San Silvestro"
     ],
     "line_classes": [
-     "1m Weg",
-     "4m Strasse"
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
-     1012,
+     1014,
      1014
     ],
     "poly_cls": [
@@ -5008,13 +6931,13 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 499.8,
-    "y": 5413.8,
-    "dz": 0.466,
+    "what": "relaxed",
+    "x": 498.2,
+    "y": 5410.2,
+    "dz": 0.21,
     "z": [
-     840.19,
-     839.72
+     839.06,
+     838.85
     ],
     "lines": [
      3534,
@@ -5040,77 +6963,45 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 522.8,
-    "y": 5398.2,
-    "dz": 0.46,
+    "what": "relaxed",
+    "x": 500.8,
+    "y": 5410.2,
+    "dz": 0.209,
     "z": [
-     839.75,
-     839.29
+     839.71,
+     839.5
     ],
     "lines": [
-     4346,
-     4346
+     3534,
+     3534
     ],
     "line_names": [
-     "Via San Silvestro",
-     "Via San Silvestro"
+     "Prò",
+     "Prò"
     ],
     "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     1014,
-     1014
+     1012,
+     1012
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
-    "fold": true
+    "fold": false
    },
    {
-    "what": "cells",
-    "x": 523.2,
-    "y": 5398.8,
-    "dz": 0.459,
-    "z": [
-     839.75,
-     839.29
-    ],
-    "lines": [
-     4346,
-     4346
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": true
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": 487.2,
-    "y": 5392.2,
-    "dz": 0.448,
+    "y": 5393.2,
+    "dz": 0.208,
     "z": [
-     834.03,
-     834.48
+     834.45,
+     834.66
     ],
     "lines": [
      3536,
@@ -5133,32 +7024,704 @@
      "hard"
     ],
     "linked": true,
-    "fold": true
+    "fold": false
    },
    {
-    "what": "cells",
-    "x": 510.8,
-    "y": 5413.8,
-    "dz": 0.444,
+    "what": "relaxed",
+    "x": 495.8,
+    "y": 5394.8,
+    "dz": 0.206,
     "z": [
-     840.44,
-     840.88
+     836.07,
+     835.86
     ],
     "lines": [
-     3537,
-     4341
+     3534,
+     3534
     ],
     "line_names": [
-     "Via San Silvestro",
-     "Stráda da Lótt"
+     "Prò",
+     "Prò"
     ],
     "line_classes": [
-     "4m Strasse",
-     "3m Strasse"
+     "1m Weg",
+     "1m Weg"
     ],
     "polys": [
-     1014,
-     1014
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 495.2,
+    "y": 5394.8,
+    "dz": 0.204,
+    "z": [
+     835.86,
+     836.07
+    ],
+    "lines": [
+     3535,
+     3534
+    ],
+    "line_names": [
+     "Piazzòra da Fescògia",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 487.2,
+    "y": 5393.8,
+    "dz": 0.198,
+    "z": [
+     834.49,
+     834.69
+    ],
+    "lines": [
+     3536,
+     3536
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     5877,
+     5877
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 499.2,
+    "y": 5412.2,
+    "dz": 0.198,
+    "z": [
+     839.98,
+     839.78
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 499.8,
+    "y": 5408.8,
+    "dz": 0.195,
+    "z": [
+     838.9,
+     838.7
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.8,
+    "y": 5410.8,
+    "dz": 0.193,
+    "z": [
+     839.89,
+     840.08
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 501.2,
+    "y": 5410.8,
+    "dz": 0.19,
+    "z": [
+     840.08,
+     839.89
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.2,
+    "y": 5408.8,
+    "dz": 0.19,
+    "z": [
+     839.01,
+     838.82
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 499.8,
+    "y": 5408.2,
+    "dz": 0.19,
+    "z": [
+     838.7,
+     838.51
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.2,
+    "y": 5409.2,
+    "dz": 0.189,
+    "z": [
+     839.2,
+     839.01
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 486.8,
+    "y": 5392.8,
+    "dz": 0.187,
+    "z": [
+     834.24,
+     834.43
+    ],
+    "lines": [
+     3536,
+     3536
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     5877,
+     5877
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.8,
+    "y": 5410.2,
+    "dz": 0.183,
+    "z": [
+     839.71,
+     839.89
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 486.8,
+    "y": 5393.2,
+    "dz": 0.183,
+    "z": [
+     834.27,
+     834.45
+    ],
+    "lines": [
+     3536,
+     3536
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     5877,
+     5877
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 498.8,
+    "y": 5410.2,
+    "dz": 0.183,
+    "z": [
+     839.17,
+     838.99
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.2,
+    "y": 5410.2,
+    "dz": 0.182,
+    "z": [
+     839.56,
+     839.38
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.8,
+    "y": 5410.8,
+    "dz": 0.18,
+    "z": [
+     839.89,
+     839.71
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 487.2,
+    "y": 5392.8,
+    "dz": 0.179,
+    "z": [
+     834.43,
+     834.61
+    ],
+    "lines": [
+     3536,
+     3536
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     5877,
+     5877
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 499.2,
+    "y": 5409.2,
+    "dz": 0.179,
+    "z": [
+     838.94,
+     838.77
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 498.8,
+    "y": 5409.8,
+    "dz": 0.177,
+    "z": [
+     838.99,
+     838.81
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 500.2,
+    "y": 5409.8,
+    "dz": 0.176,
+    "z": [
+     839.38,
+     839.2
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 499.2,
+    "y": 5410.2,
+    "dz": 0.175,
+    "z": [
+     839.29,
+     839.12
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 499.8,
+    "y": 5409.8,
+    "dz": 0.175,
+    "z": [
+     839.25,
+     839.07
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
     ],
     "poly_cls": [
      "road",
@@ -5169,7 +7732,8 @@
    }
   ],
   "n_jumps_cells": 588,
-  "n_jumps_level": 443
+  "n_jumps_relaxed": 569,
+  "n_jumps_level": 408
  },
  "breno": {
   "cells": 883,
@@ -5213,7 +7777,71 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 2.2,
+    "y": 4589.8,
+    "dz": 1.948,
+    "z": [
+     797.82,
+     795.87
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
+    "x": 1.8,
+    "y": 4590.2,
+    "dz": 1.928,
+    "z": [
+     797.82,
+     795.89
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
     "x": 1.8,
     "y": 4590.2,
     "dz": 1.928,
@@ -5277,6 +7905,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 1.8,
+    "y": 4589.8,
+    "dz": 1.926,
+    "z": [
+     795.89,
+     797.82
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 3.8,
     "y": 4588.8,
@@ -5309,10 +7969,74 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 3.2,
+    "y": 4589.2,
+    "dz": 1.914,
+    "z": [
+     797.85,
+     795.94
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 1.2,
     "y": 4590.2,
     "dz": 1.906,
+    "z": [
+     795.92,
+     797.82
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1.2,
+    "y": 4590.2,
+    "dz": 1.905,
     "z": [
      795.92,
      797.82
@@ -5405,10 +8129,74 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 2.8,
+    "y": 4589.2,
+    "dz": 1.882,
+    "z": [
+     795.97,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 2.8,
     "y": 4589.8,
     "dz": 1.881,
+    "z": [
+     797.85,
+     795.97
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 2.8,
+    "y": 4589.8,
+    "dz": 1.88,
     "z": [
      797.85,
      795.97
@@ -5498,262 +8286,6 @@
      "road"
     ],
     "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 6.2,
-    "y": 4595.2,
-    "dz": 0.539,
-    "z": [
-     798.43,
-     797.89
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 7.2,
-    "y": 4593.8,
-    "dz": 0.526,
-    "z": [
-     797.89,
-     798.41
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 5.8,
-    "y": 4595.8,
-    "dz": 0.521,
-    "z": [
-     798.43,
-     797.91
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 5.8,
-    "y": 4595.2,
-    "dz": 0.519,
-    "z": [
-     797.91,
-     798.43
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 7.2,
-    "y": 4594.8,
-    "dz": 0.494,
-    "z": [
-     798.46,
-     797.96
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 7.2,
-    "y": 4594.2,
-    "dz": 0.492,
-    "z": [
-     797.96,
-     798.46
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 6.8,
-    "y": 4595.2,
-    "dz": 0.49,
-    "z": [
-     798.46,
-     797.97
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 6.8,
-    "y": 4594.8,
-    "dz": 0.488,
-    "z": [
-     797.97,
-     798.46
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
     "fold": false
    },
    {
@@ -5918,6 +8450,70 @@
    },
    {
     "what": "level",
+    "x": 5.8,
+    "y": 4595.8,
+    "dz": 0.311,
+    "z": [
+     798.43,
+     798.12
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 5.8,
+    "y": 4595.2,
+    "dz": 0.309,
+    "z": [
+     798.12,
+     798.43
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
     "x": 7.8,
     "y": 4596.8,
     "dz": 0.294,
@@ -6045,6 +8641,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 6.2,
+    "y": 4595.2,
+    "dz": 0.207,
+    "z": [
+     798.43,
+     798.22
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 7.2,
     "y": 4594.2,
@@ -6077,7 +8705,423 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 2.2,
+    "y": 4589.8,
+    "dz": 1.949,
+    "z": [
+     797.82,
+     795.87
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1.8,
+    "y": 4590.2,
+    "dz": 1.928,
+    "z": [
+     797.82,
+     795.89
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1.8,
+    "y": 4589.8,
+    "dz": 1.926,
+    "z": [
+     795.89,
+     797.82
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 3.8,
+    "y": 4588.8,
+    "dz": 1.924,
+    "z": [
+     797.85,
+     795.92
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1.2,
+    "y": 4590.2,
+    "dz": 1.906,
+    "z": [
+     795.92,
+     797.82
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 3.2,
+    "y": 4589.2,
+    "dz": 1.902,
+    "z": [
+     797.85,
+     795.95
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 3.2,
+    "y": 4588.8,
+    "dz": 1.9,
+    "z": [
+     795.95,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2.8,
+    "y": 4589.8,
+    "dz": 1.881,
+    "z": [
+     797.85,
+     795.97
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 2.8,
+    "y": 4589.2,
+    "dz": 1.879,
+    "z": [
+     795.97,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1.2,
+    "y": 4590.8,
+    "dz": 1.812,
+    "z": [
+     796.04,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 6.2,
+    "y": 4594.2,
+    "dz": 0.265,
+    "z": [
+     797.99,
+     798.25
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 7.2,
+    "y": 4594.2,
+    "dz": 0.204,
+    "z": [
+     798.19,
+     798.39
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 6.8,
+    "y": 4594.2,
+    "dz": 0.187,
+    "z": [
+     798.08,
+     798.26
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "relaxed",
     "x": -8.2,
     "y": 4580.2,
     "dz": 0.18,
@@ -6109,7 +9153,71 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 5.8,
+    "y": 4594.2,
+    "dz": 0.179,
+    "z": [
+     798.17,
+     797.99
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 5.8,
+    "y": 4594.8,
+    "dz": 0.179,
+    "z": [
+     797.99,
+     798.17
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "relaxed",
     "x": -7.8,
     "y": 4580.2,
     "dz": 0.165,
@@ -6141,7 +9249,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": -7.8,
     "y": 4579.8,
     "dz": 0.151,
@@ -6173,71 +9281,7 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 6.2,
-    "y": 4596.2,
-    "dz": 0.138,
-    "z": [
-     798.46,
-     798.6
-    ],
-    "lines": [
-     -1,
-     -1
-    ],
-    "line_names": [
-     "-1",
-     "-1"
-    ],
-    "line_classes": [
-     "-1",
-     "-1"
-    ],
-    "polys": [
-     -1,
-     -1
-    ],
-    "poly_cls": [
-     "-",
-     "-"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 6.8,
-    "y": 4596.8,
-    "dz": 0.137,
-    "z": [
-     798.46,
-     798.6
-    ],
-    "lines": [
-     -1,
-     -1
-    ],
-    "line_names": [
-     "-1",
-     "-1"
-    ],
-    "line_classes": [
-     "-1",
-     "-1"
-    ],
-    "polys": [
-     -1,
-     -1
-    ],
-    "poly_cls": [
-     "-",
-     "-"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": -7.2,
     "y": 4579.8,
     "dz": 0.136,
@@ -6269,103 +9313,7 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 3.8,
-    "y": 4592.8,
-    "dz": 0.136,
-    "z": [
-     797.07,
-     796.93
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 3.2,
-    "y": 4592.8,
-    "dz": 0.134,
-    "z": [
-     796.97,
-     796.84
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 4.2,
-    "y": 4592.8,
-    "dz": 0.134,
-    "z": [
-     797.16,
-     797.03
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": 6.8,
     "y": 4594.8,
     "dz": 0.132,
@@ -6397,7 +9345,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 7.2,
     "y": 4594.8,
     "dz": 0.132,
@@ -6429,13 +9377,269 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -7.8,
-    "y": 4579.8,
+    "what": "relaxed",
+    "x": 5.8,
+    "y": 4595.2,
     "dz": 0.131,
     "z": [
-     791.62,
-     791.75
+     798.12,
+     797.99
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 6.2,
+    "y": 4595.2,
+    "dz": 0.131,
+    "z": [
+     798.23,
+     798.1
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 6.8,
+    "y": 4595.2,
+    "dz": 0.131,
+    "z": [
+     798.34,
+     798.21
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 5.8,
+    "y": 4595.8,
+    "dz": 0.13,
+    "z": [
+     798.25,
+     798.12
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2.8,
+    "y": 4586.2,
+    "dz": 0.129,
+    "z": [
+     794.17,
+     794.04
+    ],
+    "lines": [
+     2678,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1.2,
+    "y": 4585.8,
+    "dz": 0.129,
+    "z": [
+     794.84,
+     794.71
+    ],
+    "lines": [
+     2678,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -4.2,
+    "y": 4585.2,
+    "dz": 0.129,
+    "z": [
+     793.63,
+     793.5
+    ],
+    "lines": [
+     2678,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 6.8,
+    "y": 4593.8,
+    "dz": 0.128,
+    "z": [
+     798.26,
+     798.39
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "relaxed",
+    "x": 0.8,
+    "y": 4585.8,
+    "dz": 0.127,
+    "z": [
+     794.74,
+     794.61
     ],
     "lines": [
      2678,
@@ -6462,7 +9666,8 @@
    }
   ],
   "n_jumps_cells": 656,
-  "n_jumps_level": 660
+  "n_jumps_relaxed": 657,
+  "n_jumps_level": 550
  },
  "mugena": {
   "cells": 2443,
@@ -6762,38 +9967,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 1558.8,
-    "y": 6360.2,
-    "dz": 0.415,
-    "z": [
-     817.61,
-     818.02
-    ],
-    "lines": [
-     318,
-     318
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stráda da Caròcc"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1299,
-     1299
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": 1570.2,
     "y": 6356.8,
@@ -7082,6 +10255,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 1570.2,
+    "y": 6355.2,
+    "dz": 0.364,
+    "z": [
+     820.1,
+     820.46
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 1570.2,
     "y": 6354.8,
@@ -7178,38 +10383,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": 1558.8,
-    "y": 6360.8,
-    "dz": 0.351,
-    "z": [
-     817.64,
-     817.99
-    ],
-    "lines": [
-     318,
-     318
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stráda da Caròcc"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1299,
-     1299
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": 1559.2,
     "y": 6360.2,
@@ -7237,6 +10410,70 @@
     "poly_cls": [
      "road",
      "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1569.8,
+    "y": 6356.8,
+    "dz": 0.343,
+    "z": [
+     820.17,
+     820.51
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1569.8,
+    "y": 6356.2,
+    "dz": 0.342,
+    "z": [
+     820.02,
+     820.36
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
     ],
     "linked": true,
     "fold": false
@@ -7338,6 +10575,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 1570.2,
+    "y": 6354.8,
+    "dz": 0.333,
+    "z": [
+     819.99,
+     820.32
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 1570.8,
     "y": 6353.2,
@@ -7370,109 +10639,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1569.2,
-    "y": 6356.2,
-    "dz": 0.325,
-    "z": [
-     819.75,
-     820.07
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7057,
-     7057
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1559.8,
-    "y": 6360.2,
-    "dz": 0.325,
-    "z": [
-     818.0,
-     817.67
-    ],
-    "lines": [
-     1661,
-     318
-    ],
-    "line_names": [
-     "Stradón da Mügéna",
-     "Stráda da Caròcc"
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1289,
-     1299
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 1558.2,
-    "y": 6361.2,
-    "dz": 0.322,
-    "z": [
-     817.6,
-     817.93
-    ],
-    "lines": [
-     318,
-     318
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stráda da Caròcc"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     1299,
-     1299
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1570.2,
-    "y": 6353.8,
-    "dz": 0.319,
+    "y": 6356.8,
+    "dz": 0.413,
     "z": [
-     819.85,
-     820.17
+     820.5,
+     820.91
     ],
     "lines": [
      -2,
@@ -7498,13 +10671,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1569.8,
-    "y": 6354.8,
-    "dz": 0.317,
+    "what": "relaxed",
+    "x": 1570.2,
+    "y": 6356.2,
+    "dz": 0.404,
     "z": [
-     819.73,
-     820.05
+     820.35,
+     820.75
     ],
     "lines": [
      -2,
@@ -7530,77 +10703,205 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1571.2,
-    "y": 6352.2,
-    "dz": 0.31,
-    "z": [
-     820.15,
-     820.46
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7057,
-     7057
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1569.2,
-    "y": 6355.8,
-    "dz": 0.308,
-    "z": [
-     819.64,
-     819.95
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7057,
-     7057
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1570.8,
-    "y": 6352.8,
-    "dz": 0.307,
+    "y": 6354.8,
+    "dz": 0.394,
+    "z": [
+     820.32,
+     820.71
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1570.2,
+    "y": 6355.8,
+    "dz": 0.393,
+    "z": [
+     820.2,
+     820.6
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.8,
+    "y": 6357.2,
+    "dz": 0.388,
+    "z": [
+     820.28,
+     820.66
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.8,
+    "y": 6356.8,
+    "dz": 0.38,
+    "z": [
+     820.12,
+     820.5
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1570.2,
+    "y": 6355.2,
+    "dz": 0.378,
+    "z": [
+     820.07,
+     820.45
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.8,
+    "y": 6356.2,
+    "dz": 0.368,
+    "z": [
+     819.98,
+     820.35
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1570.2,
+    "y": 6354.8,
+    "dz": 0.36,
     "z": [
      819.96,
-     820.27
+     820.32
     ],
     "lines": [
      -2,
@@ -7626,12 +10927,76 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 1570.8,
+    "y": 6353.8,
+    "dz": 0.357,
+    "z": [
+     820.08,
+     820.44
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.8,
+    "y": 6355.8,
+    "dz": 0.354,
+    "z": [
+     819.85,
+     820.2
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": 1566.2,
     "y": 6370.2,
-    "dz": 0.306,
+    "dz": 0.349,
     "z": [
-     819.31,
+     819.27,
      819.61
     ],
     "lines": [
@@ -7658,13 +11023,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1568.8,
+    "what": "relaxed",
+    "x": 1569.2,
     "y": 6356.8,
-    "dz": 0.297,
+    "dz": 0.341,
     "z": [
-     819.58,
-     819.88
+     819.78,
+     820.12
     ],
     "lines": [
      -2,
@@ -7690,13 +11055,429 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 1570.2,
+    "y": 6354.2,
+    "dz": 0.341,
+    "z": [
+     819.85,
+     820.19
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.8,
+    "y": 6355.2,
+    "dz": 0.337,
+    "z": [
+     819.74,
+     820.07
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1570.8,
+    "y": 6353.2,
+    "dz": 0.332,
+    "z": [
+     819.97,
+     820.3
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.2,
+    "y": 6356.2,
+    "dz": 0.326,
+    "z": [
+     819.65,
+     819.98
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1570.2,
+    "y": 6353.8,
+    "dz": 0.32,
+    "z": [
+     819.76,
+     820.08
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.8,
+    "y": 6354.8,
+    "dz": 0.318,
+    "z": [
+     819.64,
+     819.96
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1565.8,
+    "y": 6370.2,
+    "dz": 0.313,
+    "z": [
+     818.95,
+     819.27
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7058,
+     7058
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1571.2,
+    "y": 6352.2,
+    "dz": 0.311,
+    "z": [
+     820.06,
+     820.37
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.2,
+    "y": 6355.8,
+    "dz": 0.309,
+    "z": [
+     819.54,
+     819.85
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1565.8,
+    "y": 6369.8,
+    "dz": 0.308,
+    "z": [
+     818.96,
+     819.27
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7058,
+     7058
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1570.8,
+    "y": 6352.8,
+    "dz": 0.307,
+    "z": [
+     819.87,
+     820.18
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1565.8,
+    "y": 6370.8,
+    "dz": 0.302,
+    "z": [
+     818.93,
+     819.24
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7058,
+     7058
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1568.8,
+    "y": 6356.8,
+    "dz": 0.298,
+    "z": [
+     819.48,
+     819.78
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": 1569.8,
     "y": 6354.2,
     "dz": 0.297,
     "z": [
-     819.65,
-     819.95
+     819.56,
+     819.85
     ],
     "lines": [
      -2,
@@ -7722,13 +11503,13 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1570.2,
     "y": 6353.2,
-    "dz": 0.295,
+    "dz": 0.296,
     "z": [
-     819.77,
-     820.06
+     819.68,
+     819.97
     ],
     "lines": [
      -2,
@@ -7745,6 +11526,70 @@
     "polys": [
      7057,
      7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1569.2,
+    "y": 6355.2,
+    "dz": 0.29,
+    "z": [
+     819.45,
+     819.74
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7057,
+     7057
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1565.2,
+    "y": 6370.2,
+    "dz": 0.285,
+    "z": [
+     818.67,
+     818.95
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7058,
+     7058
     ],
     "poly_cls": [
      "hard",
@@ -7755,7 +11600,8 @@
    }
   ],
   "n_jumps_cells": 411,
-  "n_jumps_level": 23
+  "n_jumps_relaxed": 432,
+  "n_jumps_level": 334
  },
  "vezio_hole": {
   "cells": 1572,
@@ -7766,6 +11612,102 @@
    "over_0.08": 0
   },
   "jumps": [
+   {
+    "what": "level",
+    "x": 1048.8,
+    "y": 6066.2,
+    "dz": 0.246,
+    "z": [
+     767.99,
+     767.75
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.2,
+    "y": 6066.2,
+    "dz": 0.245,
+    "z": [
+     768.01,
+     767.76
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1048.2,
+    "y": 6066.8,
+    "dz": 0.242,
+    "z": [
+     768.22,
+     767.98
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
    {
     "what": "cells",
     "x": 1049.8,
@@ -7799,6 +11741,134 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 1048.8,
+    "y": 6065.8,
+    "dz": 0.239,
+    "z": [
+     767.75,
+     767.51
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.2,
+    "y": 6065.8,
+    "dz": 0.239,
+    "z": [
+     767.76,
+     767.52
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1048.8,
+    "y": 6065.2,
+    "dz": 0.239,
+    "z": [
+     767.51,
+     767.27
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.2,
+    "y": 6065.2,
+    "dz": 0.239,
+    "z": [
+     767.52,
+     767.29
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 1049.2,
     "y": 6066.2,
@@ -7806,6 +11876,38 @@
     "z": [
      767.92,
      767.68
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.8,
+    "y": 6065.8,
+    "dz": 0.238,
+    "z": [
+     767.78,
+     767.54
     ],
     "lines": [
      -2,
@@ -7902,6 +12004,134 @@
     "z": [
      767.68,
      767.44
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.8,
+    "y": 6066.2,
+    "dz": 0.237,
+    "z": [
+     768.01,
+     767.78
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.8,
+    "y": 6065.2,
+    "dz": 0.237,
+    "z": [
+     767.54,
+     767.3
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.2,
+    "y": 6064.8,
+    "dz": 0.237,
+    "z": [
+     767.29,
+     767.05
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1049.8,
+    "y": 6064.8,
+    "dz": 0.237,
+    "z": [
+     767.3,
+     767.07
     ],
     "lines": [
      -2,
@@ -8119,6 +12349,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 1048.8,
+    "y": 6066.8,
+    "dz": 0.234,
+    "z": [
+     768.23,
+     767.99
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 1048.2,
     "y": 6066.8,
@@ -8311,12 +12573,364 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1048.8,
-    "y": 6067.2,
-    "dz": 0.227,
+    "what": "relaxed",
+    "x": 1049.8,
+    "y": 6066.2,
+    "dz": 0.25,
     "z": [
-     768.4,
+     767.93,
+     767.68
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.2,
+    "y": 6066.2,
+    "dz": 0.247,
+    "z": [
+     767.94,
+     767.69
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.8,
+    "y": 6066.8,
+    "dz": 0.246,
+    "z": [
+     768.17,
+     767.93
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.8,
+    "y": 6066.2,
+    "dz": 0.245,
+    "z": [
+     767.95,
+     767.71
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.2,
+    "y": 6066.8,
+    "dz": 0.244,
+    "z": [
+     768.18,
+     767.94
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.8,
+    "y": 6066.8,
+    "dz": 0.243,
+    "z": [
+     768.19,
+     767.95
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.2,
+    "y": 6066.2,
+    "dz": 0.243,
+    "z": [
+     767.97,
+     767.73
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.8,
+    "y": 6065.8,
+    "dz": 0.243,
+    "z": [
+     767.71,
+     767.46
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.2,
+    "y": 6066.8,
+    "dz": 0.242,
+    "z": [
+     768.21,
+     767.97
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.2,
+    "y": 6065.8,
+    "dz": 0.242,
+    "z": [
+     767.69,
+     767.45
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.2,
+    "y": 6065.8,
+    "dz": 0.24,
+    "z": [
+     767.73,
+     767.49
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.8,
+    "y": 6067.2,
+    "dz": 0.237,
+    "z": [
+     768.41,
      768.17
     ],
     "lines": [
@@ -8343,12 +12957,76 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1048.2,
-    "y": 6067.2,
-    "dz": 0.224,
+    "what": "relaxed",
+    "x": 1049.8,
+    "y": 6065.8,
+    "dz": 0.237,
     "z": [
-     768.41,
+     767.68,
+     767.44
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.2,
+    "y": 6067.2,
+    "dz": 0.236,
+    "z": [
+     768.42,
+     768.18
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.8,
+    "y": 6067.2,
+    "dz": 0.234,
+    "z": [
+     768.43,
      768.19
     ],
     "lines": [
@@ -8375,7 +13053,263 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 1048.2,
+    "y": 6067.2,
+    "dz": 0.232,
+    "z": [
+     768.44,
+     768.21
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.8,
+    "y": 6065.2,
+    "dz": 0.23,
+    "z": [
+     767.46,
+     767.23
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.2,
+    "y": 6065.2,
+    "dz": 0.23,
+    "z": [
+     767.45,
+     767.22
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.8,
+    "y": 6065.2,
+    "dz": 0.23,
+    "z": [
+     767.44,
+     767.21
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1047.8,
+    "y": 6067.2,
+    "dz": 0.225,
+    "z": [
+     768.46,
+     768.24
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.2,
+    "y": 6067.8,
+    "dz": 0.223,
+    "z": [
+     768.64,
+     768.42
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1049.8,
+    "y": 6067.8,
+    "dz": 0.223,
+    "z": [
+     768.63,
+     768.41
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1048.8,
+    "y": 6067.8,
+    "dz": 0.222,
+    "z": [
+     768.65,
+     768.43
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7155,
+     7155
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": 1048.8,
     "y": 6064.8,
     "dz": 0.221,
@@ -8407,13 +13341,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1047.8,
-    "y": 6067.2,
+    "what": "relaxed",
+    "x": 1048.2,
+    "y": 6067.8,
     "dz": 0.22,
     "z": [
-     768.43,
-     768.21
+     768.66,
+     768.44
     ],
     "lines": [
      -2,
@@ -8439,7 +13373,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1049.2,
     "y": 6064.8,
     "dz": 0.22,
@@ -8471,7 +13405,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1049.8,
     "y": 6064.8,
     "dz": 0.22,
@@ -8503,13 +13437,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1049.8,
+    "what": "relaxed",
+    "x": 1047.8,
     "y": 6067.8,
     "dz": 0.217,
     "z": [
-     768.6,
-     768.38
+     768.68,
+     768.46
     ],
     "lines": [
      -2,
@@ -8535,109 +13469,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 1049.2,
-    "y": 6067.8,
-    "dz": 0.216,
-    "z": [
-     768.6,
-     768.39
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1048.8,
-    "y": 6067.8,
-    "dz": 0.215,
-    "z": [
-     768.61,
-     768.4
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1048.2,
-    "y": 6067.8,
-    "dz": 0.213,
-    "z": [
-     768.62,
-     768.41
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1047.8,
-    "y": 6067.8,
-    "dz": 0.21,
+    "y": 6068.2,
+    "dz": 0.208,
     "z": [
-     768.64,
-     768.43
+     768.89,
+     768.68
     ],
     "lines": [
      -2,
@@ -8663,7 +13501,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 1048.8,
     "y": 6064.2,
     "dz": 0.208,
@@ -8693,362 +13531,11 @@
     ],
     "linked": true,
     "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.2,
-    "y": 6064.2,
-    "dz": 0.207,
-    "z": [
-     767.0,
-     766.79
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.8,
-    "y": 6064.2,
-    "dz": 0.207,
-    "z": [
-     766.99,
-     766.78
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.2,
-    "y": 6068.2,
-    "dz": 0.199,
-    "z": [
-     768.8,
-     768.6
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.8,
-    "y": 6068.2,
-    "dz": 0.199,
-    "z": [
-     768.8,
-     768.6
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1047.8,
-    "y": 6068.2,
-    "dz": 0.198,
-    "z": [
-     768.84,
-     768.64
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1048.2,
-    "y": 6068.2,
-    "dz": 0.197,
-    "z": [
-     768.82,
-     768.62
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1048.8,
-    "y": 6068.2,
-    "dz": 0.197,
-    "z": [
-     768.81,
-     768.61
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.2,
-    "y": 6063.8,
-    "dz": 0.191,
-    "z": [
-     766.79,
-     766.6
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.8,
-    "y": 6063.8,
-    "dz": 0.19,
-    "z": [
-     766.78,
-     766.59
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1047.2,
-    "y": 6068.8,
-    "dz": 0.187,
-    "z": [
-     769.05,
-     768.86
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1049.2,
-    "y": 6068.8,
-    "dz": 0.177,
-    "z": [
-     768.98,
-     768.8
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7155,
-     7155
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
    }
   ],
   "n_jumps_cells": 65,
-  "n_jumps_level": 0
+  "n_jumps_relaxed": 60,
+  "n_jumps_level": 53
  },
  "stradon_bridge": {
   "cells": 1389,
@@ -9380,6 +13867,38 @@
     "fold": false
    },
    {
+    "what": "level",
+    "x": 792.8,
+    "y": 5933.2,
+    "dz": 0.255,
+    "z": [
+     780.14,
+     780.4
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
     "what": "cells",
     "x": 792.2,
     "y": 5911.2,
@@ -9515,6 +14034,166 @@
     "z": [
      780.36,
      780.6
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 792.2,
+    "y": 5933.2,
+    "dz": 0.243,
+    "z": [
+     780.3,
+     780.54
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 791.8,
+    "y": 5932.8,
+    "dz": 0.243,
+    "z": [
+     780.68,
+     780.92
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 792.2,
+    "y": 5932.8,
+    "dz": 0.243,
+    "z": [
+     780.54,
+     780.78
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 792.8,
+    "y": 5932.8,
+    "dz": 0.243,
+    "z": [
+     780.4,
+     780.64
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 793.2,
+    "y": 5932.8,
+    "dz": 0.243,
+    "z": [
+     780.25,
+     780.49
     ],
     "lines": [
      -2,
@@ -9828,7 +14507,775 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": 792.2,
+    "y": 5933.8,
+    "dz": 0.294,
+    "z": [
+     780.01,
+     780.31
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 793.2,
+    "y": 5933.2,
+    "dz": 0.294,
+    "z": [
+     779.95,
+     780.24
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 792.8,
+    "y": 5933.2,
+    "dz": 0.281,
+    "z": [
+     780.13,
+     780.41
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 791.8,
+    "y": 5933.8,
+    "dz": 0.28,
+    "z": [
+     780.21,
+     780.49
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 793.8,
+    "y": 5932.8,
+    "dz": 0.278,
+    "z": [
+     780.08,
+     780.36
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 794.8,
+    "y": 5932.2,
+    "dz": 0.269,
+    "z": [
+     780.08,
+     780.35
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 792.2,
+    "y": 5933.2,
+    "dz": 0.267,
+    "z": [
+     780.31,
+     780.58
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 793.2,
+    "y": 5932.8,
+    "dz": 0.265,
+    "z": [
+     780.24,
+     780.5
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 794.2,
+    "y": 5932.2,
+    "dz": 0.258,
+    "z": [
+     780.21,
+     780.47
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 791.8,
+    "y": 5911.8,
+    "dz": 0.256,
+    "z": [
+     782.57,
+     782.32
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 792.2,
+    "y": 5911.2,
+    "dz": 0.253,
+    "z": [
+     782.48,
+     782.23
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 792.8,
+    "y": 5932.8,
+    "dz": 0.251,
+    "z": [
+     780.41,
+     780.66
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 791.8,
+    "y": 5933.2,
+    "dz": 0.25,
+    "z": [
+     780.49,
+     780.74
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 795.2,
+    "y": 5931.8,
+    "dz": 0.247,
+    "z": [
+     780.24,
+     780.49
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 793.8,
+    "y": 5932.2,
+    "dz": 0.246,
+    "z": [
+     780.36,
+     780.6
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 792.8,
+    "y": 5910.8,
+    "dz": 0.242,
+    "z": [
+     782.38,
+     782.14
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 794.8,
+    "y": 5931.8,
+    "dz": 0.237,
+    "z": [
+     780.35,
+     780.59
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 792.2,
+    "y": 5932.8,
+    "dz": 0.234,
+    "z": [
+     780.58,
+     780.81
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 793.2,
+    "y": 5932.2,
+    "dz": 0.232,
+    "z": [
+     780.5,
+     780.74
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 796.2,
+    "y": 5931.2,
+    "dz": 0.231,
+    "z": [
+     780.31,
+     780.54
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 793.2,
+    "y": 5910.2,
+    "dz": 0.226,
+    "z": [
+     782.26,
+     782.03
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 794.2,
+    "y": 5931.8,
+    "dz": 0.225,
+    "z": [
+     780.47,
+     780.7
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 795.8,
+    "y": 5931.2,
+    "dz": 0.222,
+    "z": [
+     780.4,
+     780.62
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 791.8,
+    "y": 5912.2,
+    "dz": 0.221,
+    "z": [
+     782.4,
+     782.18
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7144,
+     7144
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": 792.2,
     "y": 5911.8,
     "dz": 0.216,
@@ -9860,7 +15307,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 791.8,
     "y": 5932.8,
     "dz": 0.216,
@@ -9892,7 +15339,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 792.8,
     "y": 5932.2,
     "dz": 0.216,
@@ -9924,7 +15371,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 795.2,
     "y": 5931.2,
     "dz": 0.213,
@@ -9956,7 +15403,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 793.8,
     "y": 5931.8,
     "dz": 0.211,
@@ -9988,7 +15435,7 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
     "x": 792.8,
     "y": 5911.2,
     "dz": 0.207,
@@ -10018,330 +15465,11 @@
     ],
     "linked": true,
     "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 796.8,
-    "y": 5930.8,
-    "dz": 0.203,
-    "z": [
-     780.47,
-     780.68
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 794.8,
-    "y": 5931.2,
-    "dz": 0.201,
-    "z": [
-     780.59,
-     780.79
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 791.8,
-    "y": 5933.8,
-    "dz": 0.2,
-    "z": [
-     780.21,
-     780.01
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 792.2,
-    "y": 5932.2,
-    "dz": 0.198,
-    "z": [
-     780.81,
-     781.01
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 791.2,
-    "y": 5932.8,
-    "dz": 0.196,
-    "z": [
-     780.91,
-     781.1
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 793.2,
-    "y": 5931.8,
-    "dz": 0.196,
-    "z": [
-     780.74,
-     780.93
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 796.2,
-    "y": 5930.8,
-    "dz": 0.195,
-    "z": [
-     780.54,
-     780.74
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 793.2,
-    "y": 5910.8,
-    "dz": 0.192,
-    "z": [
-     782.14,
-     781.94
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 791.8,
-    "y": 5912.8,
-    "dz": 0.191,
-    "z": [
-     782.25,
-     782.06
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 794.2,
-    "y": 5931.2,
-    "dz": 0.189,
-    "z": [
-     780.7,
-     780.89
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7144,
-     7144
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
    }
   ],
   "n_jumps_cells": 210,
-  "n_jumps_level": 0
+  "n_jumps_relaxed": 210,
+  "n_jumps_level": 211
  },
  "castelrotto": {
   "cells": 3181,
@@ -10417,38 +15545,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -2400.2,
-    "y": 29.8,
-    "dz": 2.694,
-    "z": [
-     409.05,
-     406.36
-    ],
-    "lines": [
-     3686,
-     3696
-    ],
-    "line_names": [
-     "Castelrotto nucleo",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     295,
-     3601
-    ],
-    "poly_cls": [
-     "road",
-     "hard"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": -2400.8,
     "y": 28.8,
@@ -10481,13 +15577,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -2400.8,
-    "y": 29.2,
-    "dz": 2.636,
+    "what": "level",
+    "x": -2400.2,
+    "y": 29.8,
+    "dz": 2.674,
     "z": [
-     408.99,
-     406.35
+     409.05,
+     406.38
     ],
     "lines": [
      3686,
@@ -10513,13 +15609,13 @@
     "fold": false
    },
    {
-    "what": "level",
+    "what": "cells",
     "x": -2400.8,
     "y": 29.2,
-    "dz": 2.624,
+    "dz": 2.636,
     "z": [
-     408.98,
-     406.36
+     408.99,
+     406.35
     ],
     "lines": [
      3686,
@@ -10642,12 +15738,44 @@
    },
    {
     "what": "level",
+    "x": -2400.8,
+    "y": 29.2,
+    "dz": 2.604,
+    "z": [
+     408.98,
+     406.38
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
     "x": -2400.2,
     "y": 29.8,
-    "dz": 2.606,
+    "dz": 2.586,
     "z": [
      409.05,
-     406.45
+     406.46
     ],
     "lines": [
      3686,
@@ -10865,38 +15993,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -2399.8,
-    "y": 30.2,
-    "dz": 2.421,
-    "z": [
-     408.87,
-     406.45
-    ],
-    "lines": [
-     3686,
-     3696
-    ],
-    "line_names": [
-     "Castelrotto nucleo",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     295,
-     3601
-    ],
-    "poly_cls": [
-     "road",
-     "hard"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": -2399.2,
     "y": 33.2,
@@ -10932,10 +16028,42 @@
     "what": "level",
     "x": -2399.8,
     "y": 30.2,
-    "dz": 2.34,
+    "dz": 2.402,
     "z": [
      408.87,
-     406.53
+     406.46
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -2399.8,
+    "y": 30.2,
+    "dz": 2.322,
+    "z": [
+     408.87,
+     406.54
     ],
     "lines": [
      3686,
@@ -10996,10 +16124,10 @@
     "what": "level",
     "x": -2399.8,
     "y": 31.2,
-    "dz": 1.814,
+    "dz": 1.801,
     "z": [
      408.91,
-     407.1
+     407.11
     ],
     "lines": [
      3686,
@@ -11121,38 +16249,6 @@
     "fold": false
    },
    {
-    "what": "level",
-    "x": -2402.2,
-    "y": 37.2,
-    "dz": 1.616,
-    "z": [
-     407.7,
-     409.32
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     3604,
-     295
-    ],
-    "poly_cls": [
-     "hard",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
     "what": "cells",
     "x": -2397.8,
     "y": 34.2,
@@ -11192,70 +16288,6 @@
     "z": [
      407.81,
      409.37
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     3604,
-     295
-    ],
-    "poly_cls": [
-     "hard",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -2402.2,
-    "y": 37.2,
-    "dz": 1.551,
-    "z": [
-     407.7,
-     409.25
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     3604,
-     295
-    ],
-    "poly_cls": [
-     "hard",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -2402.2,
-    "y": 37.8,
-    "dz": 1.493,
-    "z": [
-     407.85,
-     409.34
     ],
     "lines": [
      3698,
@@ -11377,13 +16409,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -2401.2,
-    "y": 39.8,
-    "dz": 1.388,
+    "what": "level",
+    "x": -2402.2,
+    "y": 37.2,
+    "dz": 1.408,
     "z": [
-     408.21,
-     409.6
+     407.9,
+     409.3
     ],
     "lines": [
      3698,
@@ -11409,13 +16441,685 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": -2396.8,
+    "y": 33.8,
+    "dz": 2.684,
+    "z": [
+     409.58,
+     406.89
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": true
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.8,
+    "y": 30.2,
+    "dz": 2.67,
+    "z": [
+     409.13,
+     406.46
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2400.2,
+    "y": 29.8,
+    "dz": 2.669,
+    "z": [
+     409.04,
+     406.38
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2400.8,
+    "y": 28.8,
+    "dz": 2.657,
+    "z": [
+     408.96,
+     406.31
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2400.8,
+    "y": 29.2,
+    "dz": 2.612,
+    "z": [
+     408.99,
+     406.38
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.8,
+    "y": 30.8,
+    "dz": 2.587,
+    "z": [
+     409.16,
+     406.57
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2400.2,
+    "y": 29.8,
+    "dz": 2.587,
+    "z": [
+     409.04,
+     406.46
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.8,
+    "y": 30.2,
+    "dz": 2.581,
+    "z": [
+     409.13,
+     406.55
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.2,
+    "y": 31.8,
+    "dz": 2.58,
+    "z": [
+     409.21,
+     406.63
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.8,
+    "y": 31.2,
+    "dz": 2.554,
+    "z": [
+     409.18,
+     406.63
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.2,
+    "y": 31.8,
+    "dz": 2.507,
+    "z": [
+     409.21,
+     406.7
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.2,
+    "y": 32.2,
+    "dz": 2.491,
+    "z": [
+     409.24,
+     406.75
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.2,
+    "y": 32.8,
+    "dz": 2.469,
+    "z": [
+     409.28,
+     406.81
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.2,
+    "y": 33.2,
+    "dz": 2.439,
+    "z": [
+     409.31,
+     406.87
+    ],
+    "lines": [
+     3686,
+     3696
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     ""
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2397.8,
+    "y": 34.2,
+    "dz": 1.857,
+    "z": [
+     408.8,
+     406.95
+    ],
+    "lines": [
+     -2,
+     3696
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2399.2,
+    "y": 33.8,
+    "dz": 1.656,
+    "z": [
+     409.34,
+     407.68
+    ],
+    "lines": [
+     3686,
+     -2
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     "-2"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "-2"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2398.2,
+    "y": 34.2,
+    "dz": 1.549,
+    "z": [
+     408.49,
+     406.94
+    ],
+    "lines": [
+     -2,
+     3696
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2402.2,
+    "y": 37.2,
+    "dz": 1.494,
+    "z": [
+     407.81,
+     409.3
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2402.2,
+    "y": 37.8,
+    "dz": 1.423,
+    "z": [
+     407.91,
+     409.33
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2402.2,
+    "y": 37.2,
+    "dz": 1.41,
+    "z": [
+     407.81,
+     409.22
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": -2402.8,
+    "y": 37.2,
+    "dz": 1.389,
+    "z": [
+     407.76,
+     409.15
+    ],
+    "lines": [
+     3698,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "-2"
+    ],
+    "polys": [
+     3604,
+     3604
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": -2397.2,
     "y": 33.8,
-    "dz": 1.322,
+    "dz": 1.383,
     "z": [
      408.27,
-     406.94
+     406.88
     ],
     "lines": [
      -2,
@@ -11441,13 +17145,13 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -2401.2,
-    "y": 40.2,
-    "dz": 1.32,
+    "what": "relaxed",
+    "x": -2402.2,
+    "y": 38.2,
+    "dz": 1.362,
     "z": [
-     408.31,
-     409.63
+     408.01,
+     409.37
     ],
     "lines": [
      3698,
@@ -11473,7 +17177,39 @@
     "fold": false
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": -2397.8,
+    "y": 33.8,
+    "dz": 1.321,
+    "z": [
+     406.95,
+     408.27
+    ],
+    "lines": [
+     3696,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": -2397.2,
     "y": 33.8,
     "dz": 1.31,
@@ -11505,7 +17241,39 @@
     "fold": true
    },
    {
-    "what": "cells",
+    "what": "relaxed",
+    "x": -2401.8,
+    "y": 38.8,
+    "dz": 1.302,
+    "z": [
+     408.14,
+     409.44
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
     "x": -2397.2,
     "y": 34.2,
     "dz": 1.295,
@@ -11537,17 +17305,17 @@
     "fold": true
    },
    {
-    "what": "cells",
-    "x": -2398.2,
-    "y": 34.2,
-    "dz": 1.291,
+    "what": "relaxed",
+    "x": -2403.2,
+    "y": 37.2,
+    "dz": 1.266,
     "z": [
-     408.28,
-     406.99
+     409.02,
+     407.76
     ],
     "lines": [
      -2,
-     3696
+     3698
     ],
     "line_names": [
      "-2",
@@ -11555,58 +17323,58 @@
     ],
     "line_classes": [
      "-2",
-     "3m Strasse"
+     "1m Weg"
     ],
     "polys": [
-     295,
-     295
+     3604,
+     3604
     ],
     "poly_cls": [
-     "road",
-     "road"
+     "hard",
+     "hard"
     ],
     "linked": false,
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -2397.8,
-    "y": 33.8,
-    "dz": 1.266,
+    "what": "relaxed",
+    "x": -2401.2,
+    "y": 39.8,
+    "dz": 1.249,
     "z": [
-     407.0,
-     408.27
+     408.35,
+     409.6
     ],
     "lines": [
-     3696,
-     -2
+     3698,
+     3686
     ],
     "line_names": [
      "",
-     "-2"
+     "Castelrotto nucleo"
     ],
     "line_classes": [
-     "3m Strasse",
-     "-2"
+     "1m Weg",
+     "4m Strasse"
     ],
     "polys": [
-     295,
+     3604,
      295
     ],
     "poly_cls": [
-     "road",
+     "hard",
      "road"
     ],
     "linked": false,
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -2401.2,
-    "y": 39.8,
-    "dz": 1.255,
+    "what": "relaxed",
+    "x": -2401.8,
+    "y": 39.2,
+    "dz": 1.236,
     "z": [
-     408.21,
+     408.23,
      409.47
     ],
     "lines": [
@@ -11634,6 +17402,1941 @@
    }
   ],
   "n_jumps_cells": 713,
-  "n_jumps_level": 595
+  "n_jumps_relaxed": 613,
+  "n_jumps_level": 570
+ },
+ "mugena_bridge": {
+  "cells": 1108,
+  "fold_links": 140,
+  "strip_seams": {
+   "cells": 4,
+   "max_m": 0.847,
+   "over_0.08": 4
+  },
+  "jumps": [
+   {
+    "what": "cells",
+    "x": 1129.2,
+    "y": 6313.8,
+    "dz": 3.063,
+    "z": [
+     761.75,
+     764.81
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.8,
+    "y": 6313.2,
+    "dz": 2.19,
+    "z": [
+     762.72,
+     764.91
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.8,
+    "y": 6313.2,
+    "dz": 2.174,
+    "z": [
+     762.66,
+     764.83
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.8,
+    "y": 6313.2,
+    "dz": 2.159,
+    "z": [
+     762.66,
+     764.81
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.8,
+    "y": 6313.2,
+    "dz": 2.111,
+    "z": [
+     762.72,
+     764.83
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.8,
+    "y": 6313.8,
+    "dz": 2.069,
+    "z": [
+     762.76,
+     764.83
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.8,
+    "y": 6314.2,
+    "dz": 1.952,
+    "z": [
+     762.87,
+     764.83
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1117.2,
+    "y": 6306.2,
+    "dz": 1.903,
+    "z": [
+     767.22,
+     765.32
+    ],
+    "lines": [
+     -2,
+     5269
+    ],
+    "line_names": [
+     "-2",
+     "Stradón da Vésc"
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": true
+   },
+   {
+    "what": "level",
+    "x": 1128.8,
+    "y": 6314.8,
+    "dz": 1.826,
+    "z": [
+     763.0,
+     764.83
+    ],
+    "lines": [
+     -2,
+     -1
+    ],
+    "line_names": [
+     "-2",
+     "-1"
+    ],
+    "line_classes": [
+     "-2",
+     "-1"
+    ],
+    "polys": [
+     1310,
+     -1
+    ],
+    "poly_cls": [
+     "road",
+     "-"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1117.8,
+    "y": 6306.8,
+    "dz": 1.652,
+    "z": [
+     766.91,
+     765.26
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "level",
+    "x": 1128.2,
+    "y": 6312.8,
+    "dz": 1.396,
+    "z": [
+     763.53,
+     764.92
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.2,
+    "y": 6312.8,
+    "dz": 1.381,
+    "z": [
+     763.53,
+     764.91
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.2,
+    "y": 6315.2,
+    "dz": 1.35,
+    "z": [
+     765.1,
+     763.75
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6312.8,
+    "dz": 1.348,
+    "z": [
+     763.49,
+     764.84
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6312.8,
+    "dz": 1.336,
+    "z": [
+     763.49,
+     764.83
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1118.2,
+    "y": 6307.2,
+    "dz": 1.325,
+    "z": [
+     766.59,
+     765.26
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "level",
+    "x": 1127.8,
+    "y": 6314.8,
+    "dz": 1.303,
+    "z": [
+     765.05,
+     763.75
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1117.8,
+    "y": 6306.2,
+    "dz": 1.158,
+    "z": [
+     766.41,
+     765.25
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1117.8,
+    "y": 6306.2,
+    "dz": 1.129,
+    "z": [
+     766.41,
+     765.28
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1128.8,
+    "y": 6313.8,
+    "dz": 0.96,
+    "z": [
+     762.71,
+     761.75
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.8,
+    "y": 6314.2,
+    "dz": 0.954,
+    "z": [
+     762.83,
+     761.87
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6315.2,
+    "dz": 0.866,
+    "z": [
+     764.09,
+     763.22
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6314.8,
+    "dz": 0.863,
+    "z": [
+     763.85,
+     762.99
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6313.2,
+    "dz": 0.859,
+    "z": [
+     763.51,
+     762.66
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6313.8,
+    "dz": 0.858,
+    "z": [
+     763.57,
+     762.71
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1128.2,
+    "y": 6314.2,
+    "dz": 0.852,
+    "z": [
+     763.68,
+     762.83
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.2,
+    "y": 6313.8,
+    "dz": 0.849,
+    "z": [
+     763.61,
+     762.76
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 1128.2,
+    "y": 6313.2,
+    "dz": 0.849,
+    "z": [
+     763.57,
+     762.72
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1118.2,
+    "y": 6308.2,
+    "dz": 0.833,
+    "z": [
+     767.51,
+     766.68
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1117.8,
+    "y": 6307.2,
+    "dz": 0.818,
+    "z": [
+     767.4,
+     766.59
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1129.2,
+    "y": 6313.8,
+    "dz": 3.079,
+    "z": [
+     761.81,
+     764.89
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.8,
+    "y": 6313.2,
+    "dz": 2.191,
+    "z": [
+     762.72,
+     764.91
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.8,
+    "y": 6313.2,
+    "dz": 2.176,
+    "z": [
+     762.72,
+     764.89
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6312.8,
+    "dz": 1.37,
+    "z": [
+     763.55,
+     764.92
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6312.8,
+    "dz": 1.355,
+    "z": [
+     763.55,
+     764.91
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.8,
+    "y": 6313.8,
+    "dz": 0.96,
+    "z": [
+     762.77,
+     761.81
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.8,
+    "y": 6314.2,
+    "dz": 0.954,
+    "z": [
+     762.89,
+     761.93
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1127.8,
+    "y": 6315.8,
+    "dz": 0.938,
+    "z": [
+     765.17,
+     764.23
+    ],
+    "lines": [
+     1764,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "2m Weg",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6315.2,
+    "dz": 0.869,
+    "z": [
+     763.93,
+     763.06
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6314.8,
+    "dz": 0.864,
+    "z": [
+     763.92,
+     763.06
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6313.2,
+    "dz": 0.858,
+    "z": [
+     763.58,
+     762.72
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6313.8,
+    "dz": 0.856,
+    "z": [
+     763.63,
+     762.77
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1128.2,
+    "y": 6314.2,
+    "dz": 0.85,
+    "z": [
+     763.74,
+     762.89
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1121.8,
+    "y": 6315.8,
+    "dz": 0.827,
+    "z": [
+     765.3,
+     764.48
+    ],
+    "lines": [
+     1764,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "2m Weg",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1117.2,
+    "y": 6306.2,
+    "dz": 0.811,
+    "z": [
+     766.0,
+     765.19
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1118.2,
+    "y": 6308.2,
+    "dz": 0.81,
+    "z": [
+     766.49,
+     765.68
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1121.8,
+    "y": 6312.8,
+    "dz": 0.809,
+    "z": [
+     764.34,
+     765.15
+    ],
+    "lines": [
+     -2,
+     3610
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     1309,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1121.8,
+    "y": 6312.8,
+    "dz": 0.786,
+    "z": [
+     764.34,
+     765.13
+    ],
+    "lines": [
+     -2,
+     1764
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1118.8,
+    "y": 6308.8,
+    "dz": 0.783,
+    "z": [
+     766.13,
+     765.35
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1121.8,
+    "y": 6315.2,
+    "dz": 0.778,
+    "z": [
+     764.48,
+     765.26
+    ],
+    "lines": [
+     -2,
+     1764
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1127.8,
+    "y": 6316.2,
+    "dz": 0.771,
+    "z": [
+     765.22,
+     764.45
+    ],
+    "lines": [
+     1764,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "2m Weg",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1127.8,
+    "y": 6312.8,
+    "dz": 0.769,
+    "z": [
+     764.32,
+     763.55
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1119.2,
+    "y": 6309.8,
+    "dz": 0.766,
+    "z": [
+     766.27,
+     765.5
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1118.8,
+    "y": 6308.2,
+    "dz": 0.765,
+    "z": [
+     765.68,
+     764.91
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1127.8,
+    "y": 6313.2,
+    "dz": 0.748,
+    "z": [
+     764.32,
+     763.58
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1119.8,
+    "y": 6310.2,
+    "dz": 0.732,
+    "z": [
+     765.91,
+     765.18
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1127.8,
+    "y": 6313.8,
+    "dz": 0.727,
+    "z": [
+     764.36,
+     763.63
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1119.2,
+    "y": 6309.2,
+    "dz": 0.723,
+    "z": [
+     765.82,
+     765.09
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1118.2,
+    "y": 6307.8,
+    "dz": 0.722,
+    "z": [
+     765.99,
+     765.27
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1310,
+     1310
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "relaxed",
+    "x": 1127.8,
+    "y": 6315.2,
+    "dz": 0.708,
+    "z": [
+     764.64,
+     763.93
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     1309,
+     1309
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   }
+  ],
+  "n_jumps_cells": 132,
+  "n_jumps_relaxed": 118,
+  "n_jumps_level": 113
  }
 }
