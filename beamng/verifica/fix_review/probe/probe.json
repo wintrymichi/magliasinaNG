@@ -1,7 +1,12 @@
 {
  "astano_hairpin": {
   "cells": 984,
-  "fold_links": 0,
+  "fold_links": 62,
+  "strip_seams": {
+   "cells": 25,
+   "max_m": 0.135,
+   "over_0.08": 21
+  },
   "jumps": [
    {
     "what": "cells",
@@ -869,6 +874,38 @@
    },
    {
     "what": "cells",
+    "x": -3700.2,
+    "y": 2143.8,
+    "dz": 0.711,
+    "z": [
+     603.48,
+     602.77
+    ],
+    "lines": [
+     2329,
+     4201
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
     "x": -3698.8,
     "y": 2143.2,
     "dz": 0.695,
@@ -891,6 +928,70 @@
     "polys": [
      283,
      254
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -3699.2,
+    "y": 2143.8,
+    "dz": 0.669,
+    "z": [
+     603.46,
+     602.79
+    ],
+    "lines": [
+     2329,
+     4201
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -3699.8,
+    "y": 2143.8,
+    "dz": 0.611,
+    "z": [
+     603.39,
+     602.78
+    ],
+    "lines": [
+     2329,
+     4201
+    ],
+    "line_names": [
+     "",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     254,
+     283
     ],
     "poly_cls": [
      "road",
@@ -929,262 +1030,6 @@
      "road"
     ],
     "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3701.8,
-    "y": 2136.8,
-    "dz": 0.587,
-    "z": [
-     602.43,
-     601.84
-    ],
-    "lines": [
-     4201,
-     2329
-    ],
-    "line_names": [
-     "Via Agostino de Marchi",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3701.2,
-    "y": 2137.2,
-    "dz": 0.586,
-    "z": [
-     602.43,
-     601.84
-    ],
-    "lines": [
-     4201,
-     2329
-    ],
-    "line_names": [
-     "Via Agostino de Marchi",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3699.2,
-    "y": 2143.2,
-    "dz": 0.551,
-    "z": [
-     603.34,
-     602.79
-    ],
-    "lines": [
-     2329,
-     4201
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3699.2,
-    "y": 2142.8,
-    "dz": 0.502,
-    "z": [
-     603.22,
-     602.72
-    ],
-    "lines": [
-     2329,
-     4201
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3699.2,
-    "y": 2142.8,
-    "dz": 0.466,
-    "z": [
-     603.22,
-     602.76
-    ],
-    "lines": [
-     2329,
-     4201
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3700.8,
-    "y": 2136.8,
-    "dz": 0.415,
-    "z": [
-     601.9,
-     602.32
-    ],
-    "lines": [
-     2329,
-     3127
-    ],
-    "line_names": [
-     "",
-     "Via Agostino de Marchi"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3700.2,
-    "y": 2143.8,
-    "dz": 0.378,
-    "z": [
-     603.48,
-     603.11
-    ],
-    "lines": [
-     2329,
-     2329
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "1m Weg",
-     "1m Weg"
-    ],
-    "polys": [
-     254,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -3700.8,
-    "y": 2143.2,
-    "dz": 0.34,
-    "z": [
-     602.77,
-     603.11
-    ],
-    "lines": [
-     4201,
-     2329
-    ],
-    "line_names": [
-     "Via Agostino de Marchi",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     283,
-     283
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
     "fold": false
    },
    {
@@ -1282,23 +1127,188 @@
     ],
     "linked": true,
     "fold": false
+   },
+   {
+    "what": "level",
+    "x": -3709.2,
+    "y": 2141.2,
+    "dz": 0.286,
+    "z": [
+     602.62,
+     602.9
+    ],
+    "lines": [
+     4201,
+     4201
+    ],
+    "line_names": [
+     "Via Agostino de Marchi",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     283,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -3708.8,
+    "y": 2141.2,
+    "dz": 0.286,
+    "z": [
+     602.9,
+     602.62
+    ],
+    "lines": [
+     4201,
+     4201
+    ],
+    "line_names": [
+     "Via Agostino de Marchi",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     283,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -3708.8,
+    "y": 2140.8,
+    "dz": 0.284,
+    "z": [
+     602.62,
+     602.9
+    ],
+    "lines": [
+     4201,
+     4201
+    ],
+    "line_names": [
+     "Via Agostino de Marchi",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     283,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -3708.2,
+    "y": 2140.2,
+    "dz": 0.284,
+    "z": [
+     602.62,
+     602.9
+    ],
+    "lines": [
+     4201,
+     4201
+    ],
+    "line_names": [
+     "Via Agostino de Marchi",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     283,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -3708.2,
+    "y": 2140.8,
+    "dz": 0.284,
+    "z": [
+     602.9,
+     602.62
+    ],
+    "lines": [
+     4201,
+     4201
+    ],
+    "line_names": [
+     "Via Agostino de Marchi",
+     "Via Agostino de Marchi"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     283,
+     283
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
    }
   ],
-  "n_jumps_cells": 372,
+  "n_jumps_cells": 358,
   "n_jumps_level": 232
  },
  "selva_bella": {
   "cells": 1205,
-  "fold_links": 0,
+  "fold_links": 321,
+  "strip_seams": {
+   "cells": 83,
+   "max_m": 0.441,
+   "over_0.08": 41
+  },
   "jumps": [
    {
     "what": "cells",
-    "x": -1909.2,
-    "y": 2447.8,
-    "dz": 0.618,
+    "x": -1905.2,
+    "y": 2441.2,
+    "dz": 1.804,
     "z": [
-     735.59,
-     734.97
+     736.02,
+     734.22
     ],
     "lines": [
      1208,
@@ -1319,637 +1329,29 @@
     "poly_cls": [
      "road",
      "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1909.8,
-    "y": 2447.8,
-    "dz": 0.549,
-    "z": [
-     735.04,
-     735.59
-    ],
-    "lines": [
-     5775,
-     1208
-    ],
-    "line_names": [
-     "",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "2m Weg",
-     "3m Strasse"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1909.8,
-    "y": 2448.2,
-    "dz": 0.54,
-    "z": [
-     735.58,
-     735.04
-    ],
-    "lines": [
-     1208,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1910.2,
-    "y": 2448.2,
-    "dz": 0.503,
-    "z": [
-     735.56,
-     735.06
-    ],
-    "lines": [
-     1208,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1910.8,
-    "y": 2448.2,
-    "dz": 0.447,
-    "z": [
-     735.12,
-     735.56
-    ],
-    "lines": [
-     5775,
-     1208
-    ],
-    "line_names": [
-     "",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "2m Weg",
-     "3m Strasse"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1910.8,
-    "y": 2448.8,
-    "dz": 0.356,
-    "z": [
-     735.47,
-     735.12
-    ],
-    "lines": [
-     1208,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1910.8,
-    "y": 2449.2,
-    "dz": 0.217,
-    "z": [
-     735.32,
-     735.53
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1911.2,
-    "y": 2448.8,
-    "dz": 0.198,
-    "z": [
-     735.27,
-     735.47
-    ],
-    "lines": [
-     5775,
-     1208
-    ],
-    "line_names": [
-     "",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "2m Weg",
-     "3m Strasse"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1911.2,
-    "y": 2449.2,
-    "dz": 0.172,
-    "z": [
-     735.45,
-     735.27
-    ],
-    "lines": [
-     1208,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1910.8,
-    "y": 2449.8,
-    "dz": 0.161,
-    "z": [
-     735.36,
-     735.52
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1911.8,
-    "y": 2449.2,
-    "dz": 0.143,
-    "z": [
-     735.3,
-     735.45
-    ],
-    "lines": [
-     5775,
-     1208
-    ],
-    "line_names": [
-     "",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "2m Weg",
-     "3m Strasse"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1910.2,
-    "y": 2450.2,
-    "dz": 0.135,
-    "z": [
-     735.38,
-     735.52
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1909.8,
-    "y": 2450.2,
-    "dz": 0.13,
-    "z": [
-     735.41,
-     735.54
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1913.8,
-    "y": 2454.2,
-    "dz": 0.129,
-    "z": [
-     735.28,
-     735.41
-    ],
-    "lines": [
-     5502,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1911.2,
-    "y": 2448.8,
-    "dz": 0.128,
-    "z": [
-     735.27,
-     735.14
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1911.8,
-    "y": 2449.8,
-    "dz": 0.116,
-    "z": [
-     735.42,
-     735.3
-    ],
-    "lines": [
-     1208,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1909.2,
-    "y": 2449.8,
-    "dz": 0.115,
-    "z": [
-     735.45,
-     735.57
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1913.2,
-    "y": 2453.8,
-    "dz": 0.114,
-    "z": [
-     735.35,
-     735.47
-    ],
-    "lines": [
-     5502,
-     5775
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1918.2,
-    "y": 2434.2,
-    "dz": 0.113,
-    "z": [
-     729.08,
-     729.19
-    ],
-    "lines": [
-     -1,
-     -1
-    ],
-    "line_names": [
-     "-1",
-     "-1"
-    ],
-    "line_classes": [
-     "-1",
-     "-1"
-    ],
-    "polys": [
-     -1,
-     -1
-    ],
-    "poly_cls": [
-     "-",
-     "-"
     ],
     "linked": false,
     "fold": false
    },
    {
-    "what": "level",
-    "x": -1920.2,
-    "y": 2434.2,
-    "dz": 0.112,
+    "what": "cells",
+    "x": -1905.8,
+    "y": 2441.2,
+    "dz": 1.751,
     "z": [
-     728.88,
-     728.99
+     736.0,
+     734.25
     ],
     "lines": [
-     5775,
+     1208,
      5775
     ],
     "line_names": [
-     "",
+     "Via Selva Bella",
      ""
     ],
     "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     553,
-     553
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1911.8,
-    "y": 2447.2,
-    "dz": 0.11,
-    "z": [
-     735.14,
-     735.03
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
+     "3m Strasse",
      "2m Weg"
     ],
     "polys": [
@@ -1960,52 +1362,84 @@
      "road",
      "road"
     ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1909.8,
-    "y": 2445.8,
-    "dz": 0.109,
-    "z": [
-     734.91,
-     734.81
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
+    "linked": false,
     "fold": false
    },
    {
     "what": "cells",
-    "x": -1920.2,
-    "y": 2453.8,
-    "dz": 0.107,
+    "x": -1906.2,
+    "y": 2441.2,
+    "dz": 1.685,
     "z": [
-     735.21,
-     735.1
+     734.31,
+     736.0
     ],
     "lines": [
-     5502,
+     5775,
+     1208
+    ],
+    "line_names": [
+     "",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1906.2,
+    "y": 2441.8,
+    "dz": 1.632,
+    "z": [
+     735.95,
+     734.31
+    ],
+    "lines": [
+     1208,
+     5775
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1903.8,
+    "y": 2440.8,
+    "dz": 1.244,
+    "z": [
+     736.15,
+     734.9
+    ],
+    "lines": [
+     1208,
      -2
     ],
     "line_names": [
@@ -2017,408 +1451,152 @@
      "-2"
     ],
     "polys": [
-     529,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1908.8,
-    "y": 2449.8,
-    "dz": 0.099,
-    "z": [
-     735.48,
-     735.58
-    ],
-    "lines": [
-     1208,
-     1208
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "Via Selva Bella"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     529,
-     529
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1918.2,
-    "y": 2434.8,
-    "dz": 0.096,
-    "z": [
-     729.07,
-     729.16
-    ],
-    "lines": [
-     -1,
-     -1
-    ],
-    "line_names": [
-     "-1",
-     "-1"
-    ],
-    "line_classes": [
-     "-1",
-     "-1"
-    ],
-    "polys": [
-     -1,
-     -1
-    ],
-    "poly_cls": [
-     "-",
-     "-"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1928.8,
-    "y": 2439.8,
-    "dz": 0.096,
-    "z": [
-     727.6,
-     727.69
-    ],
-    "lines": [
-     5773,
-     5773
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     553,
-     553
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1920.2,
-    "y": 2434.8,
-    "dz": 0.095,
-    "z": [
-     728.88,
-     728.98
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     553,
-     553
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1912.2,
-    "y": 2447.8,
-    "dz": 0.094,
-    "z": [
-     735.18,
-     735.08
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
      526,
      526
     ],
     "poly_cls": [
      "road",
      "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1908.2,
-    "y": 2449.2,
-    "dz": 0.093,
-    "z": [
-     735.52,
-     735.61
-    ],
-    "lines": [
-     5502,
-     -1
-    ],
-    "line_names": [
-     "Via Selva Bella",
-     "-1"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "-1"
-    ],
-    "polys": [
-     529,
-     -1
-    ],
-    "poly_cls": [
-     "road",
-     "-"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1911.8,
-    "y": 2446.2,
-    "dz": 0.09,
-    "z": [
-     734.96,
-     735.05
-    ],
-    "lines": [
-     -1,
-     5775
-    ],
-    "line_names": [
-     "-1",
-     ""
-    ],
-    "line_classes": [
-     "-1",
-     "2m Weg"
-    ],
-    "polys": [
-     -1,
-     526
-    ],
-    "poly_cls": [
-     "-",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1926.2,
-    "y": 2435.8,
-    "dz": 0.087,
-    "z": [
-     728.15,
-     728.24
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     553,
-     553
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1912.2,
-    "y": 2432.2,
-    "dz": 0.087,
-    "z": [
-     729.73,
-     729.81
-    ],
-    "lines": [
-     -1,
-     -1
-    ],
-    "line_names": [
-     "-1",
-     "-1"
-    ],
-    "line_classes": [
-     "-1",
-     "-1"
-    ],
-    "polys": [
-     -1,
-     -1
-    ],
-    "poly_cls": [
-     "-",
-     "-"
     ],
     "linked": false,
     "fold": false
    },
    {
     "what": "cells",
-    "x": -1911.8,
-    "y": 2449.2,
-    "dz": 0.087,
+    "x": -1904.2,
+    "y": 2440.8,
+    "dz": 1.203,
     "z": [
-     735.3,
-     735.22
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1909.2,
-    "y": 2446.2,
-    "dz": 0.087,
-    "z": [
-     734.92,
-     734.83
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     526,
-     526
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -1921.2,
-    "y": 2453.8,
-    "dz": 0.085,
-    "z": [
-     735.12,
-     735.21
+     735.33,
+     734.13
     ],
     "lines": [
      -2,
-     5502
+     5775
     ],
     "line_names": [
      "-2",
-     "Via Selva Bella"
+     ""
     ],
     "line_classes": [
      "-2",
-     "3m Strasse"
+     "2m Weg"
     ],
     "polys": [
      526,
-     529
+     526
     ],
     "poly_cls": [
      "road",
      "road"
     ],
-    "linked": true,
+    "linked": false,
     "fold": false
    },
    {
-    "what": "level",
-    "x": -1909.8,
-    "y": 2449.8,
-    "dz": 0.084,
+    "what": "cells",
+    "x": -1904.8,
+    "y": 2441.2,
+    "dz": 1.109,
     "z": [
-     735.54,
-     735.45
+     736.05,
+     734.94
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1898.8,
+    "y": 2439.2,
+    "dz": 1.021,
+    "z": [
+     736.44,
+     735.42
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1903.2,
+    "y": 2440.8,
+    "dz": 0.899,
+    "z": [
+     736.17,
+     735.27
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1909.2,
+    "y": 2444.8,
+    "dz": 0.871,
+    "z": [
+     734.77,
+     735.64
     ],
     "lines": [
      1208,
@@ -2433,60 +1611,28 @@
      "3m Strasse"
     ],
     "polys": [
-     529,
-     529
+     526,
+     526
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
-    "what": "level",
-    "x": -1918.8,
-    "y": 2437.2,
-    "dz": 0.084,
+    "what": "cells",
+    "x": -1909.8,
+    "y": 2444.2,
+    "dz": 0.871,
     "z": [
-     728.97,
-     729.06
-    ],
-    "lines": [
-     5775,
-     5775
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     553,
-     553
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": -1907.8,
-    "y": 2449.2,
-    "dz": 0.084,
-    "z": [
-     735.55,
+     734.76,
      735.63
     ],
     "lines": [
-     5502,
-     5502
+     1208,
+     1208
     ],
     "line_names": [
      "Via Selva Bella",
@@ -2497,36 +1643,452 @@
      "3m Strasse"
     ],
     "polys": [
-     529,
-     529
+     526,
+     526
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1901.8,
+    "y": 2440.2,
+    "dz": 0.858,
+    "z": [
+     736.25,
+     735.39
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
     "fold": false
    },
    {
-    "what": "level",
-    "x": -1909.8,
-    "y": 2445.8,
-    "dz": 0.082,
+    "what": "cells",
+    "x": -1909.2,
+    "y": 2444.8,
+    "dz": 0.856,
     "z": [
-     734.91,
-     734.83
+     734.77,
+     735.63
     ],
     "lines": [
-     5775,
+     1208,
+     1208
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1909.2,
+    "y": 2445.2,
+    "dz": 0.845,
+    "z": [
+     735.62,
+     734.77
+    ],
+    "lines": [
+     1208,
+     1208
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1903.8,
+    "y": 2440.2,
+    "dz": 0.84,
+    "z": [
+     734.9,
+     734.06
+    ],
+    "lines": [
+     -2,
      5775
     ],
     "line_names": [
-     "",
+     "-2",
      ""
     ],
     "line_classes": [
-     "2m Weg",
+     "-2",
      "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1900.2,
+    "y": 2439.8,
+    "dz": 0.832,
+    "z": [
+     736.35,
+     735.52
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1904.2,
+    "y": 2440.8,
+    "dz": 0.817,
+    "z": [
+     735.33,
+     736.15
+    ],
+    "lines": [
+     -2,
+     1208
+    ],
+    "line_names": [
+     "-2",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "-2",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1902.8,
+    "y": 2439.8,
+    "dz": 0.796,
+    "z": [
+     734.77,
+     733.97
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1904.8,
+    "y": 2440.8,
+    "dz": 0.786,
+    "z": [
+     734.94,
+     734.16
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1909.8,
+    "y": 2445.2,
+    "dz": 0.777,
+    "z": [
+     734.84,
+     735.62
+    ],
+    "lines": [
+     1208,
+     1208
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1904.2,
+    "y": 2440.2,
+    "dz": 0.776,
+    "z": [
+     734.13,
+     734.9
+    ],
+    "lines": [
+     5775,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "2m Weg",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1904.2,
+    "y": 2441.2,
+    "dz": 0.774,
+    "z": [
+     736.1,
+     735.33
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1909.8,
+    "y": 2445.8,
+    "dz": 0.773,
+    "z": [
+     735.61,
+     734.84
+    ],
+    "lines": [
+     1208,
+     1208
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1901.8,
+    "y": 2439.2,
+    "dz": 0.773,
+    "z": [
+     734.65,
+     733.88
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1903.2,
+    "y": 2440.2,
+    "dz": 0.747,
+    "z": [
+     735.27,
+     734.53
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
     ],
     "polys": [
      526,
@@ -2541,24 +2103,472 @@
    },
    {
     "what": "cells",
-    "x": -1912.2,
-    "y": 2449.8,
-    "dz": 0.081,
+    "x": -1901.8,
+    "y": 2439.8,
+    "dz": 0.745,
     "z": [
-     735.34,
-     735.42
+     735.39,
+     734.65
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1900.8,
+    "y": 2438.8,
+    "dz": 0.74,
+    "z": [
+     734.52,
+     733.78
+    ],
+    "lines": [
+     -2,
+     5775
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "2m Weg"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1902.8,
+    "y": 2440.2,
+    "dz": 0.729,
+    "z": [
+     735.49,
+     734.77
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1905.2,
+    "y": 2440.8,
+    "dz": 0.72,
+    "z": [
+     734.22,
+     734.94
     ],
     "lines": [
      5775,
-     1208
+     -2
     ],
     "line_names": [
      "",
-     "Via Selva Bella"
+     "-2"
     ],
     "line_classes": [
      "2m Weg",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1910.2,
+    "y": 2445.8,
+    "dz": 0.706,
+    "z": [
+     734.91,
+     735.61
+    ],
+    "lines": [
+     1208,
+     1208
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "3m Strasse",
      "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1910.2,
+    "y": 2446.2,
+    "dz": 0.702,
+    "z": [
+     735.61,
+     734.91
+    ],
+    "lines": [
+     1208,
+     1208
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "Via Selva Bella"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -1902.8,
+    "y": 2440.8,
+    "dz": 0.701,
+    "z": [
+     736.2,
+     735.49
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1900.2,
+    "y": 2439.2,
+    "dz": 0.701,
+    "z": [
+     735.52,
+     734.82
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1899.2,
+    "y": 2439.2,
+    "dz": 0.687,
+    "z": [
+     735.96,
+     735.27
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1900.8,
+    "y": 2439.2,
+    "dz": 0.686,
+    "z": [
+     735.21,
+     734.52
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1901.2,
+    "y": 2439.8,
+    "dz": 0.679,
+    "z": [
+     735.61,
+     734.93
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1902.2,
+    "y": 2440.2,
+    "dz": 0.678,
+    "z": [
+     735.75,
+     735.08
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1902.2,
+    "y": 2439.8,
+    "dz": 0.676,
+    "z": [
+     735.08,
+     734.4
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1901.2,
+    "y": 2440.2,
+    "dz": 0.664,
+    "z": [
+     736.28,
+     735.61
+    ],
+    "lines": [
+     1208,
+     -2
+    ],
+    "line_names": [
+     "Via Selva Bella",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
+    ],
+    "polys": [
+     526,
+     526
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -1898.8,
+    "y": 2438.8,
+    "dz": 0.663,
+    "z": [
+     735.42,
+     734.76
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
     ],
     "polys": [
      526,
@@ -2572,12 +2582,17 @@
     "fold": false
    }
   ],
-  "n_jumps_cells": 17,
+  "n_jumps_cells": 176,
   "n_jumps_level": 34
  },
  "arosio": {
   "cells": 2843,
-  "fold_links": 0,
+  "fold_links": 346,
+  "strip_seams": {
+   "cells": 141,
+   "max_m": 0.187,
+   "over_0.08": 23
+  },
   "jumps": [
    {
     "what": "cells",
@@ -2773,38 +2788,6 @@
    },
    {
     "what": "cells",
-    "x": 2171.8,
-    "y": 6393.2,
-    "dz": 0.599,
-    "z": [
-     851.72,
-     851.12
-    ],
-    "lines": [
-     301,
-     308
-    ],
-    "line_names": [
-     "Möi",
-     "Via alla Chiesa di San Michele"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
-    ],
-    "polys": [
-     1578,
-     1578
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
     "x": 2179.8,
     "y": 6396.8,
     "dz": 0.579,
@@ -2855,38 +2838,6 @@
     "line_classes": [
      "4m Strasse",
      "3m Strasse"
-    ],
-    "polys": [
-     1578,
-     1578
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2172.2,
-    "y": 6393.8,
-    "dz": 0.485,
-    "z": [
-     851.61,
-     851.12
-    ],
-    "lines": [
-     301,
-     308
-    ],
-    "line_names": [
-     "Möi",
-     "Via alla Chiesa di San Michele"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
     ],
     "polys": [
      1578,
@@ -2965,6 +2916,38 @@
    },
    {
     "what": "cells",
+    "x": 2172.2,
+    "y": 6392.2,
+    "dz": 0.466,
+    "z": [
+     851.51,
+     851.04
+    ],
+    "lines": [
+     308,
+     308
+    ],
+    "line_names": [
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
     "x": 2178.8,
     "y": 6396.8,
     "dz": 0.434,
@@ -2997,6 +2980,102 @@
    },
    {
     "what": "cells",
+    "x": 2161.2,
+    "y": 6384.8,
+    "dz": 0.429,
+    "z": [
+     853.83,
+     853.4
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2172.8,
+    "y": 6392.2,
+    "dz": 0.413,
+    "z": [
+     851.44,
+     851.03
+    ],
+    "lines": [
+     308,
+     308
+    ],
+    "line_names": [
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2172.8,
+    "y": 6392.2,
+    "dz": 0.411,
+    "z": [
+     851.44,
+     851.03
+    ],
+    "lines": [
+     308,
+     308
+    ],
+    "line_names": [
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
     "x": 2170.2,
     "y": 6399.2,
     "dz": 0.407,
@@ -3026,6 +3105,134 @@
     ],
     "linked": false,
     "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2172.8,
+    "y": 6392.8,
+    "dz": 0.395,
+    "z": [
+     851.47,
+     851.08
+    ],
+    "lines": [
+     308,
+     308
+    ],
+    "line_names": [
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 2161.2,
+    "y": 6384.8,
+    "dz": 0.382,
+    "z": [
+     853.83,
+     853.44
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2172.8,
+    "y": 6393.2,
+    "dz": 0.372,
+    "z": [
+     851.5,
+     851.13
+    ],
+    "lines": [
+     308,
+     308
+    ],
+    "line_names": [
+     "Via alla Chiesa di San Michele",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 2162.8,
+    "y": 6385.2,
+    "dz": 0.366,
+    "z": [
+     853.62,
+     853.26
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
    },
    {
     "what": "cells",
@@ -3125,6 +3332,70 @@
    },
    {
     "what": "cells",
+    "x": 2161.8,
+    "y": 6385.2,
+    "dz": 0.33,
+    "z": [
+     853.73,
+     853.4
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2162.8,
+    "y": 6385.8,
+    "dz": 0.326,
+    "z": [
+     853.57,
+     853.25
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
     "x": 2172.2,
     "y": 6407.8,
     "dz": 0.324,
@@ -3183,6 +3454,38 @@
     "poly_cls": [
      "hard",
      "hard"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2162.2,
+    "y": 6385.2,
+    "dz": 0.319,
+    "z": [
+     853.68,
+     853.36
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
     ],
     "linked": true,
     "fold": false
@@ -3317,6 +3620,38 @@
    },
    {
     "what": "cells",
+    "x": 2162.8,
+    "y": 6385.2,
+    "dz": 0.306,
+    "z": [
+     853.62,
+     853.32
+    ],
+    "lines": [
+     312,
+     312
+    ],
+    "line_names": [
+     "Möi",
+     "Möi"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1584,
+     1584
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
     "x": 2174.2,
     "y": 6406.8,
     "dz": 0.305,
@@ -3375,38 +3710,6 @@
     "poly_cls": [
      "hard",
      "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2172.2,
-    "y": 6393.8,
-    "dz": 0.303,
-    "z": [
-     851.61,
-     851.31
-    ],
-    "lines": [
-     301,
-     308
-    ],
-    "line_names": [
-     "Möi",
-     "Via alla Chiesa di San Michele"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
-    ],
-    "polys": [
-     1578,
-     1578
-    ],
-    "poly_cls": [
-     "road",
-     "road"
     ],
     "linked": true,
     "fold": false
@@ -3509,6 +3812,38 @@
    },
    {
     "what": "cells",
+    "x": 2172.2,
+    "y": 6393.8,
+    "dz": 0.299,
+    "z": [
+     851.6,
+     851.31
+    ],
+    "lines": [
+     301,
+     308
+    ],
+    "line_names": [
+     "Möi",
+     "Via alla Chiesa di San Michele"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "4m Strasse"
+    ],
+    "polys": [
+     1578,
+     1578
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
     "x": 2178.2,
     "y": 6396.2,
     "dz": 0.298,
@@ -3538,335 +3873,148 @@
     ],
     "linked": true,
     "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2172.8,
-    "y": 6406.8,
-    "dz": 0.298,
-    "z": [
-     853.28,
-     852.98
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2173.8,
-    "y": 6406.8,
-    "dz": 0.297,
-    "z": [
-     853.32,
-     853.02
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2173.8,
-    "y": 6406.8,
-    "dz": 0.295,
-    "z": [
-     853.32,
-     853.02
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2173.2,
-    "y": 6406.8,
-    "dz": 0.291,
-    "z": [
-     853.29,
-     853.0
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2175.8,
-    "y": 6406.2,
-    "dz": 0.29,
-    "z": [
-     853.08,
-     852.79
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2172.2,
-    "y": 6407.2,
-    "dz": 0.29,
-    "z": [
-     853.54,
-     853.25
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2172.8,
-    "y": 6407.2,
-    "dz": 0.29,
-    "z": [
-     853.57,
-     853.28
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "level",
-    "x": 2172.2,
-    "y": 6406.8,
-    "dz": 0.29,
-    "z": [
-     853.25,
-     852.96
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2172.8,
-    "y": 6406.8,
-    "dz": 0.287,
-    "z": [
-     853.26,
-     852.97
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 2172.2,
-    "y": 6406.8,
-    "dz": 0.284,
-    "z": [
-     853.23,
-     852.95
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     8458,
-     8458
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
    }
   ],
-  "n_jumps_cells": 286,
+  "n_jumps_cells": 289,
   "n_jumps_level": 199
  },
  "fescoggia": {
   "cells": 2752,
-  "fold_links": 1,
+  "fold_links": 269,
+  "strip_seams": {
+   "cells": 121,
+   "max_m": 0.448,
+   "over_0.08": 30
+  },
   "jumps": [
+   {
+    "what": "cells",
+    "x": 501.2,
+    "y": 5410.8,
+    "dz": 0.938,
+    "z": [
+     839.27,
+     840.2
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 501.2,
+    "y": 5411.2,
+    "dz": 0.922,
+    "z": [
+     840.19,
+     839.27
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 500.8,
+    "y": 5411.2,
+    "dz": 0.909,
+    "z": [
+     839.28,
+     840.19
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 499.2,
+    "y": 5412.8,
+    "dz": 0.869,
+    "z": [
+     840.11,
+     839.24
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
    {
     "what": "cells",
     "x": 514.8,
@@ -3901,35 +4049,67 @@
    },
    {
     "what": "cells",
-    "x": 502.8,
-    "y": 5422.2,
-    "dz": 0.836,
+    "x": 500.8,
+    "y": 5411.8,
+    "dz": 0.833,
     "z": [
-     840.59,
-     841.43
+     839.36,
+     840.2
     ],
     "lines": [
-     3538,
+     3534,
      3534
     ],
     "line_names": [
-     "Via San Silvestro",
+     "Prò",
      "Prò"
     ],
     "line_classes": [
-     "4m Strasse",
+     "1m Weg",
      "1m Weg"
     ],
     "polys": [
-     1014,
-     1014
+     1012,
+     1012
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 499.8,
+    "y": 5412.8,
+    "dz": 0.814,
+    "z": [
+     840.12,
+     839.31
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
    },
    {
     "what": "cells",
@@ -3951,70 +4131,6 @@
     "line_classes": [
      "3m Strasse",
      "3m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 502.8,
-    "y": 5421.8,
-    "dz": 0.769,
-    "z": [
-     840.57,
-     841.34
-    ],
-    "lines": [
-     3538,
-     3534
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Prò"
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 503.8,
-    "y": 5421.8,
-    "dz": 0.765,
-    "z": [
-     841.37,
-     840.61
-    ],
-    "lines": [
-     3534,
-     3538
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
     ],
     "polys": [
      1014,
@@ -4061,99 +4177,99 @@
    },
    {
     "what": "cells",
-    "x": 501.8,
-    "y": 5411.8,
-    "dz": 0.716,
+    "x": 501.2,
+    "y": 5412.2,
+    "dz": 0.706,
     "z": [
-     839.5,
-     840.21
+     839.51,
+     840.22
     ],
     "lines": [
      3534,
-     3537
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1012,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 502.8,
-    "y": 5421.2,
-    "dz": 0.703,
-    "z": [
-     840.55,
-     841.25
-    ],
-    "lines": [
-     3538,
      3534
     ],
     "line_names": [
-     "Via San Silvestro",
+     "Prò",
      "Prò"
     ],
     "line_classes": [
-     "4m Strasse",
+     "1m Weg",
      "1m Weg"
     ],
     "polys": [
-     1014,
-     1014
+     1012,
+     1012
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "cells",
-    "x": 503.8,
-    "y": 5421.2,
-    "dz": 0.698,
+    "x": 500.2,
+    "y": 5413.2,
+    "dz": 0.694,
     "z": [
-     841.28,
-     840.59
+     840.16,
+     839.46
     ],
     "lines": [
      3534,
-     3538
+     3534
     ],
     "line_names": [
      "Prò",
-     "Via San Silvestro"
+     "Prò"
     ],
     "line_classes": [
      "1m Weg",
-     "4m Strasse"
+     "1m Weg"
     ],
     "polys": [
-     1014,
-     1014
+     1012,
+     1012
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 501.2,
+    "y": 5412.2,
+    "dz": 0.681,
+    "z": [
+     839.51,
+     840.2
+    ],
+    "lines": [
+     3534,
+     3534
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
    },
    {
     "what": "cells",
@@ -4189,59 +4305,27 @@
    },
    {
     "what": "cells",
-    "x": 503.8,
-    "y": 5420.8,
-    "dz": 0.663,
+    "x": 499.8,
+    "y": 5412.8,
+    "dz": 0.659,
     "z": [
-     841.2,
-     840.53
+     840.12,
+     839.46
     ],
     "lines": [
      3534,
-     3538
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 501.8,
-    "y": 5412.8,
-    "dz": 0.646,
-    "z": [
-     840.22,
-     839.57
-    ],
-    "lines": [
-     3537,
      3534
     ],
     "line_names": [
-     "Via San Silvestro",
+     "Prò",
      "Prò"
     ],
     "line_classes": [
-     "4m Strasse",
+     "1m Weg",
      "1m Weg"
     ],
     "polys": [
-     1014,
+     1012,
      1012
     ],
     "poly_cls": [
@@ -4249,103 +4333,7 @@
      "road"
     ],
     "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 502.2,
-    "y": 5412.2,
-    "dz": 0.636,
-    "z": [
-     839.61,
-     840.24
-    ],
-    "lines": [
-     3534,
-     3537
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1012,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 502.8,
-    "y": 5420.8,
-    "dz": 0.635,
-    "z": [
-     840.53,
-     841.16
-    ],
-    "lines": [
-     3538,
-     3534
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Prò"
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 503.8,
-    "y": 5420.8,
-    "dz": 0.63,
-    "z": [
-     841.2,
-     840.57
-    ],
-    "lines": [
-     3534,
-     3538
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "cells",
@@ -4381,12 +4369,12 @@
    },
    {
     "what": "cells",
-    "x": 502.2,
-    "y": 5412.8,
-    "dz": 0.628,
+    "x": 501.2,
+    "y": 5413.2,
+    "dz": 0.624,
     "z": [
-     840.23,
-     839.61
+     840.21,
+     839.59
     ],
     "lines": [
      3537,
@@ -4403,70 +4391,6 @@
     "polys": [
      1014,
      1012
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 522.8,
-    "y": 5397.2,
-    "dz": 0.61,
-    "z": [
-     839.72,
-     839.11
-    ],
-    "lines": [
-     4346,
-     4345
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Piazzòra da Fescògia"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 502.2,
-    "y": 5412.2,
-    "dz": 0.609,
-    "z": [
-     839.61,
-     840.21
-    ],
-    "lines": [
-     3534,
-     3537
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1012,
-     1014
     ],
     "poly_cls": [
      "road",
@@ -4498,6 +4422,70 @@
     ],
     "polys": [
      1014,
+     1014
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 522.2,
+    "y": 5397.2,
+    "dz": 0.596,
+    "z": [
+     839.73,
+     839.13
+    ],
+    "lines": [
+     3531,
+     4346
+    ],
+    "line_names": [
+     "Via San Silvestro",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1014,
+     1014
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 500.8,
+    "y": 5413.2,
+    "dz": 0.587,
+    "z": [
+     839.63,
+     840.21
+    ],
+    "lines": [
+     3534,
+     3537
+    ],
+    "line_names": [
+     "Prò",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     1012,
      1014
     ],
     "poly_cls": [
@@ -4541,108 +4529,12 @@
    },
    {
     "what": "cells",
-    "x": 499.8,
-    "y": 5414.2,
-    "dz": 0.582,
-    "z": [
-     840.19,
-     839.61
-    ],
-    "lines": [
-     3538,
-     3534
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Prò"
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     1014,
-     1012
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 502.8,
-    "y": 5420.2,
+    "x": 500.8,
+    "y": 5413.8,
     "dz": 0.566,
     "z": [
-     840.51,
-     841.07
-    ],
-    "lines": [
-     3538,
-     3534
-    ],
-    "line_names": [
-     "Via San Silvestro",
-     "Prò"
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 501.2,
-    "y": 5413.2,
-    "dz": 0.55,
-    "z": [
-     839.68,
-     840.23
-    ],
-    "lines": [
-     3534,
-     3537
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 500.2,
-    "y": 5414.2,
-    "dz": 0.545,
-    "z": [
-     840.21,
-     839.66
+     840.19,
+     839.63
     ],
     "lines": [
      3537,
@@ -4665,7 +4557,7 @@
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "level",
@@ -4677,16 +4569,16 @@
      839.17
     ],
     "lines": [
-     4345,
-     4345
+     4346,
+     4346
     ],
     "line_names": [
-     "Piazzòra da Fescògia",
-     "Piazzòra da Fescògia"
+     "Via San Silvestro",
+     "Via San Silvestro"
     ],
     "line_classes": [
-     "1m Weg",
-     "1m Weg"
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      1014,
@@ -4701,24 +4593,56 @@
    },
    {
     "what": "cells",
-    "x": 503.2,
-    "y": 5420.2,
-    "dz": 0.54,
+    "x": 500.2,
+    "y": 5413.2,
+    "dz": 0.532,
     "z": [
-     841.07,
-     840.53
+     840.16,
+     839.63
     ],
     "lines": [
      3534,
-     3538
+     3534
     ],
     "line_names": [
      "Prò",
-     "Via San Silvestro"
+     "Prò"
     ],
     "line_classes": [
      "1m Weg",
-     "4m Strasse"
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 522.8,
+    "y": 5398.2,
+    "dz": 0.523,
+    "z": [
+     839.75,
+     839.23
+    ],
+    "lines": [
+     4346,
+     4346
+    ],
+    "line_names": [
+     "Via San Silvestro",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      1014,
@@ -4729,7 +4653,7 @@
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "cells",
@@ -4742,15 +4666,15 @@
     ],
     "lines": [
      3531,
-     4345
+     4346
     ],
     "line_names": [
      "Via San Silvestro",
-     "Piazzòra da Fescògia"
+     "Via San Silvestro"
     ],
     "line_classes": [
      "3m Strasse",
-     "1m Weg"
+     "3m Strasse"
     ],
     "polys": [
      1014,
@@ -4761,7 +4685,7 @@
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "cells",
@@ -4837,48 +4761,16 @@
      839.17
     ],
     "lines": [
-     4345,
-     4345
-    ],
-    "line_names": [
-     "Piazzòra da Fescògia",
-     "Piazzòra da Fescògia"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "1m Weg"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 500.8,
-    "y": 5414.2,
-    "dz": 0.509,
-    "z": [
-     840.23,
-     839.72
-    ],
-    "lines": [
-     3537,
-     3534
+     4346,
+     4346
     ],
     "line_names": [
      "Via San Silvestro",
-     "Prò"
+     "Via San Silvestro"
     ],
     "line_classes": [
-     "4m Strasse",
-     "1m Weg"
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      1014,
@@ -4989,70 +4881,6 @@
    },
    {
     "what": "cells",
-    "x": 503.2,
-    "y": 5419.8,
-    "dz": 0.504,
-    "z": [
-     840.98,
-     840.48
-    ],
-    "lines": [
-     3534,
-     3538
-    ],
-    "line_names": [
-     "Prò",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 518.8,
-    "y": 5404.2,
-    "dz": 0.493,
-    "z": [
-     840.6,
-     840.11
-    ],
-    "lines": [
-     4345,
-     4346
-    ],
-    "line_names": [
-     "Piazzòra da Fescògia",
-     "Via San Silvestro"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "3m Strasse"
-    ],
-    "polys": [
-     1014,
-     1014
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
     "x": 511.8,
     "y": 5414.8,
     "dz": 0.491,
@@ -5085,23 +4913,55 @@
    },
    {
     "what": "cells",
-    "x": 522.8,
-    "y": 5397.8,
-    "dz": 0.49,
+    "x": 495.2,
+    "y": 5395.2,
+    "dz": 0.471,
     "z": [
-     839.23,
-     839.72
+     836.25,
+     835.77
     ],
     "lines": [
-     4345,
-     4346
+     3534,
+     3535
     ],
     "line_names": [
-     "Piazzòra da Fescògia",
-     "Via San Silvestro"
+     "Prò",
+     "Piazzòra da Fescògia"
     ],
     "line_classes": [
      "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 511.8,
+    "y": 5409.8,
+    "dz": 0.468,
+    "z": [
+     840.8,
+     840.33
+    ],
+    "lines": [
+     4341,
+     4346
+    ],
+    "line_names": [
+     "Stráda da Lótt",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "3m Strasse",
      "3m Strasse"
     ],
     "polys": [
@@ -5116,25 +4976,185 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 502.2,
-    "y": 5419.8,
-    "dz": 0.477,
+    "what": "level",
+    "x": 501.8,
+    "y": 5411.8,
+    "dz": 0.467,
     "z": [
-     840.47,
-     840.95
+     839.76,
+     840.23
     ],
     "lines": [
-     3538,
+     3534,
+     3537
+    ],
+    "line_names": [
+     "Prò",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     1012,
+     1014
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 499.8,
+    "y": 5413.8,
+    "dz": 0.466,
+    "z": [
+     840.19,
+     839.72
+    ],
+    "lines": [
+     3534,
      3534
     ],
     "line_names": [
-     "Via San Silvestro",
+     "Prò",
      "Prò"
     ],
     "line_classes": [
-     "4m Strasse",
+     "1m Weg",
      "1m Weg"
+    ],
+    "polys": [
+     1012,
+     1012
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 522.8,
+    "y": 5398.2,
+    "dz": 0.46,
+    "z": [
+     839.75,
+     839.29
+    ],
+    "lines": [
+     4346,
+     4346
+    ],
+    "line_names": [
+     "Via San Silvestro",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1014,
+     1014
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 523.2,
+    "y": 5398.8,
+    "dz": 0.459,
+    "z": [
+     839.75,
+     839.29
+    ],
+    "lines": [
+     4346,
+     4346
+    ],
+    "line_names": [
+     "Via San Silvestro",
+     "Via San Silvestro"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1014,
+     1014
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 487.2,
+    "y": 5392.2,
+    "dz": 0.448,
+    "z": [
+     834.03,
+     834.48
+    ],
+    "lines": [
+     3536,
+     3536
+    ],
+    "line_names": [
+     "Prò",
+     "Prò"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "1m Weg"
+    ],
+    "polys": [
+     5877,
+     5877
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 510.8,
+    "y": 5413.8,
+    "dz": 0.444,
+    "z": [
+     840.44,
+     840.88
+    ],
+    "lines": [
+     3537,
+     4341
+    ],
+    "line_names": [
+     "Via San Silvestro",
+     "Stráda da Lótt"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      1014,
@@ -5148,21 +5168,26 @@
     "fold": false
    }
   ],
-  "n_jumps_cells": 617,
+  "n_jumps_cells": 588,
   "n_jumps_level": 443
  },
  "breno": {
   "cells": 883,
-  "fold_links": 0,
+  "fold_links": 48,
+  "strip_seams": {
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
+  },
   "jumps": [
    {
     "what": "cells",
-    "x": 4.2,
-    "y": 4594.2,
-    "dz": 0.814,
+    "x": 2.2,
+    "y": 4589.8,
+    "dz": 1.949,
     "z": [
-     798.24,
-     797.42
+     797.82,
+     795.87
     ],
     "lines": [
      5216,
@@ -5184,17 +5209,49 @@
      "road",
      "road"
     ],
-    "linked": true,
+    "linked": false,
     "fold": false
    },
    {
     "what": "cells",
-    "x": 6.8,
-    "y": 4592.8,
-    "dz": 0.662,
+    "x": 1.8,
+    "y": 4590.2,
+    "dz": 1.928,
     "z": [
-     797.66,
-     798.33
+     797.82,
+     795.89
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1.8,
+    "y": 4589.8,
+    "dz": 1.926,
+    "z": [
+     795.89,
+     797.82
     ],
     "lines": [
      2678,
@@ -5216,17 +5273,17 @@
      "road",
      "road"
     ],
-    "linked": true,
+    "linked": false,
     "fold": false
    },
    {
     "what": "cells",
-    "x": 4.8,
-    "y": 4594.8,
-    "dz": 0.645,
+    "x": 3.8,
+    "y": 4588.8,
+    "dz": 1.924,
     "z": [
-     798.3,
-     797.66
+     797.85,
+     795.92
     ],
     "lines": [
      5216,
@@ -5248,81 +5305,17 @@
      "road",
      "road"
     ],
-    "linked": true,
+    "linked": false,
     "fold": false
    },
    {
     "what": "cells",
-    "x": 4.2,
-    "y": 4594.2,
-    "dz": 0.581,
+    "x": 1.2,
+    "y": 4590.2,
+    "dz": 1.906,
     "z": [
-     798.24,
-     797.66
-    ],
-    "lines": [
-     5216,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 5.2,
-    "y": 4594.8,
-    "dz": 0.574,
-    "z": [
-     798.33,
-     797.76
-    ],
-    "lines": [
-     5216,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.8,
-    "y": 4593.2,
-    "dz": 0.561,
-    "z": [
-     797.8,
-     798.36
+     795.92,
+     797.82
     ],
     "lines": [
      2678,
@@ -5344,7 +5337,167 @@
      "road",
      "road"
     ],
-    "linked": true,
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 3.2,
+    "y": 4589.2,
+    "dz": 1.902,
+    "z": [
+     797.85,
+     795.95
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 3.2,
+    "y": 4588.8,
+    "dz": 1.9,
+    "z": [
+     795.95,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2.8,
+    "y": 4589.8,
+    "dz": 1.881,
+    "z": [
+     797.85,
+     795.97
+    ],
+    "lines": [
+     5216,
+     2678
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "2m Weg"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 2.8,
+    "y": 4589.2,
+    "dz": 1.879,
+    "z": [
+     795.97,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1.2,
+    "y": 4590.8,
+    "dz": 1.812,
+    "z": [
+     796.04,
+     797.85
+    ],
+    "lines": [
+     2678,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "2m Weg",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
     "fold": false
    },
    {
@@ -5358,7 +5511,7 @@
     ],
     "lines": [
      5216,
-     2678
+     5216
     ],
     "line_names": [
      "",
@@ -5366,7 +5519,7 @@
     ],
     "line_classes": [
      "3m Strasse",
-     "2m Weg"
+     "3m Strasse"
     ],
     "polys": [
      992,
@@ -5550,7 +5703,7 @@
     ],
     "lines": [
      5216,
-     2678
+     5216
     ],
     "line_names": [
      "",
@@ -5558,7 +5711,7 @@
     ],
     "line_classes": [
      "3m Strasse",
-     "2m Weg"
+     "3m Strasse"
     ],
     "polys": [
      992,
@@ -5581,7 +5734,7 @@
      798.46
     ],
     "lines": [
-     2678,
+     5216,
      5216
     ],
     "line_names": [
@@ -5589,7 +5742,7 @@
      ""
     ],
     "line_classes": [
-     "2m Weg",
+     "3m Strasse",
      "3m Strasse"
     ],
     "polys": [
@@ -5605,15 +5758,15 @@
    },
    {
     "what": "cells",
-    "x": 6.8,
-    "y": 4593.8,
-    "dz": 0.316,
+    "x": 5.2,
+    "y": 4594.8,
+    "dz": 0.344,
     "z": [
-     797.94,
-     798.26
+     798.33,
+     797.99
     ],
     "lines": [
-     2678,
+     5216,
      5216
     ],
     "line_names": [
@@ -5621,7 +5774,135 @@
      ""
     ],
     "line_classes": [
-     "2m Weg",
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 5.8,
+    "y": 4594.8,
+    "dz": 0.342,
+    "z": [
+     797.99,
+     798.33
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 5.2,
+    "y": 4595.2,
+    "dz": 0.322,
+    "z": [
+     798.01,
+     798.33
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 5.8,
+    "y": 4594.2,
+    "dz": 0.321,
+    "z": [
+     798.33,
+     798.01
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 6.2,
+    "y": 4594.2,
+    "dz": 0.319,
+    "z": [
+     798.01,
+     798.33
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
      "3m Strasse"
     ],
     "polys": [
@@ -5669,24 +5950,24 @@
    },
    {
     "what": "cells",
-    "x": 5.8,
-    "y": 4594.8,
-    "dz": 0.245,
+    "x": 6.8,
+    "y": 4594.2,
+    "dz": 0.284,
     "z": [
-     798.1,
-     797.86
+     798.08,
+     798.36
     ],
     "lines": [
-     2678,
-     2678
+     5216,
+     5216
     ],
     "line_names": [
      "",
      ""
     ],
     "line_classes": [
-     "2m Weg",
-     "2m Weg"
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      992,
@@ -5697,7 +5978,7 @@
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "level",
@@ -5729,70 +6010,6 @@
      "-"
     ],
     "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 5.2,
-    "y": 4594.8,
-    "dz": 0.231,
-    "z": [
-     798.33,
-     798.1
-    ],
-    "lines": [
-     5216,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.8,
-    "y": 4594.2,
-    "dz": 0.213,
-    "z": [
-     798.16,
-     797.94
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
     "fold": false
    },
    {
@@ -5829,16 +6046,16 @@
    },
    {
     "what": "cells",
-    "x": 5.8,
-    "y": 4595.2,
-    "dz": 0.211,
+    "x": 7.2,
+    "y": 4594.2,
+    "dz": 0.204,
     "z": [
-     798.31,
-     798.1
+     798.19,
+     798.39
     ],
     "lines": [
      5216,
-     2678
+     5216
     ],
     "line_names": [
      "",
@@ -5846,7 +6063,7 @@
     ],
     "line_classes": [
      "3m Strasse",
-     "2m Weg"
+     "3m Strasse"
     ],
     "polys": [
      992,
@@ -5867,38 +6084,6 @@
     "z": [
      791.59,
      791.77
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.2,
-    "y": 4594.2,
-    "dz": 0.177,
-    "z": [
-     798.01,
-     797.83
     ],
     "lines": [
      2678,
@@ -5957,236 +6142,12 @@
    },
    {
     "what": "cells",
-    "x": 6.8,
-    "y": 4594.2,
-    "dz": 0.163,
-    "z": [
-     798.16,
-     798.32
-    ],
-    "lines": [
-     2678,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.2,
-    "y": 4594.8,
-    "dz": 0.162,
-    "z": [
-     798.17,
-     798.01
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 5.8,
-    "y": 4594.2,
-    "dz": 0.154,
-    "z": [
-     797.86,
-     798.01
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.2,
-    "y": 4595.2,
-    "dz": 0.154,
-    "z": [
-     798.33,
-     798.17
-    ],
-    "lines": [
-     5216,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
     "x": -7.8,
     "y": 4579.8,
     "dz": 0.151,
     "z": [
      791.6,
      791.75
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 7.2,
-    "y": 4593.8,
-    "dz": 0.147,
-    "z": [
-     798.26,
-     798.41
-    ],
-    "lines": [
-     5216,
-     5216
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "3m Strasse"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.8,
-    "y": 4593.8,
-    "dz": 0.146,
-    "z": [
-     797.94,
-     797.8
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.2,
-    "y": 4594.2,
-    "dz": 0.145,
-    "z": [
-     798.01,
-     798.16
     ],
     "lines": [
      2678,
@@ -6241,38 +6202,6 @@
      "-"
     ],
     "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 6.2,
-    "y": 4593.8,
-    "dz": 0.138,
-    "z": [
-     797.83,
-     797.7
-    ],
-    "lines": [
-     2678,
-     2678
-    ],
-    "line_names": [
-     "",
-     ""
-    ],
-    "line_classes": [
-     "2m Weg",
-     "2m Weg"
-    ],
-    "polys": [
-     992,
-     992
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
     "fold": false
    },
    {
@@ -6349,16 +6278,16 @@
      796.93
     ],
     "lines": [
-     2678,
-     2678
+     5216,
+     5216
     ],
     "line_names": [
      "",
      ""
     ],
     "line_classes": [
-     "2m Weg",
-     "2m Weg"
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      992,
@@ -6372,25 +6301,57 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": 3.8,
-    "y": 4593.8,
-    "dz": 0.135,
+    "what": "level",
+    "x": 3.2,
+    "y": 4592.8,
+    "dz": 0.134,
     "z": [
-     797.32,
-     797.19
+     796.97,
+     796.84
     ],
     "lines": [
-     2678,
-     2678
+     5216,
+     5216
     ],
     "line_names": [
      "",
      ""
     ],
     "line_classes": [
-     "2m Weg",
-     "2m Weg"
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": 4.2,
+    "y": 4592.8,
+    "dz": 0.134,
+    "z": [
+     797.16,
+     797.03
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
     ],
     "polys": [
      992,
@@ -6406,11 +6367,75 @@
    {
     "what": "cells",
     "x": 6.8,
-    "y": 4592.8,
-    "dz": 0.135,
+    "y": 4594.8,
+    "dz": 0.132,
     "z": [
-     797.66,
-     797.53
+     798.21,
+     798.08
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 7.2,
+    "y": 4594.8,
+    "dz": 0.132,
+    "z": [
+     798.32,
+     798.19
+    ],
+    "lines": [
+     5216,
+     5216
+    ],
+    "line_names": [
+     "",
+     ""
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     992,
+     992
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": false
+   },
+   {
+    "what": "level",
+    "x": -7.8,
+    "y": 4579.8,
+    "dz": 0.131,
+    "z": [
+     791.62,
+     791.75
     ],
     "lines": [
      2678,
@@ -6436,164 +6461,41 @@
     "fold": false
    }
   ],
-  "n_jumps_cells": 789,
+  "n_jumps_cells": 656,
   "n_jumps_level": 660
  },
  "mugena": {
   "cells": 2443,
-  "fold_links": 0,
+  "fold_links": 183,
+  "strip_seams": {
+   "cells": 49,
+   "max_m": 0.5,
+   "over_0.08": 38
+  },
   "jumps": [
    {
     "what": "cells",
-    "x": 1559.8,
+    "x": 1559.2,
     "y": 6357.2,
-    "dz": 0.866,
+    "dz": 0.872,
     "z": [
-     817.42,
-     818.29
+     817.39,
+     818.26
     ],
     "lines": [
      318,
-     1661
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stradón da Mügéna"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
-    ],
-    "polys": [
-     1299,
-     1289
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1559.8,
-    "y": 6357.8,
-    "dz": 0.78,
-    "z": [
-     817.47,
-     818.25
-    ],
-    "lines": [
-     318,
-     1661
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stradón da Mügéna"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
-    ],
-    "polys": [
-     1299,
-     1289
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1560.2,
-    "y": 6358.2,
-    "dz": 0.702,
-    "z": [
-     817.55,
-     818.25
-    ],
-    "lines": [
-     318,
-     1661
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stradón da Mügéna"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
-    ],
-    "polys": [
-     1299,
-     1289
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1560.2,
-    "y": 6358.2,
-    "dz": 0.699,
-    "z": [
-     817.55,
-     818.25
-    ],
-    "lines": [
-     318,
-     1661
-    ],
-    "line_names": [
-     "Stráda da Caròcc",
-     "Stradón da Mügéna"
-    ],
-    "line_classes": [
-     "3m Strasse",
-     "4m Strasse"
-    ],
-    "polys": [
-     1299,
-     1289
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1560.2,
-    "y": 6358.8,
-    "dz": 0.629,
-    "z": [
-     818.18,
-     817.55
-    ],
-    "lines": [
-     1661,
      318
     ],
     "line_names": [
-     "Stradón da Mügéna",
+     "Stráda da Caròcc",
      "Stráda da Caròcc"
     ],
     "line_classes": [
-     "4m Strasse",
+     "3m Strasse",
      "3m Strasse"
     ],
     "polys": [
-     1289,
+     1299,
      1299
     ],
     "poly_cls": [
@@ -6601,39 +6503,199 @@
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
    },
    {
     "what": "cells",
-    "x": 1559.8,
-    "y": 6358.8,
-    "dz": 0.626,
+    "x": 1559.2,
+    "y": 6357.8,
+    "dz": 0.802,
     "z": [
-     817.55,
-     818.18
+     818.19,
+     817.39
     ],
     "lines": [
      318,
-     1661
+     318
     ],
     "line_names": [
      "Stráda da Caròcc",
-     "Stradón da Mügéna"
+     "Stráda da Caròcc"
     ],
     "line_classes": [
      "3m Strasse",
-     "4m Strasse"
+     "3m Strasse"
     ],
     "polys": [
      1299,
-     1289
+     1299
     ],
     "poly_cls": [
      "road",
      "road"
     ],
     "linked": true,
-    "fold": false
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1558.8,
+    "y": 6357.8,
+    "dz": 0.792,
+    "z": [
+     817.4,
+     818.19
+    ],
+    "lines": [
+     318,
+     318
+    ],
+    "line_names": [
+     "Stráda da Caròcc",
+     "Stráda da Caròcc"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1299,
+     1299
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1558.8,
+    "y": 6358.2,
+    "dz": 0.72,
+    "z": [
+     817.44,
+     818.16
+    ],
+    "lines": [
+     318,
+     318
+    ],
+    "line_names": [
+     "Stráda da Caròcc",
+     "Stráda da Caròcc"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1299,
+     1299
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1559.2,
+    "y": 6358.8,
+    "dz": 0.643,
+    "z": [
+     817.51,
+     818.16
+    ],
+    "lines": [
+     318,
+     318
+    ],
+    "line_names": [
+     "Stráda da Caròcc",
+     "Stráda da Caròcc"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1299,
+     1299
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1559.2,
+    "y": 6358.8,
+    "dz": 0.641,
+    "z": [
+     817.51,
+     818.15
+    ],
+    "lines": [
+     318,
+     318
+    ],
+    "line_names": [
+     "Stráda da Caròcc",
+     "Stráda da Caròcc"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1299,
+     1299
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": 1559.8,
+    "y": 6359.2,
+    "dz": 0.509,
+    "z": [
+     817.65,
+     818.15
+    ],
+    "lines": [
+     318,
+     318
+    ],
+    "line_names": [
+     "Stráda da Caròcc",
+     "Stráda da Caròcc"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "3m Strasse"
+    ],
+    "polys": [
+     1299,
+     1299
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": true,
+    "fold": true
    },
    {
     "what": "cells",
@@ -6954,6 +7016,38 @@
     ],
     "linked": true,
     "fold": false
+   },
+   {
+    "what": "cells",
+    "x": 1563.8,
+    "y": 6367.8,
+    "dz": 0.376,
+    "z": [
+     817.96,
+     818.33
+    ],
+    "lines": [
+     -2,
+     -2
+    ],
+    "line_names": [
+     "-2",
+     "-2"
+    ],
+    "line_classes": [
+     "-2",
+     "-2"
+    ],
+    "polys": [
+     7058,
+     7058
+    ],
+    "poly_cls": [
+     "hard",
+     "hard"
+    ],
+    "linked": true,
+    "fold": true
    },
    {
     "what": "cells",
@@ -7658,78 +7752,19 @@
     ],
     "linked": true,
     "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1565.8,
-    "y": 6370.2,
-    "dz": 0.294,
-    "z": [
-     819.02,
-     819.31
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7058,
-     7058
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": 1565.8,
-    "y": 6369.8,
-    "dz": 0.294,
-    "z": [
-     819.03,
-     819.32
-    ],
-    "lines": [
-     -2,
-     -2
-    ],
-    "line_names": [
-     "-2",
-     "-2"
-    ],
-    "line_classes": [
-     "-2",
-     "-2"
-    ],
-    "polys": [
-     7058,
-     7058
-    ],
-    "poly_cls": [
-     "hard",
-     "hard"
-    ],
-    "linked": true,
-    "fold": false
    }
   ],
-  "n_jumps_cells": 417,
+  "n_jumps_cells": 411,
   "n_jumps_level": 23
  },
  "vezio_hole": {
   "cells": 1572,
-  "fold_links": 0,
+  "fold_links": 304,
+  "strip_seams": {
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
+  },
   "jumps": [
    {
     "what": "cells",
@@ -9017,7 +9052,12 @@
  },
  "stradon_bridge": {
   "cells": 1389,
-  "fold_links": 0,
+  "fold_links": 30,
+  "strip_seams": {
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
+  },
   "jumps": [
    {
     "what": "cells",
@@ -10305,7 +10345,12 @@
  },
  "castelrotto": {
   "cells": 3181,
-  "fold_links": 8,
+  "fold_links": 207,
+  "strip_seams": {
+   "cells": 16,
+   "max_m": 0.171,
+   "over_0.08": 4
+  },
   "jumps": [
    {
     "what": "cells",
@@ -10529,7 +10574,7 @@
      "hard"
     ],
     "linked": false,
-    "fold": false
+    "fold": true
    },
    {
     "what": "cells",
@@ -10981,102 +11026,6 @@
    },
    {
     "what": "cells",
-    "x": -2400.2,
-    "y": 36.8,
-    "dz": 1.803,
-    "z": [
-     407.67,
-     409.47
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -2400.2,
-    "y": 37.2,
-    "dz": 1.787,
-    "z": [
-     409.46,
-     407.67
-    ],
-    "lines": [
-     3686,
-     3698
-    ],
-    "line_names": [
-     "Castelrotto nucleo",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -2400.8,
-    "y": 37.2,
-    "dz": 1.712,
-    "z": [
-     407.75,
-     409.46
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
     "x": -2402.2,
     "y": 37.2,
     "dz": 1.711,
@@ -11109,38 +11058,6 @@
    },
    {
     "what": "cells",
-    "x": -2400.8,
-    "y": 36.8,
-    "dz": 1.71,
-    "z": [
-     409.38,
-     407.67
-    ],
-    "lines": [
-     3686,
-     3698
-    ],
-    "line_names": [
-     "Castelrotto nucleo",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
     "x": -2402.2,
     "y": 37.2,
     "dz": 1.643,
@@ -11166,70 +11083,6 @@
     ],
     "poly_cls": [
      "hard",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -2400.8,
-    "y": 37.8,
-    "dz": 1.637,
-    "z": [
-     407.85,
-     409.49
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -2400.8,
-    "y": 37.2,
-    "dz": 1.635,
-    "z": [
-     407.75,
-     409.38
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
      "road"
     ],
     "linked": false,
@@ -11294,38 +11147,6 @@
     ],
     "poly_cls": [
      "hard",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -2401.2,
-    "y": 37.2,
-    "dz": 1.615,
-    "z": [
-     409.36,
-     407.75
-    ],
-    "lines": [
-     3686,
-     3698
-    ],
-    "line_names": [
-     "Castelrotto nucleo",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
      "road"
     ],
     "linked": false,
@@ -11428,70 +11249,6 @@
     "fold": false
    },
    {
-    "what": "cells",
-    "x": -2400.8,
-    "y": 38.2,
-    "dz": 1.547,
-    "z": [
-     407.97,
-     409.51
-    ],
-    "lines": [
-     3698,
-     3686
-    ],
-    "line_names": [
-     "",
-     "Castelrotto nucleo"
-    ],
-    "line_classes": [
-     "1m Weg",
-     "4m Strasse"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
-    "what": "cells",
-    "x": -2401.2,
-    "y": 37.8,
-    "dz": 1.546,
-    "z": [
-     409.39,
-     407.85
-    ],
-    "lines": [
-     3686,
-     3698
-    ],
-    "line_names": [
-     "Castelrotto nucleo",
-     ""
-    ],
-    "line_classes": [
-     "4m Strasse",
-     "1m Weg"
-    ],
-    "polys": [
-     295,
-     295
-    ],
-    "poly_cls": [
-     "road",
-     "road"
-    ],
-    "linked": false,
-    "fold": false
-   },
-   {
     "what": "level",
     "x": -2402.2,
     "y": 37.8,
@@ -11525,12 +11282,12 @@
    },
    {
     "what": "cells",
-    "x": -2400.8,
+    "x": -2401.8,
     "y": 38.8,
-    "dz": 1.472,
+    "dz": 1.484,
     "z": [
-     408.07,
-     409.54
+     407.96,
+     409.44
     ],
     "lines": [
      3698,
@@ -11543,6 +11300,294 @@
     "line_classes": [
      "1m Weg",
      "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2401.8,
+    "y": 38.8,
+    "dz": 1.415,
+    "z": [
+     407.96,
+     409.37
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2401.8,
+    "y": 39.2,
+    "dz": 1.408,
+    "z": [
+     408.06,
+     409.47
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2401.2,
+    "y": 39.8,
+    "dz": 1.388,
+    "z": [
+     408.21,
+     409.6
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2397.2,
+    "y": 33.8,
+    "dz": 1.322,
+    "z": [
+     408.27,
+     406.94
+    ],
+    "lines": [
+     -2,
+     3696
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     3601
+    ],
+    "poly_cls": [
+     "road",
+     "hard"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2401.2,
+    "y": 40.2,
+    "dz": 1.32,
+    "z": [
+     408.31,
+     409.63
+    ],
+    "lines": [
+     3698,
+     3686
+    ],
+    "line_names": [
+     "",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "1m Weg",
+     "4m Strasse"
+    ],
+    "polys": [
+     3604,
+     295
+    ],
+    "poly_cls": [
+     "hard",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2397.2,
+    "y": 33.8,
+    "dz": 1.31,
+    "z": [
+     408.27,
+     409.58
+    ],
+    "lines": [
+     -2,
+     3686
+    ],
+    "line_names": [
+     "-2",
+     "Castelrotto nucleo"
+    ],
+    "line_classes": [
+     "-2",
+     "4m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -2397.2,
+    "y": 34.2,
+    "dz": 1.295,
+    "z": [
+     409.56,
+     408.27
+    ],
+    "lines": [
+     3686,
+     -2
+    ],
+    "line_names": [
+     "Castelrotto nucleo",
+     "-2"
+    ],
+    "line_classes": [
+     "4m Strasse",
+     "-2"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": true
+   },
+   {
+    "what": "cells",
+    "x": -2398.2,
+    "y": 34.2,
+    "dz": 1.291,
+    "z": [
+     408.28,
+     406.99
+    ],
+    "lines": [
+     -2,
+     3696
+    ],
+    "line_names": [
+     "-2",
+     ""
+    ],
+    "line_classes": [
+     "-2",
+     "3m Strasse"
+    ],
+    "polys": [
+     295,
+     295
+    ],
+    "poly_cls": [
+     "road",
+     "road"
+    ],
+    "linked": false,
+    "fold": false
+   },
+   {
+    "what": "cells",
+    "x": -2397.8,
+    "y": 33.8,
+    "dz": 1.266,
+    "z": [
+     407.0,
+     408.27
+    ],
+    "lines": [
+     3696,
+     -2
+    ],
+    "line_names": [
+     "",
+     "-2"
+    ],
+    "line_classes": [
+     "3m Strasse",
+     "-2"
     ],
     "polys": [
      295,
@@ -11558,37 +11603,37 @@
    {
     "what": "cells",
     "x": -2401.2,
-    "y": 38.2,
-    "dz": 1.454,
+    "y": 39.8,
+    "dz": 1.255,
     "z": [
-     409.42,
-     407.97
+     408.21,
+     409.47
     ],
     "lines": [
-     3686,
-     3698
+     3698,
+     3686
     ],
     "line_names": [
-     "Castelrotto nucleo",
-     ""
+     "",
+     "Castelrotto nucleo"
     ],
     "line_classes": [
-     "4m Strasse",
-     "1m Weg"
+     "1m Weg",
+     "4m Strasse"
     ],
     "polys": [
-     295,
+     3604,
      295
     ],
     "poly_cls": [
-     "road",
+     "hard",
      "road"
     ],
     "linked": false,
     "fold": false
    }
   ],
-  "n_jumps_cells": 736,
+  "n_jumps_cells": 713,
   "n_jumps_level": 595
  }
 }
