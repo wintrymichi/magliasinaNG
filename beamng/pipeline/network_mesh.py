@@ -385,6 +385,18 @@ class Network:
         out[r[hit], c[hit]] = True
         return out
 
+    def _joined(self, ga, b):
+        """Whether the lines ga (array) and the line b are joined through one line between an end node of each (a
+        street split at a node, met by a side street at the next one)."""
+        if not hasattr(self, "_end_pairs"):
+            self._end_pairs = {(int(min(p, q)), int(max(p, q))) for p, q in zip(self.n0, self.n1)}
+        ends_b = (int(self.n0[b]), int(self.n1[b]))
+        out = np.zeros(len(ga), bool)
+        for i, a in enumerate(np.asarray(ga)):
+            out[i] = any((min(na, nb), max(na, nb)) in self._end_pairs
+                         for na in (int(self.n0[a]), int(self.n1[a])) for nb in ends_b)
+        return out
+
     def _pin_strips(self, box, x0, y1, W, H, m, Z, G):
         """Mask of the cells (m: the polygons' cells that may) beside a strip that take its height (Z set in place)."""
         pin = np.zeros((H, W), bool)
@@ -412,7 +424,7 @@ class Network:
             g = G[rr[k], cc[k]]
             gi = np.maximum(g, 0)
             meet = (g == line) | (g < 0) | (self.n0[gi] == self.n0[line]) | (self.n0[gi] == self.n1[line]) \
-                | (self.n1[gi] == self.n0[line]) | (self.n1[gi] == self.n1[line])
+                | (self.n1[gi] == self.n0[line]) | (self.n1[gi] == self.n1[line]) | self._joined(gi, line)
             zs = self.strip_height(int(pid))(X[k], Y[k])
             ok = meet & np.isfinite(zs) & (np.abs(zs - Z[rr[k], cc[k]]) < JUNCTION_DZ)
             Z[rr[k][ok], cc[k][ok]] = zs[ok]
