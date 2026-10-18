@@ -109,8 +109,7 @@ def main(argv):
                                         "lines": [[int(ex["seg"][0, i]), net.segs[int(ex["seg"][0, i])]["class"],
                                                    net.segs[int(ex["seg"][0, i])]["kind"],
                                                    round(float(ex["h"][0, i]), 2), round(float(ex["u"][0, i]), 2),
-                                                   round(float(ex["e"][0, i]), 2), round(float(ex["wt"][0, i]), 4),
-                                                   bool(net.n0_bridge[int(ex["seg"][0, i])]), bool(net.n1_bridge[int(ex["seg"][0, i])])]
+                                                   round(float(ex["e"][0, i]), 2), round(float(ex["wt"][0, i]), 4)]
                                                   for i in range(ex["seg"].shape[1]) if ex["ok"][0, i]]})
         net.explain = False
         # the seams between the polygons' cells and the strips beside them (strips: meshed apart at their line's height)

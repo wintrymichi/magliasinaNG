@@ -73,15 +73,12 @@ FOLD_DZ = 1.5
 # v3.0 fix round: a path line (a "1m Weg" ending at a road, a flight of steps beside it) gives no height to a cell that
 # a road line also reaches: up to v3.0 the line nearest the cell in half widths won, and a path, with its half width
 # of 0.5 m, won the cells right over it inside the carriageway, at its own height (0.3-2 m off the road's). Its score
-# is raised by this much (half widths), where the cell is on the carriageway of a road line (within OFF_LINE half widths,
-# not past its end: elsewhere a road's height gives way to the ground, a 2 m drop at a bridge above Vezio).
+# is raised by this much (half widths).
 PATH_YIELD = 10.0
-# v3.0 fix round: past the end of its line a cell carried on along the grade of the line's last piece, up to 100 % where
-# that piece climbs a wall or steps (0.47 m between neighbouring cells under the church of Arosio): at most this grade.
-END_GRADE = 0.20
+# v3.0 fix round: the cells within BRIDGE_HEAD m of the end of a bridge (its head, past the end of the line leading to it)
+# keep their line's height: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
+BRIDGE_HEAD = 8.0
 STEP_DZ_PIN = 0.05     # m, cells pinned to two different strips that differ more are left free (_pin_strips)
-# The cells past the end of a line that meets a bridge (its abutment, beside the deck's head) keep the line's height
-# within REACH m: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
@@ -112,9 +109,8 @@ class Network:
         self.bridge = np.array([s["bridge"] for s in self.segs])
         self.main = np.array([s["kind"] == "road" and s["class"] in MAIN_CLASSES for s in self.segs])
         self.path = np.array([s["kind"] == "path" for s in self.segs])
-        bn = {nd for s in self.segs if s["bridge"] for nd in s["nodes"]}
-        self.n0_bridge = np.array([n in bn for n in self.n0], bool)     # the line starts / ends at a bridge
-        self.n1_bridge = np.array([n in bn for n in self.n1], bool)
+        bn = sorted({nd for s in self.segs if s["bridge"] for nd in s["nodes"]})
+        self.bridge_ends = cKDTree(self.node_xy[bn]) if bn else None          # the end nodes of the bridges
         self.polys = []                       # dicts: geom, cls, surface, segs
         self.deck_tops = []                   # bridge deck top triangles (bridges.py)
         self.deck_feet = []                   # (kind, footprint) of every deck built (bridges.py)
@@ -300,7 +296,7 @@ class Network:
             b_last = (b == N - 1) | (self.seg[np.clip(b + 1, 0, N - 1)] != seg)
             before, after = (s_raw < 0) & a_first, (s_raw > 1) & b_last
             e = np.where(before | after, along, 0.0)
-            ge = np.clip(np.where(s_raw < 0, self.g[a], self.g[b]), -END_GRADE, END_GRADE)
+            ge = np.where(s_raw < 0, self.g[a], self.g[b])
             z = self.z[a] + s * (self.z[b] - self.z[a]) + (self.c[a] + s * (self.c[b] - self.c[a])) * t + ge * e
             d = np.hypot(Xb - qx, Yb - qy)
             # a clamp at a middle station: the neighbouring piece has the same point, let it win
@@ -324,11 +320,7 @@ class Network:
         h_o = np.take_along_axis(h, order, 1)
         u = np.abs(np.take_along_axis(off, order, 1)) / np.maximum(np.take_along_axis(hw, order, 1), 0.3)
         e_o = np.abs(np.take_along_axis(ext, order, 1))
-        # a path yields only to a road line whose carriageway the point is on (not past its end, not far beside it:
-        # there the road's height is dropped for the ground's, and the path's is the one to keep)
-        is_p = self.path[seg_o]
-        road_here = (ok_o & ~is_p & (u <= OFF_LINE) & (e_o <= 1.0)).any(1)
-        score = np.where(ok_o, u + 0.05 * e_o + PATH_YIELD * (is_p & road_here[:, None]), np.inf)
+        score = np.where(ok_o, u + 0.05 * e_o + PATH_YIELD * self.path[seg_o], np.inf)
         best = np.argmin(score, axis=1)
         has = ok_o.any(1)
         zb = h_o[np.arange(n), best]
@@ -484,8 +476,10 @@ class Network:
         # a survey polygon reaching beyond the carriageway of its line onto ground far above or
         # below it (a terrace, a yard behind a wall), or past the end of its line where the line's
         # grade carried on leaves the ground: that part keeps to the ground
-        Gc = np.maximum(G, 0)
-        at_bridge = (G >= 0) & (U <= OFF_LINE) & (E <= REACH) & np.where(A <= 0.01, self.n0_bridge[Gc], self.n1_bridge[Gc])
+        at_bridge = np.zeros((H, W), bool)
+        if self.bridge_ends is not None:
+            dq, _ = self.bridge_ends.query(np.column_stack([np.tile(Xc, H), np.repeat(Yc, W)]), distance_upper_bound=BRIDGE_HEAD)
+            at_bridge = (G >= 0) & (U <= OFF_LINE) & np.isfinite(dq).reshape(H, W)
         off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge
         if getattr(self, "explain", False):           # fix_probe.py: why a cell left its line
             self.tile_explained = dict(Z=Z.copy(), G=G.copy(), U=U.copy(), E=E.copy(), A=A.copy(), Ds=Ds.copy(),
