@@ -235,7 +235,7 @@ class Network:
         return st
 
     # ------------------------------------------------------------------ heights
-    def heights(self, X, Y, P, with_seg=False, own=None, with_u=False):
+    def heights(self, X, Y, P, with_seg=False, own=None, with_u=False, junction=JUNCTION_BLEND):
         """Heights at points (X, Y) inside polygons P (index into self.polys); NaN where no line
         of the polygon is near (squares, car parks). with_seg: also the line that gave each height
         (-1 for none).
@@ -336,7 +336,7 @@ class Network:
         dn = np.where(shared >= 0, np.hypot(Xb - self.node_xy[sn, 0], Yb - self.node_xy[sn, 1]), np.inf)
         fj = np.clip((JUNCTION_R1 - dn) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
         agree = np.abs(np.nan_to_num(h_o) - zb[:, None]) <= BLEND_DZ
-        wt = wt * np.where(agree, 1.0, fj if JUNCTION_BLEND else 0.0)
+        wt = wt * np.where(agree, 1.0, fj if junction else 0.0)
         wt[np.arange(n), best] = np.where(has, np.maximum(wt[np.arange(n), best], 1e-12), 0.0)
         ws = wt.sum(1)
         if getattr(self, "explain", False):           # fix_probe.py: the candidates of every point
@@ -455,6 +455,18 @@ class Network:
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
             z = self.heights(x, y, np.full(len(x), pid), own=own)
+            if own is not None:
+                # v3.0 fix round: near the end nodes of its line a strip takes the blend of the lines meeting there (their
+                # weights fading with the distance from the node, JUNCTION_R0-R1), the same surface the strip of every one
+                # of them takes there: up to v3.0 each kept its own line's height, and two strips meeting at a junction
+                # overlapped 0.6 m apart (under the church of Arosio)
+                ends = self.node_xy[[self.n0[own], self.n1[own]]]
+                d = np.min(np.hypot(x[:, None] - ends[:, 0], y[:, None] - ends[:, 1]), axis=1)
+                w = np.clip((JUNCTION_R1 - d) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
+                k = (w > 0) & np.isfinite(z)
+                if k.any():
+                    zj = self.heights(x[k], y[k], np.full(int(k.sum()), pid), junction=True)
+                    z[k] = z[k] + w[k] * np.nan_to_num(zj - z[k])
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)
