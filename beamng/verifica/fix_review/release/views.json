@@ -1,5 +1,54 @@
 [
 [
+"astano_hairpin",
+-3709.0,
+2139.0,
+"Astano: step after the hairpin, Via Agostino de Marchi",
+true
+],
+[
+"astano_step0",
+-3709.0,
+2139.3,
+"astano: STEP 28 cm Via Agostino de Marchi (-3709, 2139)",
+false
+],
+[
+"astano_step1",
+-3706.6,
+2140.7,
+"astano: STEP 27 cm Via Agostino de Marchi (-3707, 2141)",
+false
+],
+[
+"astano_step2",
+-3513.0,
+2255.2,
+"astano: STEP 7 cm ai Vezzán (-3513, 2255)",
+false
+],
+[
+"astano_step3",
+-3988.7,
+2162.6,
+"astano: STEP 6 cm ara Gésa (-3989, 2163)",
+false
+],
+[
+"astano_edge0",
+-4128.728999999999,
+2296.7439999999997,
+"astano: road edge 60 cm over the ground (-4129, 2297)",
+false
+],
+[
+"astano_edge1",
+-3874.547,
+2279.9359999999997,
+"astano: road edge 60 cm over the ground (-3875, 2280)",
+false
+],
+[
 "astano_banco_step0",
 -1909.2,
 2450.0,
@@ -25,20 +74,6 @@ false
 -2817.1,
 2409.2,
 "astano_banco: STEP 5 cm  (-2817, 2409)",
-false
-],
-[
-"astano_banco_edge0",
--2062.763,
-2068.2439999999997,
-"astano_banco: road edge 100 cm over the ground (-2063, 2068)",
-false
-],
-[
-"astano_banco_edge1",
--2937.483,
-2350.038,
-"astano_banco: road edge 100 cm over the ground (-2937, 2350)",
 false
 ],
 [
@@ -85,16 +120,16 @@ false
 ],
 [
 "vezio_edge0",
-1396.725,
-6183.3060000000005,
-"vezio: road edge 98 cm over the ground (1397, 6183)",
+934.204,
+6058.437,
+"vezio: road edge 59 cm over the ground (934, 6058)",
 false
 ],
 [
 "vezio_edge1",
-839.6600000000001,
-5930.346,
-"vezio: road edge 98 cm over the ground (840, 5930)",
+912.656,
+5884.502,
+"vezio: road edge 58 cm over the ground (913, 5885)",
 false
 ],
 [
@@ -134,16 +169,16 @@ false
 ],
 [
 "mugena_edge0",
-1829.49,
-6266.173000000001,
-"mugena: road edge 100 cm over the ground (1829, 6266)",
+1676.149,
+6231.159,
+"mugena: road edge 60 cm over the ground (1676, 6231)",
 false
 ],
 [
 "mugena_edge1",
-1396.725,
-6183.3060000000005,
-"mugena: road edge 98 cm over the ground (1397, 6183)",
+1932.527,
+6331.888,
+"mugena: road edge 60 cm over the ground (1933, 6332)",
 false
 ],
 [
@@ -169,16 +204,16 @@ false
 ],
 [
 "arosio_edge0",
-2329.904,
-6262.058,
-"arosio: road edge 100 cm over the ground (2330, 6262)",
+2355.487,
+6237.501,
+"arosio: road edge 60 cm over the ground (2355, 6238)",
 false
 ],
 [
 "arosio_edge1",
-2179.5060000000003,
-6184.516,
-"arosio: road edge 100 cm over the ground (2180, 6185)",
+2073.0,
+6375.5509999999995,
+"arosio: road edge 60 cm over the ground (2073, 6376)",
 false
 ],
 [
@@ -211,16 +246,16 @@ false
 ],
 [
 "fescoggia_edge0",
-565.598,
-5424.709,
-"fescoggia: road edge 100 cm over the ground (566, 5425)",
+406.28,
+5401.735000000001,
+"fescoggia: road edge 60 cm over the ground (406, 5402)",
 false
 ],
 [
 "fescoggia_edge1",
-380.418,
-5358.1900000000005,
-"fescoggia: road edge 100 cm over the ground (380, 5358)",
+645.114,
+5537.335,
+"fescoggia: road edge 60 cm over the ground (645, 5537)",
 false
 ],
 [
@@ -239,16 +274,16 @@ false
 ],
 [
 "breno_edge0",
--383.86400000000003,
-4720.198,
-"breno: road edge 100 cm over the ground (-384, 4720)",
+95.055,
+4582.635,
+"breno: road edge 60 cm over the ground (95, 4583)",
 false
 ],
 [
 "breno_edge1",
-67.78,
-4822.121999999999,
-"breno: road edge 100 cm over the ground (68, 4822)",
+-36.281000000000006,
+4591.342000000001,
+"breno: road edge 60 cm over the ground (-36, 4591)",
 false
 ],
 [
@@ -281,16 +316,16 @@ false
 ],
 [
 "miglieglia_edge0",
--976.387,
-3491.054,
-"miglieglia: road edge 100 cm over the ground (-976, 3491)",
+-1141.966,
+3401.488,
+"miglieglia: road edge 60 cm over the ground (-1142, 3401)",
 false
 ],
 [
 "miglieglia_edge1",
--1275.166,
-3689.5860000000002,
-"miglieglia: road edge 100 cm over the ground (-1275, 3690)",
+-932.404,
+3682.273,
+"miglieglia: road edge 60 cm over the ground (-932, 3682)",
 false
 ],
 [
