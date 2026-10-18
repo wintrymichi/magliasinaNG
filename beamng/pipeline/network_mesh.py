@@ -78,9 +78,6 @@ PATH_YIELD = 10.0
 # v3.0 fix round: the cells within BRIDGE_HEAD m of the end of a bridge (its head, past the end of the line leading to it)
 # keep their line's height: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 BRIDGE_HEAD = 8.0
-# v3.0 fix round: a strip near the end nodes of its line takes the height of the lines meeting there (strip_height):
-# up to v3.0 it kept its own line's, 0.25-0.5 m off the cells of the other line beside it (under the church of Arosio)
-STRIP_JUNCTION_BLEND = True
 STEP_DZ_PIN = 0.05     # m, cells pinned to two different strips that differ more are left free (_pin_strips)
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
@@ -369,7 +366,23 @@ class Network:
         px, py = xs[c], ys[r]
         sn = np.maximum(shared, 0)
         d = np.hypot(px - self.node_xy[sn, 0], py - self.node_xy[sn, 1])
-        out[r[ok & (d < JUNCTION_R0)], c[ok & (d < JUNCTION_R0)]] = True
+        hit = ok & (d < JUNCTION_R0)
+        # v3.0 fix round: or one line between them joins an end node of each, both near the pair (a side street meeting
+        # the next piece of a street split at a node: under the church of Arosio the cells of the two were left with a
+        # 0.6 m wall between them)
+        rest = np.flatnonzero(~hit)
+        if len(rest):
+            if not hasattr(self, "_end_pairs"):
+                self._end_pairs = {(int(min(p, q)), int(max(p, q))) for p, q in zip(self.n0, self.n1)}
+            for i in rest:
+                for na in (a0[i], a1[i]):
+                    if np.hypot(px[i] - self.node_xy[na, 0], py[i] - self.node_xy[na, 1]) >= JUNCTION_R0:
+                        continue
+                    for nb in (b0[i], b1[i]):
+                        if (int(min(na, nb)), int(max(na, nb))) in self._end_pairs and \
+                                np.hypot(px[i] - self.node_xy[nb, 0], py[i] - self.node_xy[nb, 1]) < JUNCTION_R0:
+                            hit[i] = True
+        out[r[hit], c[hit]] = True
         return out
 
     def _pin_strips(self, box, x0, y1, W, H, m, Z, G):
@@ -426,16 +439,6 @@ class Network:
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
             z = self.heights(x, y, np.full(len(x), pid), own=own)
-            if STRIP_JUNCTION_BLEND and own is not None:
-                # near the end nodes of its line the strip takes the height the lines meeting there give (as the
-                # survey polygons' cells do), full within JUNCTION_R0 / 2 m, fading out at JUNCTION_R0
-                ends = self.node_xy[[self.n0[own], self.n1[own]]]
-                d = np.min(np.hypot(x[:, None] - ends[:, 0], y[:, None] - ends[:, 1]), axis=1)
-                w = np.clip((JUNCTION_R0 - d) / (0.5 * JUNCTION_R0), 0.0, 1.0)
-                k = (w > 0) & np.isfinite(z)
-                if k.any():
-                    za = self.heights(x[k], y[k], np.full(int(k.sum()), pid))
-                    z[k] = z[k] + w[k] * np.nan_to_num(za - z[k])
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)

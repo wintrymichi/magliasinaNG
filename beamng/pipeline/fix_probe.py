@@ -69,7 +69,6 @@ def main(argv):
         from rasterio import features as _ft
         from rasterio.transform import Affine as _Af
         Zc = Z1.copy()
-        Zc0 = Z1.copy()                       # the strips without the junction blend (nm.STRIP_JUNCTION_BLEND off)
         sids = [int(i) for i in net.ptree.query(_sh.box(x0, y0, x1, y1), predicate="intersects")
                 if net.polys[i]["cls"].startswith("strip")]
         if sids:
@@ -79,15 +78,12 @@ def main(argv):
                 k = (sown == pid) & (own < 0)
                 if k.any():
                     Zc[k] = net.strip_height(pid)(X[k], Y[k])
-                    keep, nm.STRIP_JUNCTION_BLEND = nm.STRIP_JUNCTION_BLEND, False
-                    Zc0[k] = net.strip_height(pid)(X[k], Y[k])
-                    nm.STRIP_JUNCTION_BLEND = keep
         jumps = []
         for axis, L in ((1, LR), (0, LD)):
             a = (slice(None), slice(0, -1)) if axis == 1 else (slice(0, -1), slice(None))
             b = (slice(None), slice(1, None)) if axis == 1 else (slice(1, None), slice(None))
             both = (own[a] >= 0) & (own[b] >= 0)
-            for lab, Z in (("cells", Z0), ("relaxed", Z1), ("composite", Zc), ("composite_noblend", Zc0), ("level", Zl)):
+            for lab, Z in (("cells", Z0), ("relaxed", Z1), ("composite", Zc), ("level", Zl)):
                 d = np.abs(Z[a] - Z[b])
                 m = (both if lab in ("cells", "relaxed") else np.isfinite(d)) & (d > JUMP)
                 for r, c in zip(*np.nonzero(m)):
@@ -145,9 +141,6 @@ def main(argv):
         res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "strip_seams": res_strip,
                      "composite_max_6m": max([j["dz"] for j in jumps if j["what"] == "composite"
                                               and np.hypot(j["x"] - x, j["y"] - y) < 6.0] or [0.0]),
-                     "composite_noblend_max_6m": max([j["dz"] for j in jumps if j["what"] == "composite_noblend"
-                                                      and np.hypot(j["x"] - x, j["y"] - y) < 6.0] or [0.0]),
-                     "n_jumps_composite_noblend": sum(1 for j in jumps if j["what"] == "composite_noblend"),
                      "level_max_6m": max([j["dz"] for j in jumps if j["what"] == "level"
                                           and np.hypot(j["x"] - x, j["y"] - y) < 6.0] or [0.0]),
                      "jumps": [j for j in jumps if j["what"] in ("cells", "level")][:30] + [j for j in jumps if j["what"] == "relaxed"][:30]
