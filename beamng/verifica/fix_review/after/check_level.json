@@ -1,7 +1,7 @@
 {
  "forest_items": 746645,
  "forest_floating": 3441,
- "forest_buried": 13183,
+ "forest_buried": 13184,
  "crowns_in_profile": 95,
  "crowns_in_profile_by_class": {
   "carreggiata": 84,
@@ -14,13 +14,13 @@
   "palo o cartello": 2,
   "edificio": 1
  },
- "terrain_over_road": 484,
+ "terrain_over_road": 468,
  "trunks_on_surface": 2,
  "trunks_near_roads": 4,
  "shrubs_on_surface": 0,
  "network_holes": 414,
  "network_off_profile": 545,
- "network_bumps": 39579,
+ "network_bumps": 39605,
  "network_stations": 308294,
  "network_above_ground": 126,
  "terrain_over_road_max_m": 1.621,
@@ -421,7 +421,7 @@
   "/levels/jungle_rock_island/art/shapes/buildings/Ind_metal_trim_nm.normal.png",
   "/levels/jungle_rock_island/art/shapes/buildings/ind_metal_trim_s.color.png"
  ],
- "level_size_mb": 5889.2,
+ "level_size_mb": 5889.3,
  "failed": [
   "crowns_in_profile",
   "forest_buried",
@@ -547,8 +547,8 @@
    "what": "strada staccata dal terreno",
    "x": 1129.2,
    "y": 6312.4,
-   "z": 764.9,
-   "score": 5.216
+   "z": 764.95,
+   "score": 5.266
   },
   {
    "what": "pianta interrata",
@@ -1026,7 +1026,7 @@
    "x": -481.9,
    "y": 1094.2,
    "z": 557.24,
-   "score": 3.325
+   "score": 3.327
   },
   {
    "what": "pianta interrata",
@@ -1913,6 +1913,13 @@
    "score": 1.947
   },
   {
+   "what": "gradino o dosso",
+   "x": 3.5,
+   "y": 4591.0,
+   "z": 797.97,
+   "score": 1.946
+  },
+  {
    "what": "strada sotto il terreno",
    "x": -2428.7,
    "y": 94.7,
@@ -1932,13 +1939,6 @@
    "y": 1913.0,
    "z": 641.57,
    "score": 1.929
-  },
-  {
-   "what": "gradino o dosso",
-   "x": 3.5,
-   "y": 4591.0,
-   "z": 797.97,
-   "score": 1.928
   },
   {
    "what": "strada staccata dal terreno",
@@ -2349,7 +2349,7 @@
    "x": 2403.8,
    "y": 2453.4,
    "z": 403.15,
-   "score": 1.631
+   "score": 1.633
   },
   {
    "what": "gradino o dosso",
@@ -2973,18 +2973,18 @@
    "score": 1.451
   },
   {
+   "what": "gradino o dosso",
+   "x": -228.2,
+   "y": 4469.1,
+   "z": 742.83,
+   "score": 1.451
+  },
+  {
    "what": "strada sotto il terreno",
    "x": 49.3,
    "y": -911.3,
    "z": 387.19,
    "score": 1.45
-  },
-  {
-   "what": "gradino o dosso",
-   "x": -228.2,
-   "y": 4469.1,
-   "z": 742.83,
-   "score": 1.449
   },
   {
    "what": "chioma nella sagoma della strada",

@@ -428,9 +428,9 @@ false
 ],
 [
 "new_vezio_step0",
-1130.0,
+1130.4,
 6314.0,
-"vezio: STEP 192 cm Stradón da Mügéna (1130, 6314)",
+"vezio: STEP 17 cm Stradón da Mügéna (1130, 6314)",
 false
 ],
 [
@@ -518,31 +518,31 @@ false
 false
 ],
 [
-"new_minor_step02",
-1130.0,
-6314.0,
-"minor: STEP 192 cm Stradón da Mügéna (1130, 6314)",
-false
-],
-[
 "new_minor_step08",
--1262.6,
--1833.9,
-"minor: STEP 48 cm  (-1263, -1834)",
-false
-],
-[
-"new_minor_step10",
 -5371.6,
 109.3,
 "minor: STEP 46 cm Via Roncaccio (-5372, 109)",
 false
 ],
 [
-"new_minor_step11",
+"new_minor_step09",
+-1262.6,
+-1833.9,
+"minor: STEP 42 cm  (-1263, -1834)",
+false
+],
+[
+"new_minor_step10",
 -1470.7,
 1644.9,
 "minor: STEP 33 cm  (-1471, 1645)",
+false
+],
+[
+"new_minor_step11",
+-624.0,
+1123.4,
+"minor: STEP 32 cm Via Mulino (-624, 1123)",
 false
 ]
 ]

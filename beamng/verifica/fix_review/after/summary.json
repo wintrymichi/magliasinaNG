@@ -96,7 +96,7 @@
   },
   "vezio": {
    "edges": {
-    "edges_km": 14.58,
+    "edges_km": 14.59,
     "median_m": 0.065,
     "p90_m": 0.417,
     "share_over_0.15m": 0.179,
@@ -124,10 +124,10 @@
    "worst": [
     {
      "what": "STEP",
-     "x": 1130.0,
+     "x": 1130.4,
      "y": 6314.0,
-     "z": 764.82,
-     "value": 1.922,
+     "z": 764.81,
+     "value": 0.172,
      "seg": 2761,
      "class": "4m Strasse",
      "name": "Stradón da Mügéna",
@@ -154,7 +154,7 @@
     "median_m": 0.069,
     "p90_m": 0.501,
     "share_over_0.15m": 0.24,
-    "share_over_0.3m": 0.182
+    "share_over_0.3m": 0.181
    },
    "edge_worst": [
     [
@@ -224,7 +224,7 @@
      "x": 2173.3,
      "y": 6393.8,
      "z": 851.12,
-     "value": 0.466,
+     "value": 0.46,
      "seg": 314,
      "class": "4m Strasse",
      "name": "Via alla Chiesa di San Michele",
@@ -298,7 +298,7 @@
      "x": 8.2,
      "y": 4595.2,
      "z": 798.54,
-     "value": 0.16,
+     "value": 0.197,
      "seg": 5216,
      "class": "3m Strasse",
      "name": "",
@@ -399,17 +399,6 @@
   },
   {
    "what": "STEP",
-   "x": 1130.0,
-   "y": 6314.0,
-   "z": 764.82,
-   "value": 1.922,
-   "seg": 2761,
-   "class": "4m Strasse",
-   "name": "Stradón da Mügéna",
-   "cls": "minor"
-  },
-  {
-   "what": "STEP",
    "x": 1979.7,
    "y": 3336.6,
    "z": 739.69,
@@ -465,21 +454,10 @@
   },
   {
    "what": "STEP",
-   "x": -1262.6,
-   "y": -1833.9,
-   "z": 364.05,
-   "value": 0.483,
-   "seg": 3801,
-   "class": "3m Strasse",
-   "name": "",
-   "cls": "minor"
-  },
-  {
-   "what": "STEP",
    "x": 2173.3,
    "y": 6393.8,
    "z": 851.12,
-   "value": 0.466,
+   "value": 0.46,
    "seg": 314,
    "class": "4m Strasse",
    "name": "Via alla Chiesa di San Michele",
@@ -498,6 +476,17 @@
   },
   {
    "what": "STEP",
+   "x": -1262.6,
+   "y": -1833.9,
+   "z": 364.05,
+   "value": 0.422,
+   "seg": 3801,
+   "class": "3m Strasse",
+   "name": "",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
    "x": -1470.7,
    "y": 1644.9,
    "z": 570.13,
@@ -505,6 +494,17 @@
    "seg": 4696,
    "class": "3m Strasse",
    "name": "",
+   "cls": "minor"
+  },
+  {
+   "what": "STEP",
+   "x": -624.0,
+   "y": 1123.4,
+   "z": 553.75,
+   "value": 0.321,
+   "seg": 2991,
+   "class": "3m Strasse",
+   "name": "Via Mulino",
    "cls": "minor"
   }
  ]
