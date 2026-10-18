@@ -78,6 +78,9 @@ PATH_YIELD = 10.0
 # v3.0 fix round: the cells within BRIDGE_HEAD m of the end of a bridge (its head, past the end of the line leading to it)
 # keep their line's height: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 BRIDGE_HEAD = 8.0
+# v3.0 fix round: a strip near the end nodes of its line takes the height of the lines meeting there (strip_height):
+# up to v3.0 it kept its own line's, 0.25-0.5 m off the cells of the other line beside it (under the church of Arosio)
+STRIP_JUNCTION_BLEND = True
 STEP_DZ_PIN = 0.05     # m, cells pinned to two different strips that differ more are left free (_pin_strips)
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
@@ -423,6 +426,16 @@ class Network:
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
             z = self.heights(x, y, np.full(len(x), pid), own=own)
+            if STRIP_JUNCTION_BLEND and own is not None:
+                # near the end nodes of its line the strip takes the height the lines meeting there give (as the
+                # survey polygons' cells do), full within JUNCTION_R0 / 2 m, fading out at JUNCTION_R0
+                ends = self.node_xy[[self.n0[own], self.n1[own]]]
+                d = np.min(np.hypot(x[:, None] - ends[:, 0], y[:, None] - ends[:, 1]), axis=1)
+                w = np.clip((JUNCTION_R0 - d) / (0.5 * JUNCTION_R0), 0.0, 1.0)
+                k = (w > 0) & np.isfinite(z)
+                if k.any():
+                    za = self.heights(x[k], y[k], np.full(int(k.sum()), pid))
+                    z[k] = z[k] + w[k] * np.nan_to_num(za - z[k])
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)

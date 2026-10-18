@@ -64,14 +64,32 @@ def main(argv):
         rr, cc = np.nonzero(own >= 0)
         _, _, u_, e_, a_ = net.heights(X[rr, cc], Y[rr, cc], own[rr, cc], with_seg=True, with_u=True)
         Ag[rr, cc], Ug[rr, cc], Eg[rr, cc] = a_, u_, e_
+        # the cells and the strips together, as the level's mesh has them (strips: meshed apart at strip_height)
+        import shapely as _sh
+        from rasterio import features as _ft
+        from rasterio.transform import Affine as _Af
+        Zc = Z1.copy()
+        Zc0 = Z1.copy()                       # the strips without the junction blend (nm.STRIP_JUNCTION_BLEND off)
+        sids = [int(i) for i in net.ptree.query(_sh.box(x0, y0, x1, y1), predicate="intersects")
+                if net.polys[i]["cls"].startswith("strip")]
+        if sids:
+            sown = _ft.rasterize([(net.polys[i]["geom"], i) for i in sids], out_shape=own.shape,
+                                 transform=_Af(nm.RES, 0, x0, 0, -nm.RES, y1), fill=-1, dtype=np.int32)
+            for pid in sids:
+                k = (sown == pid) & (own < 0)
+                if k.any():
+                    Zc[k] = net.strip_height(pid)(X[k], Y[k])
+                    keep, nm.STRIP_JUNCTION_BLEND = nm.STRIP_JUNCTION_BLEND, False
+                    Zc0[k] = net.strip_height(pid)(X[k], Y[k])
+                    nm.STRIP_JUNCTION_BLEND = keep
         jumps = []
         for axis, L in ((1, LR), (0, LD)):
             a = (slice(None), slice(0, -1)) if axis == 1 else (slice(0, -1), slice(None))
             b = (slice(None), slice(1, None)) if axis == 1 else (slice(1, None), slice(None))
             both = (own[a] >= 0) & (own[b] >= 0)
-            for lab, Z in (("cells", Z0), ("relaxed", Z1), ("level", Zl)):
+            for lab, Z in (("cells", Z0), ("relaxed", Z1), ("composite", Zc), ("composite_noblend", Zc0), ("level", Zl)):
                 d = np.abs(Z[a] - Z[b])
-                m = (both if lab != "level" else np.isfinite(d)) & (d > JUMP)
+                m = (both if lab in ("cells", "relaxed") else np.isfinite(d)) & (d > JUMP)
                 for r, c in zip(*np.nonzero(m)):
                     r2, c2 = (r, c + 1) if axis == 1 else (r + 1, c)
                     g1, g2 = int(G[r, c]), int(G[r2, c2])
@@ -125,19 +143,27 @@ def main(argv):
                      "over_0.08": int((strip_seams > JUMP).sum())}
         res_folds = int(sum(f.sum() for f in cap["folds"])) if cap.get("folds") is not None else 0
         res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "strip_seams": res_strip,
-                     "jumps": [j for j in jumps if j["what"] != "relaxed"][:30] + [j for j in jumps if j["what"] == "relaxed"][:30],
+                     "composite_max_6m": max([j["dz"] for j in jumps if j["what"] == "composite"
+                                              and np.hypot(j["x"] - x, j["y"] - y) < 6.0] or [0.0]),
+                     "composite_noblend_max_6m": max([j["dz"] for j in jumps if j["what"] == "composite_noblend"
+                                                      and np.hypot(j["x"] - x, j["y"] - y) < 6.0] or [0.0]),
+                     "n_jumps_composite_noblend": sum(1 for j in jumps if j["what"] == "composite_noblend"),
+                     "level_max_6m": max([j["dz"] for j in jumps if j["what"] == "level"
+                                          and np.hypot(j["x"] - x, j["y"] - y) < 6.0] or [0.0]),
+                     "jumps": [j for j in jumps if j["what"] in ("cells", "level")][:30] + [j for j in jumps if j["what"] == "relaxed"][:30]
+                     + [j for j in jumps if j["what"] == "composite"][:20],
                      "n_jumps_cells": sum(1 for j in jumps if j["what"] == "cells"),
                      "n_jumps_relaxed": sum(1 for j in jumps if j["what"] == "relaxed"),
+                     "n_jumps_composite": sum(1 for j in jumps if j["what"] == "composite"),
                      "n_jumps_level": sum(1 for j in jumps if j["what"] == "level")}
         fig, ax = plt.subplots(1, 4, figsize=(24, 6.4))
         ext = (x0, x1, y0, y1)
-        for k, (Z, t) in enumerate(((Z0, "cells, before relax"), (Z1, "cells, after"), (np.where(own >= 0, G, np.nan),
-                                                                                       "line of every cell"), (Zl, "level top faces"))):
-            im = ax[k].imshow(Z, extent=ext, origin="upper", cmap="tab20" if k == 2 else "terrain", interpolation="nearest")
+        for k, (Z, t) in enumerate(((Z0, "cells, before relax"), (Z1, "cells, after"), (Zc, "cells and strips"), (Zl, "level top faces"))):
+            im = ax[k].imshow(Z, extent=ext, origin="upper", cmap="terrain", interpolation="nearest")
             plt.colorbar(im, ax=ax[k], fraction=0.046)
             ax[k].set_title(t)
             for j in jumps:
-                if j["what"] == ("cells", "relaxed", None, "level")[k]:
+                if j["what"] == ("cells", "relaxed", None, "level")[k] or (k == 2 and j["what"] == "composite"):
                     ax[k].plot(j["x"], j["y"], ".", ms=3, color="lime" if j.get("fold") else ("red" if j["linked"] else "blue"))
             ax[k].plot(x, y, "k+", ms=14)
         fig.suptitle(f"{name} ({x:.0f}, {y:.0f}): red jumps between linked cells, blue unlinked, green folds of one line (> {JUMP} m)")
