@@ -76,6 +76,11 @@ FOLD_DZ = 1.5
 # is raised by this much (half widths), where the cell is on the carriageway of a road line (within OFF_LINE half widths,
 # not past its end: elsewhere a road's height gives way to the ground, a 2 m drop at a bridge above Vezio).
 PATH_YIELD = 10.0
+# v3.0 fix round: past the end of its line a cell carried on along the grade of the line's last piece, up to 100 % where
+# that piece climbs a wall or steps (0.47 m between neighbouring cells under the church of Arosio): at most this grade.
+END_GRADE = 0.20
+# The cells past the end of a line that meets a bridge (its abutment, beside the deck's head) keep the line's height
+# within REACH m: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
@@ -106,6 +111,9 @@ class Network:
         self.bridge = np.array([s["bridge"] for s in self.segs])
         self.main = np.array([s["kind"] == "road" and s["class"] in MAIN_CLASSES for s in self.segs])
         self.path = np.array([s["kind"] == "path" for s in self.segs])
+        bn = {nd for s in self.segs if s["bridge"] for nd in s["nodes"]}
+        self.n0_bridge = np.array([n in bn for n in self.n0], bool)     # the line starts / ends at a bridge
+        self.n1_bridge = np.array([n in bn for n in self.n1], bool)
         self.polys = []                       # dicts: geom, cls, surface, segs
         self.deck_tops = []                   # bridge deck top triangles (bridges.py)
         self.deck_feet = []                   # (kind, footprint) of every deck built (bridges.py)
@@ -291,7 +299,7 @@ class Network:
             b_last = (b == N - 1) | (self.seg[np.clip(b + 1, 0, N - 1)] != seg)
             before, after = (s_raw < 0) & a_first, (s_raw > 1) & b_last
             e = np.where(before | after, along, 0.0)
-            ge = np.where(s_raw < 0, self.g[a], self.g[b])
+            ge = np.clip(np.where(s_raw < 0, self.g[a], self.g[b]), -END_GRADE, END_GRADE)
             z = self.z[a] + s * (self.z[b] - self.z[a]) + (self.c[a] + s * (self.c[b] - self.c[a])) * t + ge * e
             d = np.hypot(Xb - qx, Yb - qy)
             # a clamp at a middle station: the neighbouring piece has the same point, let it win
@@ -459,7 +467,9 @@ class Network:
         # a survey polygon reaching beyond the carriageway of its line onto ground far above or
         # below it (a terrace, a yard behind a wall), or past the end of its line where the line's
         # grade carried on leaves the ground: that part keeps to the ground
-        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF)
+        Gc = np.maximum(G, 0)
+        at_bridge = (G >= 0) & (U <= OFF_LINE) & (E <= REACH) & np.where(A <= 0.01, self.n0_bridge[Gc], self.n1_bridge[Gc])
+        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge
         Z[off] = np.nan
         G[off] = -1
         # squares and car parks: smoothed DTM, corrected to meet the roads around
