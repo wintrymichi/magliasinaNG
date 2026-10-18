@@ -78,8 +78,19 @@ def main(argv):
                                   "fold": bool(lab == "cells" and cap.get("folds") is not None
                                                and cap["folds"][0 if axis == 1 else 1][r, c])})
         jumps.sort(key=lambda j: -j["dz"])
+        # the seams between the polygons' cells and the strips beside them (strips: meshed apart at their line's height)
+        import shapely
+        Zp = np.where(own >= 0, np.asarray(Sf.Z), np.nan)
+        probe_pin = np.zeros(own.shape, bool)
+        Zs = Zp.copy()
+        net._pin_strips(shapely.box(x0, y0, x1, y1), x0, y1, own.shape[1], own.shape[0], own >= 0, Zs, G) \
+            if hasattr(net, "_pin_strips") else None
+        sd = np.abs(Zs - Zp)
+        strip_seams = sd[np.isfinite(sd) & (sd > 1e-6)]
+        res_strip = {"cells": int(len(strip_seams)), "max_m": round(float(strip_seams.max()), 3) if len(strip_seams) else 0.0,
+                     "over_0.08": int((strip_seams > JUMP).sum())}
         res_folds = int(sum(f.sum() for f in cap["folds"])) if cap.get("folds") is not None else 0
-        res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "jumps": jumps[:40],
+        res[name] = {"cells": int((own >= 0).sum()), "fold_links": res_folds, "strip_seams": res_strip, "jumps": jumps[:40],
                      "n_jumps_cells": sum(1 for j in jumps if j["what"] == "cells"),
                      "n_jumps_level": sum(1 for j in jumps if j["what"] == "level")}
         fig, ax = plt.subplots(1, 4, figsize=(24, 6.4))

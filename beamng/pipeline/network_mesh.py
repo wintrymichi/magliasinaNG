@@ -70,6 +70,11 @@ JUNCTION_DZ = 1.0      # m, the cells of two lines meeting at a node within JUNC
 # the hairpins (Astano down to Banco). Now they are a seam: linked up to FOLD_DZ apart and spread by relax_seams.
 FOLD_GAP = 3.0
 FOLD_DZ = 1.5
+# v3.0 fix round: a path line (a "1m Weg" ending at a road, a flight of steps beside it) gives no height to a cell that
+# a road line also reaches: up to v3.0 the line nearest the cell in half widths won, and a path, with its half width
+# of 0.5 m, won the cells right over it inside the carriageway, at its own height (0.3-2 m off the road's). Its score
+# is raised by this much (half widths).
+PATH_YIELD = 10.0
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
@@ -99,6 +104,7 @@ class Network:
         self.tree = cKDTree(np.column_stack([self.x, self.y]))
         self.bridge = np.array([s["bridge"] for s in self.segs])
         self.main = np.array([s["kind"] == "road" and s["class"] in MAIN_CLASSES for s in self.segs])
+        self.path = np.array([s["kind"] == "path" for s in self.segs])
         self.polys = []                       # dicts: geom, cls, surface, segs
         self.deck_tops = []                   # bridge deck top triangles (bridges.py)
         self.deck_feet = []                   # (kind, footprint) of every deck built (bridges.py)
@@ -308,7 +314,7 @@ class Network:
         h_o = np.take_along_axis(h, order, 1)
         u = np.abs(np.take_along_axis(off, order, 1)) / np.maximum(np.take_along_axis(hw, order, 1), 0.3)
         e_o = np.abs(np.take_along_axis(ext, order, 1))
-        score = np.where(ok_o, u + 0.05 * e_o, np.inf)
+        score = np.where(ok_o, u + 0.05 * e_o + PATH_YIELD * self.path[seg_o], np.inf)
         best = np.argmin(score, axis=1)
         has = ok_o.any(1)
         zb = h_o[np.arange(n), best]
@@ -354,6 +360,38 @@ class Network:
         d = np.hypot(px - self.node_xy[sn, 0], py - self.node_xy[sn, 1])
         out[r[ok & (d < JUNCTION_R0)], c[ok & (d < JUNCTION_R0)]] = True
         return out
+
+    def _pin_strips(self, box, x0, y1, W, H, m, Z, G):
+        """Mask of the cells (m: the polygons' cells that may) beside a strip that take its height (Z set in place)."""
+        pin = np.zeros((H, W), bool)
+        sids = [int(i) for i in self.ptree.query(box, predicate="intersects") if self.polys[i]["cls"].startswith("strip")]
+        if not sids:
+            return pin
+        tr = Affine(RES, 0, x0, 0, -RES, y1)
+        sown = features.rasterize([(self.polys[i]["geom"], i) for i in sids], out_shape=(H, W), transform=tr, fill=-1,
+                                  dtype=np.int32, all_touched=True)
+        near = sown.copy()
+        for dr, dc in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            sh = np.full((H, W), -1, np.int32)
+            sh[max(dr, 0):H + min(dr, 0), max(dc, 0):W + min(dc, 0)] = sown[max(-dr, 0):H + min(-dr, 0), max(-dc, 0):W + min(-dc, 0)]
+            near = np.where(near >= 0, near, sh)
+        cand = m & (near >= 0)
+        if not cand.any():
+            return pin
+        rr, cc = np.nonzero(cand)
+        X, Y = x0 + (cc + 0.5) * RES, y1 - (rr + 0.5) * RES
+        for pid in np.unique(near[rr, cc]):
+            k = near[rr, cc] == pid
+            line = self.polys[int(pid)]["own"]
+            g = G[rr[k], cc[k]]
+            gi = np.maximum(g, 0)
+            meet = (g == line) | (g < 0) | (self.n0[gi] == self.n0[line]) | (self.n0[gi] == self.n1[line]) \
+                | (self.n1[gi] == self.n0[line]) | (self.n1[gi] == self.n1[line])
+            zs = self.strip_height(int(pid))(X[k], Y[k])
+            ok = meet & np.isfinite(zs) & (np.abs(zs - Z[rr[k], cc[k]]) < JUNCTION_DZ)
+            Z[rr[k][ok], cc[k][ok]] = zs[ok]
+            pin[rr[k][ok], cc[k][ok]] = True
+        return pin
 
     def strip_height(self, pid):
         """Height function of a strip polygon: the surface of its own line (nearest station of its
@@ -430,6 +468,13 @@ class Network:
         low = m & (Z < Dlo)
         Z[low] = Dlo[low]
         G[low] = FILLED
+        # v3.0 fix round: the cells beside the strip of a line (its mesh outside the survey polygons, at the line's
+        # own height: strip_height) take the strip's height and keep it, where their own line is the strip's or
+        # meets it at a node (or they are a filled square) and the two differ by less than JUNCTION_DZ; the seam
+        # moves into the polygon and is spread there. Up to v3.0 a strip met a polygon whose cells had been given
+        # another line's height, or relaxed towards a junction, with a step (0.3-0.6 m: Astano, Arosio).
+        main_cell = (G >= 0) & self.main[np.maximum(G, 0)] & (U <= 1.0)
+        pin = self._pin_strips(box, x0, y1, W, H, m & ~main_cell, Z, G)     # a main road does not bend to a strip
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
@@ -456,8 +501,8 @@ class Network:
             | (fold_d & (np.abs(Z[:-1, :] - Z[1:, :]) < FOLD_DZ))
         # the carriageways of the main roads keep their surface: the side roads, yards and paths meeting
         # them take up the difference (a main road does not bend to a side road)
-        main_cell = (G >= 0) & self.main[np.maximum(G, 0)] & (U <= 1.0)
-        Z = relax_seams(Z, G, owner, LR, LD, main_cell, (fold_r, fold_d))
+        pin_r, pin_d = pin[:, :-1] != pin[:, 1:], pin[:-1, :] != pin[1:, :]
+        Z = relax_seams(Z, G, owner, LR, LD, main_cell | pin, (fold_r | pin_r, fold_d | pin_d))
         return surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES), ids
 
 
