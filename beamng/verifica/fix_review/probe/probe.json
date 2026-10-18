@@ -3,9 +3,9 @@
   "cells": 984,
   "fold_links": 62,
   "strip_seams": {
-   "cells": 25,
-   "max_m": 0.135,
-   "over_0.08": 21
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
   },
   "jumps": [
    {
@@ -1296,9 +1296,9 @@
   "cells": 1205,
   "fold_links": 321,
   "strip_seams": {
-   "cells": 83,
-   "max_m": 0.441,
-   "over_0.08": 41
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
   },
   "jumps": [
    {
@@ -2589,9 +2589,9 @@
   "cells": 2843,
   "fold_links": 346,
   "strip_seams": {
-   "cells": 141,
-   "max_m": 0.187,
-   "over_0.08": 23
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
   },
   "jumps": [
    {
@@ -3882,9 +3882,9 @@
   "cells": 2752,
   "fold_links": 269,
   "strip_seams": {
-   "cells": 121,
-   "max_m": 0.448,
-   "over_0.08": 30
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
   },
   "jumps": [
    {
@@ -6468,9 +6468,9 @@
   "cells": 2443,
   "fold_links": 183,
   "strip_seams": {
-   "cells": 49,
-   "max_m": 0.5,
-   "over_0.08": 38
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
   },
   "jumps": [
    {
@@ -10347,9 +10347,9 @@
   "cells": 3181,
   "fold_links": 207,
   "strip_seams": {
-   "cells": 16,
-   "max_m": 0.171,
-   "over_0.08": 4
+   "cells": 0,
+   "max_m": 0.0,
+   "over_0.08": 0
   },
   "jumps": [
    {
