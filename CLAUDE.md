@@ -54,6 +54,10 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Check winding/orientation when placing text or UVs along an outline: the fuel station fascia text was
   mirrored on outlines that ran the other way.
 
+- Translucent overlay materials need `"translucentZWrite": true` (as Italy has them): without it the game draws
+  them in a pass that takes no shadows, and they glow under cars and trees (road wear, 2026-10-18). DecalRoads
+  draw on the road meshes only with `overObjects` set, and they do not fix that by themselves.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs
