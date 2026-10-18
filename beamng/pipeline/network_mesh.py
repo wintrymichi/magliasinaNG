@@ -441,6 +441,10 @@ class Network:
             clash[b] |= c
         Z[clash] = Z_own[clash]
         pin &= ~clash
+        if getattr(self, "explain", False):
+            self.pin_explained = dict(near=near.copy(), near_line=np.array([self.polys[int(i)].get("own", -1) if i >= 0 else -1
+                                                                            for i in near.ravel()]).reshape(H, W),
+                                      pid_of=pid_of.copy(), clash=clash.copy(), Z_strip=np.where(pid_of >= 0, Z, np.nan))
         return pin
 
     def strip_height(self, pid):
@@ -534,6 +538,7 @@ class Network:
         pin = self._pin_strips(box, x0, y1, W, H, m & ~main_cell, Z, G)     # a main road does not bend to a strip
         if getattr(self, "explain", False):
             self.tile_explained.update(pin=pin.copy(), Z_pinned=Z.copy(), G_final=G.copy())
+            self.tile_explained.update(getattr(self, "pin_explained", {}))
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights

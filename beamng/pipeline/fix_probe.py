@@ -106,7 +106,8 @@ def main(argv):
         jumps.sort(key=lambda j: -j["dz"])
         # the candidate lines of the two cells of the largest jumps after relaxing: line, height, half widths, overrun, weight
         net.explain = True
-        for j in [j for j in jumps if j["what"] == "relaxed"][:4]:
+        for j in [j for j in jumps if j["what"] == "relaxed"][:4] + \
+                [j for j in jumps if j["what"] == "composite" and np.hypot(j["x"] - x, j["y"] - y) < 6.0][:3]:
             P = np.array([[j["x"], j["y"]]])
             j["candidates"] = []
             r0, c0 = int(round((y1 - j["y"]) / nm.RES - 0.5)), int(round((j["x"] - x0) / nm.RES - 0.5))
