@@ -3,7 +3,7 @@
 # on the new level: the drive test and the renders of the same places (beamng/verifica/fix_review/after/, committed
 # to the branch next to release/, the released v3.0). The zip to test in the game is an artifact of the run.
 # Nothing is published as a release.
-# build stamp: 1
+# build stamp: 2
 name: fix build (v3.0 fixes)
 
 on:
