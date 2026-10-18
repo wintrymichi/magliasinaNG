@@ -56,6 +56,11 @@ def main(argv):
         ys = y1 - (np.arange(n) + 0.5) * nm.RES
         X, Y = np.meshgrid(xs, ys)
         Zl = S.height(X.ravel(), Y.ravel(), "high").reshape(X.shape)
+        # the line's point each cell projects on (m along it), its distance in half widths, how far past the line's end
+        Ag, Ug, Eg = (np.full(own.shape, np.nan) for _ in range(3))
+        rr, cc = np.nonzero(own >= 0)
+        _, _, u_, e_, a_ = net.heights(X[rr, cc], Y[rr, cc], own[rr, cc], with_seg=True, with_u=True)
+        Ag[rr, cc], Ug[rr, cc], Eg[rr, cc] = a_, u_, e_
         jumps = []
         for axis, L in ((1, LR), (0, LD)):
             a = (slice(None), slice(0, -1)) if axis == 1 else (slice(0, -1), slice(None))
@@ -76,6 +81,9 @@ def main(argv):
                                   "poly_cls": [net.polys[int(own[r, c])]["cls"] if own[r, c] >= 0 else "-",
                                                net.polys[int(own[r2, c2])]["cls"] if own[r2, c2] >= 0 else "-"],
                                   "linked": bool(L[r, c]),
+                                  "arc": [round(float(Ag[r, c]), 2), round(float(Ag[r2, c2]), 2)],
+                                  "u": [round(float(Ug[r, c]), 2), round(float(Ug[r2, c2]), 2)],
+                                  "past_end": [round(float(Eg[r, c]), 2), round(float(Eg[r2, c2]), 2)],
                                   "fold": bool(lab != "level" and cap.get("folds") is not None
                                                and cap["folds"][0 if axis == 1 else 1][r, c])})
         jumps.sort(key=lambda j: -j["dz"])

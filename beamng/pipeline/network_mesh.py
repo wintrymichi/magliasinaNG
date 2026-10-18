@@ -73,7 +73,8 @@ FOLD_DZ = 1.5
 # v3.0 fix round: a path line (a "1m Weg" ending at a road, a flight of steps beside it) gives no height to a cell that
 # a road line also reaches: up to v3.0 the line nearest the cell in half widths won, and a path, with its half width
 # of 0.5 m, won the cells right over it inside the carriageway, at its own height (0.3-2 m off the road's). Its score
-# is raised by this much (half widths).
+# is raised by this much (half widths), where the cell is on the carriageway of a road line (within OFF_LINE half widths,
+# not past its end: elsewhere a road's height gives way to the ground, a 2 m drop at a bridge above Vezio).
 PATH_YIELD = 10.0
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
@@ -314,7 +315,11 @@ class Network:
         h_o = np.take_along_axis(h, order, 1)
         u = np.abs(np.take_along_axis(off, order, 1)) / np.maximum(np.take_along_axis(hw, order, 1), 0.3)
         e_o = np.abs(np.take_along_axis(ext, order, 1))
-        score = np.where(ok_o, u + 0.05 * e_o + PATH_YIELD * self.path[seg_o], np.inf)
+        # a path yields only to a road line whose carriageway the point is on (not past its end, not far beside it:
+        # there the road's height is dropped for the ground's, and the path's is the one to keep)
+        is_p = self.path[seg_o]
+        road_here = (ok_o & ~is_p & (u <= OFF_LINE) & (e_o <= 1.0)).any(1)
+        score = np.where(ok_o, u + 0.05 * e_o + PATH_YIELD * (is_p & road_here[:, None]), np.inf)
         best = np.argmin(score, axis=1)
         has = ok_o.any(1)
         zb = h_o[np.arange(n), best]
