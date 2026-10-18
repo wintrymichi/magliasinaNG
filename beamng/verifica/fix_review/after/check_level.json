@@ -1,0 +1,3302 @@
+{
+ "forest_items": 746645,
+ "forest_floating": 3441,
+ "forest_buried": 13183,
+ "crowns_in_profile": 95,
+ "crowns_in_profile_by_class": {
+  "carreggiata": 84,
+  "marciapiede o piazzale": 3,
+  "sentiero": 8
+ },
+ "crowns_in_profile_max_m": 4.22,
+ "trunks_in_solids": 3,
+ "trunks_in_solids_by_kind": {
+  "palo o cartello": 2,
+  "edificio": 1
+ },
+ "terrain_over_road": 484,
+ "trunks_on_surface": 2,
+ "trunks_near_roads": 4,
+ "shrubs_on_surface": 0,
+ "network_holes": 414,
+ "network_off_profile": 545,
+ "network_bumps": 39579,
+ "network_stations": 308294,
+ "network_above_ground": 126,
+ "terrain_over_road_max_m": 1.621,
+ "network_off_profile_max_m": 3.553,
+ "network_bump_max_m": 4.295,
+ "road_faces_under_water": 0,
+ "terrain_pits": 0,
+ "terrain_pit_max_m": 0.0,
+ "terrain_carve_cliffs": 0,
+ "terrain_carve_cliff_max_m": 0.0,
+ "road_obstacles": 38,
+ "path_obstacles": 153,
+ "obstacles_by_kind": {
+  "strade: ponte o gradino": 1,
+  "strade: guardrail": 14,
+  "strade: edificio": 2,
+  "strade: oggetto": 21,
+  "sentieri: ponte o gradino": 116,
+  "sentieri: guardrail": 3,
+  "sentieri: muro": 18,
+  "sentieri: edificio": 12,
+  "sentieri: oggetto": 4
+ },
+ "building_walls_inward_share": 0.0,
+ "building_walls_inward_m2": 0.0,
+ "road_faces_under_ground": 375,
+ "road_faces_under_ground_max_m": 2.164,
+ "road_seams": 153,
+ "road_seams_max_m": 0.864,
+ "ai_roads": 2999,
+ "ai_components": 34,
+ "ai_components_over_1km": 2,
+ "ai_largest_km": 235.1,
+ "network_road_pieces_over_1km": 2,
+ "missing_files": 0,
+ "missing_file_list": {},
+ "vanilla_file_list": [
+  "/art/shapes/common/power_lines_procedural/electric_pole_wood_old_01.dae",
+  "/art/shapes/common/power_lines_procedural/t_old_wood_ao.data.png",
+  "/art/shapes/common/power_lines_procedural/t_old_wood_b.color.png",
+  "/art/shapes/common/power_lines_procedural/t_old_wood_nm.normal.png",
+  "/art/shapes/common/power_lines_procedural/t_old_wood_r.data.png",
+  "/art/shapes/objects/s_trashbag_pile_01.dae",
+  "/assets/materials/foliage/bush/t_fluffy/t_fluffy_ao.data.png",
+  "/assets/materials/foliage/bush/t_fluffy/t_fluffy_b.color.png",
+  "/assets/materials/foliage/bush/t_fluffy/t_fluffy_nm.normal.png",
+  "/assets/materials/foliage/bush/t_fluffy/t_fluffy_o.data.png",
+  "/assets/materials/foliage/bush/t_fluffy/t_fluffy_r.data.png",
+  "/assets/materials/foliage/bush/t_generibush_leaves/t_generic_bush_ao.data.png",
+  "/assets/materials/foliage/bush/t_generibush_leaves/t_generic_bush_b.color.png",
+  "/assets/materials/foliage/bush/t_generibush_leaves/t_generic_bush_nm.normal.png",
+  "/assets/materials/foliage/bush/t_generibush_leaves/t_generic_bush_o.data.png",
+  "/assets/materials/foliage/bush/t_generibush_leaves/t_generic_bush_r.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_long_01/t_grass_green_long_01_ao.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_long_01/t_grass_green_long_01_nm.normal.png",
+  "/assets/materials/foliage/grass/t_grass_green_long_01/t_grass_green_long_01_o.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_long_01/t_grass_green_long_01_r.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_long_03/t_grass_green_long_03_b.color.png",
+  "/assets/materials/foliage/grass/t_grass_green_short_01/t_grass_green_short_01_ao.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_short_01/t_grass_green_short_01_nm.normal.png",
+  "/assets/materials/foliage/grass/t_grass_green_short_01/t_grass_green_short_01_o.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_short_01/t_grass_green_short_01_r.data.png",
+  "/assets/materials/foliage/grass/t_grass_green_short_02/t_grass_green_short_02_b.color.png",
+  "/assets/materials/foliage/groundcover/t_flowers_01/t_flowers_01_ao.data.png",
+  "/assets/materials/foliage/groundcover/t_flowers_01/t_flowers_01_b.color.png",
+  "/assets/materials/foliage/groundcover/t_flowers_01/t_flowers_01_nm.normal.png",
+  "/assets/materials/foliage/groundcover/t_flowers_01/t_flowers_01_o.data.png",
+  "/assets/materials/foliage/groundcover/t_flowers_01/t_flowers_01_r.data.png",
+  "/assets/materials/terrain/asphalt/macro_asphalt/t_macro_asphalt_ao.png",
+  "/assets/materials/terrain/asphalt/macro_asphalt/t_macro_asphalt_b.png",
+  "/assets/materials/terrain/asphalt/macro_asphalt/t_macro_asphalt_h.png",
+  "/assets/materials/terrain/asphalt/macro_asphalt/t_macro_asphalt_nm.png",
+  "/assets/materials/terrain/asphalt/macro_asphalt/t_macro_asphalt_r.png",
+  "/assets/materials/terrain/asphalt/t_asphalt_02/t_asphalt_02_ao.png",
+  "/assets/materials/terrain/asphalt/t_asphalt_02/t_asphalt_02_b.png",
+  "/assets/materials/terrain/asphalt/t_asphalt_02/t_asphalt_02_h.png",
+  "/assets/materials/terrain/asphalt/t_asphalt_02/t_asphalt_02_nm.png",
+  "/assets/materials/terrain/asphalt/t_asphalt_02/t_asphalt_02_r.png",
+  "/assets/materials/terrain/concrete/concrete/t_concrete_damaged_ao.png",
+  "/assets/materials/terrain/concrete/concrete/t_concrete_damaged_b.png",
+  "/assets/materials/terrain/concrete/concrete/t_concrete_damaged_h.png",
+  "/assets/materials/terrain/concrete/concrete/t_concrete_damaged_nm.png",
+  "/assets/materials/terrain/concrete/concrete/t_concrete_damaged_r.png",
+  "/assets/materials/terrain/forest/t_forest_ground/t_forest_ground_ao.png",
+  "/assets/materials/terrain/forest/t_forest_ground/t_forest_ground_b.png",
+  "/assets/materials/terrain/forest/t_forest_ground/t_forest_ground_h.png",
+  "/assets/materials/terrain/forest/t_forest_ground/t_forest_ground_nm.png",
+  "/assets/materials/terrain/forest/t_forest_ground/t_forest_ground_r.png",
+  "/assets/materials/terrain/forest/t_forest_ground_02/t_forest_ground_02_ao.png",
+  "/assets/materials/terrain/forest/t_forest_ground_02/t_forest_ground_02_b.png",
+  "/assets/materials/terrain/forest/t_forest_ground_02/t_forest_ground_02_h.png",
+  "/assets/materials/terrain/forest/t_forest_ground_02/t_forest_ground_02_nm.png",
+  "/assets/materials/terrain/forest/t_forest_ground_02/t_forest_ground_02_r.png",
+  "/assets/materials/terrain/forest/t_macro_dirt_forest/t_macro_dirt_forest_ao.png",
+  "/assets/materials/terrain/forest/t_macro_dirt_forest/t_macro_dirt_forest_b.png",
+  "/assets/materials/terrain/forest/t_macro_dirt_forest/t_macro_dirt_forest_h.png",
+  "/assets/materials/terrain/forest/t_macro_dirt_forest/t_macro_dirt_forest_nm.png",
+  "/assets/materials/terrain/forest/t_macro_dirt_forest/t_macro_dirt_forest_r.png",
+  "/assets/materials/terrain/forest/t_macro_forest/t_macro_forest_ao.png",
+  "/assets/materials/terrain/forest/t_macro_forest/t_macro_forest_b.png",
+  "/assets/materials/terrain/forest/t_macro_forest/t_macro_forest_h.png",
+  "/assets/materials/terrain/forest/t_macro_forest/t_macro_forest_nm.png",
+  "/assets/materials/terrain/forest/t_macro_forest/t_macro_forest_r.png",
+  "/assets/materials/terrain/forest/t_moss/t_moss_ao.png",
+  "/assets/materials/terrain/forest/t_moss/t_moss_b.png",
+  "/assets/materials/terrain/forest/t_moss/t_moss_h.png",
+  "/assets/materials/terrain/forest/t_moss/t_moss_nm.png",
+  "/assets/materials/terrain/forest/t_moss/t_moss_r.png",
+  "/assets/materials/terrain/grass/macro_grass/t_macro_grass_ao.png",
+  "/assets/materials/terrain/grass/macro_grass/t_macro_grass_b.png",
+  "/assets/materials/terrain/grass/macro_grass/t_macro_grass_h.png",
+  "/assets/materials/terrain/grass/macro_grass/t_macro_grass_nm.png",
+  "/assets/materials/terrain/grass/macro_grass/t_macro_grass_r.png",
+  "/assets/materials/terrain/grass/t_dirt_vegetation/t_dirt_vegetation_ao.png",
+  "/assets/materials/terrain/grass/t_dirt_vegetation/t_dirt_vegetation_b.png",
+  "/assets/materials/terrain/grass/t_dirt_vegetation/t_dirt_vegetation_h.png",
+  "/assets/materials/terrain/grass/t_dirt_vegetation/t_dirt_vegetation_nm.png",
+  "/assets/materials/terrain/grass/t_dirt_vegetation/t_dirt_vegetation_r.png",
+  "/assets/materials/terrain/grass/t_grass_01/t_grass_01_ao.png",
+  "/assets/materials/terrain/grass/t_grass_01/t_grass_01_b.png",
+  "/assets/materials/terrain/grass/t_grass_01/t_grass_01_h.png",
+  "/assets/materials/terrain/grass/t_grass_01/t_grass_01_nm.png",
+  "/assets/materials/terrain/grass/t_grass_01/t_grass_01_r.png",
+  "/assets/materials/terrain/grass/t_macro_grass/t_macro_grass_ao.png",
+  "/assets/materials/terrain/grass/t_macro_grass/t_macro_grass_b.png",
+  "/assets/materials/terrain/grass/t_macro_grass/t_macro_grass_h.png",
+  "/assets/materials/terrain/grass/t_macro_grass/t_macro_grass_nm.png",
+  "/assets/materials/terrain/grass/t_macro_grass/t_macro_grass_r.png",
+  "/assets/materials/terrain/mud/mud/t_mud_ao.png",
+  "/assets/materials/terrain/mud/mud/t_mud_b.png",
+  "/assets/materials/terrain/mud/mud/t_mud_h.png",
+  "/assets/materials/terrain/mud/mud/t_mud_nm.png",
+  "/assets/materials/terrain/mud/mud/t_mud_r.png",
+  "/assets/materials/terrain/rock/macro_rocky/t_macro_rocky_ao.png",
+  "/assets/materials/terrain/rock/macro_rocky/t_macro_rocky_b.png",
+  "/assets/materials/terrain/rock/macro_rocky/t_macro_rocky_h.png",
+  "/assets/materials/terrain/rock/macro_rocky/t_macro_rocky_nm.png",
+  "/assets/materials/terrain/rock/macro_rocky/t_macro_rocky_r.png",
+  "/assets/materials/terrain/rock/t_dirt_rocky/t_dirt_rocky_ao.png",
+  "/assets/materials/terrain/rock/t_dirt_rocky/t_dirt_rocky_b.png",
+  "/assets/materials/terrain/rock/t_dirt_rocky/t_dirt_rocky_h.png",
+  "/assets/materials/terrain/rock/t_dirt_rocky/t_dirt_rocky_nm.png",
+  "/assets/materials/terrain/rock/t_dirt_rocky/t_dirt_rocky_r.png",
+  "/assets/materials/terrain/soil/t_gravel/t_gravel_ao.png",
+  "/assets/materials/terrain/soil/t_gravel/t_gravel_b.png",
+  "/assets/materials/terrain/soil/t_gravel/t_gravel_h.png",
+  "/assets/materials/terrain/soil/t_gravel/t_gravel_nm.png",
+  "/assets/materials/terrain/soil/t_gravel/t_gravel_r.png",
+  "/assets/materials/tileable/metal/chainlink/t_chainlink_fence_b.color.dds",
+  "/assets/materials/tileable/metal/chainlink/t_chainlink_fence_nm.normal.dds",
+  "/assets/materials/tileable/metal/chainlink/t_chainlink_fence_o.data.dds",
+  "/assets/materials/tileable/metal/chainlink/t_chainlink_fence_r.data.dds",
+  "/assets/materials/tileable/water/depthcolor_ramp/depthcolor_ramp_italy_muddy_b.png",
+  "/assets/materials/tileable/water/water_effects/foam2_b.color.dds",
+  "/assets/materials/tileable/water/water_effects/ripple_nm.normal.dds",
+  "/assets/materials/tree/beech/t_beech_blocker/t_beech_blocker_ao.data.png",
+  "/assets/materials/tree/beech/t_beech_blocker/t_beech_blocker_b.color.png",
+  "/assets/materials/tree/beech/t_beech_blocker/t_beech_blocker_nm.normal.png",
+  "/assets/materials/tree/beech/t_beech_blocker/t_beech_blocker_o.data.png",
+  "/assets/materials/tree/beech/t_beech_blocker/t_beech_blocker_r.data.png",
+  "/assets/materials/tree/beech/t_beech_branch_01/t_beech_branch_ao.data.png",
+  "/assets/materials/tree/beech/t_beech_branch_01/t_beech_branch_b.color.png",
+  "/assets/materials/tree/beech/t_beech_branch_01/t_beech_branch_nm.normal.png",
+  "/assets/materials/tree/beech/t_beech_branch_01/t_beech_branch_o.data.png",
+  "/assets/materials/tree/beech/t_beech_branch_01/t_beech_branch_r.data.png",
+  "/assets/materials/tree/beech/t_beech_leaves/t_beech_leaves_ao.data.png",
+  "/assets/materials/tree/beech/t_beech_leaves/t_beech_leaves_b.color.png",
+  "/assets/materials/tree/beech/t_beech_leaves/t_beech_leaves_nm.normal.png",
+  "/assets/materials/tree/beech/t_beech_leaves/t_beech_leaves_o.data.png",
+  "/assets/materials/tree/beech/t_beech_leaves/t_beech_leaves_r.data.png",
+  "/assets/materials/tree/beech/t_beech_leaves_distant/t_beech_leaves_distant_ao.data.png",
+  "/assets/materials/tree/beech/t_beech_leaves_distant/t_beech_leaves_distant_b.color.png",
+  "/assets/materials/tree/beech/t_beech_leaves_distant/t_beech_leaves_distant_nm.normal.png",
+  "/assets/materials/tree/beech/t_beech_leaves_distant/t_beech_leaves_distant_o.data.png",
+  "/assets/materials/tree/beech/t_beech_leaves_distant/t_beech_leaves_distant_r.data.png",
+  "/assets/materials/tree/beech/t_beech_trunk/t_beech_bark_ao.data.png",
+  "/assets/materials/tree/beech/t_beech_trunk/t_beech_bark_b.color.png",
+  "/assets/materials/tree/beech/t_beech_trunk/t_beech_bark_nm.normal.png",
+  "/assets/materials/tree/beech/t_beech_trunk/t_beech_bark_r.data.png",
+  "/assets/materials/tree/birch/t_birch_bark/t_birch_bark_ao.data.png",
+  "/assets/materials/tree/birch/t_birch_bark/t_birch_bark_b.color.png",
+  "/assets/materials/tree/birch/t_birch_bark/t_birch_bark_nm.normal.png",
+  "/assets/materials/tree/birch/t_birch_bark/t_birch_bark_r.data.png",
+  "/assets/materials/tree/birch/t_birch_branch/t_birch_branch_ao.data.png",
+  "/assets/materials/tree/birch/t_birch_branch/t_birch_branch_b.color.png",
+  "/assets/materials/tree/birch/t_birch_branch/t_birch_branch_nm.normal.png",
+  "/assets/materials/tree/birch/t_birch_branch/t_birch_branch_o.data.png",
+  "/assets/materials/tree/birch/t_birch_branch/t_birch_branch_r.data.png",
+  "/assets/materials/tree/birch/t_birch_leaves/t_birch_leaves_ao.data.png",
+  "/assets/materials/tree/birch/t_birch_leaves/t_birch_leaves_b.color.png",
+  "/assets/materials/tree/birch/t_birch_leaves/t_birch_leaves_nm.normal.png",
+  "/assets/materials/tree/birch/t_birch_leaves/t_birch_leaves_o.data.png",
+  "/assets/materials/tree/birch/t_birch_leaves/t_birch_leaves_r.data.png",
+  "/assets/materials/tree/birch/t_birch_leaves_distant/t_birch_leaves_distant_ao.data.png",
+  "/assets/materials/tree/birch/t_birch_leaves_distant/t_birch_leaves_distant_b.color.png",
+  "/assets/materials/tree/birch/t_birch_leaves_distant/t_birch_leaves_distant_nm.normal.png",
+  "/assets/materials/tree/birch/t_birch_leaves_distant/t_birch_leaves_distant_o.data.png",
+  "/assets/materials/tree/birch/t_birch_leaves_distant/t_birch_leaves_distant_r.data.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves/t_cypress_leaves_ao.data.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves/t_cypress_leaves_b.color.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves/t_cypress_leaves_nm.normal.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves/t_cypress_leaves_o.data.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves/t_cypress_leaves_r.data.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves_distant/t_cypress_leaves_distant_ao.data.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves_distant/t_cypress_leaves_distant_b.color.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves_distant/t_cypress_leaves_distant_nm.normal.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves_distant/t_cypress_leaves_distant_o.data.png",
+  "/assets/materials/tree/cypress/t_cypress_leaves_distant/t_cypress_leaves_distant_r.data.png",
+  "/assets/materials/tree/fir/t_fir_bark/t_fir_bark_ao.data.png",
+  "/assets/materials/tree/fir/t_fir_bark/t_fir_bark_b.color.png",
+  "/assets/materials/tree/fir/t_fir_bark/t_fir_bark_nm.normal.png",
+  "/assets/materials/tree/fir/t_fir_bark/t_fir_bark_r.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves/t_fir_leaves_ao.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves/t_fir_leaves_b.color.png",
+  "/assets/materials/tree/fir/t_fir_leaves/t_fir_leaves_nm.normal.png",
+  "/assets/materials/tree/fir/t_fir_leaves/t_fir_leaves_o.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves/t_fir_leaves_r.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_02/t_fir_leaves_02_b.color.png",
+  "/assets/materials/tree/fir/t_fir_leaves_dead/t_fir_leaves_dead_ao.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_dead/t_fir_leaves_dead_b.color.png",
+  "/assets/materials/tree/fir/t_fir_leaves_dead/t_fir_leaves_dead_nm.normal.png",
+  "/assets/materials/tree/fir/t_fir_leaves_dead/t_fir_leaves_dead_o.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_dead/t_fir_leaves_dead_r.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_distant/t_fir_leaves_distant_ao.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_distant/t_fir_leaves_distant_b.color.png",
+  "/assets/materials/tree/fir/t_fir_leaves_distant/t_fir_leaves_distant_nm.normal.png",
+  "/assets/materials/tree/fir/t_fir_leaves_distant/t_fir_leaves_distant_o.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_distant/t_fir_leaves_distant_r.data.png",
+  "/assets/materials/tree/fir/t_fir_leaves_distant_02/t_fir_leaves_distant_02_b.color.png",
+  "/assets/materials/tree/holm_oak/t_holm_oak_branches/t_holm_oak_branches_ao.data.png",
+  "/assets/materials/tree/holm_oak/t_holm_oak_branches/t_holm_oak_branches_b.color.png",
+  "/assets/materials/tree/holm_oak/t_holm_oak_branches/t_holm_oak_branches_nm.normal.png",
+  "/assets/materials/tree/holm_oak/t_holm_oak_branches/t_holm_oak_branches_o.data.png",
+  "/assets/materials/tree/holm_oak/t_holm_oak_branches/t_holm_oak_branches_r.data.png",
+  "/assets/materials/tree/oak/t_moss/t_moss_ao.data.png",
+  "/assets/materials/tree/oak/t_moss/t_moss_b.color.png",
+  "/assets/materials/tree/oak/t_moss/t_moss_nm.normal.png",
+  "/assets/materials/tree/oak/t_moss/t_moss_o.data.png",
+  "/assets/materials/tree/oak/t_moss/t_moss_r.data.png",
+  "/assets/materials/tree/oak/t_oak_bark/t_oak_bark_ao.data.png",
+  "/assets/materials/tree/oak/t_oak_bark/t_oak_bark_b.color.png",
+  "/assets/materials/tree/oak/t_oak_bark/t_oak_bark_nm.normal.png",
+  "/assets/materials/tree/oak/t_oak_bark/t_oak_bark_r.data.png",
+  "/assets/materials/tree/oak/t_oak_branch_01/t_oak_branch_ao.data.png",
+  "/assets/materials/tree/oak/t_oak_branch_01/t_oak_branch_b.color.png",
+  "/assets/materials/tree/oak/t_oak_branch_01/t_oak_branch_nm.normal.png",
+  "/assets/materials/tree/oak/t_oak_branch_01/t_oak_branch_o.data.png",
+  "/assets/materials/tree/oak/t_oak_branch_01/t_oak_branch_r.data.png",
+  "/assets/materials/tree/oak/t_oak_branch_02/t_oak_branch_02_ao.data.png",
+  "/assets/materials/tree/oak/t_oak_branch_02/t_oak_branch_02_b.color.png",
+  "/assets/materials/tree/oak/t_oak_branch_02/t_oak_branch_02_nm.normal.png",
+  "/assets/materials/tree/oak/t_oak_branch_02/t_oak_branch_02_o.data.png",
+  "/assets/materials/tree/oak/t_oak_branch_02/t_oak_branch_02_r.data.png",
+  "/assets/materials/tree/oak/t_oak_leaves_01/t_oak_leaves_ao.data.png",
+  "/assets/materials/tree/oak/t_oak_leaves_01/t_oak_leaves_nm.normal.png",
+  "/assets/materials/tree/oak/t_oak_leaves_01/t_oak_leaves_o.data.png",
+  "/assets/materials/tree/oak/t_oak_leaves_01/t_oak_leaves_r.data.png",
+  "/assets/materials/tree/oak/t_oak_leaves_02/t_oak_leaves_02_b.color.png",
+  "/assets/materials/tree/oak/t_oak_leaves_distant/t_oak_leaves_distant_ao.data.png",
+  "/assets/materials/tree/oak/t_oak_leaves_distant/t_oak_leaves_distant_b.color.png",
+  "/assets/materials/tree/oak/t_oak_leaves_distant/t_oak_leaves_distant_nm.normal.png",
+  "/assets/materials/tree/oak/t_oak_leaves_distant/t_oak_leaves_distant_o.data.png",
+  "/assets/materials/tree/oak/t_oak_leaves_distant/t_oak_leaves_distant_r.data.png",
+  "/assets/materials/tree/t_pine/t_pine_bark/t_pine_bark_ao.data.png",
+  "/assets/materials/tree/t_pine/t_pine_bark/t_pine_bark_b.color.png",
+  "/assets/materials/tree/t_pine/t_pine_bark/t_pine_bark_nm.normal.png",
+  "/assets/materials/tree/t_pine/t_pine_bark/t_pine_bark_r.data.png",
+  "/assets/materials/tree/tropical/tro_tree_1_trunk/t_tro_bark_01_detail_nm.normal.png",
+  "/assets/materials/tree/tropical/tro_tree_1_trunk/t_tropical_bark_variation_1_detail.data.png",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_bld_cleanmetal_n.dds",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_bld_cleanmetal_r.dds",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_bld_cleanmetal_s.dds",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_bld_wood_d.dds",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_bld_wood_n.dds",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_bld_wood_s.dds",
+  "/levels/east_coast_usa/art/shapes/buildings/eca_breakup_texture.dds",
+  "/levels/east_coast_usa/art/shapes/clutter/clutter_city_bench_wood.dae",
+  "/levels/east_coast_usa/art/shapes/null.dds",
+  "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_forest_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_large_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_small_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_c.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_e.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_forest_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_forest_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_large_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_small_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_small_c.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_small_d.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/tree_douglasfir_large_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/tree_douglasfir_large_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/tree_douglasfir_small_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/tree_douglasfir_small_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_forest_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_forest_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_large_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_large_b.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_large_c.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_sml_a.dae",
+  "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_sml_b.dae",
+  "/levels/italy/art/road/detailed_normals/t_asphalt_detail_02_nm.normal.png",
+  "/levels/italy/art/road/t_asphalt_decayed_ao.data.png",
+  "/levels/italy/art/road/t_asphalt_decayed_b.color.png",
+  "/levels/italy/art/road/t_asphalt_decayed_nm.normal.png",
+  "/levels/italy/art/road/t_asphalt_decayed_o.data.png",
+  "/levels/italy/art/road/t_asphalt_decayed_r.data.png",
+  "/levels/italy/art/road/t_asphalt_trackwear_ao.data.png",
+  "/levels/italy/art/road/t_asphalt_trackwear_b.color.png",
+  "/levels/italy/art/road/t_asphalt_trackwear_nm.normal.png",
+  "/levels/italy/art/road/t_asphalt_trackwear_o.data.png",
+  "/levels/italy/art/road/t_asphalt_trackwear_r.data.png",
+  "/levels/italy/art/road/t_asphalt_variation_02_ao.data.png",
+  "/levels/italy/art/road/t_asphalt_variation_02_b.color.png",
+  "/levels/italy/art/road/t_asphalt_variation_02_nm.normal.png",
+  "/levels/italy/art/road/t_asphalt_variation_02_o.data.png",
+  "/levels/italy/art/road/t_asphalt_variation_02_r.data.png",
+  "/levels/italy/art/road/t_line_white_b.color.png",
+  "/levels/italy/art/road/t_line_white_nm.normal.png",
+  "/levels/italy/art/road/t_line_white_o.data.png",
+  "/levels/italy/art/road/t_line_white_r.data.png",
+  "/levels/italy/art/shapes/buildings/detail_grunge_03.dds",
+  "/levels/italy/art/shapes/buildings/it_concrete_roadside_walls_d.dds",
+  "/levels/italy/art/shapes/buildings/it_concrete_roadside_walls_n.dds",
+  "/levels/italy/art/shapes/buildings/it_concrete_roadside_walls_s.dds",
+  "/levels/italy/art/shapes/buildings/italy_bld_decals.dds",
+  "/levels/italy/art/shapes/buildings/italy_bld_decals_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_bld_trim_metal_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_bld_trim_metal_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_bld_trim_metal_s.dds",
+  "/levels/italy/art/shapes/buildings/italy_city_busstop.dae",
+  "/levels/italy/art/shapes/buildings/italy_city_tree_pot_wplant.dae",
+  "/levels/italy/art/shapes/buildings/italy_clutter_bar_umbrella.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_big_dustbin.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_convexmirror.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_dumpster.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_fire_hydrant.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_mailboxstand.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_metal_bin.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_metal_chair.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_metal_drum.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_pallet.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_plastic_chair_a.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_pwood_bench.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_pwood_table.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_round_mtable.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_round_ptable.DAE",
+  "/levels/italy/art/shapes/buildings/italy_clutter_sorting_bin.DAE",
+  "/levels/italy/art/shapes/buildings/italy_cobblestone_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_cobblestone_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_cobblestone_patterned_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_cobblestone_patterned_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_curb_concrete_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_curb_concrete_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_curb_concrete_s.dds",
+  "/levels/italy/art/shapes/buildings/italy_guardrails_basic.dae",
+  "/levels/italy/art/shapes/buildings/italy_guardrails_basic_end_ccw.dae",
+  "/levels/italy/art/shapes/buildings/italy_guardrails_basic_end_cw.dae",
+  "/levels/italy/art/shapes/buildings/italy_light_single.dae",
+  "/levels/italy/art/shapes/buildings/italy_medieval_stone_wall_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_medieval_stone_wall_decals_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_medieval_stone_wall_decals_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_medieval_stone_wall_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_plastic_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_plastic_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_plastic_trim_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_plastic_trim_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_plastic_trim_s.dds",
+  "/levels/italy/art/shapes/buildings/italy_poles_lights_etc_d.dds",
+  "/levels/italy/art/shapes/buildings/italy_poles_lights_etc_n.dds",
+  "/levels/italy/art/shapes/buildings/italy_poles_lights_etc_s.dds",
+  "/levels/italy/art/shapes/buildings/italy_road_signs.dds",
+  "/levels/italy/art/shapes/buildings/t_asphalt_ao.data.png",
+  "/levels/italy/art/shapes/buildings/t_asphalt_b.color.png",
+  "/levels/italy/art/shapes/buildings/t_asphalt_nm.normal.png",
+  "/levels/italy/art/shapes/buildings/t_asphalt_r.data.png",
+  "/levels/italy/art/shapes/buildings/t_concrete_damaged_ao.data.png",
+  "/levels/italy/art/shapes/buildings/t_concrete_damaged_b.color.png",
+  "/levels/italy/art/shapes/buildings/t_concrete_damaged_nm.normal.png",
+  "/levels/italy/art/shapes/buildings/t_concrete_damaged_r.data.png",
+  "/levels/italy/art/shapes/buildings/t_italy_bld_metal_b.color.png",
+  "/levels/italy/art/shapes/buildings/t_italy_bld_metal_nm.normal.png",
+  "/levels/italy/art/shapes/buildings/t_italy_bld_metal_r.data.png",
+  "/levels/italy/art/shapes/buildings/t_macro_asphalt_detail.data.png",
+  "/levels/italy/art/shapes/buildings/t_macro_asphalt_nm.normal.png",
+  "/levels/italy/art/shapes/buildings/t_macro_concrete_detail.data.png",
+  "/levels/italy/art/shapes/buildings/t_macro_concrete_nm.normal.png",
+  "/levels/italy/art/shapes/buildings/traffic_cycle.png",
+  "/levels/italy/art/shapes/misc/italy_planter_round_1.dae",
+  "/levels/italy/art/shapes/misc/italy_planter_square_2.dae",
+  "/levels/italy/art/shapes/trees/trees_italy/cypress_hedge_3m.dae",
+  "/levels/italy/art/shapes/trees/trees_italy/cypress_tree.dae",
+  "/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae",
+  "/levels/italy/art/shapes/trees/trees_italy/generibush.dae",
+  "/levels/italy/art/shapes/trees/trees_italy/holm_oak.dae",
+  "/levels/italy/art/terrains/Rock-05-N2.dds",
+  "/levels/jungle_rock_island/art/shapes/buildings/Ind_metal_trim_d.color.png",
+  "/levels/jungle_rock_island/art/shapes/buildings/Ind_metal_trim_nm.normal.png",
+  "/levels/jungle_rock_island/art/shapes/buildings/ind_metal_trim_s.color.png"
+ ],
+ "level_size_mb": 5889.2,
+ "failed": [
+  "crowns_in_profile",
+  "forest_buried",
+  "forest_floating",
+  "forest_items",
+  "network_bumps",
+  "network_holes",
+  "network_off_profile",
+  "network_off_profile_max_m",
+  "road_obstacles",
+  "terrain_over_road",
+  "terrain_over_road_max_m",
+  "trunks_near_roads",
+  "trunks_on_surface"
+ ],
+ "places": [
+  {
+   "what": "pianta interrata",
+   "x": 552.2,
+   "y": -3529.8,
+   "z": 334.1,
+   "score": 13.27
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1397.8,
+   "y": -3147.8,
+   "z": 348.91,
+   "score": 12.928
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1139.2,
+   "y": -3111.2,
+   "z": 437.44,
+   "score": 12.258
+  },
+  {
+   "what": "pianta interrata",
+   "x": 634.2,
+   "y": -3546.2,
+   "z": 289.77,
+   "score": 10.987
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1026.2,
+   "y": -3114.8,
+   "z": 497.05,
+   "score": 10.119
+  },
+  {
+   "what": "pianta interrata",
+   "x": 816.8,
+   "y": -3455.8,
+   "z": 388.96,
+   "score": 6.62
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1276.8,
+   "y": -3141.2,
+   "z": 391.48,
+   "score": 6.334
+  },
+  {
+   "what": "pianta interrata",
+   "x": 490.2,
+   "y": -3404.8,
+   "z": 441.67,
+   "score": 6.1
+  },
+  {
+   "what": "pianta interrata",
+   "x": 243.8,
+   "y": -2977.8,
+   "z": 293.78,
+   "score": 6.03
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1280.8,
+   "y": -3141.8,
+   "z": 385.74,
+   "score": 5.826
+  },
+  {
+   "what": "pianta interrata",
+   "x": 221.8,
+   "y": -2980.8,
+   "z": 282.3,
+   "score": 5.733
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1169.2,
+   "y": -3386.2,
+   "z": 373.94,
+   "score": 5.695
+  },
+  {
+   "what": "pianta interrata",
+   "x": 654.8,
+   "y": -3535.2,
+   "z": 341.14,
+   "score": 5.591
+  },
+  {
+   "what": "pianta interrata",
+   "x": 683.2,
+   "y": -3536.2,
+   "z": 326.41,
+   "score": 5.547
+  },
+  {
+   "what": "pianta interrata",
+   "x": -381.8,
+   "y": 2992.2,
+   "z": 542.61,
+   "score": 5.431
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 1129.2,
+   "y": 6312.4,
+   "z": 764.9,
+   "score": 5.216
+  },
+  {
+   "what": "pianta interrata",
+   "x": -41.2,
+   "y": 6550.8,
+   "z": 1148.51,
+   "score": 5.089
+  },
+  {
+   "what": "pianta interrata",
+   "x": -4163.8,
+   "y": 314.2,
+   "z": 375.1,
+   "score": 4.929
+  },
+  {
+   "what": "pianta interrata",
+   "x": 414.2,
+   "y": 2116.8,
+   "z": 536.26,
+   "score": 4.865
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 1396.8,
+   "y": 6474.1,
+   "z": 799.37,
+   "score": 4.739
+  },
+  {
+   "what": "pianta interrata",
+   "x": 475.8,
+   "y": 5158.8,
+   "z": 755.71,
+   "score": 4.666
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2718.2,
+   "y": 3011.2,
+   "z": 366.59,
+   "score": 4.604
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1257.2,
+   "y": 6355.2,
+   "z": 748.41,
+   "score": 4.404
+  },
+  {
+   "what": "pianta interrata",
+   "x": -595.8,
+   "y": 563.8,
+   "z": 472.12,
+   "score": 4.355
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3723.7,
+   "y": 4650.6,
+   "z": 333.57,
+   "score": 4.295
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -713.9,
+   "y": 537.5,
+   "z": 507.87,
+   "score": 4.263
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1348.2,
+   "y": -325.8,
+   "z": 604.72,
+   "score": 4.218,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta interrata",
+   "x": 443.8,
+   "y": -3464.8,
+   "z": 309.89,
+   "score": 4.165
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2459.8,
+   "y": 3496.8,
+   "z": 960.96,
+   "score": 4.145
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1104.8,
+   "y": -3115.8,
+   "z": 471.08,
+   "score": 4.145
+  },
+  {
+   "what": "pianta interrata",
+   "x": 477.2,
+   "y": 5184.8,
+   "z": 772.09,
+   "score": 4.135
+  },
+  {
+   "what": "pianta interrata",
+   "x": 456.8,
+   "y": -537.8,
+   "z": 343.76,
+   "score": 4.121
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2693.8,
+   "y": 4207.2,
+   "z": 1088.73,
+   "score": 4.072
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1010.8,
+   "y": 2623.8,
+   "z": 615.53,
+   "score": 4.06
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2848.8,
+   "y": 4252.8,
+   "z": 1193.15,
+   "score": 4.052
+  },
+  {
+   "what": "pianta interrata",
+   "x": 173.2,
+   "y": -3111.2,
+   "z": 279.1,
+   "score": 3.905
+  },
+  {
+   "what": "pianta interrata",
+   "x": 747.8,
+   "y": -3455.8,
+   "z": 409.58,
+   "score": 3.884
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2794.2,
+   "y": 3173.8,
+   "z": 829.8,
+   "score": 3.873
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1253.2,
+   "y": 6370.2,
+   "z": 759.05,
+   "score": 3.857
+  },
+  {
+   "what": "pianta interrata",
+   "x": 674.8,
+   "y": 4303.2,
+   "z": 632.83,
+   "score": 3.82
+  },
+  {
+   "what": "pianta interrata",
+   "x": 599.2,
+   "y": -3533.8,
+   "z": 322.66,
+   "score": 3.79
+  },
+  {
+   "what": "pianta interrata",
+   "x": 581.2,
+   "y": -3452.2,
+   "z": 420.52,
+   "score": 3.786
+  },
+  {
+   "what": "pianta interrata",
+   "x": 3174.2,
+   "y": 2846.8,
+   "z": 332.29,
+   "score": 3.783
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1401.8,
+   "y": 5170.8,
+   "z": 969.22,
+   "score": 3.754
+  },
+  {
+   "what": "pianta interrata",
+   "x": 180.2,
+   "y": 635.2,
+   "z": 512.11,
+   "score": 3.753
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2604.8,
+   "y": 4399.2,
+   "z": 1112.46,
+   "score": 3.745
+  },
+  {
+   "what": "pianta interrata",
+   "x": 720.2,
+   "y": -3534.2,
+   "z": 334.44,
+   "score": 3.695
+  },
+  {
+   "what": "pianta interrata",
+   "x": 4481.2,
+   "y": 6434.8,
+   "z": 428.3,
+   "score": 3.632
+  },
+  {
+   "what": "pianta interrata",
+   "x": -3186.8,
+   "y": 498.2,
+   "z": 320.84,
+   "score": 3.629
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2905.8,
+   "y": 3412.2,
+   "z": 399.7,
+   "score": 3.625
+  },
+  {
+   "what": "pianta interrata",
+   "x": -4089.8,
+   "y": 369.8,
+   "z": 341.24,
+   "score": 3.623
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2024.8,
+   "y": -1359.2,
+   "z": 270.33,
+   "score": 3.604
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2542.2,
+   "y": 1645.2,
+   "z": 511.27,
+   "score": 3.601
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1179.8,
+   "y": -1446.8,
+   "z": 426.98,
+   "score": 3.583,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1051.8,
+   "y": -3108.8,
+   "z": 484.54,
+   "score": 3.58
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1270.2,
+   "y": 4243.2,
+   "z": 741.48,
+   "score": 3.568
+  },
+  {
+   "what": "pianta interrata",
+   "x": -4865.8,
+   "y": 2239.2,
+   "z": 602.08,
+   "score": 3.563
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -6007.1,
+   "y": 171.2,
+   "z": 269.55,
+   "score": 3.553
+  },
+  {
+   "what": "pianta interrata",
+   "x": -706.2,
+   "y": 645.8,
+   "z": 504.44,
+   "score": 3.551
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2544.8,
+   "y": 4367.8,
+   "z": 1051.51,
+   "score": 3.544
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1425.8,
+   "y": -1630.2,
+   "z": 333.82,
+   "score": 3.541
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2473.8,
+   "y": 1780.2,
+   "z": 478.49,
+   "score": 3.536
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2870.2,
+   "y": 4636.8,
+   "z": 1294.94,
+   "score": 3.524
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2683.8,
+   "y": 4190.2,
+   "z": 1086.85,
+   "score": 3.517
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2033.8,
+   "y": -517.8,
+   "z": 319.56,
+   "score": 3.514
+  },
+  {
+   "what": "pianta interrata",
+   "x": 3487.8,
+   "y": 5829.2,
+   "z": 415.87,
+   "score": 3.504
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1792.8,
+   "y": 3666.2,
+   "z": 731.89,
+   "score": 3.502
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -6007.1,
+   "y": 171.2,
+   "z": 269.55,
+   "score": 3.493
+  },
+  {
+   "what": "pianta interrata",
+   "x": -93.8,
+   "y": 3709.2,
+   "z": 593.9,
+   "score": 3.489
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2827.8,
+   "y": 4215.8,
+   "z": 547.87,
+   "score": 3.471
+  },
+  {
+   "what": "pianta interrata",
+   "x": -3238.2,
+   "y": 280.8,
+   "z": 302.84,
+   "score": 3.452
+  },
+  {
+   "what": "pianta interrata",
+   "x": 730.8,
+   "y": -331.2,
+   "z": 396.66,
+   "score": 3.452
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2008.2,
+   "y": -525.8,
+   "z": 336.31,
+   "score": 3.447
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2028.2,
+   "y": -1475.8,
+   "z": 270.33,
+   "score": 3.439
+  },
+  {
+   "what": "pianta interrata",
+   "x": 362.8,
+   "y": 2659.8,
+   "z": 704.97,
+   "score": 3.421
+  },
+  {
+   "what": "pianta interrata",
+   "x": -692.8,
+   "y": 4040.2,
+   "z": 628.54,
+   "score": 3.4
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2533.8,
+   "y": 2932.2,
+   "z": 653.43,
+   "score": 3.38
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 606.8,
+   "y": -3531.8,
+   "z": 353.54,
+   "score": 3.368
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2239.8,
+   "y": 3188.8,
+   "z": 593.39,
+   "score": 3.367
+  },
+  {
+   "what": "pianta interrata",
+   "x": -947.8,
+   "y": 274.2,
+   "z": 701.75,
+   "score": 3.358
+  },
+  {
+   "what": "pianta interrata",
+   "x": -4876.0,
+   "y": 2241.3,
+   "z": 604.11,
+   "score": 3.35
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2724.8,
+   "y": 3027.8,
+   "z": 380.24,
+   "score": 3.348
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2289.2,
+   "y": 3682.2,
+   "z": 703.11,
+   "score": 3.346
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -481.9,
+   "y": 1094.2,
+   "z": 557.24,
+   "score": 3.325
+  },
+  {
+   "what": "pianta interrata",
+   "x": -3762.8,
+   "y": 310.8,
+   "z": 309.15,
+   "score": 3.32
+  },
+  {
+   "what": "pianta interrata",
+   "x": 338.2,
+   "y": 2631.8,
+   "z": 694.2,
+   "score": 3.319
+  },
+  {
+   "what": "pianta interrata",
+   "x": -665.2,
+   "y": 573.8,
+   "z": 476.15,
+   "score": 3.319
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -1424.2,
+   "y": -161.2,
+   "z": 610.53,
+   "score": 3.317
+  },
+  {
+   "what": "pianta interrata",
+   "x": -5234.2,
+   "y": 74.2,
+   "z": 296.31,
+   "score": 3.314
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1129.8,
+   "y": 4043.8,
+   "z": 701.83,
+   "score": 3.303
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1113.2,
+   "y": 5440.2,
+   "z": 685.79,
+   "score": 3.291
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2474.8,
+   "y": 2236.2,
+   "z": 546.49,
+   "score": 3.276
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1999.2,
+   "y": -513.8,
+   "z": 334.82,
+   "score": 3.273
+  },
+  {
+   "what": "pianta interrata",
+   "x": 721.8,
+   "y": 4404.8,
+   "z": 632.68,
+   "score": 3.271
+  },
+  {
+   "what": "pianta interrata",
+   "x": -541.2,
+   "y": -1148.2,
+   "z": 547.71,
+   "score": 3.269
+  },
+  {
+   "what": "pianta interrata",
+   "x": 1453.8,
+   "y": 4620.8,
+   "z": 820.53,
+   "score": 3.263
+  },
+  {
+   "what": "pianta interrata",
+   "x": -807.8,
+   "y": 3370.2,
+   "z": 648.54,
+   "score": 3.261
+  },
+  {
+   "what": "pianta interrata",
+   "x": -74.2,
+   "y": 1653.2,
+   "z": 587.3,
+   "score": 3.255
+  },
+  {
+   "what": "pianta interrata",
+   "x": 176.8,
+   "y": -3154.8,
+   "z": 290.63,
+   "score": 3.25
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 419.8,
+   "y": 2139.2,
+   "z": 556.12,
+   "score": 3.237,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2501.8,
+   "y": 4332.8,
+   "z": 1030.2,
+   "score": 3.223
+  },
+  {
+   "what": "pianta interrata",
+   "x": -679.8,
+   "y": 499.8,
+   "z": 525.01,
+   "score": 3.219
+  },
+  {
+   "what": "pianta interrata",
+   "x": 354.2,
+   "y": 2648.2,
+   "z": 696.56,
+   "score": 3.211
+  },
+  {
+   "what": "pianta interrata",
+   "x": 182.8,
+   "y": -3203.8,
+   "z": 287.49,
+   "score": 3.21
+  },
+  {
+   "what": "pianta interrata",
+   "x": 2163.2,
+   "y": 1264.8,
+   "z": 337.68,
+   "score": 3.21
+  },
+  {
+   "what": "pianta interrata",
+   "x": -34.8,
+   "y": 3313.2,
+   "z": 631.65,
+   "score": 3.209
+  },
+  {
+   "what": "pianta interrata",
+   "x": 180.2,
+   "y": -2973.2,
+   "z": 269.78,
+   "score": 3.205
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1136.8,
+   "y": -361.2,
+   "z": 703.88,
+   "score": 3.204
+  },
+  {
+   "what": "pianta interrata",
+   "x": -1464.8,
+   "y": 3420.2,
+   "z": 660.02,
+   "score": 3.201
+  },
+  {
+   "what": "pianta interrata",
+   "x": -4245.2,
+   "y": 2408.2,
+   "z": 690.04,
+   "score": 3.197
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2877.2,
+   "y": 1098.8,
+   "z": 455.93,
+   "score": 3.196
+  },
+  {
+   "what": "pianta interrata",
+   "x": -3865.7,
+   "y": 1950.1,
+   "z": 577.55,
+   "score": 3.191
+  },
+  {
+   "what": "pianta interrata",
+   "x": -2623.2,
+   "y": 3041.8,
+   "z": 734.36,
+   "score": 3.19
+  },
+  {
+   "what": "pianta interrata",
+   "x": -4365.8,
+   "y": 2457.8,
+   "z": 703.44,
+   "score": 3.179
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2022.2,
+   "y": -1480.2,
+   "z": 270.34,
+   "score": 3.112
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2407.8,
+   "y": 4456.2,
+   "z": 806.04,
+   "score": 2.99
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 533.2,
+   "y": -3536.2,
+   "z": 335.09,
+   "score": 2.933
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -2550.2,
+   "y": 24.2,
+   "z": 372.12,
+   "score": 2.761,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 468.3,
+   "y": 4336.7,
+   "z": 651.66,
+   "score": 2.75
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -2619.8,
+   "y": 4638.8,
+   "z": 1176.06,
+   "score": 2.686
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -2421.9,
+   "y": -783.1,
+   "z": 267.97,
+   "score": 2.686
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 148.1,
+   "y": -2032.9,
+   "z": 275.12,
+   "score": 2.655
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -44.2,
+   "y": 4442.1,
+   "z": 761.12,
+   "score": 2.653
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -2087.2,
+   "y": 1145.6,
+   "z": 616.18,
+   "score": 2.643
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 287.5,
+   "y": 5361.4,
+   "z": 831.15,
+   "score": 2.634
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -2087.2,
+   "y": 1145.6,
+   "z": 616.18,
+   "score": 2.633
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 1755.2,
+   "y": 5261.6,
+   "z": 842.83,
+   "score": 2.623
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -44.2,
+   "y": 4442.1,
+   "z": 761.12,
+   "score": 2.62
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 2112.4,
+   "y": 752.7,
+   "z": 311.36,
+   "score": 2.602
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -2732.2,
+   "y": 3031.8,
+   "z": 718.98,
+   "score": 2.588,
+   "cosa": "sentiero"
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2996.2,
+   "y": 2727.2,
+   "z": 325.86,
+   "score": 2.582
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -37.8,
+   "y": 6472.8,
+   "z": 1151.14,
+   "score": 2.573
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 306.8,
+   "y": 282.8,
+   "z": 554.63,
+   "score": 2.548,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -59.8,
+   "y": 4439.8,
+   "z": 759.86,
+   "score": 2.545
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -59.8,
+   "y": 4439.8,
+   "z": 759.86,
+   "score": 2.532
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 158.0,
+   "y": -2093.4,
+   "z": 274.4,
+   "score": 2.506
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -352.7,
+   "y": -110.7,
+   "z": 473.66,
+   "score": 2.486
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 3007.1,
+   "y": 3905.2,
+   "z": 530.11,
+   "score": 2.469
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 856.6,
+   "y": 308.9,
+   "z": 623.12,
+   "score": 2.467
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 3005.9,
+   "y": 3903.6,
+   "z": 530.58,
+   "score": 2.435
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 2627.3,
+   "y": 4180.3,
+   "z": 605.52,
+   "score": 2.414
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -1899.9,
+   "y": -143.5,
+   "z": 407.87,
+   "score": 2.408
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2419.8,
+   "y": 51.2,
+   "z": 270.7,
+   "score": 2.407
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -58.2,
+   "y": -799.4,
+   "z": 406.45,
+   "score": 2.397
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -5697.8,
+   "y": 1437.8,
+   "z": 425.68,
+   "score": 2.38,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 2865.9,
+   "y": 2505.9,
+   "z": 306.89,
+   "score": 2.375
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 1884.2,
+   "y": 2681.2,
+   "z": 558.22,
+   "score": 2.366,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -38.4,
+   "y": 4443.4,
+   "z": 761.42,
+   "score": 2.339
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -4465.8,
+   "y": 115.8,
+   "z": 336.33,
+   "score": 2.338
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -38.4,
+   "y": 4443.4,
+   "z": 761.42,
+   "score": 2.336
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -61.2,
+   "y": 4119.2,
+   "z": 649.34,
+   "score": 2.333,
+   "cosa": "sentiero"
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -4463.8,
+   "y": 116.1,
+   "z": 335.99,
+   "score": 2.309
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -1314.7,
+   "y": -1656.4,
+   "z": 360.1,
+   "score": 2.252
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 578.8,
+   "y": -3530.8,
+   "z": 338.7,
+   "score": 2.211
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 458.2,
+   "y": -3407.2,
+   "z": 424.07,
+   "score": 2.193
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 2116.3,
+   "y": 753.7,
+   "z": 310.51,
+   "score": 2.177
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2233.3,
+   "y": 718.7,
+   "z": 295.55,
+   "score": 2.164
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 158.8,
+   "y": -2353.8,
+   "z": 270.33,
+   "score": 2.146
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -679.1,
+   "y": -2549.6,
+   "z": 278.01,
+   "score": 2.124
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -1405.4,
+   "y": 1858.3,
+   "z": 623.36,
+   "score": 2.116
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2377.8,
+   "y": 84.2,
+   "z": 270.61,
+   "score": 2.11
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -58.2,
+   "y": -799.4,
+   "z": 406.45,
+   "score": 2.107
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 414.1,
+   "y": 4406.0,
+   "z": 677.49,
+   "score": 2.096
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -968.9,
+   "y": 2208.7,
+   "z": 637.23,
+   "score": 2.094
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 1513.2,
+   "y": 231.8,
+   "z": 449.17,
+   "score": 2.077,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -968.9,
+   "y": 2208.7,
+   "z": 637.23,
+   "score": 2.071
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 2101.7,
+   "y": 747.3,
+   "z": 314.15,
+   "score": 2.066
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 2909.2,
+   "y": 2101.8,
+   "z": 288.84,
+   "score": 2.065,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -2370.2,
+   "y": 3586.2,
+   "z": 937.4,
+   "score": 2.06
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 4167.1,
+   "y": 5512.1,
+   "z": 347.77,
+   "score": 2.047
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 2229.9,
+   "y": 6477.6,
+   "z": 875.74,
+   "score": 2.039
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2582.2,
+   "y": 190.8,
+   "z": 270.92,
+   "score": 2.038
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 3723.7,
+   "y": 4650.6,
+   "z": 333.57,
+   "score": 2.037
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -2812.1,
+   "y": 3239.3,
+   "z": 863.65,
+   "score": 2.034
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1424.8,
+   "y": -239.8,
+   "z": 605.53,
+   "score": 2.027,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1588.8,
+   "y": -2127.8,
+   "z": 270.3,
+   "score": 2.023
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -58.5,
+   "y": -797.5,
+   "z": 406.38,
+   "score": 2.018
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 2120.1,
+   "y": 754.8,
+   "z": 309.65,
+   "score": 2.009
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 2229.9,
+   "y": 6477.6,
+   "z": 875.74,
+   "score": 2.007
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -1418.7,
+   "y": 1933.0,
+   "z": 648.52,
+   "score": 2.003
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": -1289.1,
+   "y": -1786.1,
+   "z": 361.29,
+   "score": 2.0,
+   "cosa": "ponte o gradino",
+   "az": 264.3
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 2401.4,
+   "y": 1308.2,
+   "z": 283.59,
+   "score": 2.0,
+   "cosa": "guardrail",
+   "az": 200.2
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": -748.7,
+   "y": 1051.0,
+   "z": 533.95,
+   "score": 2.0,
+   "cosa": "guardrail",
+   "az": 184.5
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": -2506.9,
+   "y": 2362.6,
+   "z": 584.56,
+   "score": 2.0,
+   "cosa": "guardrail",
+   "az": 83.2
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 1497.1,
+   "y": 429.8,
+   "z": 534.01,
+   "score": 2.0,
+   "cosa": "guardrail",
+   "az": 233.7
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 2396.2,
+   "y": 1316.8,
+   "z": 283.56,
+   "score": 2.0,
+   "cosa": "guardrail",
+   "az": 1.3
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 506.9,
+   "y": 5451.2,
+   "z": 844.82,
+   "score": 2.0,
+   "cosa": "edificio",
+   "az": 241.8
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 44.3,
+   "y": -650.7,
+   "z": 386.73,
+   "score": 2.0,
+   "cosa": "edificio",
+   "az": 21.6
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 88.3,
+   "y": -812.3,
+   "z": 377.36,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 334.3
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 404.7,
+   "y": -1623.9,
+   "z": 293.61,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 185.4
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 4053.8,
+   "y": 4488.6,
+   "z": 299.07,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 306.0
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": -1026.6,
+   "y": 2093.5,
+   "z": 640.41,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 37.1
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 2756.8,
+   "y": 1807.4,
+   "z": 281.3,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 141.9
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 4106.4,
+   "y": 4793.8,
+   "z": 301.18,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 277.7
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 3323.3,
+   "y": 2826.8,
+   "z": 287.09,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 336.1
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 853.8,
+   "y": -2023.3,
+   "z": 279.91,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 191.1
+  },
+  {
+   "what": "ostacolo sulla strada",
+   "x": 4134.6,
+   "y": 4823.0,
+   "z": 302.28,
+   "score": 2.0,
+   "cosa": "oggetto",
+   "az": 103.0
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1310.7,
+   "y": 413.3,
+   "z": 574.02,
+   "score": 2.0
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 2120.1,
+   "y": 754.8,
+   "z": 309.65,
+   "score": 1.979
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2006.8,
+   "y": -1363.2,
+   "z": 270.45,
+   "score": 1.972
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -1418.7,
+   "y": 1933.0,
+   "z": 648.52,
+   "score": 1.971
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 143.2,
+   "y": -2315.2,
+   "z": 270.38,
+   "score": 1.968
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2637.2,
+   "y": 228.8,
+   "z": 270.71,
+   "score": 1.961
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3787.9,
+   "y": 4773.5,
+   "z": 335.02,
+   "score": 1.947
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -2428.7,
+   "y": 94.7,
+   "z": 419.61,
+   "score": 1.94
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 613.1,
+   "y": 2647.2,
+   "z": 751.59,
+   "score": 1.932
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1499.0,
+   "y": 1913.0,
+   "z": 641.57,
+   "score": 1.929
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3.5,
+   "y": 4591.0,
+   "z": 797.97,
+   "score": 1.928
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -1014.0,
+   "y": 2624.2,
+   "z": 619.38,
+   "score": 1.91
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 2342.1,
+   "y": 2222.9,
+   "z": 408.12,
+   "score": 1.898
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 4167.1,
+   "y": 5512.1,
+   "z": 347.77,
+   "score": 1.885
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 167.2,
+   "y": -2368.8,
+   "z": 270.36,
+   "score": 1.881
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -1904.3,
+   "y": 2441.4,
+   "z": 736.07,
+   "score": 1.876
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 1991.1,
+   "y": 1498.6,
+   "z": 469.5,
+   "score": 1.875
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 1991.1,
+   "y": 1498.6,
+   "z": 469.5,
+   "score": 1.874
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 281.9,
+   "y": 5353.9,
+   "z": 831.08,
+   "score": 1.873
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -2093.2,
+   "y": 1140.2,
+   "z": 612.83,
+   "score": 1.866
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -1904.3,
+   "y": 2441.4,
+   "z": 736.07,
+   "score": 1.86
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 161.8,
+   "y": -2354.2,
+   "z": 270.33,
+   "score": 1.857
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1659.8,
+   "y": 814.2,
+   "z": 519.6,
+   "score": 1.854
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 273.2,
+   "y": 335.8,
+   "z": 556.12,
+   "score": 1.852,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 4167.1,
+   "y": 5512.1,
+   "z": 347.77,
+   "score": 1.846
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2016.8,
+   "y": -1612.8,
+   "z": 270.5,
+   "score": 1.845
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 795.8,
+   "y": -3445.2,
+   "z": 428.45,
+   "score": 1.843
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -27.3,
+   "y": -1612.7,
+   "z": 377.64,
+   "score": 1.839
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 221.3,
+   "y": 2676.7,
+   "z": 725.81,
+   "score": 1.838
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 2239.0,
+   "y": 1076.1,
+   "z": 296.71,
+   "score": 1.836
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -1418.7,
+   "y": 1933.0,
+   "z": 648.52,
+   "score": 1.832
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 3573.5,
+   "y": 5342.5,
+   "z": 395.49,
+   "score": 1.832
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1574.8,
+   "y": 1149.7,
+   "z": 571.42,
+   "score": 1.821
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2000.8,
+   "y": -1401.8,
+   "z": 270.6,
+   "score": 1.804
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -425.2,
+   "y": 731.2,
+   "z": 490.51,
+   "score": 1.8,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 386.2,
+   "y": -57.2,
+   "z": 432.13,
+   "score": 1.794
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -588.8,
+   "y": 1405.2,
+   "z": 621.56,
+   "score": 1.789,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1680.7,
+   "y": 1327.3,
+   "z": 553.23,
+   "score": 1.772
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -302.2,
+   "y": 578.2,
+   "z": 422.14,
+   "score": 1.761
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2996.8,
+   "y": 467.2,
+   "z": 270.61,
+   "score": 1.752
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2411.3,
+   "y": 1750.7,
+   "z": 314.93,
+   "score": 1.746
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2231.3,
+   "y": 726.7,
+   "z": 296.16,
+   "score": 1.743
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2659.2,
+   "y": 254.2,
+   "z": 270.42,
+   "score": 1.742
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -4932.6,
+   "y": 2251.7,
+   "z": 617.49,
+   "score": 1.727
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 805.0,
+   "y": 5926.5,
+   "z": 780.84,
+   "score": 1.722
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -4299.2,
+   "y": 352.2,
+   "z": 416.28,
+   "score": 1.719
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 1871.8,
+   "y": 2695.8,
+   "z": 553.8,
+   "score": 1.713,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -2072.0,
+   "y": 1998.8,
+   "z": 571.71,
+   "score": 1.712
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3102.7,
+   "y": 3745.1,
+   "z": 481.69,
+   "score": 1.712
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 448.0,
+   "y": -1066.0,
+   "z": 357.22,
+   "score": 1.707
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 3475.2,
+   "y": 4880.9,
+   "z": 426.33,
+   "score": 1.706
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 218.7,
+   "y": 2681.3,
+   "z": 725.71,
+   "score": 1.683
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 1954.9,
+   "y": 6060.1,
+   "z": 775.98,
+   "score": 1.682
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2317.3,
+   "y": 6206.7,
+   "z": 841.08,
+   "score": 1.681
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -4054.3,
+   "y": 2264.7,
+   "z": 637.94,
+   "score": 1.68
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -2079.6,
+   "y": 1152.2,
+   "z": 616.0,
+   "score": 1.677
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1252.2,
+   "y": 67.8,
+   "z": 723.59,
+   "score": 1.676,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2922.7,
+   "y": 2703.3,
+   "z": 320.68,
+   "score": 1.675
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -2728.2,
+   "y": 2639.2,
+   "z": 673.75,
+   "score": 1.67
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1179.3,
+   "y": -2190.7,
+   "z": 299.05,
+   "score": 1.67
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 3787.9,
+   "y": 4773.5,
+   "z": 335.02,
+   "score": 1.665
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1273.2,
+   "y": 6223.8,
+   "z": 715.8,
+   "score": 1.66
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -2108.7,
+   "y": 1132.7,
+   "z": 615.55,
+   "score": 1.66
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1056.8,
+   "y": 5463.8,
+   "z": 666.12,
+   "score": 1.657
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -50.3,
+   "y": 2357.1,
+   "z": 587.3,
+   "score": 1.652
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1676.7,
+   "y": 1343.3,
+   "z": 553.16,
+   "score": 1.648
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -1376.2,
+   "y": 2221.2,
+   "z": 723.76,
+   "score": 1.643
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2924.2,
+   "y": 358.8,
+   "z": 270.33,
+   "score": 1.638
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 2403.8,
+   "y": 2453.4,
+   "z": 403.15,
+   "score": 1.631
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -47.0,
+   "y": -631.5,
+   "z": 395.63,
+   "score": 1.63
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 3787.9,
+   "y": 4773.5,
+   "z": 335.02,
+   "score": 1.629
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1811.1,
+   "y": 2469.9,
+   "z": 660.85,
+   "score": 1.624
+  },
+  {
+   "what": "terreno sopra la strada",
+   "x": 206.0,
+   "y": -2980.4,
+   "z": 288.62,
+   "score": 1.621
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 1525.8,
+   "y": 231.8,
+   "z": 450.12,
+   "score": 1.618,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -839.2,
+   "y": 1693.5,
+   "z": 608.15,
+   "score": 1.617
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -3819.8,
+   "y": 2984.2,
+   "z": 952.66,
+   "score": 1.615
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1996.2,
+   "y": -1211.2,
+   "z": 270.78,
+   "score": 1.614
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -2272.6,
+   "y": -53.4,
+   "z": 414.23,
+   "score": 1.606
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -2079.6,
+   "y": 1152.2,
+   "z": 616.0,
+   "score": 1.603
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -1288.9,
+   "y": -2182.8,
+   "z": 275.24,
+   "score": 1.602
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -2272.6,
+   "y": -53.4,
+   "z": 414.23,
+   "score": 1.601
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3547.3,
+   "y": 3440.7,
+   "z": 289.65,
+   "score": 1.599
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2004.8,
+   "y": -1228.8,
+   "z": 270.56,
+   "score": 1.598
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1488.9,
+   "y": 6410.8,
+   "z": 819.25,
+   "score": 1.598
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 1953.8,
+   "y": 2641.2,
+   "z": 550.14,
+   "score": 1.591,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2243.3,
+   "y": 776.8,
+   "z": 293.39,
+   "score": 1.59
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 3152.2,
+   "y": 228.2,
+   "z": 270.33,
+   "score": 1.589
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -3967.3,
+   "y": 2265.6,
+   "z": 636.8,
+   "score": 1.589
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1166.7,
+   "y": 151.3,
+   "z": 533.4,
+   "score": 1.588
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1705.3,
+   "y": 228.7,
+   "z": 372.59,
+   "score": 1.587
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 30.9,
+   "y": -986.8,
+   "z": 389.89,
+   "score": 1.585
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3573.5,
+   "y": 5342.5,
+   "z": 395.49,
+   "score": 1.585
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -4648.7,
+   "y": -97.3,
+   "z": 273.37,
+   "score": 1.582
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2071.1,
+   "y": 682.9,
+   "z": 325.26,
+   "score": 1.58
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -1313.5,
+   "y": -1658.0,
+   "z": 360.23,
+   "score": 1.578
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 1991.1,
+   "y": 1498.6,
+   "z": 469.5,
+   "score": 1.578
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 1874.0,
+   "y": 3353.8,
+   "z": 777.84,
+   "score": 1.576
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1316.7,
+   "y": -1655.3,
+   "z": 358.89,
+   "score": 1.562
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2019.8,
+   "y": 2692.8,
+   "z": 484.22,
+   "score": 1.558
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 87.8,
+   "y": -2253.8,
+   "z": 270.35,
+   "score": 1.551
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3029.3,
+   "y": 3598.7,
+   "z": 438.72,
+   "score": 1.551
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2415.3,
+   "y": 1760.3,
+   "z": 313.46,
+   "score": 1.549
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 3117.8,
+   "y": 228.2,
+   "z": 270.34,
+   "score": 1.541
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 388.2,
+   "y": -2647.2,
+   "z": 270.49,
+   "score": 1.539
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": -1980.0,
+   "y": -1164.3,
+   "z": 269.78,
+   "score": 1.537
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1962.8,
+   "y": 2413.2,
+   "z": 587.82,
+   "score": 1.534
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2448.7,
+   "y": 2093.3,
+   "z": 330.11,
+   "score": 1.534
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -2063.3,
+   "y": 1155.3,
+   "z": 612.67,
+   "score": 1.533
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 401.3,
+   "y": -1624.8,
+   "z": 294.27,
+   "score": 1.533
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 393.3,
+   "y": -1647.3,
+   "z": 293.47,
+   "score": 1.531
+  },
+  {
+   "what": "strada staccata dal terreno",
+   "x": 1874.0,
+   "y": 3353.8,
+   "z": 777.84,
+   "score": 1.53
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -4296.8,
+   "y": 413.3,
+   "z": 433.85,
+   "score": 1.524
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1093.3,
+   "y": -2459.3,
+   "z": 282.67,
+   "score": 1.523
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -2275.8,
+   "y": 2220.8,
+   "z": 606.0,
+   "score": 1.521
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1481.3,
+   "y": 50.7,
+   "z": 433.48,
+   "score": 1.521
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1236.7,
+   "y": -1745.3,
+   "z": 374.4,
+   "score": 1.518
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1270.8,
+   "y": -31.8,
+   "z": 739.95,
+   "score": 1.517,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -4429.6,
+   "y": 2220.7,
+   "z": 630.93,
+   "score": 1.515
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 918.7,
+   "y": 6016.7,
+   "z": 772.04,
+   "score": 1.514
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -1978.8,
+   "y": -405.7,
+   "z": 371.32,
+   "score": 1.513
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 792.8,
+   "y": -308.2,
+   "z": 424.75,
+   "score": 1.511
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2260.7,
+   "y": 1677.3,
+   "z": 371.27,
+   "score": 1.51
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -1219.8,
+   "y": -1346.2,
+   "z": 426.91,
+   "score": 1.504
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -5945.1,
+   "y": 498.3,
+   "z": 352.87,
+   "score": 1.5
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1572.7,
+   "y": 1144.7,
+   "z": 561.45,
+   "score": 1.5
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 453.6,
+   "y": 2660.7,
+   "z": 745.56,
+   "score": 1.5
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -2262.7,
+   "y": 1198.7,
+   "z": 628.36,
+   "score": 1.499
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 732.1,
+   "y": -1367.1,
+   "z": 291.65,
+   "score": 1.499
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -2124.7,
+   "y": 2041.3,
+   "z": 572.95,
+   "score": 1.497
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 2279.8,
+   "y": 1813.0,
+   "z": 386.22,
+   "score": 1.495
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1709.3,
+   "y": 244.7,
+   "z": 372.81,
+   "score": 1.495
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3567.3,
+   "y": 4010.7,
+   "z": 337.64,
+   "score": 1.491
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -2112.7,
+   "y": 2110.7,
+   "z": 589.6,
+   "score": 1.49
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 724.2,
+   "y": -1002.8,
+   "z": 299.69,
+   "score": 1.487
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 3573.2,
+   "y": 5741.7,
+   "z": 377.38,
+   "score": 1.486
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1519.8,
+   "y": 682.7,
+   "z": 565.82,
+   "score": 1.485
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1714.2,
+   "y": 2412.8,
+   "z": 698.39,
+   "score": 1.481
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -4744.8,
+   "y": 2388.2,
+   "z": 640.51,
+   "score": 1.48
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1367.2,
+   "y": -1082.2,
+   "z": 416.9,
+   "score": 1.476,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 4480.8,
+   "y": 6431.2,
+   "z": 444.22,
+   "score": 1.475
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1680.7,
+   "y": 1317.3,
+   "z": 553.73,
+   "score": 1.471
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 46.8,
+   "y": 979.8,
+   "z": 385.51,
+   "score": 1.469
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1080.7,
+   "y": -534.7,
+   "z": 387.28,
+   "score": 1.469
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1077.2,
+   "y": 6449.8,
+   "z": 752.41,
+   "score": 1.468
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2423.3,
+   "y": 1112.1,
+   "z": 281.68,
+   "score": 1.467
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1030.8,
+   "y": -2444.2,
+   "z": 304.6,
+   "score": 1.466
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1704.8,
+   "y": -741.8,
+   "z": 394.56,
+   "score": 1.465,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 851.8,
+   "y": 4680.2,
+   "z": 634.9,
+   "score": 1.464
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -671.3,
+   "y": -2465.7,
+   "z": 278.07,
+   "score": 1.463
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1870.7,
+   "y": 3311.3,
+   "z": 759.37,
+   "score": 1.463
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 2697.8,
+   "y": 283.8,
+   "z": 270.42,
+   "score": 1.462
+  },
+  {
+   "what": "gradino o dosso",
+   "x": 1706.5,
+   "y": 3205.0,
+   "z": 784.16,
+   "score": 1.458
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 281.8,
+   "y": -3531.8,
+   "z": 270.33,
+   "score": 1.456
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -100.2,
+   "y": 3718.2,
+   "z": 607.16,
+   "score": 1.456
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": -1405.4,
+   "y": 1858.3,
+   "z": 623.36,
+   "score": 1.455
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3038.7,
+   "y": 3001.3,
+   "z": 360.92,
+   "score": 1.453
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 18.2,
+   "y": 1061.8,
+   "z": 390.3,
+   "score": 1.451
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 49.3,
+   "y": -911.3,
+   "z": 387.19,
+   "score": 1.45
+  },
+  {
+   "what": "gradino o dosso",
+   "x": -228.2,
+   "y": 4469.1,
+   "z": 742.83,
+   "score": 1.449
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": 1627.2,
+   "y": 186.2,
+   "z": 390.44,
+   "score": 1.446,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1553.6,
+   "y": 1114.7,
+   "z": 566.19,
+   "score": 1.445
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -818.8,
+   "y": 1176.2,
+   "z": 537.61,
+   "score": 1.443
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -2811.8,
+   "y": 1908.8,
+   "z": 472.71,
+   "score": 1.442,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 21.3,
+   "y": -1991.3,
+   "z": 293.02,
+   "score": 1.442
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3662.7,
+   "y": 5579.3,
+   "z": 374.42,
+   "score": 1.441
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -282.2,
+   "y": 3298.8,
+   "z": 575.16,
+   "score": 1.439
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -4385.8,
+   "y": 225.2,
+   "z": 394.98,
+   "score": 1.434
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 1104.0,
+   "y": -2417.1,
+   "z": 277.26,
+   "score": 1.432
+  },
+  {
+   "what": "strada fuori profilo",
+   "x": 3.5,
+   "y": 4591.0,
+   "z": 797.97,
+   "score": 1.427
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 255.2,
+   "y": 1991.8,
+   "z": 488.36,
+   "score": 1.421
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -2818.4,
+   "y": 1694.2,
+   "z": 438.77,
+   "score": 1.42
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1679.3,
+   "y": 1308.7,
+   "z": 554.08,
+   "score": 1.42
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 3796.7,
+   "y": 5849.4,
+   "z": 345.15,
+   "score": 1.42
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1241.3,
+   "y": -1738.7,
+   "z": 373.0,
+   "score": 1.419
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1898.2,
+   "y": -571.2,
+   "z": 270.66,
+   "score": 1.418
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -1251.2,
+   "y": -64.8,
+   "z": 745.32,
+   "score": 1.416,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -27.3,
+   "y": 4503.3,
+   "z": 777.49,
+   "score": 1.412
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1223.8,
+   "y": 6265.2,
+   "z": 712.0,
+   "score": 1.411
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 309.8,
+   "y": -2503.2,
+   "z": 270.54,
+   "score": 1.41
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -758.8,
+   "y": -2543.3,
+   "z": 291.33,
+   "score": 1.41
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2286.7,
+   "y": 1631.3,
+   "z": 352.6,
+   "score": 1.41
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 1678.2,
+   "y": -2083.2,
+   "z": 270.33,
+   "score": 1.409
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 685.2,
+   "y": -1193.8,
+   "z": 301.16,
+   "score": 1.405
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -208.4,
+   "y": -291.0,
+   "z": 440.55,
+   "score": 1.403
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 130.0,
+   "y": 4556.0,
+   "z": 773.8,
+   "score": 1.403
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -298.8,
+   "y": 2249.8,
+   "z": 483.24,
+   "score": 1.402
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -113.3,
+   "y": -1524.7,
+   "z": 401.92,
+   "score": 1.402
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -4305.8,
+   "y": 2513.2,
+   "z": 752.04,
+   "score": 1.4
+  },
+  {
+   "what": "terreno sopra la strada",
+   "x": 3726.0,
+   "y": 4649.7,
+   "z": 334.54,
+   "score": 1.4
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -1317.3,
+   "y": -2146.7,
+   "z": 282.59,
+   "score": 1.393
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 831.3,
+   "y": -2432.7,
+   "z": 290.93,
+   "score": 1.392
+  },
+  {
+   "what": "chioma nella sagoma della strada",
+   "x": -516.8,
+   "y": 1337.8,
+   "z": 613.65,
+   "score": 1.391,
+   "cosa": "carreggiata"
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 405.4,
+   "y": -1320.8,
+   "z": 354.71,
+   "score": 1.39
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1660.7,
+   "y": 1262.6,
+   "z": 554.05,
+   "score": 1.39
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1597.0,
+   "y": 1205.0,
+   "z": 563.55,
+   "score": 1.384
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 2497.3,
+   "y": 1162.7,
+   "z": 275.48,
+   "score": 1.384
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -364.8,
+   "y": 2990.8,
+   "z": 560.46,
+   "score": 1.383
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 115.8,
+   "y": -2286.2,
+   "z": 270.33,
+   "score": 1.382
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1964.7,
+   "y": 3394.3,
+   "z": 764.23,
+   "score": 1.377
+  },
+  {
+   "what": "pianta sospesa",
+   "x": 496.8,
+   "y": 5073.2,
+   "z": 714.4,
+   "score": 1.367
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": 1517.3,
+   "y": 674.7,
+   "z": 565.88,
+   "score": 1.366
+  },
+  {
+   "what": "pianta sospesa",
+   "x": -5422.2,
+   "y": 51.2,
+   "z": 280.56,
+   "score": 1.363
+  },
+  {
+   "what": "strada sotto il terreno",
+   "x": -514.7,
+   "y": 1112.7,
+   "z": 558.6,
+   "score": 1.362
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+{
+ "roads": 1916,
+ "ring_roads": 33,
+ "junctions": 5381,
+ "meshes": 213,
+ "seconds": 107,
+ "track_km": 270.5,
+ "edge_km": 509.3,
+ "variation_km": 178.9,
+ "cracks_km": 23.1
+}

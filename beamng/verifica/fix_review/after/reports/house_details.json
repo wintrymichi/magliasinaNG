@@ -1,0 +1,15 @@
+{
+ "shapes": 351,
+ "houses": 7611,
+ "downpipes": 24481,
+ "aerials": 2000,
+ "dishes": 1549,
+ "pv": 418,
+ "pv_m2": 16890,
+ "pipes_no_wall": 5538,
+ "gutter_km": 215.3,
+ "eaves_in_air_km": 103.4,
+ "detail_tiles": 215,
+ "panel_tiles": 58,
+ "triangles": 596594
+}

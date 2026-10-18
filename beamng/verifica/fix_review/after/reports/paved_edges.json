@@ -1,0 +1,54 @@
+{
+ "materials": [
+  "mp_road_asphalt",
+  "mp_road_sett",
+  "mp_road_cobble",
+  "mp_hard_asphalt",
+  "mp_hard_sett",
+  "mp_hard_cobble",
+  "mp_road_asphalt_fresh",
+  "mp_sidewalk"
+ ],
+ "edge_drop_m": 0.0,
+ "terrain_under_faces_m": 0.04,
+ "keep_out_m": 2.0,
+ "keep_out_lift_m": 0.35,
+ "keep_out_km2": 5.83,
+ "paved_outer_edges_before": {
+  "edges_km": 479.5,
+  "over_terrain_m": {
+   "p10": 0.119,
+   "median": 0.219,
+   "p75": 0.311,
+   "p90": 0.481
+  },
+  "share_over_0.15m": 0.763,
+  "share_over_0.3m": 0.271,
+  "terrain_over_the_faces_inside": {
+   "share": 5e-05,
+   "max_m": 3.505
+  }
+ },
+ "paved_outer_edges_after": {
+  "edges_km": 479.5,
+  "over_terrain_m": {
+   "p10": 0.05,
+   "median": 0.07,
+   "p75": 0.086,
+   "p90": 0.124
+  },
+  "share_over_0.15m": 0.066,
+  "share_over_0.3m": 0.016,
+  "terrain_over_the_faces_inside": {
+   "share": 0.0001,
+   "max_m": 3.507
+  }
+ },
+ "terrain_vertices_raised": {
+  "vertices": 2333783,
+  "median_m": 0.154,
+  "p95_m": 1.382,
+  "max_m": 2.984,
+  "in_keep_out": 659921
+ }
+}

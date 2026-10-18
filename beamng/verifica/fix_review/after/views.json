@@ -1,0 +1,548 @@
+[
+[
+"astano_hairpin",
+-3709.0,
+2139.0,
+"Astano: step after the hairpin, Via Agostino de Marchi",
+true
+],
+[
+"astano_step0",
+-3709.0,
+2139.3,
+"astano: STEP 28 cm Via Agostino de Marchi (-3709, 2139)",
+false
+],
+[
+"astano_step1",
+-3706.6,
+2140.7,
+"astano: STEP 27 cm Via Agostino de Marchi (-3707, 2141)",
+false
+],
+[
+"astano_step2",
+-3513.0,
+2255.2,
+"astano: STEP 7 cm ai Vezzán (-3513, 2255)",
+false
+],
+[
+"astano_step3",
+-3988.7,
+2162.6,
+"astano: STEP 6 cm ara Gésa (-3989, 2163)",
+false
+],
+[
+"astano_edge0",
+-4128.728999999999,
+2296.7439999999997,
+"astano: road edge 60 cm over the ground (-4129, 2297)",
+false
+],
+[
+"astano_edge1",
+-3874.547,
+2279.9359999999997,
+"astano: road edge 60 cm over the ground (-3875, 2280)",
+false
+],
+[
+"astano_banco_step0",
+-1909.2,
+2450.0,
+"astano_banco: STEP 15 cm Via Selva Bella (-1909, 2450)",
+false
+],
+[
+"astano_banco_step1",
+-2002.8,
+2429.8,
+"astano_banco: STEP 6 cm  (-2003, 2430)",
+false
+],
+[
+"astano_banco_step2",
+-2821.5,
+2407.3,
+"astano_banco: STEP 6 cm  (-2822, 2407)",
+false
+],
+[
+"astano_banco_step3",
+-2817.1,
+2409.2,
+"astano_banco: STEP 5 cm  (-2817, 2409)",
+false
+],
+[
+"vezio_step0",
+1021.7,
+6082.0,
+"vezio: HOLE 100 cm Stradón da Vésc (1022, 6082)",
+false
+],
+[
+"vezio_step1",
+1035.8,
+6077.9,
+"vezio: HOLE 100 cm Stradón da Vésc (1036, 6078)",
+false
+],
+[
+"vezio_step2",
+1040.1,
+6077.7,
+"vezio: HOLE 100 cm Stradón da Vésc (1040, 6078)",
+false
+],
+[
+"vezio_step3",
+1053.8,
+6080.0,
+"vezio: HOLE 100 cm Stradón da Vésc (1054, 6080)",
+false
+],
+[
+"vezio_step4",
+1060.0,
+6082.7,
+"vezio: HOLE 100 cm Stradón da Vésc (1060, 6083)",
+false
+],
+[
+"vezio_step5",
+1020.0,
+6082.3,
+"vezio: HOLE 100 cm Stradón da Vésc (1020, 6082)",
+false
+],
+[
+"vezio_edge0",
+934.204,
+6058.437,
+"vezio: road edge 59 cm over the ground (934, 6058)",
+false
+],
+[
+"vezio_edge1",
+912.656,
+5884.502,
+"vezio: road edge 58 cm over the ground (913, 5885)",
+false
+],
+[
+"vezio_trees",
+1129.961,
+6153.021,
+"vezio: 4 trees on / by the road within 40 m (1130, 6153)",
+true
+],
+[
+"mugena_step0",
+1557.8,
+6360.7,
+"mugena: STEP 15 cm Stráda da Caròcc (1558, 6361)",
+false
+],
+[
+"mugena_step1",
+1519.8,
+6313.3,
+"mugena: STEP 11 cm Stráda da Caròcc (1520, 6313)",
+false
+],
+[
+"mugena_step2",
+1513.5,
+6231.3,
+"mugena: STEP 8 cm Stráda da Caròcc (1514, 6231)",
+false
+],
+[
+"mugena_step3",
+1515.1,
+6323.1,
+"mugena: STEP 6 cm  (1515, 6323)",
+false
+],
+[
+"mugena_edge0",
+1676.149,
+6231.159,
+"mugena: road edge 60 cm over the ground (1676, 6231)",
+false
+],
+[
+"mugena_edge1",
+1932.527,
+6331.888,
+"mugena: road edge 60 cm over the ground (1933, 6332)",
+false
+],
+[
+"mugena_trees",
+1483.394,
+6280.262,
+"mugena: 2 trees on / by the road within 40 m (1483, 6280)",
+true
+],
+[
+"arosio_step0",
+2173.3,
+6393.8,
+"arosio: STEP 25 cm Via alla Chiesa di San Michele (2173, 6394)",
+false
+],
+[
+"arosio_step1",
+2280.8,
+6292.6,
+"arosio: STEP 7 cm Via alla Chiesa di San Michele (2281, 6293)",
+false
+],
+[
+"arosio_edge0",
+2355.487,
+6237.501,
+"arosio: road edge 60 cm over the ground (2355, 6238)",
+false
+],
+[
+"arosio_edge1",
+2073.0,
+6375.5509999999995,
+"arosio: road edge 60 cm over the ground (2073, 6376)",
+false
+],
+[
+"fescoggia_step0",
+776.9,
+5710.9,
+"fescoggia: HOLE 100 cm Stradón da Vésc (777, 5711)",
+false
+],
+[
+"fescoggia_step1",
+780.0,
+5709.3,
+"fescoggia: HOLE 100 cm Stradón da Vésc (780, 5709)",
+false
+],
+[
+"fescoggia_step2",
+504.1,
+5411.6,
+"fescoggia: STEP 25 cm Via San Silvestro (504, 5412)",
+false
+],
+[
+"fescoggia_step3",
+773.8,
+5706.4,
+"fescoggia: STEP 13 cm Stradón da Vésc (774, 5706)",
+false
+],
+[
+"fescoggia_edge0",
+406.28,
+5401.735000000001,
+"fescoggia: road edge 60 cm over the ground (406, 5402)",
+false
+],
+[
+"fescoggia_edge1",
+645.114,
+5537.335,
+"fescoggia: road edge 60 cm over the ground (645, 5537)",
+false
+],
+[
+"breno_step0",
+8.2,
+4595.2,
+"breno: STEP 46 cm  (8, 4595)",
+false
+],
+[
+"breno_step1",
+75.9,
+4615.1,
+"breno: STEP 6 cm  (76, 4615)",
+false
+],
+[
+"breno_edge0",
+95.055,
+4582.635,
+"breno: road edge 60 cm over the ground (95, 4583)",
+false
+],
+[
+"breno_edge1",
+-36.281000000000006,
+4591.342000000001,
+"breno: road edge 60 cm over the ground (-36, 4591)",
+false
+],
+[
+"miglieglia_step0",
+-1068.4,
+3518.0,
+"miglieglia: STEP 10 cm  (-1068, 3518)",
+false
+],
+[
+"miglieglia_step1",
+-914.9,
+3800.9,
+"miglieglia: STEP 9 cm Via Bisada (-915, 3801)",
+false
+],
+[
+"miglieglia_step2",
+-914.8,
+3798.3,
+"miglieglia: STEP 9 cm Via Bisada (-915, 3798)",
+false
+],
+[
+"miglieglia_step3",
+-976.2,
+3552.0,
+"miglieglia: STEP 7 cm Via Canavee (-976, 3552)",
+false
+],
+[
+"miglieglia_edge0",
+-1141.966,
+3401.488,
+"miglieglia: road edge 60 cm over the ground (-1142, 3401)",
+false
+],
+[
+"miglieglia_edge1",
+-932.404,
+3682.273,
+"miglieglia: road edge 60 cm over the ground (-932, 3682)",
+false
+],
+[
+"minor_step00",
+-2399.5,
+32.8,
+"minor: STEP 260 cm Castelrotto nucleo (-2400, 33)",
+false
+],
+[
+"minor_step01",
+-2401.1,
+31.1,
+"minor: STEP 253 cm Castelrotto nucleo (-2401, 31)",
+false
+],
+[
+"minor_step02",
+-2399.1,
+40.9,
+"minor: STEP 206 cm Castelrotto nucleo (-2399, 41)",
+false
+],
+[
+"minor_step03",
+1132.5,
+-285.1,
+"minor: STEP 98 cm Via Cantonale (1132, -285)",
+false
+],
+[
+"minor_step04",
+1979.7,
+3336.6,
+"minor: STEP 96 cm Via Cantonale (1980, 3337)",
+false
+],
+[
+"minor_step05",
+-1383.6,
+1589.7,
+"minor: STEP 90 cm  (-1384, 1590)",
+false
+],
+[
+"minor_step06",
+1270.3,
+-415.5,
+"minor: STEP 87 cm Via Giuseppe Soldati (1270, -416)",
+false
+],
+[
+"minor_step07",
+2202.1,
+2033.5,
+"minor: STEP 73 cm Via Mondonico (2202, 2034)",
+false
+],
+[
+"minor_step08",
+805.6,
+5928.4,
+"minor: STEP 71 cm Stradón da Vésc (806, 5928)",
+false
+],
+[
+"minor_step09",
+4025.2,
+5713.5,
+"minor: STEP 64 cm Via San Pietro (4025, 5714)",
+false
+],
+[
+"minor_step10",
+1321.3,
+458.2,
+"minor: STEP 54 cm  (1321, 458)",
+false
+],
+[
+"minor_step11",
+1321.8,
+460.9,
+"minor: STEP 52 cm  (1322, 461)",
+false
+],
+[
+"new_astano_edge0",
+-4028.12,
+2176.965,
+"astano: road edge 60 cm over the ground (-4028, 2177)",
+false
+],
+[
+"new_astano_edge1",
+-4023.23,
+2099.605,
+"astano: road edge 60 cm over the ground (-4023, 2100)",
+false
+],
+[
+"new_vezio_step0",
+1130.0,
+6314.0,
+"vezio: STEP 192 cm Stradón da Mügéna (1130, 6314)",
+false
+],
+[
+"new_vezio_step1",
+1118.3,
+6304.8,
+"vezio: STEP 6 cm Stradón da Vésc (1118, 6305)",
+false
+],
+[
+"new_vezio_edge0",
+927.6279999999999,
+6063.864,
+"vezio: road edge 60 cm over the ground (928, 6064)",
+false
+],
+[
+"new_vezio_edge1",
+917.8389999999999,
+6095.164,
+"vezio: road edge 60 cm over the ground (918, 6095)",
+false
+],
+[
+"new_mugena_step0",
+1557.2,
+6355.6,
+"mugena: STEP 6 cm Stráda da Caròcc (1557, 6356)",
+false
+],
+[
+"new_mugena_edge0",
+1578.154,
+6098.556,
+"mugena: road edge 60 cm over the ground (1578, 6099)",
+false
+],
+[
+"new_mugena_edge1",
+1949.899,
+6333.27,
+"mugena: road edge 60 cm over the ground (1950, 6333)",
+false
+],
+[
+"new_arosio_edge1",
+2559.174,
+6187.2919999999995,
+"arosio: road edge 60 cm over the ground (2559, 6187)",
+false
+],
+[
+"new_fescoggia_edge1",
+329.43,
+5395.283,
+"fescoggia: road edge 60 cm over the ground (329, 5395)",
+false
+],
+[
+"new_breno_edge0",
+-148.665,
+4407.144,
+"breno: road edge 60 cm over the ground (-149, 4407)",
+false
+],
+[
+"new_breno_edge1",
+-8.632000000000005,
+4468.107,
+"breno: road edge 60 cm over the ground (-9, 4468)",
+false
+],
+[
+"new_miglieglia_edge0",
+-1214.824,
+3663.902,
+"miglieglia: road edge 60 cm over the ground (-1215, 3664)",
+false
+],
+[
+"new_miglieglia_edge1",
+-912.338,
+3745.66,
+"miglieglia: road edge 60 cm over the ground (-912, 3746)",
+false
+],
+[
+"new_minor_step02",
+1130.0,
+6314.0,
+"minor: STEP 192 cm Stradón da Mügéna (1130, 6314)",
+false
+],
+[
+"new_minor_step08",
+-1262.6,
+-1833.9,
+"minor: STEP 48 cm  (-1263, -1834)",
+false
+],
+[
+"new_minor_step10",
+-5371.6,
+109.3,
+"minor: STEP 46 cm Via Roncaccio (-5372, 109)",
+false
+],
+[
+"new_minor_step11",
+-1470.7,
+1644.9,
+"minor: STEP 33 cm  (-1471, 1645)",
+false
+]
+]

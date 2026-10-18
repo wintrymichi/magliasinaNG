@@ -1,0 +1,39 @@
+{
+ "counts": {
+  "bin": 1660,
+  "post_box": 472,
+  "recycling": 23,
+  "picnic": 24,
+  "trashbags": 377,
+  "bench": 587,
+  "table": 75,
+  "umbrella": 75,
+  "chair": 150,
+  "terraces": 61,
+  "planter_round": 828,
+  "planter": 181,
+  "planter_square": 440,
+  "mirror": 32,
+  "hydrant": 348,
+  "house_bin": 1321,
+  "garden_table": 182,
+  "garden_chair": 364,
+  "drum": 1346,
+  "pallet": 1594,
+  "yard_props": 7023,
+  "yards": 2470,
+  "dumpster": 521
+ },
+ "objects": 12463,
+ "left_out": {
+  "carriageway": 5581,
+  "wall": 2247,
+  "clear": 495,
+  "slope": 2046,
+  "building": 14475,
+  "props": 1156,
+  "step": 193,
+  "railway": 98
+ },
+ "seconds": 95
+}

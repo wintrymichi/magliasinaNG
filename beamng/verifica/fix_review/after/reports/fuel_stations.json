@@ -1,0 +1,19 @@
+{
+ "stations": 9,
+ "from_chargers": 1,
+ "left_out": {
+  "osm": 18,
+  "off_terrain": 0,
+  "off_road": 9,
+  "same_station": 0
+ },
+ "canopies_replaced": 8,
+ "canopies_new": 0,
+ "no_canopy": 1,
+ "islands": 13,
+ "dispensers": 26,
+ "totems": 8,
+ "triangles": 8556,
+ "refuel_stations": 8,
+ "seconds": 53
+}

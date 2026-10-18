@@ -1,0 +1,10 @@
+{
+ "tiles": 1308,
+ "squares": 2319283,
+ "triangles": 18304474,
+ "steep_vertices": 3099003,
+ "changed_vertices": 2632354,
+ "changed_max_m": 8.36555770209867,
+ "triangles_far": 5521208,
+ "seconds": 497
+}
