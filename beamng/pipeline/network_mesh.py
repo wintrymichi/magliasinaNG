@@ -79,6 +79,7 @@ PATH_YIELD = 10.0
 # v3.0 fix round: past the end of its line a cell carried on along the grade of the line's last piece, up to 100 % where
 # that piece climbs a wall or steps (0.47 m between neighbouring cells under the church of Arosio): at most this grade.
 END_GRADE = 0.20
+STEP_DZ_PIN = 0.05     # m, cells pinned to two different strips that differ more are left free (_pin_strips)
 # The cells past the end of a line that meets a bridge (its abutment, beside the deck's head) keep the line's height
 # within REACH m: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
@@ -395,6 +396,8 @@ class Network:
             return pin
         rr, cc = np.nonzero(cand)
         X, Y = x0 + (cc + 0.5) * RES, y1 - (rr + 0.5) * RES
+        Z_own = Z.copy()
+        pid_of = np.full((H, W), -1, np.int64)
         for pid in np.unique(near[rr, cc]):
             k = near[rr, cc] == pid
             line = self.polys[int(pid)]["own"]
@@ -406,6 +409,18 @@ class Network:
             ok = meet & np.isfinite(zs) & (np.abs(zs - Z[rr[k], cc[k]]) < JUNCTION_DZ)
             Z[rr[k][ok], cc[k][ok]] = zs[ok]
             pin[rr[k][ok], cc[k][ok]] = True
+            pid_of[rr[k][ok], cc[k][ok]] = pid
+        # where two strips meet (a junction of two lines both meshed as strips), neighbouring cells pinned to different
+        # strips at different heights keep their own: pinned, the step between them stayed (0.47 m under the church of
+        # Arosio); free, relax_seams spreads it
+        clash = np.zeros((H, W), bool)
+        for a, b in (((slice(None), slice(0, -1)), (slice(None), slice(1, None))),
+                     ((slice(0, -1), slice(None)), (slice(1, None), slice(None)))):
+            c = pin[a] & pin[b] & (pid_of[a] != pid_of[b]) & (np.abs(Z[a] - Z[b]) > STEP_DZ_PIN)
+            clash[a] |= c
+            clash[b] |= c
+        Z[clash] = Z_own[clash]
+        pin &= ~clash
         return pin
 
     def strip_height(self, pid):
@@ -495,6 +510,8 @@ class Network:
         # another line's height, or relaxed towards a junction, with a step (0.3-0.6 m: Astano, Arosio).
         main_cell = (G >= 0) & self.main[np.maximum(G, 0)] & (U <= 1.0)
         pin = self._pin_strips(box, x0, y1, W, H, m & ~main_cell, Z, G)     # a main road does not bend to a strip
+        if getattr(self, "explain", False):
+            self.tile_explained.update(pin=pin.copy(), Z_pinned=Z.copy(), G_final=G.copy())
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
