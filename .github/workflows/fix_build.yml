@@ -1,0 +1,152 @@
+# Build of the level with the fixes of the round after the v3.0 release (steps on the narrow roads, the step below
+# Astano, far trees on the road at Vezio), from scratch as v3_build_test.yml, then the same review as fix_review.yml
+# on the new level: the drive test and the renders of the same places (beamng/verifica/fix_review/after/, committed
+# to the branch next to release/, the released v3.0). The zip to test in the game is an artifact of the run.
+# Nothing is published as a release.
+# build stamp: 1
+name: fix build (v3.0 fixes)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-e0btjw]
+    paths: [.github/workflows/fix_build.yml]
+
+concurrency:
+  group: fix-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  fix-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0 playwright==1.55.0
+          python -m playwright install --with-deps chromium
+
+      - name: Downloads from earlier runs
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/magliasinaNG/bm/data     # MAGLIASO_ROOT/data, written out: the cache takes no '..'
+          key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
+          restore-keys: v3-data-
+
+      - name: Release v1.1 (objects of the original route, neutral textures)
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_worldcover.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+          du -sh "$MAGLIASO_ROOT/data"/* || true
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: Road network
+        working-directory: beamng/pipeline
+        run: |
+          python network.py
+          python network_surface.py
+
+      - name: Level (build_level.py, every finishing step inside)
+        working-directory: beamng/pipeline
+        run: |
+          python build_level.py | tee "$MAGLIASO_ROOT/build_level.log"
+          df -h .
+
+      - name: Checks
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          mkdir -p "$O"
+          python check_level.py || true
+          cp ../verifica/check_level.json "$O/check_level.json"
+          python drive_test.py || true
+          cp ../verifica/drive_test.json "$O/drive_test.json"
+          git checkout -- ../verifica/check_level.json ../verifica/drive_test.json
+
+      - name: Package
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          python package.py magliaso_pura_v3.0 | tee "$O/package.log"
+          mv "$MAGLIASO_ROOT/dist/magliaso_pura_v3.0.zip" "$O/"
+          cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
+          cp "$MAGLIASO_ROOT/build_level.log" "$O/"
+          ls -la "$O"
+          md5sum "$O/magliaso_pura_v3.0.zip"
+
+      - name: Review of the places (fix_review.py, the views of the released level)
+        working-directory: beamng/pipeline
+        run: |
+          O=../verifica/fix_review/after
+          rm -rf "$O"; mkdir -p "$O"
+          cp "$GITHUB_WORKSPACE/out/drive_test.json" "$O/drive_test.json"
+          cp "$GITHUB_WORKSPACE/out/check_level.json" "$O/check_level.json" || true
+          cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
+          V=../verifica/fix_review/release/views.json
+          if [ -f "$V" ]; then python fix_review.py "$O" --drive "$O/drive_test.json" --views "$V"
+          else python fix_review.py "$O" --drive "$O/drive_test.json"; fi
+          ls -la "$O"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fix-build
+          path: out/
+
+      - name: Commit the review
+        run: |
+          git checkout -- beamng/dati beamng/verifica/check_level.json beamng/verifica/drive_test.json || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/verifica/fix_review
+          git commit -m "fix build: review of the rebuilt level" || exit 0
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 5; done

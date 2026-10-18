@@ -67,7 +67,7 @@ JUNCTION_DZ = 1.0      # m, the cells of two lines meeting at a node within JUNC
 # along it (the inside of a hairpin, where the nearest point of the line jumps from one leg to the other) are not one
 # surface by that alone: up to v3.0 they were linked whatever their heights (as the steps of a stair), and the mesh
 # rose by the whole height between the legs from one cell to the next, a step of up to a metre across the lane after
-# the hairpins (Astano down to Banco). Now they are a seam: linked up to FOLD_DZ apart and spread by relax_seams.
+# the hairpins. Now, up to FOLD_DZ apart, the link is a seam spread by relax_seams (farther apart they stay as they were).
 FOLD_GAP = 3.0
 FOLD_DZ = 1.5
 # v3.0 fix round: a path line (a "1m Weg" ending at a road, a flight of steps beside it) gives no height to a cell that
@@ -485,28 +485,26 @@ class Network:
         LD[:-1, :] = m[:-1, :] & m[1:, :]
         same_r = (G[:, :-1] == G[:, 1:]) & (G[:, :-1] != -1) & (owner[:, :-1] == owner[:, 1:])
         same_d = (G[:-1, :] == G[1:, :]) & (G[:-1, :] != -1) & (owner[:-1, :] == owner[1:, :])
-        fold_r = same_r & (G[:, :-1] >= 0) & (np.abs(A[:, :-1] - A[:, 1:]) > FOLD_GAP)
-        fold_d = same_d & (G[:-1, :] >= 0) & (np.abs(A[:-1, :] - A[1:, :]) > FOLD_GAP)
-        same_r &= ~fold_r
-        same_d &= ~fold_d
+        fold_r = same_r & (G[:, :-1] >= 0) & (np.abs(A[:, :-1] - A[:, 1:]) > FOLD_GAP) \
+            & (np.abs(Z[:, :-1] - Z[:, 1:]) < FOLD_DZ)
+        fold_d = same_d & (G[:-1, :] >= 0) & (np.abs(A[:-1, :] - A[1:, :]) > FOLD_GAP) \
+            & (np.abs(Z[:-1, :] - Z[1:, :]) < FOLD_DZ)
         # two lines that meet at a node near the cells are one junction: their cells are linked up to
         # JUNCTION_DZ apart (the step between them is spread by relax_seams, not left as a kerb)
         jun_r = self._junction_links(G[:, :-1], G[:, 1:], x0 + (np.arange(W - 1) + 1.0) * RES,
                                      y1 - (np.arange(H) + 0.5) * RES)
         jun_d = self._junction_links(G[:-1, :], G[1:, :], x0 + (np.arange(W) + 0.5) * RES,
                                      y1 - (np.arange(H - 1) + 1.0) * RES)
-        LR[:, :-1] &= same_r | (np.abs(Z[:, :-1] - Z[:, 1:]) < STEP_Z) | (jun_r & (np.abs(Z[:, :-1] - Z[:, 1:]) < JUNCTION_DZ)) \
-            | (fold_r & (np.abs(Z[:, :-1] - Z[:, 1:]) < FOLD_DZ))
-        LD[:-1, :] &= same_d | (np.abs(Z[:-1, :] - Z[1:, :]) < STEP_Z) | (jun_d & (np.abs(Z[:-1, :] - Z[1:, :]) < JUNCTION_DZ)) \
-            | (fold_d & (np.abs(Z[:-1, :] - Z[1:, :]) < FOLD_DZ))
+        LR[:, :-1] &= same_r | (np.abs(Z[:, :-1] - Z[:, 1:]) < STEP_Z) | (jun_r & (np.abs(Z[:, :-1] - Z[:, 1:]) < JUNCTION_DZ))
+        LD[:-1, :] &= same_d | (np.abs(Z[:-1, :] - Z[1:, :]) < STEP_Z) | (jun_d & (np.abs(Z[:-1, :] - Z[1:, :]) < JUNCTION_DZ))
         # the carriageways of the main roads keep their surface: the side roads, yards and paths meeting
         # them take up the difference (a main road does not bend to a side road)
         pin_r, pin_d = pin[:, :-1] != pin[:, 1:], pin[:-1, :] != pin[1:, :]
-        Z = relax_seams(Z, G, owner, LR, LD, main_cell | pin, (fold_r | pin_r, fold_d | pin_d))
+        Z = relax_seams(Z, G, owner, LR, LD, main_cell | pin, (fold_r | pin_r, fold_d | pin_d), pin)
         return surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES), ids
 
 
-def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None):
+def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None, pinned=None):
     """Z with the jumps at the seams spread over SEAM_R m. A seam is a link between two cells whose heights
     come from different lines, or that lie in different polygons, and differ by more than SEAM_DZ. Around
     the seams (cells within SEAM_R m, linked) the heights are solved again keeping the height difference
@@ -514,7 +512,7 @@ def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None):
     the vertical curves of the roads stay, only the jump is spread smoothly over the zone); the cells
     outside the zone keep their heights, and so do fixed_cells (the carriageways of the main roads) unless
     the seam is between two of them. folds: (right, down) link masks of neighbouring cells of one line that are
-    seams too (FOLD_GAP)."""
+    seams too (FOLD_GAP, the cells beside a strip). pinned: cells that keep their heights in any case."""
     fr_, fd_ = folds if folds is not None else (np.zeros(LR[:, :-1].shape, bool), np.zeros(LD[:-1, :].shape, bool))
     jr = LR[:, :-1] & ((G[:, :-1] != G[:, 1:]) | (owner[:, :-1] != owner[:, 1:]) | fr_) & \
         (np.abs(Z[:, :-1] - Z[:, 1:]) > SEAM_DZ)
@@ -543,6 +541,9 @@ def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None):
         both[1:, :] |= fd
         free = ndi.binary_dilation(both, iterations=int(round(SEAM_R / RES))) if both.any() else both
         zone &= ~fixed_cells | free
+    if pinned is not None:                              # pinned cells keep their heights whatever the seams around
+        zone &= ~pinned
+    if fixed_cells is not None or pinned is not None:
         if not zone.any():
             return Z
     ur, uc = np.nonzero(zone)
