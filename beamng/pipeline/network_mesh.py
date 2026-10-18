@@ -479,7 +479,7 @@ class Network:
         at_bridge = np.zeros((H, W), bool)
         if self.bridge_ends is not None:
             dq, _ = self.bridge_ends.query(np.column_stack([np.tile(Xc, H), np.repeat(Yc, W)]), distance_upper_bound=BRIDGE_HEAD)
-            at_bridge = (G >= 0) & (U <= OFF_LINE) & np.isfinite(dq).reshape(H, W)
+            at_bridge = (G >= 0) & np.isfinite(dq).reshape(H, W)
         off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge
         if getattr(self, "explain", False):           # fix_probe.py: why a cell left its line
             self.tile_explained = dict(Z=Z.copy(), G=G.copy(), U=U.copy(), E=E.copy(), A=A.copy(), Ds=Ds.copy(),
