@@ -137,7 +137,7 @@ jobs:
         run: |
           N="$RUNNER_TEMP/notes.md"
           {
-            echo "**Nightly build of v3.0.40, to test in the game. Not the release.** Built $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\` of \`$GITHUB_REF_NAME\`."
+            echo "**Nightly build of v3.0.40: UNTESTED, built to be tested in the game. Not the release.** Built $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\` of \`$GITHUB_REF_NAME\`."
             echo
             echo "For BeamNG.drive 0.40. Before installing: remove or disable \`magliaso_pura_v3.0.zip\` in the mods folder (both are the same level). After updating the game to 0.40, BeamNG disables every mod: enable this one in the mod manager."
             echo
