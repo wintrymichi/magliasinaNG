@@ -458,6 +458,146 @@ def inward_walls(lv, places):
             "building_walls_inward_m2": round(tin, 0)}
 
 
+HOLE_TOL = 0.10            # m: an open edge of a wall mesh this far over the terrain is a hole in the wall (v3.0.40)
+HOLE_UNDER = 0.05          # m: ... and not this far under the road tops within HOLE_ROAD m
+HOLE_ROAD = 1.0
+HOLE_STEP = 0.08           # m across an open edge where the surface that closes it is looked for
+NOTCH_TOL = 0.30           # m: a wall top corner this much under another at its place and in the ground
+
+
+def wall_holes(lv, ter, places):
+    """v3.0.40: holes in the walls (the game draws one side of a face: through a gap in a wall mesh one sees the
+    ground behind it). A wall mesh is closed but at its feet under the ground: an edge of only one triangle (the
+    meshes welded at 5 mm) over the terrain and over the roads beside it, that no other face of the walls or the
+    roads continues (looked for HOLE_STEP m across it in the plane of its triangle), is a hole: the end of a
+    roadside wall open under its cap, a foot in the air over the asphalt, a top missing. And the corners of a wall
+    top down in the ground under another top corner at their place (v3.0: taken for feet by walls.wall_feet_step):
+    notches in the wall. Metres of open edges, the notches, and the places."""
+    from scipy.spatial import cKDTree
+    from walls import FaceSet
+    meshes = {"walls": [], "roads/surfaces": []}
+    for grp in meshes:
+        f = os.path.join(lv, "main", "MissionGroup", *grp.split("/"), "items.level.json")
+        for it in (pr.items(f) if os.path.exists(f) else []):
+            sn = it.get("shapeName", "")
+            path = os.path.join(lv, *sn.split("/")[3:])
+            if it.get("class") != "TSStatic" or not sn.endswith(".dae") or not os.path.exists(path):
+                continue
+            V, N, T, C, parts = pr.read_dae(path)
+            meshes[grp].append((V + np.array(it.get("position", [0, 0, 0]), np.float64), parts))
+    if not meshes["walls"]:
+        return {}
+    # the road tops (their vertices) and every triangle of the walls and the roads (the faces that may close a gap)
+    rtop, allt = [], []
+    for W, parts in meshes["roads/surfaces"]:
+        for mat, idx in parts:
+            t = W[idx[:, 0].reshape(-1, 3)]
+            n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+            rtop.append(t[n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-12) > 0.5].reshape(-1, 3))
+            allt.append(t)
+    R = np.unique(np.round(np.concatenate(rtop), 3), axis=0) if rtop else np.zeros((0, 3))
+    rtree = cKDTree(R[:, :2]) if len(R) else None
+    # the wall triangles of all the shapes welded together (a wall can reach over two chunks)
+    tri = []
+    crest = []
+    for W, parts in meshes["walls"]:
+        for mat, idx in parts:
+            t = W[idx[:, 0].reshape(-1, 3)]
+            allt.append(t)
+            tri.append(t)
+            crest.append(np.full(len(t), mat.endswith("_top")))
+    tri, crest = np.concatenate(tri), np.concatenate(crest)
+    P = tri.reshape(-1, 3)
+    _, wid = np.unique(np.round(P * 200).astype(np.int64), axis=0, return_inverse=True)
+    tw = wid.ravel().reshape(-1, 3)
+    ok = (tw[:, 0] != tw[:, 1]) & (tw[:, 1] != tw[:, 2]) & (tw[:, 2] != tw[:, 0])
+    k3 = np.flatnonzero(ok)
+    # every edge with the vertex opposite it; the edges of one triangle only
+    e = np.concatenate([tw[k3][:, [0, 1]], tw[k3][:, [1, 2]], tw[k3][:, [2, 0]]])
+    _, inv, cnt = np.unique(np.sort(e, 1), axis=0, return_inverse=True, return_counts=True)
+    one = cnt[inv.ravel()] == 1
+    T3 = tri[k3]
+    A = np.concatenate([T3[:, 0], T3[:, 1], T3[:, 2]])[one]
+    B = np.concatenate([T3[:, 1], T3[:, 2], T3[:, 0]])[one]
+    O = np.concatenate([T3[:, 2], T3[:, 0], T3[:, 1]])[one]
+    # notches: a top corner under another top corner at its place and under the terrain around it
+    C = tri[crest].reshape(-1, 3)
+    key = np.round(C[:, :2] * 100).astype(np.int64)
+    _, g = np.unique(key[:, 0] * 10_000_019 + key[:, 1], return_inverse=True)
+    g = g.ravel()
+    hi = np.full(g.max() + 1, -np.inf)
+    np.maximum.at(hi, g, C[:, 2])
+    k = np.flatnonzero(C[:, 2] < hi[g] - NOTCH_TOL)
+    notch = []
+    if len(k):
+        low = np.minimum.reduce([ter.sample(C[k, 0] + dx, C[k, 1] + dy) for dx in (-0.75, 0.75) for dy in (-0.75, 0.75)])
+        notch = [np.unique(np.round(C[k[C[k, 2] < low]], 2), axis=0)]
+    # over the ground: the terrain, and the road tops beside the edge
+    over = np.minimum(A[:, 2] - ter.sample(A[:, 0], A[:, 1]), B[:, 2] - ter.sample(B[:, 0], B[:, 1])) > HOLE_TOL
+    M = (A + B) / 2
+    if rtree is not None:
+        for j, ii in zip(np.flatnonzero(over), rtree.query_ball_point(M[over, :2], HOLE_ROAD)):
+            if ii and min(A[j, 2], B[j, 2]) < R[ii, 2].min() - HOLE_UNDER:
+                over[j] = False
+    A, B, O, M = A[over], B[over], O[over], M[over]
+    L = np.linalg.norm(B - A, axis=1)
+    keep = L > 0.02
+    A, B, O, M, L = A[keep], B[keep], O[keep], M[keep], L[keep]
+    # a face that closes the edge: across it away from its triangle in its plane (a face going on), under the edge
+    # of a top (its side, a road face that took the place of the side: walls.double_faces_step), or behind the edge
+    # of a side (the top, the faces of another wall)
+    n = np.cross(B - A, O - A)
+    u = np.cross(n, B - A)
+    u /= np.maximum(np.linalg.norm(u, axis=1, keepdims=True), 1e-12)
+    u *= -np.sign(np.einsum("ij,ij->i", u, O - A))[:, None]
+    n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)          # the front of the triangle
+    steep = np.abs(n[:, 2:]) < 0.5
+    # an edge of a top: the side under it; of a side: the top or the other faces behind it
+    other = np.where(steep, -n * np.array([1.0, 1.0, 0.0]), np.array([0.0, 0.0, -1.0]))
+    other /= np.maximum(np.linalg.norm(other, axis=1, keepdims=True), 1e-12)
+    dirs = (u, other)
+    closed = np.zeros(len(A), bool)
+    if len(A):
+        T = np.concatenate(allt)
+        near = cKDTree(M).query(T.mean(1), distance_upper_bound=6.0)[0] < np.inf
+        T = T[near]
+        Nn = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0])
+        Nn /= np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
+        fs = FaceSet(T, Nn)
+        for j in range(len(A)):
+            for f, dv in ((f, dv) for dv in dirs for f in (0.25, 0.5, 0.75)):
+                p = A[j] + (B[j] - A[j]) * f + HOLE_STEP * dv[j]
+                for k in fs.near(p):
+                    t, nk = T[k], Nn[k]
+                    d = (p - t[0]) @ nk
+                    if abs(d) > 0.04:
+                        continue
+                    # not the triangle of the edge itself
+                    if min(np.abs(t - A[j]).max(1).min(), np.abs(t - B[j]).max(1).min()) < 0.005:
+                        continue
+                    q = p - d * nk
+                    inside = True
+                    for a, b in ((0, 1), (1, 2), (2, 0)):        # metres inside every edge, 2 cm allowed
+                        w = np.cross(nk, t[b] - t[a])
+                        w /= max(np.linalg.norm(w), 1e-12)
+                        if (q - t[a]) @ w * np.sign((t[3 - a - b] - t[a]) @ w) < -0.02:
+                            inside = False
+                            break
+                    if inside:
+                        closed[j] = True
+                        break
+                if closed[j]:
+                    break
+    hole = ~closed
+    if hole.any() and places is not None:
+        places.add("buco nel muro", M[hole, 0], M[hole, 1], M[hole, 2], L[hole])
+    nt = np.concatenate(notch) if notch else np.zeros((0, 3))
+    if len(nt) and places is not None:
+        places.add("cima del muro a terra", nt[:, 0], nt[:, 1], nt[:, 2], np.ones(len(nt)))
+    return {"wall_holes_m": round(float(L[hole].sum()), 1), "wall_hole_edges": int(hole.sum()),
+            "wall_top_notches": int(len(nt))}
+
+
 def main(lv=None):
     lv = lv or LEVEL_DIR
     res, places = {}, Places()
@@ -626,6 +766,8 @@ def main(lv=None):
         res.update(obstacles(lv, net, places, zsurf))
     res.update(inward_walls(lv, places))
     print("inward walls:", res["building_walls_inward_share"], flush=True)
+    res.update(wall_holes(lv, ter, places))
+    print("wall holes:", {k: v for k, v in res.items() if k.startswith("wall_")}, flush=True)
     # road faces under the bare ground, band by band of the DTM
     under = np.zeros(len(tri), bool)
     dz_under = np.zeros(len(tri))

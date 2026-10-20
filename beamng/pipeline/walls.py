@@ -1315,9 +1315,11 @@ def wall_feet_step(root, report=None):
     size). Only the vertex heights and texture coordinates of the wall shapes change.
     v3.0.40: beside a road the ground is the road surface, which can stand metres over the terrain carved under it (an
     embankment, a road on a slope): the feet there were left in the air as "a wall on a bridge" (over FOOT_MAX above the
-    terrain) and the walls showed a slot of up to 30 cm over the asphalt, the inside of the wall seen through it (290 m
-    of wall foot in v3.0). A foot within FOOT_ROAD m of a road surface goes FOOT_DEPTH m under the lowest of it there too,
-    however high that stands over the terrain."""
+    terrain) and the walls showed a slot of up to 60 cm over the asphalt, the inside of the wall seen through it. A foot
+    within FOOT_ROAD m of a road surface goes FOOT_DEPTH m under the lowest of it there too, however high that stands over
+    the terrain. With the two v3.0.40 rules below (a wall on something else measured from the highest terrain vertex, never
+    a corner of a wall top) the open wall feet over the ground (check_level.wall_holes) went from 275 m to 7 m on the
+    v3.0 level."""
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -1346,6 +1348,19 @@ def wall_feet_step(root, report=None):
         top = np.full(g.max() + 1, -np.inf)
         np.maximum.at(top, g, W[:, 2])
         foot = W[:, 2] < top[g] - FOOT_GAP
+        # v3.0.40: never a corner of a wall top (a *_top material). Where two wall pieces of different heights meet, or
+        # the two faces of a thin wall touch, the lower top stands under a higher one at the same place: v3.0 took it
+        # for a foot and pulled it down to the ground (5,831 top corners, notches down to the ground in the walls)
+        crest = np.zeros(len(W), bool)
+        for mat, idx in parts:
+            if mat.endswith("_top"):
+                crest[idx[:, 0]] = True
+        kz = np.round(W * 1000).astype(np.int64)
+        _, gz = np.unique(kz, axis=0, return_inverse=True)
+        gz = gz.ravel()
+        on_crest = np.zeros(gz.max() + 1, bool)
+        on_crest[gz[crest]] = True
+        foot &= ~on_crest[gz]
         aim = _ter_min(Q, z0, maxh, W[:, 0], W[:, 1]) - FOOT_DEPTH
         # v3.0.40: on something else only when over the highest terrain vertex around by FOOT_MAX: measured from the
         # lowest, the feet on steep slopes and beside a ditch were taken for walls on a bridge and left in the air
