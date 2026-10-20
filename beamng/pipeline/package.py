@@ -1,10 +1,13 @@
 """Zip the built level as a BeamNG mod: <ROOT>/dist/<name>.zip with levels/magliaso_pura/...
 
-Development files of the validation tour are left out. The archive goes into the user's
+Development files of the validation tour are left out. v3.0.40: the mod's own Lua (beamng/mod: scripts/ and
+lua/, the timing of the ambient sounds) goes in at the root of the zip. The archive goes into the user's
 mods folder (or is installed from the zip).
 """
 import hashlib, os, re, sys, zipfile
 from config import LEVEL_DIR, LEVEL_NAME, ROOT
+
+MOD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "mod")   # beamng/mod
 
 SKIP = {"validation_views.json", "validation_route.json"}
 
@@ -46,6 +49,11 @@ def main(name):
                 # already compressed formats are stored
                 ctype = zipfile.ZIP_STORED if f.lower().endswith((".jpg", ".png", ".dds")) else zipfile.ZIP_DEFLATED
                 z.write(src, arc, compress_type=ctype)
+                n += 1; size += os.path.getsize(src)
+        for root, _, files in os.walk(MOD_DIR):
+            for f in sorted(files):
+                src = os.path.join(root, f)
+                z.write(src, os.path.relpath(src, MOD_DIR).replace("\\", "/"))
                 n += 1; size += os.path.getsize(src)
     print(out, n, "files, %.0f MB level -> %.0f MB zip" % (size / 2**20, os.path.getsize(out) / 2**20))
     print("%s: %d entries, digest %s" % ((os.path.basename(out),) + digest(out)), flush=True)
