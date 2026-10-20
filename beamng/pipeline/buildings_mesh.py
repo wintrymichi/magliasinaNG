@@ -650,6 +650,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             rest, groups = houses(b, rest, style, rec, height, rcol.get(b["uuid"]), wall_col, sv, parts.get(b["uuid"]),
                                   by_egid, shop_pts)
             groups = [(sel, landmarks.apply(pst, b, fp, wall_col)) for sel, pst in groups]
+            groups = landmarks.split_tower(b, rest, groups, fp, roofs)
             if len(groups) > 1:
                 stats["parts"] = stats.get("parts", 0) + len(groups)
             # windows, doors and plinth on the walls of the building (of every house of a block)

@@ -393,6 +393,20 @@ def tower_part(walls, roofs):
     return inside, R
 
 
+def split_tower(b, walls, groups, fp, roofs):
+    """A sacred block of the survey that the register gives to its houses (Bedigliora: the bell tower in one
+    building with the village core): the tower's walls become a group of their own, drawn as a bell tower."""
+    if b["kind"] not in SACRED or not groups or any(p["use"] in USES for _, p in groups):
+        return groups
+    tp = tower_part(walls, roofs_of(fp, roofs))
+    if tp is None:
+        return groups
+    mask = tp[0]
+    out = [(np.asarray(sel, bool) & ~mask, p) for sel, p in groups]
+    out.append((mask.copy(), apply(dict(groups[0][1], use="tower"), b, fp)))
+    return out
+
+
 def layout(b, walls, style, ctx, em, lem, roofs=None):
     """The landmark details of one building (walls: its wall triangles, outward); the number of modules placed."""
     use = style["use"]
