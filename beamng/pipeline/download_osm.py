@@ -18,12 +18,13 @@ the Overpass servers; --pin copies the downloaded files there.
 (c) OpenStreetMap contributors, ODbL 1.0: the extracts in dati/ are under the ODbL.
 """
 import gzip, json, os, shutil, sys, time
+import numpy as np
 import requests
 from config import DATA, local_to_lv95, lv95_to_wgs
 import area
 
 URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
-        "https://maps.mail.ru/osm/tools/overpass/api/interpreter"]
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.private.coffee/api/interpreter"]
 MARGIN = 300.0
 OUT = os.path.join(DATA, "osm", "osm_area.json")
 COMMUNES = os.path.join(DATA, "osm", "communes.json")
@@ -76,8 +77,8 @@ def bbox(bounds=None):
                                     max(p[1] for p in ll))
 
 
-def overpass(q):
-    for attempt in range(6):
+def overpass(q, attempts=6):
+    for attempt in range(attempts):
         url = URLS[attempt % len(URLS)]
         try:
             ua = {"User-Agent": "magliasinaNG BeamNG map pipeline (github.com/wintrymichi/magliasinaNG)"}
@@ -116,20 +117,32 @@ def main():
             print("kept in the repository:", pinned)
 
 
+ADD_TILE = 1000.0         # m, side of the boxes --add asks for (larger ones timed out on busy Overpass servers)
+
+
 def add():
-    """v3.0.40: the elements over each whole village (area.villages(), one small query each) missing from the pinned
-    extracts."""
+    """v3.0.40: the elements over each whole village (area.villages()) missing from the pinned extracts, asked for in
+    boxes of ADD_TILE m."""
     for path, query in ((OUT, QUERY), (POIS, QUERY_POIS)):
         pinned = PINNED[path]
         d = json.load(gzip.open(pinned, "rt", encoding="utf-8"))
         have = {(e["type"], e["id"]) for e in d["elements"]}
         for key, _, g in area.villages():
-            b = bbox(g.buffer(MARGIN).bounds)
-            new = [e for e in overpass(query.replace("{bbox}", b))["elements"] if (e["type"], e["id"]) not in have]
-            have |= {(e["type"], e["id"]) for e in new}
-            d["elements"] += new
-            d.setdefault("added_bbox", []).append(b)
-            print(os.path.basename(pinned), key, "+%d elements over" % len(new), b, flush=True)
+            x0, y0, x1, y1 = g.buffer(MARGIN).bounds
+            nx, ny = int(np.ceil((x1 - x0) / ADD_TILE)), int(np.ceil((y1 - y0) / ADD_TILE))
+            n = 0
+            for i in range(nx):
+                for j in range(ny):
+                    box = (x0 + i * (x1 - x0) / nx, y0 + j * (y1 - y0) / ny,
+                           x0 + (i + 1) * (x1 - x0) / nx, y0 + (j + 1) * (y1 - y0) / ny)
+                    b = bbox(box)
+                    new = [e for e in overpass(query.replace("{bbox}", b), 12)["elements"]
+                           if (e["type"], e["id"]) not in have]
+                    have |= {(e["type"], e["id"]) for e in new}
+                    d["elements"] += new
+                    d.setdefault("added_bbox", []).append(b)
+                    n += len(new)
+            print(os.path.basename(pinned), key, "+%d elements in %d boxes" % (n, nx * ny), flush=True)
         with gzip.open(pinned, "wt", encoding="utf-8", compresslevel=9) as f:
             json.dump(d, f)
 

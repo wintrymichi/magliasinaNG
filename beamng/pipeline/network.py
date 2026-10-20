@@ -7,6 +7,8 @@ another, stay apart). Segments are sampled into stations every STEP m.
 Station width: the surveyed carriageway (MU 'strada_sentiero' polygons) measured with rays from the
 line where it runs inside one (the line is moved to the middle of it when it is off by less than
 MAX_SHIFT), otherwise the nominal width of the swissTLM3D class.
+v3.0.40: a dead end that runs down into the lake (a slipway: the whole Caslano shore came into the area) stops where
+the ground (dtm05) reaches the lake level + WET m, so no road is drawn under the water.
 Output: work/network.npz (stations and segments) and work/network.json (summary).
 """
 import json, os, pickle
@@ -31,6 +33,8 @@ CLASSES = {
     "2m Weg": (2.0, "path", 16.0), "2m Wegfragment": (2.0, "path", 16.0),
     "1m Weg": (1.3, "path", 12.0), "1m Wegfragment": (1.3, "path", 12.0),
 }
+WET = 0.15              # m over the lake level: a dead end stops where the ground comes down to this
+LOW = 2.0               # m under the lake level: lower ground is dry land (the Tresa below Ponte Tresa), not lake
 SKIP = {"Tunnel", "Unterfuehrung", "Unterfuehrung mit Treppe", "Galerie"}
 BRIDGE = {"Bruecke", "Bruecke mit Treppe", "Steg", "Bruecke mit Galerie"}
 
@@ -151,9 +155,47 @@ def measure_width(P, N, polys, nominal):
     return width, off
 
 
+def dry_ends(lines, ends, node_pos):
+    """v3.0.40: cut every dead end that runs down into the lake where the ground (dtm05) reaches the lake level + WET;
+    its node moves to the cut. A line wholly in the water is dropped. Returns the lines and their ends."""
+    import water
+    from geo import Grid
+    try:
+        level, dtm = water.lake_level(), Grid.load(os.path.join(WORK, "dtm05.npz"))
+    except (FileNotFoundError, OSError):
+        return lines, ends
+    deg = np.bincount(ends.ravel(), minlength=len(node_pos))
+    out_l, out_e, cut, dropped = [], [], 0, 0
+    for (props, L), (na, nb) in zip(lines, ends):
+        if deg[na] == 1 or deg[nb] == 1:
+            Q = densify(L, 1.0)
+            h = np.nan_to_num(dtm.sample(Q[:, 0], Q[:, 1]), nan=1e4)
+            dry = (h >= level + WET) | (h < level - LOW)          # not the valley of the Tresa below the lake
+            if not dry.any():
+                dropped += 1
+                continue
+            i0 = int(np.argmax(dry)) if deg[na] == 1 else 0
+            i1 = len(Q) - int(np.argmax(dry[::-1])) if deg[nb] == 1 else len(Q)
+            if i1 - i0 < 2:
+                dropped += 1
+                continue
+            if i0 > 0 or i1 < len(Q):
+                L = Q[i0:i1]
+                if i0 > 0:
+                    node_pos[na] = L[0, :2]
+                if i1 < len(Q):
+                    node_pos[nb] = L[-1, :2]
+                cut += 1
+        out_l.append((props, L))
+        out_e.append((na, nb))
+    print("dead ends into the lake (level %.2f m): %d cut at the shore, %d dropped" % (level, cut, dropped), flush=True)
+    return out_l, np.array(out_e).reshape(-1, 2)
+
+
 def build():
     lines = load_lines()
     ends, node_pos = nodes_of(lines)
+    lines, ends = dry_ends(lines, ends, node_pos)
     polys = av_carriageway()
     segs = []
     sx, sy, sz, sseg, sidx, snode, sw, sss = [], [], [], [], [], [], [], []
