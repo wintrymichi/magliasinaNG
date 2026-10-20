@@ -3,7 +3,8 @@
 # road network, build_level.py with every finishing step inside, the automatic checks (check_level.py,
 # drive_test.py) and the package. The zip goes to GitHub as the pre-release "nightly" (michi 2026-10-20: "mettila
 # tipo in una cartella nightly builds su github"), replacing the previous one: a build to test in the game, never
-# the latest release. The checks, the reports and the build log are an artifact of the run.
+# the latest release. The checks, the reports and the build log are an artifact of the run and the asset
+# nightly_reports.zip of the pre-release.
 #
 # It runs when beamng/nightly/stamp.txt changes on the integration branch (write the date and what is in it there to
 # start a build), or on demand.
@@ -125,6 +126,9 @@ jobs:
           mv "$MAGLIASO_ROOT/dist/$ZIP_NAME.zip" "$GITHUB_WORKSPACE/zip/"
           cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
           cp "$MAGLIASO_ROOT/build_level.log" "$O/"
+          # the reports also as an asset of the pre-release: Actions artifacts and logs cannot be read from the
+          # cloud sessions, release assets can
+          (cd "$O" && zip -qr "$GITHUB_WORKSPACE/zip/nightly_reports.zip" .)
           ls -la "$O" "$GITHUB_WORKSPACE/zip"
           md5sum "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip"
 
@@ -145,8 +149,9 @@ jobs:
             echo
             awk '/^## v3.0.40/{on=1; next} /^## /{on=0} on' CHANGELOG.md
             echo
-            echo "Automatic checks, reports and the build log: artifact \"nightly-build-reports\" of run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            echo "Automatic checks, reports and the build log: \`nightly_reports.zip\` below (also the artifact \"nightly-build-reports\" of run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
           } > "$N"
           gh release delete nightly --yes --cleanup-tag || true
-          gh release create nightly "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip" --prerelease --latest=false \
+          gh release create nightly "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip" "$GITHUB_WORKSPACE/zip/nightly_reports.zip" \
+            --prerelease --latest=false \
             --target "$GITHUB_SHA" --title "Nightly builds: v3.0.40 ($(date -u '+%Y-%m-%d'))" --notes-file "$N"

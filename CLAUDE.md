@@ -69,6 +69,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 
 ## Checking a finish step in the cloud container
 
+- Actions artifacts and run log zips are blocked by the proxy; `get_job_logs` with return_content works, and a
+  long log is saved to a file to grep. The nightly also attaches its reports to the pre-release (nightly_reports.zip).
 - The released zip downloads in seconds with curl from `github.com/.../releases/download/<tag>/<zip>`; extract it
   (5.5 GB) and run the step on the folder (`bng.LevelFiles`). jsdelivr is blocked: render3d's three.module.js comes
   from the npm tarball (`registry.npmjs.org/three/-/three-0.170.0.tgz`) into `WORK`.
@@ -140,6 +142,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   grep for an existing name before adding a helper.
 - Torch with default threads in parallel zone runs oversubscribed the CPU (hours): STREET_THREADS=1 per process.
 - pkill with a pattern that is also in your own command line kills your shell (exit 144): kill by PID.
+- The photo hedges were applied in understory.main(), which the build never runs: it copies dati/understory.npz
+  as it is (prepare_work.py), so nightly #1 had none of them (2026-10-20). Hook new data where the build reads it
+  (vegetation.py now applies understory.photo_hedges), and check the build log prints the hook's counts.
 - A workflow's commit step pushed nothing: `git pull --rebase` refused because street_collect also rewrote a file
   that was not committed (street_facades.json). Restore the rest (`git checkout -- beamng/dati`) before pulling.
   Tile results stay in the run's artifacts: rerun only the collect with mode=area from_run=<run id>.
