@@ -9,7 +9,7 @@ the game keeps the times of every run in the mission's leaderboard. Each route c
 A route follows the AI roads of the level as built (MissionGroup/AIRoads, ai_roads.py), so the races stay on the
 roads the game's traffic drives:
 - a route given as the name of an AI road (the measured Strada Cantonale Magliaso - Pura) is that road, with the
-  pieces "<name>_<n>" it is cut into where its speed limit changes (ai_roads.speed_limits), in order;
+  pieces "<name>_<n>" / "<name>_g<n>" it is cut into (speed limits, give-way points), chained by their ends;
 - a route given as waypoints (village spawn points or local coordinates) is the chain of shortest ways between
   them over the AI roads, where a road costs its length / drivability**ROUTE_POWER (so the cantonal roads are
   taken over the village lanes) and two roads meet where their nodes lie within JOIN m (and JOIN_DZ m in height).
@@ -19,7 +19,7 @@ line. The mission's preview is the level's preview (the orthophoto) cut around t
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish races
 """
-import io, json, math, os, shutil, time
+import io, json, math, os, re, shutil, time
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy.sparse import coo_matrix
@@ -120,19 +120,25 @@ class RoadGraph:
 def route_line(graph, route, places):
     """(n, 4) x, y, z, width along the route."""
     if isinstance(route, str):
-        # the road and the pieces ai_roads.speed_limits cut it into where its limit changes ("<name>_<n>", in
-        # order, each starting on the end node of the one before)
-        ks = [i for i, r in enumerate(graph.roads) if r.get("name") == route or
-              r.get("name", "").startswith(route + "_") and r["name"][len(route) + 1:].isdigit()]
-        if not ks:
+        # the road and the pieces it is cut into: "<name>_<n>" where its speed limit changes (ai_roads.speed_limits),
+        # "<name>_g<n>" before a give-way point (markings_rules); each starts on the end node of the one before,
+        # so they are chained by their ends, from the piece with the plain name
+        piece = re.compile(re.escape(route) + r"(_g?\d+)*$")
+        ks = [i for i, r in enumerate(graph.roads) if piece.match(r.get("name", ""))]
+        first = [i for i in ks if graph.roads[i]["name"] == route]
+        if not first:
             raise ValueError(f"no AI road {route}")
-        ks.sort(key=lambda i: 0 if graph.roads[i]["name"] == route else int(graph.roads[i]["name"][len(route) + 1:]))
-        parts = [np.column_stack([graph.P[graph.R == k], graph.W[graph.R == k]]) for k in ks]
-        out = parts[0]
-        for q in parts[1:]:
-            if np.hypot(*(q[0, :2] - out[-1, :2])) > JOIN and np.hypot(*(q[-1, :2] - out[-1, :2])) <= JOIN:
+        parts = {k: np.column_stack([graph.P[graph.R == k], graph.W[graph.R == k]]) for k in ks}
+        out, left = parts.pop(first[0]), parts
+        while left:
+            k, q = min(((k, q) for k, q in left.items()), key=lambda kq: min(
+                np.hypot(*(kq[1][0, :2] - out[-1, :2])), np.hypot(*(kq[1][-1, :2] - out[-1, :2]))))
+            if np.hypot(*(q[-1, :2] - out[-1, :2])) < np.hypot(*(q[0, :2] - out[-1, :2])):
                 q = q[::-1]                                   # a piece written the other way round
-            out = np.vstack([out, q[1:] if np.hypot(*(q[0, :2] - out[-1, :2])) < 0.05 else q])
+            if np.hypot(*(q[0, :2] - out[-1, :2])) > JOIN:
+                break                                         # the rest is not on the way on
+            out = np.vstack([out, q[1:]])
+            del left[k]
         return out
     pts = [places[w] if isinstance(w, str) else w for w in route]
     nodes = []
