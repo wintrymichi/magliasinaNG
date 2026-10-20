@@ -10,6 +10,7 @@ Writes to the folder given:
 """
 import io, json, os, pickle, sys
 import numpy as np
+import shapely
 import requests
 from config import WORK, local_to_lv95
 from geo import Grid
@@ -59,6 +60,20 @@ def main(out):
     ids = buildings_mesh.canopies(blds, fps)
     print("canopies", len(ids), flush=True)
     sel = [b for b in blds if b["uuid"] in ids]
+    # the cadastral survey over each: buildings (LCSF edificio) and single objects (SOSF), share of the roof plan
+    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+    layers = [("LCSF", "edificio")] + [("SOSF", k) for k in av.get("SOSF", {})]
+    trees = {k: shapely.STRtree([g for g, _ in av[k[0]][k[1]]]) for k in layers if av.get(k[0], {}).get(k[1])}
+    cover = []
+    for b in sel:
+        plan = buildings_mesh.roof_plan(b["roofs"])
+        row = {}
+        for k, t in trees.items():
+            hit = t.query(plan, predicate="intersects")
+            if len(hit):
+                row["/".join(k)] = round(shapely.union_all(t.geometries.take(hit)).intersection(plan).area / plan.area, 3)
+        cover.append(row)
+    json.dump({"uuids": [b["uuid"] for b in sel], "cover": cover}, open(os.path.join(out, "cover.json"), "w"))
     for i, b in enumerate(sel):
         (x0, y0, _), (x1, y1, _) = b["bbox"]
         x0, y0, x1, y1 = x0 - PAD, y0 - PAD, x1 + PAD, y1 + PAD
@@ -69,7 +84,8 @@ def main(out):
             arrs[f"{name}_{i}"] = np.asarray(sub.a, np.float32)
             arrs[f"o{name}_{i}"] = np.array([sub.x_min, sub.y_max, sub.res])
         uu.append(b["uuid"])
-        ortho(x0, y0, x1, y1, os.path.join(out, "ortho", f"{i}.jpg"))
+        if not os.path.exists(os.path.join(out, "ortho", f"{i}.jpg")):
+            ortho(x0, y0, x1, y1, os.path.join(out, "ortho", f"{i}.jpg"))
         if i % 50 == 0:
             print(i, len(sel), flush=True)
     np.savez_compressed(os.path.join(out, "wallless.npz"), uuids=np.array(uu), **arrs)
