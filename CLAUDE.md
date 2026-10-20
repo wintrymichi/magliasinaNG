@@ -67,6 +67,19 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   ground a few metres out on both sides (walls.wall_side), and read beyond any vertex that may itself be raised.
 - Anything that raises ground near the railway must respect its bed (railway.bed_fn, network_mesh rail caps).
 
+## Checking a finish step in the cloud container
+
+- The released zip downloads in seconds with curl from `github.com/.../releases/download/<tag>/<zip>`; extract it
+  (5.5 GB) and run the step on the folder (`bng.LevelFiles`). jsdelivr is blocked: render3d's three.module.js comes
+  from the npm tarball (`registry.npmjs.org/three/-/three-0.170.0.tgz`) into `WORK`.
+- swissNAMES3D is not reachable, so `places.villages()` is empty: the spawn spheres of the released level
+  (village names on their main road) stood in for testing direction_signs.
+- OSM ways run where the level has no road (Italy, beyond the corridors): a prop placed along an OSM road must
+  first check the carriageway mesh is there (87 of 295 junction poles were in fields).
+- "Off the carriageway" is not free ground: yards and squares (`mp_hard_*`) are driven on too.
+- Render cameras placed along an OSM line ended inside houses; put them over the carriageway mesh, at the
+  height of the mesh, and aim at the object's real position, not the planned one (it moves when it is placed).
+
 ## Meshes
 
 - Check winding/orientation when placing text or UVs along an outline: the fuel station fascia text was
