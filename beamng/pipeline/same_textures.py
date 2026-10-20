@@ -26,7 +26,8 @@ def same_textures_step(root, report=None):
     lv = f"levels/{LEVEL_NAME}/"
     first, dup = {}, {}
     for name in sorted(zi.namelist()):
-        if name.startswith(lv) and name.lower().endswith(EXT):
+        # the baked imposters of a shape are found by the shape's name, never through a json (far_trees.prebaked)
+        if name.startswith(lv) and name.lower().endswith(EXT) and ".dae.imposter" not in name:
             h = hashlib.md5(zi.read(name)).hexdigest()
             if h in first:
                 dup[name] = first[h]
