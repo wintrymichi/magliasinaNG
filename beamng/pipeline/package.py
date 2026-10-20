@@ -1,4 +1,5 @@
-"""Zip the built level as a BeamNG mod: <ROOT>/dist/<name>.zip with levels/magliaso_pura/...
+"""Zip the built level as a BeamNG mod: <ROOT>/dist/<name>.zip with levels/magliaso_pura/... and the level's
+missions (v3.0.40, races.py): gameplay/missions/magliaso_pura/... beside the level folder.
 
 Development files of the validation tour are left out. The archive goes into the user's
 mods folder (or is installed from the zip).
@@ -45,6 +46,14 @@ def main(name):
                 arc = os.path.join("levels", LEVEL_NAME, os.path.relpath(src, LEVEL_DIR)).replace("\\", "/")
                 # already compressed formats are stored
                 ctype = zipfile.ZIP_STORED if f.lower().endswith((".jpg", ".png", ".dds")) else zipfile.ZIP_DEFLATED
+                z.write(src, arc, compress_type=ctype)
+                n += 1; size += os.path.getsize(src)
+        missions = os.path.join(os.path.dirname(os.path.dirname(LEVEL_DIR)), "gameplay", "missions", LEVEL_NAME)
+        for root, _, files in os.walk(missions):
+            for f in sorted(files):
+                src = os.path.join(root, f)
+                arc = os.path.join("gameplay", "missions", LEVEL_NAME, os.path.relpath(src, missions)).replace("\\", "/")
+                ctype = zipfile.ZIP_STORED if f.lower().endswith((".jpg", ".png")) else zipfile.ZIP_DEFLATED
                 z.write(src, arc, compress_type=ctype)
                 n += 1; size += os.path.getsize(src)
     print(out, n, "files, %.0f MB level -> %.0f MB zip" % (size / 2**20, os.path.getsize(out) / 2**20))
