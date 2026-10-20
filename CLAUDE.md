@@ -21,6 +21,12 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - `pgrep -f`/`pkill -f` with a pattern in your own command line stops your own shell: use "[r]un_build" style patterns.
 - Push work often. An earlier session lost the fuel stations module because it was never pushed.
 
+- `gh release download` fails in the cloud (GraphQL blocked): download release assets through the REST API
+  (`gh api .../releases/tags/<tag>`, then the asset URL with `Accept: application/octet-stream`).
+- pip can hang with no output in the cloud: run it with `timeout` and `--progress-bar off`, kill and retry.
+- `git commit` during an unfinished rebase folds the new commit into the one being picked: run
+  `git rebase --continue` (check `git status`) before committing anything else.
+
 ## Testing in the game on the PC
 
 - The monitor may be off (OLED, black window on top): run the game in a virtual KWin session, it renders on the RTX:
@@ -85,6 +91,18 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   to the branch (strade_extra.yml, paesi_interi.yml), and test the code locally with stand-in inputs first.
 - Growing the area (area.py) changes what the pinned extracts in beamng/dati must cover: re-pinning them pulls newer
   data for the whole map. Add only what is new (download_gwr.py --add) and check the OSM extract's bbox.
+
+## Races (time trials, races.py)
+
+- Mission files go in `gameplay/missions/<level>/timeTrial/<id>/` beside `levels/`, not inside the level folder:
+  a zip made from the level folder alone loses them (package.py adds them).
+- The game's mission format was guessed at first (no game files in the cloud, beamng.com blocked): copy the keys of
+  a vanilla 0.40 mission instead (Italy `timeTrial/002-Asphalt`, loose files in `<install>/gameplay/missions/`).
+- Start positions turn the vehicle's -Y onto the road, not +Y (the first guess faced the cars backwards).
+- Plain shortest paths over the AI roads cut through village lanes: weight by drivability**4, and follow the
+  measured cantonal road by name, including its split pieces `<name>_<n>` / `<name>_g<n>` (traffic thread).
+- The cantonal AI road starts with a hook inside the Magliaso junction, and a start position on the start line
+  spawns the car on it: trim turn-backs at the route ends and start the car 15 m before the line.
 
 ## Working with cat (the owner)
 
