@@ -738,6 +738,27 @@ def carve_terrain(feet, xs, ys, H):
     return Hf.reshape(H.shape)
 
 
+END_SPILL = 0.3        # m past the end of a roadside wall the terrain is still lowered/raised for it
+
+
+def roadside_shut(face, back, zb, zt, s, away, T, thick):
+    """The faces that close a roadside wall run behind its face and cap: the back (out, away from the road) and the
+    two ends, (n*3, 3) triangles facing out and their texture coordinates (u along the back, across the ends; v the
+    height)."""
+    Kb4, Kt4 = np.column_stack([back, zb, s]), np.column_stack([back, zt, s])
+    quads = [(np.stack([Kb4[:-1], Kt4[:-1], Kt4[1:], Kb4[:-1], Kt4[1:], Kb4[1:]], 1).reshape(-1, 3, 4),
+              away[:-1].repeat(2, 0))]
+    for k, out in ((0, -1.0), (len(face) - 1, 1.0)):
+        F_b, F_t, K_b, K_t = [*face[k], zb[k], 0.0], [*face[k], zt[k], 0.0], [*back[k], zb[k], thick], [*back[k], zt[k], thick]
+        quads.append((np.array([F_b, F_t, K_t, F_b, K_t, K_b]).reshape(2, 3, 4), np.tile(out * T[k], (2, 1))))
+    shut = []
+    for q, want in quads:
+        n = np.cross(q[:, 1, :3] - q[:, 0, :3], q[:, 2, :3] - q[:, 0, :3])[:, :2]
+        shut.append(q[:, ::-1] if (n * want).sum(1).mean() < 0 else q)
+    shut = np.concatenate(shut).reshape(-1, 4)
+    return shut[:, :3], shut[:, [3, 2]]
+
+
 def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick=1.75, photo=True):
     """Retaining walls detected along the route (roadside_walls.json): vertical face from
     0.3 m below road level to the measured top, capped (1.75 m, more than a terrain step) over the
@@ -800,8 +821,14 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
         if np.mean(np.cross(t3[:, 1] - t3[:, 0], t3[:, 2] - t3[:, 0])[:, 2]) < 0:
             cap = t3[:, ::-1].reshape(-1, 3)
         mb.add(material + "_top", cap, uvs=cap[:, :2] / WALL_TILE.get(material + "_top", 1.6), normals=bng.flat_normals_soup(cap))
+        # v3.0.40: the wall closed: up to v3.0 it was the face and the cap only, and where a run ends the cap stood
+        # over a void (the terrain under it is lowered to the road) open at the end and at the back: from the road
+        # one saw under the cap into the bank, "a wall with a hole" (20 runs, 485 m of open edges in v3.0)
+        shut, uv = roadside_shut(face, back, zb, zt, s, away, T, thick)
+        mb.add(material, shut, uvs=uv / WALL_TILE.get(material, 1.6), normals=bng.flat_normals_soup(shut))
         for k in range(len(P)):
-            samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], zb[k] + 0.3, zt[k]])
+            samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], zb[k] + 0.3, zt[k], T[k, 0], T[k, 1],
+                            -np.inf if k else -END_SPILL, np.inf if k < len(P) - 1 else END_SPILL])
     if photo:
         mats = []
         for i, page in enumerate(atlas.pages):
@@ -830,6 +857,12 @@ def adjust_terrain_roadside(samples, xs, ys, H, behind=3.4, front=1.6, hidden=1.
     Hf = H.ravel()
     S = samples[j]
     off = ((pts - S[:, :2]) * S[:, 2:4]).sum(1)              # + behind the face, - in front
+    if S.shape[1] > 6:
+        # v3.0.40: not past the ends of the wall (END_SPILL m at most): up to v3.0 the ground was lowered and raised
+        # in a strip up to 3.9 m long beyond them too, a pit in the bank where the wall stops
+        a = ((pts - S[:, :2]) * S[:, 6:8]).sum(1)
+        keep = (a >= S[:, 8]) & (a <= S[:, 9])
+        flat, pts, S, off = flat[keep], pts[keep], S[keep], off[keep]
     # vertices up to `hidden` m behind the face stay at road level (under the 1.75 m wide cap),
     # further back they rise to the crest: the terrain step is always hidden by the wall
     fr = (off < hidden) & (off > -front)
@@ -1228,15 +1261,41 @@ def double_faces_step(root, report=None):
 FOOT_DEPTH = 0.30        # m: the foot of a wall goes at least this far under the terrain around it
 FOOT_GAP = 0.05          # m: a vertex this much lower than the highest one at its place is a foot
 FOOT_MAX = 2.5           # m: a foot further over the terrain stands on something else (a bridge, a deck): kept
+FOOT_ROAD = 1.0          # m: a road surface this near a foot (across) is the ground the wall stands on
 
 
-def _ter_min(Q, z0, maxh, x, y):
-    """Lowest of the four terrain vertices around (x, y): under it for every split of the square."""
+def _ter_min(Q, z0, maxh, x, y, f=np.minimum):
+    """Lowest of the four terrain vertices around (x, y): under it for every split of the square (f=np.maximum:
+    the highest)."""
     n = Q.shape[0]
     c = np.clip(np.floor((x - TER_X0) / TER_SQUARE).astype(np.int64), 0, n - 2)
     r = np.clip(np.floor((y - TER_Y0) / TER_SQUARE).astype(np.int64), 0, n - 2)
-    q = np.minimum(np.minimum(Q[r, c], Q[r, c + 1]), np.minimum(Q[r + 1, c], Q[r + 1, c + 1]))
+    q = f(f(Q[r, c], Q[r, c + 1]), f(Q[r + 1, c], Q[r + 1, c + 1]))
     return z0 + q.astype(np.float64) / 65535.0 * maxh
+
+
+def _road_ground(zi, lv):
+    """KD-tree of the vertices of the road surfaces (their flat triangles: not the skirts) and their heights."""
+    pts = []
+    f = f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"
+    if f not in zi.NameToInfo:
+        return None, None
+    for o in read_items(zi, f):
+        sn = o.get("shapeName", "").lstrip("/")
+        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo or not sn.endswith(".dae"):
+            continue
+        text = zi.read(sn).decode("utf-8")
+        if "<triangles" not in text:
+            continue
+        V, N, UV, C, parts, node = optimize_level.parse(text)
+        W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
+        for mat, idx in parts:
+            t, n, st = _steep(W, idx)
+            pts.append(t[~st].reshape(-1, 3))
+    if not pts:
+        return None, None
+    P = np.unique(np.round(np.concatenate(pts), 3), axis=0)
+    return cKDTree(P[:, :2]), P[:, 2]
 
 
 def _set_arr(text, aid, values, fmt):
@@ -1253,7 +1312,14 @@ def wall_feet_step(root, report=None):
     wall, you see through it"). Here every foot vertex of the wall meshes (a vertex lower than the one over it at the
     same place: the bottom corners of the side faces) goes to FOOT_DEPTH m under the lowest terrain vertex around it
     where it is not already that deep (nor over FOOT_MAX m above it: a wall on a bridge), its texture coordinate along the height moved with it (the stones keep their
-    size). Only the vertex heights and texture coordinates of the wall shapes change."""
+    size). Only the vertex heights and texture coordinates of the wall shapes change.
+    v3.0.40: beside a road the ground is the road surface, which can stand metres over the terrain carved under it (an
+    embankment, a road on a slope): the feet there were left in the air as "a wall on a bridge" (over FOOT_MAX above the
+    terrain) and the walls showed a slot of up to 60 cm over the asphalt, the inside of the wall seen through it. A foot
+    within FOOT_ROAD m of a road surface goes FOOT_DEPTH m under the lowest of it there too, however high that stands over
+    the terrain. With the two v3.0.40 rules below (a wall on something else measured from the highest terrain vertex, never
+    a corner of a wall top) the open wall feet over the ground (check_level.wall_holes) went from 275 m to 7 m on the
+    v3.0 level."""
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -1265,7 +1331,8 @@ def wall_feet_step(root, report=None):
     Q = np.frombuffer(data[5:5 + 2 * n * n], "<u2").reshape(n, n)
     items = [json.loads(l) for l in zi.read(f"{lv}/main/MissionGroup/walls/items.level.json").decode("utf-8").splitlines()
              if l.strip()]
-    new, res = {}, {"shapes": 0, "feet_lowered": 0, "lowered_m_p50": 0.0, "lowered_m_max": 0.0}
+    rtree, rz = _road_ground(zi, lv)
+    new, res = {}, {"shapes": 0, "feet_lowered": 0, "feet_on_road": 0, "lowered_m_p50": 0.0, "lowered_m_max": 0.0}
     drops = []
     for o in items:
         sn = o.get("shapeName", "").lstrip("/")
@@ -1281,8 +1348,36 @@ def wall_feet_step(root, report=None):
         top = np.full(g.max() + 1, -np.inf)
         np.maximum.at(top, g, W[:, 2])
         foot = W[:, 2] < top[g] - FOOT_GAP
+        # v3.0.40: never a corner of a wall top (a *_top material). Where two wall pieces of different heights meet, or
+        # the two faces of a thin wall touch, the lower top stands under a higher one at the same place: v3.0 took it
+        # for a foot and pulled it down to the ground (5,831 top corners, notches down to the ground in the walls)
+        crest = np.zeros(len(W), bool)
+        for mat, idx in parts:
+            if mat.endswith("_top"):
+                crest[idx[:, 0]] = True
+        kz = np.round(W * 1000).astype(np.int64)
+        _, gz = np.unique(kz, axis=0, return_inverse=True)
+        gz = gz.ravel()
+        on_crest = np.zeros(gz.max() + 1, bool)
+        on_crest[gz[crest]] = True
+        foot &= ~on_crest[gz]
         aim = _ter_min(Q, z0, maxh, W[:, 0], W[:, 1]) - FOOT_DEPTH
-        low = foot & (W[:, 2] > aim) & (W[:, 2] - aim < FOOT_MAX + FOOT_DEPTH)
+        # v3.0.40: on something else only when over the highest terrain vertex around by FOOT_MAX: measured from the
+        # lowest, the feet on steep slopes and beside a ditch were taken for walls on a bridge and left in the air
+        low = foot & (W[:, 2] > aim) & (W[:, 2] < _ter_min(Q, z0, maxh, W[:, 0], W[:, 1], np.maximum) + FOOT_MAX)
+        if rtree is not None and foot.any():
+            fi = np.flatnonzero(foot)
+            road = np.full(len(fi), np.inf)
+            for j, ii in enumerate(rtree.query_ball_point(W[fi, :2], r=FOOT_ROAD)):
+                if ii:
+                    road[j] = rz[ii].min()
+            # a road surface under the wall that is no deck over it (a wall foot under the road stays)
+            on = np.isfinite(road) & (W[fi, 2] > road - FOOT_DEPTH) & (W[fi, 2] < road + FOOT_MAX)
+            fi, road = fi[on], road[on]
+            # under the road surface, and under the terrain where that is near enough for the rule above
+            aim[fi] = np.where(low[fi], np.minimum(aim[fi], road - FOOT_DEPTH), road - FOOT_DEPTH)
+            low[fi] = True
+            res["feet_on_road"] += int(len(fi))
         if not low.any():
             continue
         dz = np.where(low, aim - W[:, 2], 0.0)

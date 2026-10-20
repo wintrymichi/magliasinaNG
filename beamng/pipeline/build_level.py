@@ -66,7 +66,7 @@ def stage_terrain(scene, ctx):
     if "wall_feet" in ctx:
         import walls
         posts.append(lambda H, xs, ys: walls.adjust_terrain_roadside(
-            ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
+            ctx.get("rwall_samples", np.zeros((0, 10))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"], ctx.get("water_cover")))
