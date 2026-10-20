@@ -1,0 +1,51 @@
+{
+ "italy_road_markings_line_thin": {
+  "name": "italy_road_markings_line_thin",
+  "mapTo": "italy_road_markings_line_thin",
+  "class": "Material",
+  "persistentId": "c28b918b-7ebd-45fa-b363-6f682ac553ef",
+  "Stages": [
+   {
+    "baseColorMap": "/assets/materials/decalroad/lines/line_white/t_line_white_b.color.png",
+    "normalMap": "/assets/materials/decalroad/lines/line_white/t_line_white_nm.normal.png",
+    "opacityFactor": 0.75,
+    "opacityMap": "/assets/materials/decalroad/lines/line_white/t_line_white_o.data.png",
+    "pixelSpecular": true,
+    "roughnessMap": "/assets/materials/decalroad/lines/chalk_marking/t_line_white_r.data.png",
+    "scrollSpeed": 4.11800003,
+    "specular": [
+     0.274509996,
+     0.274509996,
+     0.274509996,
+     1
+    ]
+   },
+   {
+    "opacityFactor": null,
+    "pixelSpecular": null,
+    "scrollSpeed": null,
+    "specular": null
+   },
+   {
+    "opacityFactor": null,
+    "pixelSpecular": null,
+    "scrollSpeed": null,
+    "specular": null
+   },
+   {
+    "opacityFactor": null,
+    "pixelSpecular": null,
+    "scrollSpeed": null,
+    "specular": null
+   }
+  ],
+  "annotation": "SOLID_LINE",
+  "materialTag0": "RoadAndPath",
+  "materialTag1": "beamng",
+  "materialTag2": "markings",
+  "specularStrength0": "0.490196",
+  "translucent": true,
+  "translucentZWrite": true,
+  "version": 1.5
+ }
+}

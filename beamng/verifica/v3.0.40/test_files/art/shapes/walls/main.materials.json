@@ -1,0 +1,134 @@
+{
+ "mp_wall_stone": {
+  "name": "mp_wall_stone",
+  "mapTo": "mp_wall_stone",
+  "class": "Material",
+  "persistentId": "665fa232-ecb1-4172-a2ea-c5fd4a66a4dc",
+  "Stages": [
+   {
+    "baseColorMap": "/assets/materials/baked_props/italy_medieval_stone_wall/italy_medieval_stone_wall_d.dds",
+    "normalMap": "/assets/materials/baked_props/italy_medieval_stone_wall/italy_medieval_stone_wall_n.dds",
+    "detailMap": "/assets/materials/tileable/metal/italy_rust/detail_grunge_03.dds",
+    "detailNormalMap": "/levels/italy/art/terrains/Rock-05-N2.dds",
+    "detailScale": [
+     0.1,
+     0.1
+    ],
+    "detailNormalMapStrength": 0.1
+   },
+   {},
+   {},
+   {}
+  ],
+  "materialTag0": "beamng",
+  "version": 1.5,
+  "groundType": "ROCK"
+ },
+ "mp_wall_stone_top": {
+  "name": "mp_wall_stone_top",
+  "mapTo": "mp_wall_stone_top",
+  "class": "Material",
+  "persistentId": "cc3b14f0-327d-4bc8-a59e-37d25e2f9d0d",
+  "Stages": [
+   {
+    "baseColorMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_b.color.png",
+    "normalMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_nm.normal.png",
+    "roughnessMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_r.data.png",
+    "ambientOcclusionMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_ao.data.png",
+    "detailMap": "/levels/italy/art/shapes/buildings/t_macro_concrete_detail.data.png",
+    "detailNormalMap": "/levels/italy/art/shapes/buildings/t_macro_concrete_nm.normal.png",
+    "detailScale": [
+     0.1,
+     0.1
+    ],
+    "detailNormalMapStrength": 0.7
+   },
+   {},
+   {},
+   {}
+  ],
+  "materialTag0": "beamng",
+  "version": 1.5,
+  "groundType": "CONCRETE"
+ },
+ "mp_wall_concrete": {
+  "name": "mp_wall_concrete",
+  "mapTo": "mp_wall_concrete",
+  "class": "Material",
+  "persistentId": "04b40c3a-a73b-4886-b85b-15ad8c8605aa",
+  "Stages": [
+   {
+    "baseColorMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_b.color.png",
+    "normalMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_nm.normal.png",
+    "roughnessMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_r.data.png",
+    "ambientOcclusionMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_ao.data.png",
+    "detailMap": "/levels/italy/art/shapes/buildings/t_macro_concrete_detail.data.png",
+    "detailNormalMap": "/levels/italy/art/shapes/buildings/t_macro_concrete_nm.normal.png",
+    "detailScale": [
+     0.1,
+     0.1
+    ],
+    "detailNormalMapStrength": 0.7
+   },
+   {},
+   {},
+   {}
+  ],
+  "materialTag0": "beamng",
+  "version": 1.5,
+  "groundType": "CONCRETE"
+ },
+ "mp_wall_concrete_top": {
+  "name": "mp_wall_concrete_top",
+  "mapTo": "mp_wall_concrete_top",
+  "class": "Material",
+  "persistentId": "2cce7940-29d6-457f-b7a4-7f51ea373a6d",
+  "Stages": [
+   {
+    "baseColorMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_b.color.png",
+    "baseColorFactor": [
+     0.92,
+     0.92,
+     0.9,
+     1.0
+    ],
+    "normalMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_nm.normal.png",
+    "roughnessMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_r.data.png",
+    "ambientOcclusionMap": "/levels/italy/art/shapes/buildings/t_concrete_damaged_ao.data.png",
+    "detailMap": "/levels/italy/art/shapes/buildings/t_macro_concrete_detail.data.png",
+    "detailNormalMap": "/levels/italy/art/shapes/buildings/t_macro_concrete_nm.normal.png",
+    "detailScale": [
+     0.1,
+     0.1
+    ],
+    "detailNormalMapStrength": 0.7
+   },
+   {},
+   {},
+   {}
+  ],
+  "materialTag0": "beamng",
+  "version": 1.5,
+  "groundType": "CONCRETE"
+ },
+ "mp_wall_plaster": {
+  "name": "mp_wall_plaster",
+  "mapTo": "mp_wall_plaster",
+  "class": "Material",
+  "persistentId": "ac0d4c63-2f3c-4608-b6a5-634ef5c64824",
+  "Stages": [
+   {
+    "baseColorMap": "/levels/magliaso_pura/art/shapes/buildings/t_bld_plaster_b.color.png",
+    "normalMap": "/levels/magliaso_pura/art/shapes/buildings/t_bld_plaster_nm.normal.png",
+    "roughnessMap": "/levels/magliaso_pura/art/shapes/buildings/t_bld_plaster_r.data.png",
+    "vertColor": true
+   },
+   {},
+   {},
+   {}
+  ],
+  "materialTag0": "beamng",
+  "version": 1.5,
+  "groundType": "CONCRETE"
+ }
+}
