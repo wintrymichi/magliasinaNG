@@ -857,6 +857,10 @@ def write_info(ctx):
         "isAuxiliary": False, "supportsTraffic": True, "supportsTimeOfDay": True,
         # v3.0.40: Swiss rules for the AI and the traffic (keep right, no turning on red)
         "roadRules": {"rightHandDrive": False, "turnOnRed": False},
+        # the traffic's vehicles: "region" picks the European ones (trafficUtils.getBaseGroupParams, 0.40, with
+        # smart selections on); a country the game does not list (it knows usa/germany/italy/france/japan) weighs
+        # no country over the others
+        "country": "Switzerland", "region": "europe",
         "defaultSpawnPointName": spawns[0][0] if spawns else None,
         "spawnPoints": [{"objectname": s[0], "translationId": s[0]} for s in spawns],
     }

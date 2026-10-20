@@ -1944,6 +1944,10 @@ def report_numbers(paint, stats):
 # the game's simple signal controllers (settings/trafficSignals.json): the traffic stops at a STOP line and gives
 # way at a give-way line or a roundabout entry, as the paint and the signs say
 SIGNAL_TYPES = {"stop": ("signStop", "basicStop"), "give_way": ("signYield", "basicYield")}
+# the game (settings/trafficSignals.json of 0.40) has no give-way sign: the level defines it in
+# signalControllerDefinitions.json, which core/trafficSignals.lua reads over the game's types and states
+SIGNAL_DEFINITIONS = {"states": {"basicYield": {"action": "yield", "lights": ["black"], "name": "Give Way"}},
+                      "types": {"signYield": {"isSimple": True, "name": "Give Way", "states": ["basicYield"]}}}
 SIGNAL_SAME = 3.0          # m: signal points of one kind this close, facing the same way, are one
 
 
@@ -2033,6 +2037,7 @@ def markings_rules_step(root, report=None):
             mats.setdefault(m["name"], m)
         new_files[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
         new_files[f"{LV}/signals.json"] = json.dumps(signals_json(paint.signals, stats), indent=1).encode("utf-8")
+        new_files[f"{LV}/signalControllerDefinitions.json"] = json.dumps(SIGNAL_DEFINITIONS, indent=1).encode("utf-8")
         parent = next((o["__parent"] for o in mk if "__parent" in o), "markings")
         keep = [o for o in mk if not NET_SHAPE.search(o.get("shapeName", "")) and not OLD_SHAPE.search(o.get("shapeName", ""))]
         for o in objs:
