@@ -167,7 +167,8 @@ def dry_ends(lines, ends, node_pos):
     deg = np.bincount(ends.ravel(), minlength=len(node_pos))
     out_l, out_e, cut, dropped = [], [], 0, 0
     for (props, L), (na, nb) in zip(lines, ends):
-        if deg[na] == 1 or deg[nb] == 1:
+        # a pier or a footbridge over the water (KUNSTBAUTE Steg, Bruecke) stays as it is
+        if (deg[na] == 1 or deg[nb] == 1) and (props.get("KUNSTBAUTE") or "Keine") not in BRIDGE:
             Q = densify(L, 1.0)
             h = np.nan_to_num(dtm.sample(Q[:, 0], Q[:, 1]), nan=1e4)
             dry = (h >= level + WET) | (h < level - LOW)          # not the valley of the Tresa below the lake
