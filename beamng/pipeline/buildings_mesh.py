@@ -561,6 +561,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
     fps = [footprint(b) for b in blds]
     pos = {b["uuid"]: i for i, b in enumerate(blds)}
     gwr = facades.gwr_join(blds, fps)
+    landmarks.prepare(blds, fps, gwr)
     measured = {}
     if os.path.exists(facades.FACADE_COLORS):
         measured = json.load(open(facades.FACADE_COLORS))
@@ -656,7 +657,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 for sel, pst in groups:
                     if pst["use"] in landmarks.USES:
                         stats["landmarks"] = stats.get("landmarks", 0) + 1
-                        stats["openings"] += landmarks.layout(b, rest[sel], pst, ctx, em, lem)
+                        stats["openings"] += landmarks.layout(b, rest[sel], pst, ctx, em, lem, roofs)
                     elif pst["use"] != "none":
                         stats["openings"] += facades.layout_building(b, rest[sel], pst, ctx, em)
                     stats["shops"] = stats.get("shops", 0) + int(pst["shop"])
@@ -748,6 +749,9 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             C = np.repeat(np.array([np.r_[np.clip(c / np.array(ashlar_mean), 0, 1), 1.0] for c in lem.AC]), 6, 0)
             mb.add("bld_ashlar", V, uvs=np.concatenate(lem.AUV).reshape(-1, 2), normals=bng.flat_normals_soup(V),
                    colors=C)
+        if lem.XV:
+            V = np.concatenate(lem.XV).reshape(-1, 3)
+            mb.add("bld_iron", V, normals=bng.flat_normals_soup(V))
         lem.clear()
         if mb.empty():
             continue
@@ -782,7 +786,8 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                                  "emissiveMap": T("t_bld_landmark", "e.color.png"), "emissiveFactor": [1, 1, 1],
                                  "instanceEmissive": True}),
             bng.material("bld_ashlar", T("t_bld_ashlar", "b.color.png"), T("t_bld_ashlar", "nm.normal.png"),
-                         T("t_bld_ashlar", "r.data.png"), T("t_bld_ashlar", "ao.data.png"), vert_color=True)]
+                         T("t_bld_ashlar", "r.data.png"), T("t_bld_ashlar", "ao.data.png"), vert_color=True),
+            bng.material("bld_iron", base_color=(0.10, 0.10, 0.10, 1.0), roughness=0.55, metallic=0.7)]
     for kind in bld_textures.ROOF_TILE:
         n = f"t_roof_{kind}"
         ao = T(n, "ao.data.png") if kind != "flat" else None              # v2.4

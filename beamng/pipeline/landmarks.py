@@ -59,6 +59,29 @@ def spec_of(fp):
     return best
 
 
+SACRED = ("Sakrales Gebaeude", "Kapelle", "Sakraler Turm")
+TOWER_NEAR = 25.0             # m: a tower of the survey ("Turm") this close to a church is its bell tower
+_sacred = None
+
+
+def prepare(blds, fps, gwr):
+    """The footprints of the sacred buildings of the survey (object kind, register class 1272): a plain "Turm" near
+    one of them is a bell tower, any other (a water tower, the control tower of the airfield) is not."""
+    global _sacred
+    keep = [fp for b, fp in zip(blds, fps) if b["kind"] in SACRED or gwr.get(b["uuid"], {}).get("gklas") == 1272]
+    _sacred = shapely.STRtree(keep) if keep else None
+
+
+def near_sacred(fp, b):
+    if _sacred is None:
+        return False
+    for j in _sacred.query(fp.buffer(TOWER_NEAR)):
+        g = _sacred.geometries[j]
+        if not g.equals(fp):
+            return True
+    return False
+
+
 def apply(style, b, fp, measured=None):
     """The style of a landmark: use (church, chapel, tower), walls, tone and roof after the catalogue; the style of
     any other building is returned as it is."""
@@ -66,6 +89,8 @@ def apply(style, b, fp, measured=None):
     use = spec.get("use") or style["use"]
     if use not in USES:
         return style
+    if use == "tower" and b["kind"] not in SACRED and not spec and not near_sacred(fp, b):
+        return style                          # a tower that is no bell tower
     if use == "church" and fp.area < CHAPEL_AREA and not spec.get("use"):
         use = "chapel"
     st = dict(style)
@@ -93,9 +118,27 @@ class Emitter:
         self.V, self.UV = [], []              # atlas quads
         self.LV, self.LUV = [], []            # the clock faces (lit at night)
         self.AV, self.AUV, self.AC = [], [], []   # ashlar: triangles, uvs, colour of each quad
+        self.XV = []                          # wrought iron: the crosses on the spires and gables
 
     def empty(self):
-        return not (self.V or self.LV or self.AV)
+        return not (self.V or self.LV or self.AV or self.XV)
+
+    def cross(self, p, facing, h=1.6):
+        """An iron cross standing on the point p, its arms across `facing` (a horizontal unit vector)."""
+        f = np.array([facing[0], facing[1], 0.0])
+        f /= max(np.linalg.norm(f), 1e-9)
+        s = np.array([-f[1], f[0], 0.0])
+        t = 0.05
+        bars = [(p, p + np.array([0, 0, h])), (p + np.array([0, 0, 0.62 * h]) - s * 0.32 * h,
+                                               p + np.array([0, 0, 0.62 * h]) + s * 0.32 * h)]
+        for a, b in bars:
+            d = (b - a) / np.linalg.norm(b - a)
+            u = np.cross(d, f)
+            u /= max(np.linalg.norm(u), 1e-9)
+            c = [u * t + f * t, -u * t + f * t, -u * t - f * t, u * t - f * t]
+            for k in range(4):
+                p0, p1 = c[k], c[(k + 1) % 4]
+                self.XV.append(np.array([[a + p0, b + p0, b + p1], [a + p0, b + p1, a + p1]]))
 
     def clear(self):
         self.__init__(self.index)
@@ -245,7 +288,7 @@ def band_all(lem, fs, z, height, out, color):
         lem.box(f["o"], f["a"], f["n"], ua - out, ub + out, z, z + height, out, color)
 
 
-def layout(b, walls, style, ctx, em, lem):
+def layout(b, walls, style, ctx, em, lem, roofs=None):
     """The landmark details of one building (walls: its wall triangles, outward); the number of modules placed."""
     fs = faces(b, walls, ctx)
     if not fs:
@@ -263,7 +306,18 @@ def layout(b, walls, style, ctx, em, lem):
     wide = np.array([f["W"] for f in fs]) >= 1.6
     z_e = float(np.median(eaves[good & wide])) if (good & wide).any() else float(np.median(eaves[good]))
     if use == "tower":
-        return tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, stone_col)
+        n = tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, stone_col)
+        # the cross on the spire: on the highest point of the roof over the tower's walls
+        if roofs is not None and len(roofs) and spec.get("cross", True):
+            R = roofs.reshape(-1, 3)
+            xy = walls.reshape(-1, 3)[:, :2]
+            inside = (R[:, 0] >= xy[:, 0].min() - 0.5) & (R[:, 0] <= xy[:, 0].max() + 0.5) & \
+                     (R[:, 1] >= xy[:, 1].min() - 0.5) & (R[:, 1] <= xy[:, 1].max() + 0.5)
+            if inside.any():
+                top = R[inside][np.argmax(R[inside][:, 2])]
+                if top[2] > z_e + 1.0:
+                    lem.cross(top - np.array([0, 0, 0.05]), fs[0]["n"][:2], h=float(np.clip(0.07 * (z_e - g_lo), 1.2, 2.4)))
+        return n
     return church(fs, z_e, g_lo, style, spec, ctx, lem, rng, stone_col, chapel=use == "chapel")
 
 
@@ -373,6 +427,10 @@ def church(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim, chapel=False):
             lem.module(name, f["o"], f["a"], f["n"], uc, gc - 0.05, s)
             top = gc - 0.05 + m["h"] * s
             count += 1
+        k = int(np.nanargmax(f["top"]))
+        if apex > z_e + 1.0 and spec.get("cross", True):
+            p = f["o"] + f["us"][k] * f["a"] + np.array([0.0, 0.0, apex - 0.05]) - f["n"] * 0.3
+            lem.cross(p, f["n"][:2], h=1.0 if chapel else 1.5)
         if not chapel and f["W"] >= 5.0:
             d = float(np.clip(0.16 * f["W"], 0.8, 1.8))
             zc = min(max(top + 0.7 + d / 2, z_e - 0.2), apex - 1.0 - d / 2)
@@ -403,3 +461,200 @@ def church(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim, chapel=False):
             if f["W"] >= 2.0:
                 quoins(lem, f, float(np.nanmin(f["g"])) - 0.3, z_e - CORNICE[0], i % 2)
     return count
+
+
+# ------------------------------------------------------------------ the cable car
+# The Miglieglia - Monte Lema cable car, from the line of swissTLM3D (TLM_UEBRIGE_BAHN, download_tlm.py): its
+# vertices are the stations and the pylons. Drawn in MissionGroup/landmarks/cableway, collision on the pylons only:
+# - the ropes: CABLE_GAUGE m apart, sagging between the supports (a parabola, CABLE_SAG of the span), from the
+#   station hall CABLE_STATION_H m over the ground at either end over the saddles of the pylons;
+# - the pylons: steel lattice towers (four legs tapering to the head, cross bracing, a cross beam with the
+#   saddles), as high as the ropes over them;
+# - the cabins hanging on the ropes, CABIN_EVERY m apart, the colours of the line.
+CABLE_KINDS = ("Luftseilbahn", "Gondelbahn", "Kabinenbahn", "Pendelbahn", "Umlaufbahn")
+CABLE_GAUGE = 5.0
+CABLE_SAG = 0.025
+CABLE_STATION_H = 5.5
+CABLE_R = 0.03
+CABIN_EVERY = 90.0
+CABIN = (2.0, 1.6, 2.1)            # m: length (along the line), width, height of a cabin
+CABIN_COLOR = (0.78, 0.10, 0.08)
+STEEL = (0.42, 0.44, 0.45)
+
+
+def cable_lines(near=None, dist=400.0):
+    """[(props, (n, 3) local points)] of the cable cars of swissTLM3D (within dist m of `near` when given)."""
+    from config import DATA, lv95_to_local
+    f = os.path.join(DATA, "tlm", "TLM_UEBRIGE_BAHN.json")
+    if not os.path.exists(f):
+        return []
+    out = []
+    for ft in json.load(open(f))["features"]:
+        if not any(k in str(ft["props"].get("OBJEKTART", "")) for k in CABLE_KINDS):
+            continue
+        for p in ft["parts"]:
+            P = np.array(p, float)
+            x, y = lv95_to_local(P[:, 0], P[:, 1])
+            Q = np.column_stack([x, y, P[:, 2]])
+            if near is not None and np.hypot(Q[:, 0] - near[0], Q[:, 1] - near[1]).min() > dist:
+                continue
+            out.append((ft["props"], Q))
+    return out
+
+
+def _tube(a, b, r):
+    """A square tube of half-width r from a to b (8 triangles, open at the ends)."""
+    d = b - a
+    ln = np.linalg.norm(d)
+    if ln < 1e-6:
+        return np.zeros((0, 3, 3))
+    d = d / ln
+    u = np.cross(d, [0.0, 0.0, 1.0])
+    if np.linalg.norm(u) < 1e-6:
+        u = np.array([1.0, 0.0, 0.0])
+    u = u / np.linalg.norm(u)
+    v = np.cross(u, d)
+    c = [u * r + v * r, -u * r + v * r, -u * r - v * r, u * r - v * r]
+    tris = []
+    for k in range(4):
+        p0, p1 = c[k], c[(k + 1) % 4]
+        tris += [[a + p0, b + p0, b + p1], [a + p0, b + p1, a + p1]]
+    return np.array(tris)
+
+
+def _box(c, ax, ay, hz, sx, sy, z0):
+    """A box centred at c (x, y), axes ax, ay (unit, horizontal), half sizes sx, sy, from z0 to z0 + hz."""
+    P = lambda i, j, z: np.array([c[0] + i * sx * ax[0] + j * sy * ay[0], c[1] + i * sx * ax[1] + j * sy * ay[1], z])
+    q = [P(-1, -1, z0), P(1, -1, z0), P(1, 1, z0), P(-1, 1, z0)]
+    t = [P(-1, -1, z0 + hz), P(1, -1, z0 + hz), P(1, 1, z0 + hz), P(-1, 1, z0 + hz)]
+    tris = [[t[0], t[1], t[2]], [t[0], t[2], t[3]], [q[0], q[2], q[1]], [q[0], q[3], q[2]]]
+    for k in range(4):
+        a, b = q[k], q[(k + 1) % 4]
+        A, B = t[k], t[(k + 1) % 4]
+        tris += [[a, b, B], [a, B, A]]
+    return np.array(tris)
+
+
+def rope(p0, p1, sag, n=24):
+    """Points of a rope from p0 to p1 sagging `sag` m at its middle."""
+    s = np.linspace(0, 1, n)
+    P = p0[None] + (p1 - p0)[None] * s[:, None]
+    P[:, 2] -= 4 * sag * s * (1 - s)
+    return P
+
+
+def pylon(base, top, axis, legs=1.4, head=0.5):
+    """A lattice pylon from the ground point `base` up to the saddle height top (z), its cross beam across axis."""
+    import itertools
+    across = np.array([-axis[1], axis[0], 0.0])
+    h = top - base[2]
+    tris = []
+    corners = lambda w, z: [base[:2] + w * (i * axis[:2] + j * across[:2]) for i, j in itertools.product((-1, 1), (-1, 1))]
+    lo = corners(legs, 0)
+    hi = corners(head, 0)
+    for a, b in zip(lo, hi):
+        tris.append(_tube(np.r_[a, base[2] - 0.5], np.r_[b, top - 0.6], 0.09))
+    # bracing every 3 m: the four sides, crossing
+    nz = max(2, int(h / 3.0))
+    zs = np.linspace(base[2], top - 0.6, nz + 1)
+    w = lambda z: legs + (head - legs) * (z - base[2]) / max(top - 0.6 - base[2], 1e-3)
+    order = [0, 1, 3, 2]
+    for z0, z1 in zip(zs[:-1], zs[1:]):
+        c0, c1 = corners(w(z0), 0), corners(w(z1), 0)
+        for k in range(4):
+            i, j = order[k], order[(k + 1) % 4]
+            tris.append(_tube(np.r_[c0[i], z0], np.r_[c1[j], z1], 0.035))
+            tris.append(_tube(np.r_[c0[j], z0], np.r_[c1[i], z1], 0.035))
+            tris.append(_tube(np.r_[c1[i], z1], np.r_[c1[j], z1], 0.035))
+    # the cross beam carrying the saddles of both tracks
+    half = CABLE_GAUGE / 2 + 0.6
+    tris.append(_box(base[:2], across[:2], axis[:2], 0.6, half, 0.35, top - 0.6))
+    for sgn in (-1, 1):
+        c = base[:2] + sgn * CABLE_GAUGE / 2 * across[:2]
+        tris.append(_box(c, axis[:2], across[:2], 0.25, 1.6, 0.18, top))
+    return np.concatenate(tris)
+
+
+def cabin(p, axis):
+    """A cabin hanging from the rope point p: the carriage on the rope, the hanger, the body with its windows
+    (body: CABIN_COLOR, glazing: dark)."""
+    across = np.array([-axis[1], axis[0], 0.0])
+    L, W, H = CABIN
+    body_top = p[2] - 2.4
+    body = _box(p[:2], axis[:2], across[:2], H, L / 2, W / 2, body_top - H)
+    roof = _box(p[:2], axis[:2], across[:2], 0.12, L / 2 + 0.05, W / 2 + 0.05, body_top)
+    glass = [_box(p[:2], axis[:2], across[:2], 0.75, L / 2 + 0.01, W / 2 + 0.01, body_top - 1.05)]
+    hanger = _tube(np.r_[p[:2], body_top + 0.1], np.r_[p[:2], p[2] - 0.1], 0.05)
+    carriage = _box(p[:2], axis[:2], across[:2], 0.25, 0.6, 0.12, p[2] - 0.2)
+    return body, np.concatenate([roof, hanger, carriage]), np.concatenate(glass)
+
+
+def cableway(level_dir, level_name, ground, near):
+    """The cable car near `near` (local x, y of its valley station): [(shape, origin, triangles)]."""
+    import bng
+    lines = cable_lines(near)
+    if not lines:
+        print("cableway: no line of swissTLM3D near", near)
+        return []
+    props, P = max(lines, key=lambda l: np.linalg.norm(l[1][-1, :2] - l[1][0, :2]))
+    if np.hypot(*(P[-1, :2] - np.asarray(near))) < np.hypot(*(P[0, :2] - np.asarray(near))):
+        P = P[::-1]                                         # from the valley station up
+    g = np.array([float(ground(np.array([x]), np.array([y]))[0]) for x, y in P[:, :2]])
+    # the supports: the stations at either end, the pylons at the vertices between (the rope over their saddles)
+    sup = []
+    for k, (x, y, z) in enumerate(P):
+        end = k in (0, len(P) - 1)
+        h = CABLE_STATION_H if end else (z - g[k] if np.isfinite(z) and z - g[k] > 6 else 14.0)
+        sup.append((np.array([x, y, g[k]]), g[k] + h, end))
+    axis_all = (P[-1, :2] - P[0, :2]) / np.linalg.norm(P[-1, :2] - P[0, :2])
+    origin = np.array([P[0, 0], P[0, 1], 0.0])
+    mb = bng.MeshBuilder()
+    mc = bng.MeshBuilder()
+    span_len = 0.0
+    cab_at = CABIN_EVERY / 2
+    for (b0, t0, e0), (b1, t1, e1) in zip(sup[:-1], sup[1:]):
+        d = b1[:2] - b0[:2]
+        L = float(np.linalg.norm(d))
+        ax = np.r_[d / max(L, 1e-6), 0.0]
+        across = np.array([-ax[1], ax[0], 0.0])
+        for sgn in (-1, 1):
+            off = sgn * CABLE_GAUGE / 2 * across
+            p0 = np.r_[b0[:2], t0 + 0.3] + off
+            p1 = np.r_[b1[:2], t1 + 0.3] + off
+            R = rope(p0, p1, CABLE_SAG * L)
+            for a, b in zip(R[:-1], R[1:]):
+                mb.add("lm_cable_rope", (_tube(a, b, CABLE_R) - origin).reshape(-1, 3))
+            # cabins along this span, at their place along the whole line (up on one track, down on the other)
+            s = cab_at
+            while s < span_len + L:
+                if s > span_len + 15 and s < span_len + L - 15:
+                    f = (s - span_len) / L
+                    q = p0 + (p1 - p0) * f
+                    q[2] -= 4 * CABLE_SAG * L * f * (1 - f)
+                    body, rest, glass = cabin(q, ax)
+                    mc.add("lm_cabin", (body - origin).reshape(-1, 3))
+                    mc.add("lm_cabin_steel", (rest - origin).reshape(-1, 3))
+                    mc.add("lm_cabin_glass", (glass - origin).reshape(-1, 3))
+                s += CABIN_EVERY
+        span_len += L
+    for k, (b, t, end) in enumerate(sup):
+        if end:
+            continue
+        mb.add("lm_pylon", (pylon(b, t, axis_all) - origin).reshape(-1, 3))
+    out = []
+    os.makedirs(os.path.join(level_dir, "art", "shapes", "landmarks"), exist_ok=True)
+    for m, name in ((mb, "cableway"), (mc, "cableway_cabins")):
+        if m.empty():
+            continue
+        rel = f"art/shapes/landmarks/{name}.dae"
+        m.write_dae(os.path.join(level_dir, rel), name=name, origin=origin)
+        out.append((f"/levels/{level_name}/{rel}", origin, m.triangle_count()))
+    mats = [bng.material("lm_cable_rope", base_color=(0.12, 0.12, 0.12, 1), roughness=0.5, metallic=0.8),
+            bng.material("lm_pylon", base_color=STEEL + (1,), roughness=0.6, metallic=0.6, double_sided=True),
+            bng.material("lm_cabin", base_color=CABIN_COLOR + (1,), roughness=0.35, metallic=0.2),
+            bng.material("lm_cabin_steel", base_color=(0.3, 0.31, 0.32, 1), roughness=0.5, metallic=0.7),
+            bng.material("lm_cabin_glass", base_color=(0.12, 0.15, 0.17, 1), roughness=0.08, metallic=0.1)]
+    bng.write_materials(os.path.join(level_dir, "art", "shapes", "landmarks", "main.materials.json"), mats)
+    print("cableway:", props.get("NAME") or props.get("OBJEKTART"), len(P), "vertices,", len(sup) - 2, "pylons,",
+          round(span_len), "m")
+    return out
