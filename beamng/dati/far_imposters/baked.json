@@ -1,0 +1,14 @@
+{
+ "_about": "Imposters of the far trees (far_trees.py) as BeamNG.drive 0.40.0.0 baked them (DX12, RTX 4070, michi's PC, 2026-10-20; two bakes byte-identical), shipped beside the DAEs (far_trees.prebaked). dae_md5: the DAE each was baked from: a model that changes needs a new bake (delete temp/levels/magliaso_pura/art/shapes/trees/far_* in the user folder, load the level once, copy the two .dds of each model here and its md5 below).",
+ "dae_md5": {
+  "far_broad_a": "b208d798fefaed406edf43211db352bf",
+  "far_broad_b": "b6a92f2093c08add55d516e7edb10278",
+  "far_broad_c": "60f3ce71f11646273fa398ed77431e89",
+  "far_narrow_a": "09fa04189214e88542b999b8bba0008d",
+  "far_narrow_b": "e7ce2b3216cebec8950cba7a841dd82a",
+  "far_narrow_c": "abcd9722c9d345deb950f132a777d0e7",
+  "far_fir_a": "4398c9829007f63dbcff57762f7e82b9",
+  "far_fir_b": "405fa43d0e9ed8ccc135107fa50e3246",
+  "far_fir_c": "4a9fd460a809f7b3edee4006736e8ba4"
+ }
+}
