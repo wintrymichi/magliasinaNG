@@ -19,7 +19,7 @@ The openings, clock faces and quoins are quads OFFSET m in front of the walls wi
 (landmark_textures.py, material bld_landmark, clock faces bld_landmark_lit), the cornices, string courses and plinths
 boxes of squared granite (bld_ashlar).
 """
-import json, os
+import json, math, os
 import numpy as np
 import shapely
 
@@ -70,6 +70,24 @@ def prepare(blds, fps, gwr):
     global _sacred
     keep = [fp for b, fp in zip(blds, fps) if b["kind"] in SACRED or gwr.get(b["uuid"], {}).get("gklas") == 1272]
     _sacred = shapely.STRtree(keep) if keep else None
+    # the survey often keeps the roof of a church as an object of its own, without walls: the tower and the spire
+    # are found on the roofs over the walls, whoever holds them
+    global _lids
+    lids = [(shapely.MultiPoint(b["roofs"].reshape(-1, 3)[:, :2]).convex_hull, b["roofs"]) for b in blds
+            if not len(b["walls"]) and len(b["roofs"])]
+    _lids = (shapely.STRtree([fp for fp, _ in lids]), [r for _, r in lids]) if lids else None
+
+
+_lids = None
+
+
+def roofs_of(fp, roofs):
+    """The roof triangles over a building: its own, else those of the wall-less roof objects over its footprint."""
+    if len(roofs) or _lids is None or fp is None:
+        return roofs
+    tree, rs = _lids
+    got = [rs[j] for j in tree.query(fp) if tree.geometries[j].intersection(fp).area > 0.5 * min(fp.area, tree.geometries[j].area)]
+    return np.concatenate(got) if got else roofs
 
 
 def near_sacred(fp, b):
@@ -197,6 +215,10 @@ def faces(b, walls, ctx):
         F = facades.facade_polygon(tris, a)
         if F is None:
             continue
+        # a slot under half a metre in the wall (a recess, a downpipe of the survey) does not split the facade
+        F = F.buffer(0.3, join_style="mitre").buffer(-0.3, join_style="mitre")
+        if F.is_empty:
+            continue
         u0, z0, u1, z1 = F.bounds
         if u1 - u0 < 0.8:
             continue
@@ -209,6 +231,40 @@ def faces(b, walls, ctx):
         g = np.where(np.isfinite(g), g, z0)
         out.append({"tris": tris, "n": n, "a": a, "o": o, "F": F, "us": us, "g": np.asarray(g, float), "top": top,
                     "u0": u0, "u1": u1, "W": u1 - u0, "zmin": z0, "zmax": z1})
+    return out
+
+
+def round_faces(walls, ctx, k=4):
+    """The faces of a round tower (the survey draws it as many narrow facets, none wide enough for a module):
+    k planes touching the drum, as faces() gives them; None when the walls are not a drum."""
+    P = walls.reshape(-1, 3)
+    hull = shapely.MultiPoint(P[:, :2]).convex_hull
+    if hull.area < 3.0:
+        return None
+    c = np.array(hull.centroid.coords[0])
+    d = np.hypot(P[:, 0] - c[0], P[:, 1] - c[1])
+    r = float(np.median(d))
+    if r < 1.2 or np.std(d) > 0.08 * r or abs(hull.area - math.pi * r * r) > 0.12 * hull.area:
+        return None
+    W = 1.15 * r
+    z0, z1 = float(P[:, 2].min()), float(P[:, 2].max())
+    out = []
+    for j in range(k):
+        t = 2 * math.pi * j / k + math.pi / 4
+        n = np.array([math.cos(t), math.sin(t), 0.0])
+        a = np.array([-n[1], n[0], 0.0])
+        o = np.array([c[0], c[1], 0.0]) + r * n
+        # the top of the drum on this side
+        side = (P[:, :2] - c) @ n[:2] > 0.7 * r
+        top = float(P[side, 2].max()) if side.any() else z1
+        F = shapely.box(-W / 2, z0, W / 2, top)
+        us = np.linspace(-W / 2, W / 2, 5)
+        g = ctx.ground(o[0] + us * a[0] + n[0] * 0.4, o[1] + us * a[1] + n[1] * 0.4)
+        g = np.where(np.isfinite(g), g, z0)
+        tris = walls[((walls.mean(1)[:, :2] - c) @ n[:2]) > 0.7 * r]
+        out.append({"tris": tris if len(tris) else walls, "n": n, "a": a, "o": o, "F": F, "us": us,
+                    "g": np.asarray(g, float), "top": np.full(len(us), top), "u0": -W / 2, "u1": W / 2, "W": W,
+                    "zmin": z0, "zmax": top, "round": True})
     return out
 
 
@@ -309,14 +365,19 @@ def tower_part(walls, roofs):
     _, lab = connected_components(M, directed=False)
     lab = lab[:k]
     best = None
-    for c in np.unique(lab):
+    comps = np.unique(lab)
+    plans = {c: shapely.MultiPoint(roofs[lab == c].reshape(-1, 3)[:, :2]).convex_hull for c in comps}
+    # over the roof of the nave (the largest piece), not over every piece: a terrace or a landing of the tower
+    # is a piece of roof of its own
+    nave = max(comps, key=lambda c: plans[c].area)
+    top = roofs[lab == nave][..., 2].max()
+    for c in comps:
         R = roofs[lab == c]
         P = R.reshape(-1, 3)
-        plan = shapely.MultiPoint(P[:, :2]).convex_hull
-        others = roofs[lab != c]
-        if not len(others) or not TOWER_PLAN[0] <= plan.area <= TOWER_PLAN[1]:
+        plan = plans[c]
+        if c == nave or not TOWER_PLAN[0] <= plan.area <= TOWER_PLAN[1]:
             continue
-        if P[:, 2].max() < others[..., 2].max() + TOWER_OVER or P[:, 2].min() < others[..., 2].max() - 1.0:
+        if P[:, 2].max() < top + TOWER_OVER or P[:, 2].min() < top - 1.0:
             continue
         if best is None or P[:, 2].max() > best[2]:
             best = (plan, R, P[:, 2].max())
@@ -341,7 +402,7 @@ def layout(b, walls, style, ctx, em, lem, roofs=None):
             mask, troofs = tp
             n = layout(b, walls[mask], dict(style, use="tower"), ctx, em, lem, troofs)
             return n + layout(b, walls[~mask], style, ctx, em, lem, None)
-    fs = faces(b, walls, ctx)
+    fs = (use == "tower" and round_faces(walls, ctx)) or faces(b, walls, ctx)
     if not fs:
         return 0
     spec = style.get("landmark") or {}
@@ -353,7 +414,9 @@ def layout(b, walls, style, ctx, em, lem, roofs=None):
     good = np.isfinite(eaves)
     if not good.any():
         return 0
-    wide = np.array([f["W"] for f in fs]) >= 1.6
+    Ws = np.array([f["W"] for f in fs])
+    # a tower: the eaves of its shaft (its widest faces), not of a lantern or a drum on top of it
+    wide = Ws >= (max(1.6, 0.6 * Ws.max()) if use == "tower" else 1.6)
     z_e = float(np.median(eaves[good & wide])) if (good & wide).any() else float(np.median(eaves[good]))
     if use == "tower":
         n = tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, stone_col)
@@ -380,7 +443,9 @@ def tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim):
     front = front_of(fs, ctx, faces_ok)
     # the cornice under the eaves, the bell chamber under it
     cz = z_e - CORNICE[0]
-    band_all(lem, fs, cz, CORNICE[0], CORNICE[1], trim)
+    drum = bool(fs[0].get("round"))
+    if not drum:
+        band_all(lem, fs, cz, CORNICE[0], CORNICE[1], trim)
     nb = spec.get("bells")
     zb_min = z_e
     for i in faces_ok:
@@ -401,7 +466,7 @@ def tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim):
         lem.module(name, f["o"], f["a"], f["n"], uc, zb, s)
         zb_min = min(zb_min, zb)
         count += 1
-    if count:
+    if count and not drum:
         band_all(lem, fs, zb_min - COURSE[0] - 0.05, COURSE[0], COURSE[1], trim)
     # the clock faces under the bell chamber, on the front and the faces turned the most like it
     n_clock = spec.get("clock", 2 if H >= 11 else 0)
@@ -423,12 +488,12 @@ def tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim):
             count += 1
     # quoins up the corners, slits on the stone towers, the door at the foot of the front
     # (none on a round or polygonal tower: more than six faces)
-    if spec.get("quoins", True) and len([f for f in fs if f["W"] >= 0.8]) <= 6:
+    if spec.get("quoins", True) and not drum and len([f for f in fs if f["W"] >= 0.8]) <= 6:
         for i, f in enumerate(fs):
             if f["W"] >= 1.6:
                 quoins(lem, f, float(np.nanmin(f["g"])) - 0.3, (zb_min - COURSE[0] - 0.05) if count else z_e - CORNICE[0],
                        i % 2)
-    if front >= 0:
+    if front >= 0 and not drum:                # (a drum stands in the church: its foot is in the nave)
         f = fs[front]
         uc = 0.5 * (f["u0"] + f["u1"])
         gc = float(np.interp(uc, f["us"], f["g"]))

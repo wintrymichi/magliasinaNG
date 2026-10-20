@@ -657,7 +657,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 for sel, pst in groups:
                     if pst["use"] in landmarks.USES:
                         stats["landmarks"] = stats.get("landmarks", 0) + 1
-                        stats["openings"] += landmarks.layout(b, rest[sel], pst, ctx, em, lem, roofs)
+                        stats["openings"] += landmarks.layout(b, rest[sel], pst, ctx, em, lem, landmarks.roofs_of(fp, roofs))
                     elif pst["use"] != "none":
                         stats["openings"] += facades.layout_building(b, rest[sel], pst, ctx, em)
                     stats["shops"] = stats.get("shops", 0) + int(pst["shop"])

@@ -2,7 +2,7 @@
 # (their buildings of swissBUILDINGS3D, the register, ground and orthophoto around them, reference photos with an
 # open licence on contact sheets, the cable lines of swissTLM3D), committed to beamng/verifica/monumenti/pack on the
 # branch: the cloud session that writes the models cannot reach swisstopo, Commons or Mapillary.
-# stamp: 3
+# stamp: 4
 name: landmarks pack
 
 on:

@@ -334,8 +334,8 @@ def main(out):
             z0 = float(np.nanmin(dtm))
             pack = {"id": "cableway", "bounds": (x0, y0, x1, y1), "members": [], "buildings": sb,
                     "gwr": {b["uuid"]: gwr[b["uuid"]] for b in sb if b["uuid"] in gwr}, "parts": {}, "by_egid": {},
-                    "dtm_res": 2.0, "dtm_z0": z0,
-                    "dtm": np.round((np.nan_to_num(dtm[0], nan=z0) - z0) * 100).astype(np.uint16),
+                    "dtm_res": 2.0, "dtm_z0": z0, "dtm_unit": 0.1, "ortho_res": 2.0,    # 900 m of climb: decimetres
+                    "dtm": np.round((np.nan_to_num(dtm[0], nan=z0) - z0) * 10).astype(np.uint16),
                     "ortho": None if ortho is None else np.nan_to_num(ortho).clip(0, 255).astype(np.uint8),
                     "line": P.tolist()}
             with gzip.open(os.path.join(out, "sites", "cableway.pkl.gz"), "wb") as f:
