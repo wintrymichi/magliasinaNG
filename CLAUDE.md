@@ -58,6 +58,14 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   them in a pass that takes no shadows, and they glow under cars and trees (road wear, 2026-10-18). DecalRoads
   draw on the road meshes only with `overObjects` set, and they do not fix that by themselves.
 
+## Data from the cloud sessions
+
+- swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
+  cloud container (proxy 403). Compute anything that needs them in a small GitHub workflow that commits its result
+  to the branch (strade_extra.yml, paesi_interi.yml), and test the code locally with stand-in inputs first.
+- Growing the area (area.py) changes what the pinned extracts in beamng/dati must cover: re-pinning them pulls newer
+  data for the whole map. Add only what is new (download_gwr.py --add) and check the OSM extract's bbox.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs
