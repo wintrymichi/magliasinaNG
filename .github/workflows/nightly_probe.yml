@@ -1,6 +1,6 @@
 # Which code made the worst road places of the v3.0.40 nightly (check_level of nightly #2): fix_probe.py on the
 # nightly level, the cells, lines and polygons there. A development aid of the traffic thread; no build.
-# probe stamp: 1
+# probe stamp: 2
 name: nightly probe (traffic thread)
 
 on:
@@ -89,7 +89,7 @@ jobs:
           python network_surface.py
 
       - name: Probe of the worst places of the nightly
-                working-directory: beamng/pipeline
+        working-directory: beamng/pipeline
         run: |
           O=../verifica/traffico/nightly
           rm -rf "$O"; mkdir -p "$O"
