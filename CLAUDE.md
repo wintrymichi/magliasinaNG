@@ -49,10 +49,6 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - A Remote Control session started from a thread reports only to that thread (@parent): forward its notes to the
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
   long step ends.
-- The 0.40 vehicle AI (`lua/vehicle/ai.lua`) acts on signal actions 1-3 only: a "yield" (4) or "slow" (5) signal
-  is driven through like "go". Give way by giving the minor road piece a lower drivability than the main road.
-- The 0.40 FMOD strings bank keeps the event paths as a prefix trie: a scan for whole `event:/` strings finds none.
-  0.40 has no church bell, bird or cricket events (`dati/ambient_events.json`).
 
 ## Terrain fixes
 
