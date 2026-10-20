@@ -118,6 +118,29 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Growing the area (area.py) changes what the pinned extracts in beamng/dati must cover: re-pinning them pulls newer
   data for the whole map. Add only what is new (download_gwr.py --add) and check the OSM extract's bbox.
 
+## Street photo reference (street_*.py)
+
+- Google Street View terms forbid bulk download and derived data: michi asked twice, it was declined. Use Mapillary,
+  Panoramax and KartaView (open licences) plus swisstopo; the step reads extra panoramas only from WORK/sv/pano.
+- Mapillary, swisstopo and Hugging Face are blocked from the cloud container: run the network steps in
+  street_reference.yml (token from the MAPILLARY_TOKEN secret) and commit only small results. Its devpack job
+  commits photos (74 MB): purge them from a branch before it is merged (rebuild the branch without them).
+- Pose fits: a fit with a big heading turn and a mediocre building overlap was a false match (a dashcam turned 31 deg).
+  Gate on IoU >= 0.45 and >= 0.6 when the heading moved more than 12 deg (street_zone.accept).
+- The scene render must open the alleys (street_scene.open_alleys): the 0.5 m DSM closes narrow alleys and
+  every photo there failed to fit.
+- Hedge votes landed on facades behind the strip when voted at the 3x3 max height: vote just under the cell's own
+  top (street_hedges.VOTE_DOWN).
+- Facade openings from Grounding DINO: about half the windows missed, eaves bands taken as balconies, a stone arcade
+  as a garage. A facade with no detections must never blank a seen wall (facades.Measured.evidence); measured
+  facades are off unless MAGLIASO_STREET_FACADES=1 (michi 2026-10-20).
+- Roofs: the game's roofs agree with the photos within ~0.5 m (median bias +0.15 m); a one-photo difference is
+  noise. Apply only with 2+ photos agreeing (street_collect ROOF_*).
+- props_osm: a local helper named like the module-level box() shadowed it and would have crashed the build:
+  grep for an existing name before adding a helper.
+- Torch with default threads in parallel zone runs oversubscribed the CPU (hours): STREET_THREADS=1 per process.
+- pkill with a pattern that is also in your own command line kills your shell (exit 144): kill by PID.
+
 ## Races (time trials, races.py)
 
 - Mission files go in `gameplay/missions/<level>/timeTrial/<id>/` beside `levels/`, not inside the level folder:

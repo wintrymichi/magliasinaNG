@@ -1,0 +1,92 @@
+{
+ "sources": {
+  "mapillary": {
+   "photos": 10629,
+   "panoramas_360": 2769,
+   "years": {
+    "2012": 932,
+    "2016": 1566,
+    "2017": 55,
+    "2019": 4815,
+    "2020": 76,
+    "2021": 2170,
+    "2022": 176,
+    "2023": 18,
+    "2024": 169,
+    "2025": 639,
+    "2026": 13
+   }
+  },
+  "panoramax": {
+   "photos": 576,
+   "panoramas_360": 0,
+   "years": {
+    "2010": 9,
+    "2019": 2,
+    "2021": 3,
+    "2022": 6,
+    "2025": 556
+   }
+  },
+  "kartaview": {
+   "photos": 31,
+   "panoramas_360": 0,
+   "years": {
+    "2015": 5,
+    "2016": 16,
+    "2017": 5,
+    "2019": 5
+   }
+  }
+ },
+ "places": 19679,
+ "share_of_places": {
+  "any": {
+   "10m": 0.1412,
+   "25m": 0.1731
+  },
+  "360": {
+   "10m": 0.0168,
+   "25m": 0.0236
+  },
+  "mapillary": {
+   "10m": 0.137,
+   "25m": 0.1622
+  },
+  "mapillary_360": {
+   "10m": 0.0168,
+   "25m": 0.0236
+  },
+  "panoramax": {
+   "10m": 0.0065,
+   "25m": 0.0159
+  },
+  "panoramax_360": {
+   "10m": 0.0,
+   "25m": 0.0
+  },
+  "kartaview": {
+   "10m": 0.0014,
+   "25m": 0.002
+  },
+  "kartaview_360": {
+   "10m": 0.0,
+   "25m": 0.0
+  }
+ },
+ "status": {
+  "mapillary": "ok",
+  "panoramax https://api.panoramax.xyz/api": {
+   "calls": 138,
+   "given_up": false,
+   "errors": {}
+  },
+  "kartaview": {
+   "calls": 138,
+   "given_up": false,
+   "errors": {
+    "HTTP 400 {\"status\":{\"apiCode\":\"690\",\"apiMessage\":\" An unexpected server error has occurred\",\"httpCode\":400,\"httpMessage\"": 1
+   }
+  }
+ }
+}

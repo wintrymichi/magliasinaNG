@@ -267,7 +267,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | Not yet reviewed in the game: the river water, the grip of the paving, the street lamp lights at night. | [#8](https://github.com/wintrymichi/magliasinaNG/issues/8) |
 | Palms, grass density and vineyard row spacing are estimates. Where OpenStreetMap gives no surface, swissTLM3D applies. | [#9](https://github.com/wintrymichi/magliasinaNG/issues/9) |
 | The plinth of a few houses blocks a trail (12 blocked trail points instead of 10, for example in an alley below Pura). | [#10](https://github.com/wintrymichi/magliasinaNG/issues/10) |
-| Façades: windows, balconies and doors are plausible but not copied one by one; some colours measured in shadow are wrong; arcades and storey-high plinths are not modelled; exposed stone only on the churches known from photos (a church and its tower in one survey building get one material: San Cristoforo in Caslano is all plaster; the nave of Bedigliora is drawn like the houses of its block). | [#11](https://github.com/wintrymichi/magliasinaNG/issues/11) |
+| Façades: windows, balconies and doors are plausible but not copied one by one (v3.0.40 can measure them from open street photos, but the detector still misses about half, so that is off); some colours measured in shadow are wrong; arcades and storey-high plinths are not modelled; exposed stone only on the churches known from photos (a church and its tower in one survey building get one material: San Cristoforo in Caslano is all plaster; the nave of Bedigliora is drawn like the houses of its block). | [#11](https://github.com/wintrymichi/magliasinaNG/issues/11) |
 | Yards on two levels become steep ramps beside the road (for example in Caslano). | [#12](https://github.com/wintrymichi/magliasinaNG/issues/12) |
 | Some buildings have walls under only part of the roof (a shed in Pura). | [#13](https://github.com/wintrymichi/magliasinaNG/issues/13) |
 | Guardrails and wall materials only where the panoramas see them; 736 walls stay stone. | [#14](https://github.com/wintrymichi/magliasinaNG/issues/14) |
@@ -643,3 +643,4 @@ Third-party materials remain subject to their respective licences. OpenStreetMap
 - © OpenStreetMap contributors, ODbL 1.0: the extracts in `beamng/dati/osm_*.json.gz` are under the ODbL.
 - Copernicus DEM GLO-30 (© DLR e.V. / Airbus, provided under COPERNICUS by the EU and ESA): distant landscape.
 - Google Street View: visual reference only; no image is distributed.
+- Street-level photos from Mapillary (CC BY-SA 4.0), Panoramax and KartaView contributors (under their open licences): used to check hedges, fountains and roof heights; only positions and votes derived from them are kept (`beamng/dati/street_*.json`), no image is distributed.

@@ -15,6 +15,13 @@ Only objects that OSM records at a place are built, and only with models the lev
 - bus stops (highway=bus_stop, v2.2): a grey pole beside the road with the yellow stop sign across it
   (a bus and the name of the stop in black, drawn here as the signs along the streets of the area look)
   and a timetable board; where OSM records a shelter, a steel and glass shelter with a bench behind it.
+- v3.0.40: the benches, litter bins, fire hydrants and junction boxes the open street photos show
+  (street_objects.py, dati/street_objects.json) where OSM has none of the kind within PHOTO_NEAR m: the same
+  models (a junction box a grey cabinet), turned like the furniture of OSM.
+- v3.0.40: the fountains and drinking water points of OSM: a granite basin (Italy's kerb stone) with its water and a
+  pillar with a spout at one end, along the road, as long as the street photos show it (street_fountains.py,
+  dati/street_fountains.json); the small ones (drinking water, bubblers) a stone bowl at the foot of the pillar;
+  none where several photos see the place and no fountain.
 Nothing is placed on the Italian side (outside the land of the cadastral survey), on a carriageway,
 inside a building or a wall, in the middle of a road of the network (blocked, build_level.stage_props)
 or within CORRIDOR m of the Street View route; a sign that does not find free ground beside the road
@@ -32,13 +39,62 @@ import osm
 LIGHT = "/levels/italy/art/shapes/buildings/italy_light_single.dae"      # arm along the local +x axis
 BENCH = "/levels/east_coast_usa/art/shapes/clutter/clutter_city_bench_wood.dae"
 BIN = "/levels/italy/art/shapes/buildings/italy_clutter_metal_bin.DAE"
+HYDRANT = "/levels/italy/art/shapes/buildings/italy_clutter_fire_hydrant.DAE"
 CORRIDOR = 60.0
+PHOTO_OBJECTS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "street_objects.json")
+PHOTO_KINDS = {"bench": "bench", "trash_can": "waste_basket", "hydrant": "hydrant", "junction_box": "junction_box"}
+PHOTO_NEAR = 3.0          # m: furniture of OSM of the same kind this near is the one the photos show
+PHOTO_FOUNTAINS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati",
+                               "street_fountains.json")
+FOUNTAIN = (1.8, 0.75, 0.7)         # m: length, width, height of the granite basin of a village fountain
+FOUNTAIN_SMALL = (0.5, 0.36, 0.45)  # m: the stone bowl at the foot of a small drinking fountain
+FOUNTAIN_SMALL_TAGS = {"bubbler", "drinking", "nozzle", "bottle_refill"}
+RIM = 0.12                # m: the basin's walls
+WATER_DOWN = 0.08         # m: the water under the rim
+PILLAR = 0.32             # m: side of the pillar at the end of the basin (its spout over the water)
 STOP_SIZE = 0.60          # m across the octagon (Swiss sizes 60 / 90 / 110 cm; 60 cm on local roads)
 GIVEWAY_SIZE = 0.90       # m, side of the triangle (60 / 90 / 120 cm)
 PLATE_LOW = 1.50          # m, underside of a plate over the ground
 EDGE_OUT = 0.60           # m from the edge of the carriageway to the pole
 RED = (193, 18, 28)       # RAL 3020 traffic red
 L = f"/levels/{LEVEL_NAME}"
+
+
+def _quad(a, b, c, d, want):
+    """Two triangles of the quad a b c d (in order round it), wound so that their normal points along want."""
+    if np.cross(b - a, c - a) @ want < 0:
+        b, d = d, b
+    return [a, b, c, a, c, d]
+
+
+def fountain(c, t, L, W, z0, zt, pillar_h):
+    """Triangles (stone, water, metal) of a village fountain: a basin L x W (along the unit direction t and across
+    it) from z0 to its rim at zt, the water WATER_DOWN m under the rim, and a pillar at its +t end, pillar_h m over
+    the rim, with a spout over the water."""
+    t3, n3, up = np.array([t[0], t[1], 0.0]), np.array([-t[1], t[0], 0.0]), np.array([0.0, 0.0, 1.0])
+    C = np.array([c[0], c[1], 0.0])
+    P = lambda a, b, z: C + a * t3 + b * n3 + z * up
+    o = [(L / 2, W / 2), (-L / 2, W / 2), (-L / 2, -W / 2), (L / 2, -W / 2)]
+    i = [(a - np.sign(a) * RIM, b - np.sign(b) * RIM) for a, b in o]
+    zw = zt - WATER_DOWN
+    stone = []
+    for k in range(4):
+        (a0, b0), (a1, b1) = o[k], o[(k + 1) % 4]
+        (i0, j0), (i1, j1) = i[k], i[(k + 1) % 4]
+        out = 0.5 * (a0 + a1) * t3 + 0.5 * (b0 + b1) * n3
+        stone += _quad(P(a0, b0, z0), P(a1, b1, z0), P(a1, b1, zt), P(a0, b0, zt), out)              # outside
+        stone += _quad(P(a0, b0, zt), P(a1, b1, zt), P(i1, j1, zt), P(i0, j0, zt), up)              # rim
+        stone += _quad(P(i0, j0, zw - 0.05), P(i1, j1, zw - 0.05), P(i1, j1, zt), P(i0, j0, zt), -out)  # inside
+    water = _quad(*(P(a, b, zw) for a, b in i), up)
+    metal = []
+    if pillar_h > 0:
+        t2, n2 = np.asarray(t, float), np.array([-t[1], t[0]], float)
+        pc = np.asarray(c) + t2 * (L / 2 + PILLAR / 2 - 0.02)
+        stone += list(box(pc, t2, n2, PILLAR, PILLAR, z0, zt + pillar_h))
+        stone += list(box(pc, t2, n2, PILLAR + 0.06, PILLAR + 0.06, zt + pillar_h, zt + pillar_h + 0.07))   # its cap
+        zs = zt + 0.45 * pillar_h
+        metal = list(box(np.asarray(c) + t2 * (L / 2 - 0.16), t2, n2, 0.30, 0.035, zs, zs + 0.035))
+    return np.array(stone), np.array(water), np.array(metal).reshape(-1, 3)
 
 
 def _font(px):
@@ -307,6 +363,7 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     swiss = lambda x, y: len(lcsf.query(shapely.Point(x, y), predicate="within")) > 0
     counts = {"stop": 0, "give_way": 0, "bench": 0, "waste_basket": 0, "street_lamp": 0, "bus_stop": 0, "shelter": 0,
               "left_out": 0}
+    import italy_mats as it
     sign_dir = os.path.join(level_dir, "art", "shapes", "signs")
     os.makedirs(sign_dir, exist_ok=True)
     # v2.2: RGB colour and a separate opacity map, the naming of the BeamNG texture cooker
@@ -323,11 +380,25 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
             bng.material("mp_osm_pole", base_color=[0.62, 0.63, 0.64, 1], roughness=0.5, metallic=0.6),
             bng.material("mp_osm_shelter_frame", base_color=[0.30, 0.32, 0.34, 1], roughness=0.45, metallic=0.7),
             bng.material("mp_osm_shelter_glass", base_color=[0.55, 0.62, 0.66, 1], roughness=0.08, metallic=0.1),
-            bng.material("mp_osm_shelter_roof", base_color=[0.70, 0.71, 0.72, 1], roughness=0.5, metallic=0.4)]
+            bng.material("mp_osm_shelter_roof", base_color=[0.70, 0.71, 0.72, 1], roughness=0.5, metallic=0.4),
+            bng.material("mp_osm_cabinet", base_color=[0.62, 0.63, 0.60, 1], roughness=0.6, metallic=0.2),
+            it.material("mp_osm_fountain_stone", "italy_curb_concrete", ground_type="ROCK"),
+            bng.material("mp_osm_fountain_water", base_color=[0.10, 0.13, 0.13, 1], roughness=0.03, metallic=0.3)]
     bus_textures = {}
     mb = bng.MeshBuilder()
     g = "MissionGroup/props/osm"
     placed_list = []
+
+    def facing(x, y):
+        """Heading (radians, of the local +x axis) towards the nearest road or path within 30 m."""
+        near = wtree.query(shapely.Point(x, y), predicate="dwithin", distance=30.0)
+        if not len(near):
+            return 0.0
+        lines = [walk[i]["line"] for i in near]
+        j = int(np.argmin(shapely.distance(shapely.Point(x, y), lines)))
+        q = np.asarray(shapely.shortest_line(lines[j], shapely.Point(x, y)).coords)[0]
+        to = np.array([q[0] - x, q[1] - y])
+        return math.atan2(to[1], to[0]) if np.hypot(*to) > 1e-6 else 0.0
     for n in nodes:
         t = n["tags"]
         kind = t.get("highway") if t.get("highway") in ("stop", "give_way", "street_lamp", "bus_stop") else t.get("amenity")
@@ -399,15 +470,7 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
         if on_carriageway([x], [y])[0] or blocked([x], [y])[0]:
             counts["left_out"] += 1
             continue
-        near = wtree.query(shapely.Point(x, y), predicate="dwithin", distance=30.0)
-        theta = 0.0
-        if len(near):
-            lines = [walk[i]["line"] for i in near]
-            j = int(np.argmin(shapely.distance(shapely.Point(x, y), lines)))
-            q = np.asarray(shapely.shortest_line(lines[j], shapely.Point(x, y)).coords)[0]
-            to = np.array([q[0] - x, q[1] - y])
-            if np.hypot(*to) > 1e-6:
-                theta = math.atan2(to[1], to[0])
+        theta = facing(x, y)
         z = float(ground([x], [y])[0])
         if kind == "street_lamp":
             scene.add(g + "/street_lights", bng.tsstatic(LIGHT, (x, y, z), rot=bng.rot_local_x_to(theta), collision=True))
@@ -417,9 +480,79 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
                                                       collision=True))
         counts[kind] += 1
         placed_list.append([round(float(x), 2), round(float(y), 2), kind, n["id"]])
+    # v3.0.40: the furniture of the street photos where OSM records none of its kind
+    import json
+    photo = json.load(open(PHOTO_OBJECTS)) if os.path.exists(PHOTO_OBJECTS) else []
+    for o in photo:
+        kind = PHOTO_KINDS.get(o["cls"])
+        x, y = float(o["x"]), float(o["y"])
+        if kind is None or near_route(x, y) or not inside(x, y) or not swiss(x, y):
+            continue
+        if any(k == kind and (px - x) ** 2 + (py - y) ** 2 < PHOTO_NEAR ** 2 for px, py, k, _ in placed_list):
+            continue
+        if on_carriageway([x], [y])[0] or blocked([x], [y])[0]:
+            counts["left_out"] += 1
+            continue
+        theta = facing(x, y)
+        z = float(ground([x], [y])[0])
+        if kind == "junction_box":
+            t = np.array([-math.sin(theta), math.cos(theta)])         # along the road, the door towards it
+            V = box(np.array([x, y]), t, np.array([-t[1], t[0]]), float(np.clip(o.get("width", 0.8), 0.5, 1.6)), 0.35,
+                    z - 0.1, z + 1.2)
+            mb.add("mp_osm_cabinet", V, uvs=V[:, :2] + V[:, 2:3], normals=bng.flat_normals_soup(V))
+        else:
+            mdl = {"bench": BENCH, "waste_basket": BIN, "hydrant": HYDRANT}[kind]
+            scene.add(g + "/furniture", bng.tsstatic(mdl, (x, y, z), rot=bng.rot_local_x_to(theta + math.pi / 2),
+                                                      collision=True))
+        counts["photo_" + kind] = counts.get("photo_" + kind, 0) + 1
+        placed_list.append([round(x, 2), round(y, 2), kind, "photo"])
+    # v3.0.40: the fountains of OSM, a granite basin with its pillar (the small ones a bowl at the foot of the
+    # pillar), as long as the street photos show it; where several photos see the place and none a fountain (a tap
+    # on a wall, a fountain gone) nothing
+    fseen = json.load(open(PHOTO_FOUNTAINS)) if os.path.exists(PHOTO_FOUNTAINS) else {}
+    for n in nodes:
+        t = n["tags"]
+        if t.get("amenity") not in ("fountain", "drinking_water"):
+            continue
+        ph = fseen.get(str(n["id"]), {})
+        if ph.get("seen", 0) >= 2 and not ph.get("found"):
+            counts["fountain_not_in_photos"] = counts.get("fountain_not_in_photos", 0) + 1
+            continue
+        x, y = n["x"] + ph.get("dx", 0.0), n["y"] + ph.get("dy", 0.0)
+        if not inside(x, y) or not swiss(x, y):
+            continue
+        if ph.get("found"):
+            small = ph["width"] < 1.0
+        else:
+            small = t.get("amenity") == "drinking_water" or t.get("fountain") in FOUNTAIN_SMALL_TAGS
+        L_, W_, H_ = FOUNTAIN_SMALL if small else FOUNTAIN
+        if ph.get("found") and not small:
+            L_ = float(np.clip(ph["width"], 1.0, 4.0))
+            W_ = float(np.clip(0.42 * L_, 0.6, 1.2))
+        theta = facing(x, y)
+        tt = np.array([-math.sin(theta), math.cos(theta)])          # along the road
+        to = np.array([math.cos(theta), math.sin(theta)])           # towards it
+        for off in (0.0, -0.5, 0.5, -1.0, 1.0, -1.5):
+            c = np.array([x, y]) + off * to
+            pts = np.array([c + sa * tt * (L_ / 2 + (PILLAR if sa > 0 else 0)) + sb * to * W_ / 2
+                            for sa in (-1, 1) for sb in (-1, 1)] + [c])
+            if not on_carriageway(pts[:, 0], pts[:, 1]).any() and not blocked(pts[:, 0], pts[:, 1]).any():
+                break
+        else:
+            counts["left_out"] += 1
+            continue
+        zg = ground(pts[:, 0], pts[:, 1])
+        stone, water, metal = fountain(c, tt, L_, W_, float(np.min(zg)) - 0.15, float(np.max(zg)) + H_,
+                                       0.65 if small else 0.75)
+        mb.add("mp_osm_fountain_stone", stone, uvs=bng.box_uvs_soup(stone, 1.0), normals=bng.flat_normals_soup(stone))
+        mb.add("mp_osm_fountain_water", water, uvs=water[:, :2], normals=bng.flat_normals_soup(water))
+        if len(metal):
+            mb.add("mp_osm_pole", metal, uvs=metal[:, :2] + metal[:, 2:3], normals=bng.flat_normals_soup(metal))
+        k = "fountain_small" if small else "fountain"
+        counts[k] = counts.get(k, 0) + 1
+        placed_list.append([round(float(c[0]), 2), round(float(c[1]), 2), k, n["id"]])
     bng.write_materials(os.path.join(level_dir, "art", "shapes", "props", "osm.materials.json"), mats)
     from config import WORK
-    import json
     json.dump(placed_list, open(os.path.join(WORK, "osm_props.json"), "w"))
     rel = "art/shapes/props/props_osm.dae"
     mb.write_dae(os.path.join(level_dir, rel), name="props_osm", origin=(0, 0, 0), orient=True)

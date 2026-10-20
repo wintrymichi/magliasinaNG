@@ -507,9 +507,36 @@ def houses(b, rest, style, rec, height, roof_rgb, wall_col, sv, pp, by_egid, sho
     return rest, out
 
 
+STREET_ROOFS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "street_roofs.json")
+ROOF_MAX = 4.0          # m: a roof the street photos see further off is a building rebuilt, not a roof to move
+ROOF_WALL = 2.0         # m: the walls keep at least this much under a lowered roof
+
+
+def raise_roof(b, dz):
+    """The building with its roofs dz m higher (or lower) and its walls up to them: every vertex at or above the
+    eaves (the lowest point of the roofs) moves by dz, the walls under it stay (the ground floor, and the openings
+    the photos measured on it, keep their heights)."""
+    roofs, walls = b["roofs"], b["walls"]
+    if not len(roofs) or not dz or abs(dz) > ROOF_MAX:
+        return b
+    eaves = float(roofs[:, :, 2].min())
+    base = float(walls[:, :, 2].min()) if len(walls) else eaves
+    dz = max(dz, min(0.0, base + ROOF_WALL - eaves))
+    out = dict(b)
+    out["roofs"] = roofs + np.array([0.0, 0.0, dz])
+    if len(walls):
+        w = walls.copy()
+        w[:, :, 2] += np.where(w[:, :, 2] >= eaves - 0.05, dz, 0.0)
+        out["walls"] = w
+    lo, hi = np.array(b["bbox"][0], float), np.array(b["bbox"][1], float)
+    out["bbox"] = [lo.tolist(), (hi + np.array([0.0, 0.0, dz])).tolist()]
+    return out
+
+
 def load_buildings():
     """The buildings of the level: swissBUILDINGS3D (buildings.pkl) without the ones gone from the ground
-    and with the ones of the cadastral survey it does not model (missing_buildings.py, v2.2)."""
+    and with the ones of the cadastral survey it does not model (missing_buildings.py, v2.2); v3.0.40: the roofs
+    the street photos see higher or lower moved there (street_roofs.py, dati/street_roofs.json)."""
     blds = pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb"))
     diff = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "buildings_diff.json")
     added = os.path.join(WORK, "buildings_added.pkl")
@@ -518,6 +545,9 @@ def load_buildings():
         blds = [b for b in blds if b["uuid"] not in gone]
     if os.path.exists(added):
         blds += pickle.load(open(added, "rb"))
+    if os.path.exists(STREET_ROOFS):
+        roofs = json.load(open(STREET_ROOFS))
+        blds = [raise_roof(b, roofs[b["uuid"]]["dz"]) if b["uuid"] in roofs else b for b in blds]
     return blds
 
 
