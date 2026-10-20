@@ -1,7 +1,7 @@
 {
  "sacred": [
   {
-   "i": 188,
+   "i": 190,
    "uuid": "{18CAACF3-80CD-4D01-B296-9285BF9F54EB}",
    "kind": "Kapelle",
    "name": null,
@@ -16,7 +16,7 @@
    "egid": 191789088
   },
   {
-   "i": 403,
+   "i": 406,
    "uuid": "{0A42894F-A20D-4EC3-A58D-CE644F3DD120}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -31,7 +31,7 @@
    "egid": 191462773
   },
   {
-   "i": 411,
+   "i": 414,
    "uuid": "{6A04BE31-361D-4DD9-911C-B63E12159E67}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -46,7 +46,7 @@
    "egid": 191461677
   },
   {
-   "i": 438,
+   "i": 442,
    "uuid": "{ACE93009-690E-46E9-B227-2CB3FBFE2AB6}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -61,7 +61,7 @@
    "egid": 191789094
   },
   {
-   "i": 452,
+   "i": 456,
    "uuid": "{AE3FC7DA-B861-4151-8022-61EA7D139E01}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -76,7 +76,7 @@
    "egid": 191448430
   },
   {
-   "i": 922,
+   "i": 930,
    "uuid": "{A86887FA-AB27-4B4C-B690-62BC037806D5}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -91,7 +91,7 @@
    "egid": 191854241
   },
   {
-   "i": 1386,
+   "i": 1394,
    "uuid": "{48013785-B203-4489-8AE0-33667C0CADBC}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -106,7 +106,7 @@
    "egid": 191461160
   },
   {
-   "i": 1551,
+   "i": 1559,
    "uuid": "{7FED6BB6-8498-472A-8C91-640B27CD90BB}",
    "kind": "Sakrales Gebaeude",
    "name": "Madonna di Cimaronco",
@@ -121,7 +121,7 @@
    "egid": 191787470
   },
   {
-   "i": 1965,
+   "i": 1973,
    "uuid": "{8C3DBA58-7B31-4D7A-A398-3CE4D8BBC7D1}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -136,7 +136,7 @@
    "egid": 191462690
   },
   {
-   "i": 2060,
+   "i": 2068,
    "uuid": "{17A5869E-185B-406A-B468-63B7B79C14C7}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -151,7 +151,7 @@
    "egid": 192028654
   },
   {
-   "i": 2195,
+   "i": 2203,
    "uuid": "{DCC62494-3DCF-4221-9678-B0AD671B287E}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -166,7 +166,7 @@
    "egid": 191462776
   },
   {
-   "i": 2298,
+   "i": 2306,
    "uuid": "{9F7030BD-4F57-4E85-833A-3E6EE03440F9}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -181,7 +181,7 @@
    "egid": 191465051
   },
   {
-   "i": 2938,
+   "i": 2946,
    "uuid": "{EFA3625C-336C-436D-822B-22511F996029}",
    "kind": "Kapelle",
    "name": null,
@@ -196,7 +196,7 @@
    "egid": 191259990
   },
   {
-   "i": 3046,
+   "i": 3054,
    "uuid": "{BA781565-A6CE-42E8-82FD-5216E8A55653}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -211,7 +211,7 @@
    "egid": 191856344
   },
   {
-   "i": 3107,
+   "i": 3115,
    "uuid": "{3B846263-55BC-4A84-8E9B-78EC1D01F894}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -226,7 +226,7 @@
    "egid": 191858394
   },
   {
-   "i": 3231,
+   "i": 3239,
    "uuid": "{44270416-9313-4EB8-A428-B449A6178EDB}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -241,7 +241,7 @@
    "egid": 191998051
   },
   {
-   "i": 3266,
+   "i": 3274,
    "uuid": "{4B932E52-BB15-4487-9C70-3E524EF7381F}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -256,7 +256,7 @@
    "egid": 191260011
   },
   {
-   "i": 3326,
+   "i": 3334,
    "uuid": "{2D9A63FC-C5F6-49A2-9388-945868E572D7}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -271,7 +271,7 @@
    "egid": 400005503
   },
   {
-   "i": 3930,
+   "i": 3938,
    "uuid": "{B7F5C103-B680-40DF-BBF0-138C9CE8D259}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -286,7 +286,7 @@
    "egid": 192051183
   },
   {
-   "i": 4132,
+   "i": 4140,
    "uuid": "{CAD03582-9765-4DC4-A520-C3F659116EEE}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -301,7 +301,7 @@
    "egid": null
   },
   {
-   "i": 4162,
+   "i": 4170,
    "uuid": "{018669E4-80CF-4ECE-8AF9-C5A1EA7A2849}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -316,7 +316,7 @@
    "egid": 191856345
   },
   {
-   "i": 4176,
+   "i": 4184,
    "uuid": "{125A7F9F-8583-4290-AF0E-F3EFE9B214A8}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -331,7 +331,7 @@
    "egid": 191856304
   },
   {
-   "i": 4276,
+   "i": 4284,
    "uuid": "{BFB1571F-A081-46B6-84CD-4C8B7F57FE98}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -346,7 +346,7 @@
    "egid": 191856379
   },
   {
-   "i": 4295,
+   "i": 4303,
    "uuid": "{4C2BAA61-BAD4-4FB5-A191-1A9391C4FD5A}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -361,7 +361,7 @@
    "egid": 192051178
   },
   {
-   "i": 4618,
+   "i": 4626,
    "uuid": "{F77EC993-8BA6-424A-9514-676E59E13CAC}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -376,7 +376,7 @@
    "egid": 191796022
   },
   {
-   "i": 4703,
+   "i": 4711,
    "uuid": "{68DB8F70-A5F1-408F-AD10-1B766983BB32}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -391,7 +391,7 @@
    "egid": 191448315
   },
   {
-   "i": 4899,
+   "i": 4907,
    "uuid": "{DB2AA9F3-9871-46DF-97D9-85DAB5BCEE0C}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -406,7 +406,7 @@
    "egid": 191801287
   },
   {
-   "i": 5184,
+   "i": 5192,
    "uuid": "{B5E03EF2-8B43-4AF3-8396-FACB52E0CBC0}",
    "kind": "Kapelle",
    "name": null,
@@ -421,7 +421,7 @@
    "egid": null
   },
   {
-   "i": 5237,
+   "i": 5245,
    "uuid": "{9F2A72A9-E2DB-4F85-959F-154223698E33}",
    "kind": "Kapelle",
    "name": null,
@@ -436,7 +436,7 @@
    "egid": 191790405
   },
   {
-   "i": 5399,
+   "i": 5407,
    "uuid": "{CDEA67F6-5DF1-45AE-977A-E134C1FF0370}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -451,7 +451,7 @@
    "egid": 192020960
   },
   {
-   "i": 5651,
+   "i": 5659,
    "uuid": "{C4B6E37A-9529-4192-B251-CF74B25B20BB}",
    "kind": "Sakraler Turm",
    "name": null,
@@ -466,7 +466,7 @@
    "egid": 11180826
   },
   {
-   "i": 5701,
+   "i": 5709,
    "uuid": "{D3E7A4D9-69E4-48D5-B343-EAECB3EDF9E7}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -481,7 +481,7 @@
    "egid": 191999208
   },
   {
-   "i": 5710,
+   "i": 5718,
    "uuid": "{FAC49884-FA8D-4A32-A159-64FC3B4083FD}",
    "kind": "Mauer gross",
    "name": null,
@@ -496,7 +496,7 @@
    "egid": 192026508
   },
   {
-   "i": 5806,
+   "i": 5814,
    "uuid": "{30339E44-81D5-45C3-9575-3AA1A8BE6330}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -511,7 +511,7 @@
    "egid": 190391148
   },
   {
-   "i": 5810,
+   "i": 5818,
    "uuid": "{8DD133C0-5EB7-490F-A244-069A5AA11846}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -526,7 +526,7 @@
    "egid": 274002749
   },
   {
-   "i": 5819,
+   "i": 5827,
    "uuid": "{510E43DA-771A-4713-B128-AB28533565D4}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -541,7 +541,7 @@
    "egid": 191804264
   },
   {
-   "i": 5899,
+   "i": 5907,
    "uuid": "{4A23CD18-0040-4112-8315-E692BAF62D60}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -556,7 +556,7 @@
    "egid": 191804217
   },
   {
-   "i": 5984,
+   "i": 5992,
    "uuid": "{FC29BBC0-A4FD-44D7-995C-F74EAD405C49}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -571,7 +571,7 @@
    "egid": 191795155
   },
   {
-   "i": 5993,
+   "i": 6001,
    "uuid": "{DDA2B0C7-03D5-4CAB-99E2-9A79E0969E1B}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -586,7 +586,7 @@
    "egid": 190099100
   },
   {
-   "i": 6090,
+   "i": 6098,
    "uuid": "{8A720C97-5130-4D85-B8A0-8B9AD8A02F20}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -601,7 +601,7 @@
    "egid": 191547612
   },
   {
-   "i": 6691,
+   "i": 6699,
    "uuid": "{DEC54909-ABA9-43B7-8535-422551AF788E}",
    "kind": "Sakraler Turm",
    "name": null,
@@ -616,7 +616,7 @@
    "egid": 191926848
   },
   {
-   "i": 6789,
+   "i": 6797,
    "uuid": "{B3304FB1-10C6-4168-A7B8-C1ED129DE7B1}",
    "kind": "Sakraler Turm",
    "name": null,
@@ -631,7 +631,7 @@
    "egid": 192029373
   },
   {
-   "i": 6814,
+   "i": 6822,
    "uuid": "{44D2AA34-7763-4D4B-834A-9D75C9D0D9FD}",
    "kind": "Turm",
    "name": null,
@@ -646,7 +646,7 @@
    "egid": null
   },
   {
-   "i": 7185,
+   "i": 7193,
    "uuid": "{61BC6D3A-69F1-41C8-AA6E-75271BC9ECA0}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -661,7 +661,7 @@
    "egid": 191855352
   },
   {
-   "i": 7194,
+   "i": 7202,
    "uuid": "{AD0A344F-F64C-45E3-8AFD-AF860DC8B4B6}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -676,7 +676,7 @@
    "egid": 191854874
   },
   {
-   "i": 7443,
+   "i": 7451,
    "uuid": "{58588961-85D2-41CD-927A-352718D98A9B}",
    "kind": "Sakrales Gebaeude",
    "name": "S. Ambrogio",
@@ -691,7 +691,7 @@
    "egid": 191459090
   },
   {
-   "i": 7515,
+   "i": 7523,
    "uuid": "{309D34D9-A41C-431F-A711-86BDF12C5000}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -706,7 +706,7 @@
    "egid": 191855287
   },
   {
-   "i": 7576,
+   "i": 7584,
    "uuid": "{780CAE42-6ACC-465F-B317-0FA8E29C579A}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -721,7 +721,7 @@
    "egid": 11101758
   },
   {
-   "i": 7583,
+   "i": 7591,
    "uuid": "{75152506-3E1E-4843-8D5B-4180022547B2}",
    "kind": "Kapelle",
    "name": null,
@@ -736,7 +736,7 @@
    "egid": 191928005
   },
   {
-   "i": 7754,
+   "i": 7762,
    "uuid": "{06377705-8AFE-4BB8-9156-6745DF30AF9D}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -751,7 +751,7 @@
    "egid": 192029489
   },
   {
-   "i": 7755,
+   "i": 7763,
    "uuid": "{56D3001D-9CA9-40CE-ABFB-8FBD9C905DF3}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -766,7 +766,7 @@
    "egid": 192029359
   },
   {
-   "i": 7900,
+   "i": 7908,
    "uuid": "{1F6F8333-7F5C-4B71-BC3A-179449EF35C3}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -781,7 +781,7 @@
    "egid": 191459270
   },
   {
-   "i": 7938,
+   "i": 7946,
    "uuid": "{854FFD4E-8023-4C68-9322-A9AD7B2FAF42}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -796,7 +796,7 @@
    "egid": 191856046
   },
   {
-   "i": 8012,
+   "i": 8020,
    "uuid": "{0146CA64-BC59-4A28-A4A3-4C3ABAFB60B7}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -811,7 +811,7 @@
    "egid": 191857450
   },
   {
-   "i": 9114,
+   "i": 9122,
    "uuid": "{5950ABC9-5FBA-4DAF-80B0-7626CB910EB4}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -826,7 +826,7 @@
    "egid": 191801249
   },
   {
-   "i": 9370,
+   "i": 9378,
    "uuid": "{8B6DD6C8-6120-473C-B109-27AEF995EAE9}",
    "kind": "Kapelle",
    "name": null,
@@ -841,7 +841,7 @@
    "egid": 192021611
   },
   {
-   "i": 9401,
+   "i": 9409,
    "uuid": "{CB742EA3-6E68-49BF-8756-DFCF6B0E7AC6}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -856,7 +856,7 @@
    "egid": 191802584
   },
   {
-   "i": 9745,
+   "i": 9753,
    "uuid": "{3C416007-4E00-4676-A2A2-C2F615DCA028}",
    "kind": "Kapelle",
    "name": null,
@@ -871,7 +871,7 @@
    "egid": 192026512
   },
   {
-   "i": 9796,
+   "i": 9804,
    "uuid": "{05100C93-EAE1-4EC5-B6D8-D60EA7267FD8}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -886,7 +886,7 @@
    "egid": 191801266
   },
   {
-   "i": 10145,
+   "i": 10153,
    "uuid": "{8A6CED71-5F33-48E8-8366-619D0D70FCA2}",
    "kind": "Kapelle",
    "name": "Sta. Maria",
@@ -901,7 +901,7 @@
    "egid": 191877617
   },
   {
-   "i": 10398,
+   "i": 10406,
    "uuid": "{D5A8CC22-B087-4FA3-82B4-8F0AC91DDF81}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -916,7 +916,7 @@
    "egid": 191791440
   },
   {
-   "i": 10403,
+   "i": 10411,
    "uuid": "{C6F7954D-F34C-4540-B3CB-798CDE505FF8}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -931,7 +931,7 @@
    "egid": 191459891
   },
   {
-   "i": 10514,
+   "i": 10522,
    "uuid": "{FA15424B-4872-471D-BF64-CEAE723A280F}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -946,7 +946,7 @@
    "egid": 400006994
   },
   {
-   "i": 10666,
+   "i": 10674,
    "uuid": "{1BE39CF5-2D90-4564-974D-AE85A4C3A904}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -961,7 +961,7 @@
    "egid": 191801283
   },
   {
-   "i": 10688,
+   "i": 10696,
    "uuid": "{0E38C9EB-BEAF-4B4E-B59F-B6F347A6F07E}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -976,7 +976,7 @@
    "egid": 191801240
   },
   {
-   "i": 10737,
+   "i": 10745,
    "uuid": "{44E32D49-641C-4DCF-B6FC-0908F89AA064}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -991,7 +991,7 @@
    "egid": 11100354
   },
   {
-   "i": 10746,
+   "i": 10754,
    "uuid": "{5B8C7374-6B00-47CC-81C2-B93463AC2E4B}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1006,7 +1006,7 @@
    "egid": 191666934
   },
   {
-   "i": 10759,
+   "i": 10767,
    "uuid": "{897312B1-0481-4A4C-B8E3-F91D06B84831}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1021,7 +1021,7 @@
    "egid": 191801263
   },
   {
-   "i": 10783,
+   "i": 10791,
    "uuid": "{D0E3292D-4772-482B-86A4-CCF09F186637}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1036,7 +1036,7 @@
    "egid": 191802548
   },
   {
-   "i": 11460,
+   "i": 11468,
    "uuid": "{423A4573-1AB8-4850-9E22-224BDF011960}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1051,7 +1051,7 @@
    "egid": 192018920
   },
   {
-   "i": 11550,
+   "i": 11558,
    "uuid": "{790B52BB-E732-4251-8156-1F7A48AB0500}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1066,7 +1066,7 @@
    "egid": 191701552
   },
   {
-   "i": 11704,
+   "i": 11712,
    "uuid": "{ECB6C3BE-3449-4C55-B782-9AA8BFC5C445}",
    "kind": "Sakrales Gebaeude",
    "name": null,
@@ -1081,7 +1081,7 @@
    "egid": 400006995
   },
   {
-   "i": 12242,
+   "i": 12250,
    "uuid": "{94022CF9-1EF7-4176-9520-421561A04C30}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1096,7 +1096,7 @@
    "egid": 191795555
   },
   {
-   "i": 12266,
+   "i": 12274,
    "uuid": "{C97D4C5F-820A-4879-8205-DF6DBD7502A0}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1111,7 +1111,7 @@
    "egid": 191459731
   },
   {
-   "i": 12827,
+   "i": 12835,
    "uuid": "{61FAAD8E-84CC-4B09-8EFB-4853B4921153}",
    "kind": "Gebaeude Einzelhaus",
    "name": null,
@@ -1135,7 +1135,7 @@
    "lon": 8.849801,
    "members": [
     {
-     "i": 10759,
+     "i": 10767,
      "uuid": "{897312B1-0481-4A4C-B8E3-F91D06B84831}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1150,7 +1150,7 @@
      "egid": 191801263
     }
    ],
-   "buildings": 14,
+   "buildings": 16,
    "photos": 0
   },
   {
@@ -1161,7 +1161,7 @@
    "lon": 8.84374,
    "members": [
     {
-     "i": 10666,
+     "i": 10674,
      "uuid": "{1BE39CF5-2D90-4564-974D-AE85A4C3A904}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1176,7 +1176,7 @@
      "egid": 191801283
     }
    ],
-   "buildings": 12,
+   "buildings": 20,
    "photos": 0
   },
   {
@@ -1187,7 +1187,7 @@
    "lon": 8.833825,
    "members": [
     {
-     "i": 9114,
+     "i": 9122,
      "uuid": "{5950ABC9-5FBA-4DAF-80B0-7626CB910EB4}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1202,7 +1202,7 @@
      "egid": 191801249
     }
    ],
-   "buildings": 11,
+   "buildings": 14,
    "photos": 0
   },
   {
@@ -1213,7 +1213,7 @@
    "lon": 8.841112,
    "members": [
     {
-     "i": 9796,
+     "i": 9804,
      "uuid": "{05100C93-EAE1-4EC5-B6D8-D60EA7267FD8}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1228,7 +1228,7 @@
      "egid": 191801266
     }
    ],
-   "buildings": 6,
+   "buildings": 8,
    "photos": 1
   },
   {
@@ -1239,7 +1239,7 @@
    "lon": 8.789675,
    "members": [
     {
-     "i": 4176,
+     "i": 4184,
      "uuid": "{125A7F9F-8583-4290-AF0E-F3EFE9B214A8}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1254,7 +1254,7 @@
      "egid": 191856304
     }
    ],
-   "buildings": 1,
+   "buildings": 2,
    "photos": 0
   },
   {
@@ -1265,7 +1265,7 @@
    "lon": 8.821696,
    "members": [
     {
-     "i": 4162,
+     "i": 4170,
      "uuid": "{018669E4-80CF-4ECE-8AF9-C5A1EA7A2849}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1280,7 +1280,7 @@
      "egid": 191856345
     }
    ],
-   "buildings": 8,
+   "buildings": 14,
    "photos": 4
   },
   {
@@ -1291,7 +1291,7 @@
    "lon": 8.805791,
    "members": [
     {
-     "i": 4276,
+     "i": 4284,
      "uuid": "{BFB1571F-A081-46B6-84CD-4C8B7F57FE98}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1306,7 +1306,7 @@
      "egid": 191856379
     }
    ],
-   "buildings": 14,
+   "buildings": 16,
    "photos": 4
   },
   {
@@ -1317,7 +1317,7 @@
    "lon": 8.837003,
    "members": [
     {
-     "i": 10737,
+     "i": 10745,
      "uuid": "{44E32D49-641C-4DCF-B6FC-0908F89AA064}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1332,7 +1332,7 @@
      "egid": 11100354
     }
    ],
-   "buildings": 9,
+   "buildings": 14,
    "photos": 0
   },
   {
@@ -1343,7 +1343,7 @@
    "lon": 8.818661,
    "members": [
     {
-     "i": 3930,
+     "i": 3938,
      "uuid": "{B7F5C103-B680-40DF-BBF0-138C9CE8D259}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1358,7 +1358,7 @@
      "egid": 192051183
     },
     {
-     "i": 4295,
+     "i": 4303,
      "uuid": "{4C2BAA61-BAD4-4FB5-A191-1A9391C4FD5A}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1373,7 +1373,7 @@
      "egid": 192051178
     }
    ],
-   "buildings": 5,
+   "buildings": 7,
    "photos": 4
   },
   {
@@ -1384,7 +1384,7 @@
    "lon": 8.842037,
    "members": [
     {
-     "i": 10688,
+     "i": 10696,
      "uuid": "{0E38C9EB-BEAF-4B4E-B59F-B6F347A6F07E}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1399,7 +1399,7 @@
      "egid": 191801240
     }
    ],
-   "buildings": 15,
+   "buildings": 22,
    "photos": 0
   },
   {
@@ -1410,7 +1410,7 @@
    "lon": 8.818847,
    "members": [
     {
-     "i": 3107,
+     "i": 3115,
      "uuid": "{3B846263-55BC-4A84-8E9B-78EC1D01F894}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1425,7 +1425,7 @@
      "egid": 191858394
     },
     {
-     "i": 4132,
+     "i": 4140,
      "uuid": "{CAD03582-9765-4DC4-A520-C3F659116EEE}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1440,7 +1440,7 @@
      "egid": null
     }
    ],
-   "buildings": 13,
+   "buildings": 16,
    "photos": 4
   },
   {
@@ -1451,7 +1451,7 @@
    "lon": 8.792252,
    "members": [
     {
-     "i": 3046,
+     "i": 3054,
      "uuid": "{BA781565-A6CE-42E8-82FD-5216E8A55653}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1466,7 +1466,7 @@
      "egid": 191856344
     }
    ],
-   "buildings": 16,
+   "buildings": 20,
    "photos": 4
   },
   {
@@ -1477,7 +1477,7 @@
    "lon": 8.815664,
    "members": [
     {
-     "i": 3266,
+     "i": 3274,
      "uuid": "{4B932E52-BB15-4487-9C70-3E524EF7381F}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1492,7 +1492,7 @@
      "egid": 191260011
     }
    ],
-   "buildings": 7,
+   "buildings": 12,
    "photos": 4
   },
   {
@@ -1503,7 +1503,7 @@
    "lon": 8.834043,
    "members": [
     {
-     "i": 4899,
+     "i": 4907,
      "uuid": "{DB2AA9F3-9871-46DF-97D9-85DAB5BCEE0C}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1518,7 +1518,7 @@
      "egid": 191801287
     }
    ],
-   "buildings": 19,
+   "buildings": 27,
    "photos": 0
   },
   {
@@ -1529,7 +1529,7 @@
    "lon": 8.842402,
    "members": [
     {
-     "i": 5651,
+     "i": 5659,
      "uuid": "{C4B6E37A-9529-4192-B251-CF74B25B20BB}",
      "kind": "Sakraler Turm",
      "name": null,
@@ -1544,7 +1544,7 @@
      "egid": 11180826
     }
    ],
-   "buildings": 11,
+   "buildings": 17,
    "photos": 0
   },
   {
@@ -1555,7 +1555,7 @@
    "lon": 8.803657,
    "members": [
     {
-     "i": 2938,
+     "i": 2946,
      "uuid": "{EFA3625C-336C-436D-822B-22511F996029}",
      "kind": "Kapelle",
      "name": null,
@@ -1570,7 +1570,7 @@
      "egid": 191259990
     }
    ],
-   "buildings": 12,
+   "buildings": 16,
    "photos": 2
   },
   {
@@ -1581,7 +1581,7 @@
    "lon": 8.847939,
    "members": [
     {
-     "i": 5399,
+     "i": 5407,
      "uuid": "{CDEA67F6-5DF1-45AE-977A-E134C1FF0370}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1596,7 +1596,7 @@
      "egid": 192020960
     },
     {
-     "i": 5819,
+     "i": 5827,
      "uuid": "{510E43DA-771A-4713-B128-AB28533565D4}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1611,7 +1611,7 @@
      "egid": 191804264
     }
    ],
-   "buildings": 12,
+   "buildings": 19,
    "photos": 4
   },
   {
@@ -1622,7 +1622,7 @@
    "lon": 8.840089,
    "members": [
     {
-     "i": 5184,
+     "i": 5192,
      "uuid": "{B5E03EF2-8B43-4AF3-8396-FACB52E0CBC0}",
      "kind": "Kapelle",
      "name": null,
@@ -1637,7 +1637,7 @@
      "egid": null
     }
    ],
-   "buildings": 4
+   "buildings": 5
   },
   {
    "id": "-02092_+02115",
@@ -1647,7 +1647,7 @@
    "lon": 8.842531,
    "members": [
     {
-     "i": 5899,
+     "i": 5907,
      "uuid": "{4A23CD18-0040-4112-8315-E692BAF62D60}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1662,7 +1662,7 @@
      "egid": 191804217
     }
    ],
-   "buildings": 11,
+   "buildings": 16,
    "photos": 4
   },
   {
@@ -1673,7 +1673,7 @@
    "lon": 8.819236,
    "members": [
     {
-     "i": 3231,
+     "i": 3239,
      "uuid": "{44270416-9313-4EB8-A428-B449A6178EDB}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1688,7 +1688,7 @@
      "egid": 191998051
     },
     {
-     "i": 3326,
+     "i": 3334,
      "uuid": "{2D9A63FC-C5F6-49A2-9388-945868E572D7}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1703,7 +1703,7 @@
      "egid": 400005503
     }
    ],
-   "buildings": 11,
+   "buildings": 16,
    "photos": 4
   },
   {
@@ -1714,7 +1714,7 @@
    "lon": 8.834137,
    "members": [
     {
-     "i": 4618,
+     "i": 4626,
      "uuid": "{F77EC993-8BA6-424A-9514-676E59E13CAC}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -1729,7 +1729,7 @@
      "egid": 191796022
     }
    ],
-   "buildings": 7,
+   "buildings": 9,
    "photos": 0
   },
   {
@@ -1740,7 +1740,7 @@
    "lon": 8.858459,
    "members": [
     {
-     "i": 12827,
+     "i": 12835,
      "uuid": "{61FAAD8E-84CC-4B09-8EFB-4853B4921153}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1755,7 +1755,7 @@
      "egid": 400003996
     }
    ],
-   "buildings": 16,
+   "buildings": 23,
    "photos": 6
   },
   {
@@ -1766,7 +1766,7 @@
    "lon": 8.879434,
    "members": [
     {
-     "i": 10398,
+     "i": 10406,
      "uuid": "{D5A8CC22-B087-4FA3-82B4-8F0AC91DDF81}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1781,7 +1781,7 @@
      "egid": 191791440
     }
    ],
-   "buildings": 20,
+   "buildings": 29,
    "photos": 0
   },
   {
@@ -1792,7 +1792,7 @@
    "lon": 8.866142,
    "members": [
     {
-     "i": 9370,
+     "i": 9378,
      "uuid": "{8B6DD6C8-6120-473C-B109-27AEF995EAE9}",
      "kind": "Kapelle",
      "name": null,
@@ -1817,7 +1817,7 @@
    "lon": 8.875626,
    "members": [
     {
-     "i": 10145,
+     "i": 10153,
      "uuid": "{8A6CED71-5F33-48E8-8366-619D0D70FCA2}",
      "kind": "Kapelle",
      "name": "Sta. Maria",
@@ -1832,7 +1832,7 @@
      "egid": 191877617
     },
     {
-     "i": 10514,
+     "i": 10522,
      "uuid": "{FA15424B-4872-471D-BF64-CEAE723A280F}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1847,7 +1847,7 @@
      "egid": 400006994
     }
    ],
-   "buildings": 15,
+   "buildings": 22,
    "photos": 5
   },
   {
@@ -1858,7 +1858,7 @@
    "lon": 8.870382,
    "members": [
     {
-     "i": 10783,
+     "i": 10791,
      "uuid": "{D0E3292D-4772-482B-86A4-CCF09F186637}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1873,7 +1873,7 @@
      "egid": 191802548
     }
    ],
-   "buildings": 14,
+   "buildings": 23,
    "photos": 6
   },
   {
@@ -1884,7 +1884,7 @@
    "lon": 8.868714,
    "members": [
     {
-     "i": 10403,
+     "i": 10411,
      "uuid": "{C6F7954D-F34C-4540-B3CB-798CDE505FF8}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1899,7 +1899,7 @@
      "egid": 191459891
     }
    ],
-   "buildings": 16,
+   "buildings": 23,
    "photos": 6
   },
   {
@@ -1910,7 +1910,7 @@
    "lon": 8.868205,
    "members": [
     {
-     "i": 9401,
+     "i": 9409,
      "uuid": "{CB742EA3-6E68-49BF-8756-DFCF6B0E7AC6}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1925,7 +1925,7 @@
      "egid": 191802584
     }
    ],
-   "buildings": 19,
+   "buildings": 22,
    "photos": 6
   },
   {
@@ -1936,7 +1936,7 @@
    "lon": 8.861537,
    "members": [
     {
-     "i": 10746,
+     "i": 10754,
      "uuid": "{5B8C7374-6B00-47CC-81C2-B93463AC2E4B}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -1951,7 +1951,7 @@
      "egid": 191666934
     }
    ],
-   "buildings": 2,
+   "buildings": 3,
    "photos": 6
   },
   {
@@ -1962,7 +1962,7 @@
    "lon": 8.85607,
    "members": [
     {
-     "i": 9745,
+     "i": 9753,
      "uuid": "{3C416007-4E00-4676-A2A2-C2F615DCA028}",
      "kind": "Kapelle",
      "name": null,
@@ -1987,7 +1987,7 @@
    "lon": 8.862847,
    "members": [
     {
-     "i": 5710,
+     "i": 5718,
      "uuid": "{FAC49884-FA8D-4A32-A159-64FC3B4083FD}",
      "kind": "Mauer gross",
      "name": null,
@@ -2002,7 +2002,7 @@
      "egid": 192026508
     }
    ],
-   "buildings": 15,
+   "buildings": 20,
    "photos": 4
   },
   {
@@ -2013,7 +2013,7 @@
    "lon": 8.862979,
    "members": [
     {
-     "i": 5810,
+     "i": 5818,
      "uuid": "{8DD133C0-5EB7-490F-A244-069A5AA11846}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2028,7 +2028,7 @@
      "egid": 274002749
     }
    ],
-   "buildings": 16,
+   "buildings": 22,
    "photos": 4
   },
   {
@@ -2039,7 +2039,7 @@
    "lon": 8.859234,
    "members": [
     {
-     "i": 5984,
+     "i": 5992,
      "uuid": "{FC29BBC0-A4FD-44D7-995C-F74EAD405C49}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2054,7 +2054,7 @@
      "egid": 191795155
     }
    ],
-   "buildings": 17,
+   "buildings": 24,
    "photos": 4
   },
   {
@@ -2065,7 +2065,7 @@
    "lon": 8.85361,
    "members": [
     {
-     "i": 5806,
+     "i": 5814,
      "uuid": "{30339E44-81D5-45C3-9575-3AA1A8BE6330}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2080,7 +2080,7 @@
      "egid": 190391148
     }
    ],
-   "buildings": 20,
+   "buildings": 29,
    "photos": 4
   },
   {
@@ -2091,7 +2091,7 @@
    "lon": 8.855944,
    "members": [
     {
-     "i": 5993,
+     "i": 6001,
      "uuid": "{DDA2B0C7-03D5-4CAB-99E2-9A79E0969E1B}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2106,7 +2106,7 @@
      "egid": 190099100
     }
    ],
-   "buildings": 25,
+   "buildings": 36,
    "photos": 6
   },
   {
@@ -2117,7 +2117,7 @@
    "lon": 8.857323,
    "members": [
     {
-     "i": 5701,
+     "i": 5709,
      "uuid": "{D3E7A4D9-69E4-48D5-B343-EAECB3EDF9E7}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2132,7 +2132,7 @@
      "egid": 191999208
     }
    ],
-   "buildings": 18,
+   "buildings": 24,
    "photos": 4
   },
   {
@@ -2143,7 +2143,7 @@
    "lon": 8.868799,
    "members": [
     {
-     "i": 6090,
+     "i": 6098,
      "uuid": "{8A720C97-5130-4D85-B8A0-8B9AD8A02F20}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2158,7 +2158,7 @@
      "egid": 191547612
     }
    ],
-   "buildings": 18,
+   "buildings": 25,
    "photos": 4
   },
   {
@@ -2169,7 +2169,7 @@
    "lon": 8.873989,
    "members": [
     {
-     "i": 5237,
+     "i": 5245,
      "uuid": "{9F2A72A9-E2DB-4F85-959F-154223698E33}",
      "kind": "Kapelle",
      "name": null,
@@ -2184,7 +2184,7 @@
      "egid": 191790405
     }
    ],
-   "buildings": 2,
+   "buildings": 5,
    "photos": 0
   },
   {
@@ -2195,7 +2195,7 @@
    "lon": 8.856911,
    "members": [
     {
-     "i": 4703,
+     "i": 4711,
      "uuid": "{68DB8F70-A5F1-408F-AD10-1B766983BB32}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2210,7 +2210,7 @@
      "egid": 191448315
     }
    ],
-   "buildings": 38,
+   "buildings": 56,
    "photos": 5
   },
   {
@@ -2221,7 +2221,7 @@
    "lon": 8.857149,
    "members": [
     {
-     "i": 452,
+     "i": 456,
      "uuid": "{AE3FC7DA-B861-4151-8022-61EA7D139E01}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2236,7 +2236,7 @@
      "egid": 191448430
     }
    ],
-   "buildings": 28,
+   "buildings": 35,
    "photos": 4
   },
   {
@@ -2247,7 +2247,7 @@
    "lon": 8.870921,
    "members": [
     {
-     "i": 438,
+     "i": 442,
      "uuid": "{ACE93009-690E-46E9-B227-2CB3FBFE2AB6}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2262,7 +2262,7 @@
      "egid": 191789094
     }
    ],
-   "buildings": 15,
+   "buildings": 21,
    "photos": 6
   },
   {
@@ -2273,7 +2273,7 @@
    "lon": 8.871487,
    "members": [
     {
-     "i": 188,
+     "i": 190,
      "uuid": "{18CAACF3-80CD-4D01-B296-9285BF9F54EB}",
      "kind": "Kapelle",
      "name": null,
@@ -2288,7 +2288,7 @@
      "egid": 191789088
     }
    ],
-   "buildings": 16,
+   "buildings": 20,
    "photos": 4
   },
   {
@@ -2299,7 +2299,7 @@
    "lon": 8.87773,
    "members": [
     {
-     "i": 411,
+     "i": 414,
      "uuid": "{6A04BE31-361D-4DD9-911C-B63E12159E67}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2314,7 +2314,7 @@
      "egid": 191461677
     }
    ],
-   "buildings": 18,
+   "buildings": 32,
    "photos": 4
   },
   {
@@ -2325,7 +2325,7 @@
    "lon": 8.882016,
    "members": [
     {
-     "i": 403,
+     "i": 406,
      "uuid": "{0A42894F-A20D-4EC3-A58D-CE644F3DD120}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2340,7 +2340,7 @@
      "egid": 191462773
     }
    ],
-   "buildings": 20,
+   "buildings": 35,
    "photos": 1
   },
   {
@@ -2351,7 +2351,7 @@
    "lon": 8.884655,
    "members": [
     {
-     "i": 2195,
+     "i": 2203,
      "uuid": "{DCC62494-3DCF-4221-9678-B0AD671B287E}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2366,7 +2366,7 @@
      "egid": 191462776
     }
    ],
-   "buildings": 6,
+   "buildings": 7,
    "photos": 2
   },
   {
@@ -2377,7 +2377,7 @@
    "lon": 8.883304,
    "members": [
     {
-     "i": 11704,
+     "i": 11712,
      "uuid": "{ECB6C3BE-3449-4C55-B782-9AA8BFC5C445}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2392,7 +2392,7 @@
      "egid": 400006995
     }
    ],
-   "buildings": 21,
+   "buildings": 25,
    "photos": 4
   },
   {
@@ -2403,7 +2403,7 @@
    "lon": 8.888551,
    "members": [
     {
-     "i": 12242,
+     "i": 12250,
      "uuid": "{94022CF9-1EF7-4176-9520-421561A04C30}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2418,7 +2418,7 @@
      "egid": 191795555
     }
    ],
-   "buildings": 1,
+   "buildings": 2,
    "photos": 1
   },
   {
@@ -2429,7 +2429,7 @@
    "lon": 8.89249,
    "members": [
     {
-     "i": 12266,
+     "i": 12274,
      "uuid": "{C97D4C5F-820A-4879-8205-DF6DBD7502A0}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2444,7 +2444,7 @@
      "egid": 191459731
     }
    ],
-   "buildings": 8,
+   "buildings": 16,
    "photos": 0
   },
   {
@@ -2455,7 +2455,7 @@
    "lon": 8.888083,
    "members": [
     {
-     "i": 11460,
+     "i": 11468,
      "uuid": "{423A4573-1AB8-4850-9E22-224BDF011960}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2470,7 +2470,7 @@
      "egid": 192018920
     },
     {
-     "i": 11550,
+     "i": 11558,
      "uuid": "{790B52BB-E732-4251-8156-1F7A48AB0500}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2485,7 +2485,7 @@
      "egid": 191701552
     }
    ],
-   "buildings": 19,
+   "buildings": 22,
    "photos": 0
   },
   {
@@ -2496,7 +2496,7 @@
    "lon": 8.897742,
    "members": [
     {
-     "i": 6691,
+     "i": 6699,
      "uuid": "{DEC54909-ABA9-43B7-8535-422551AF788E}",
      "kind": "Sakraler Turm",
      "name": null,
@@ -2511,7 +2511,7 @@
      "egid": 191926848
     },
     {
-     "i": 7900,
+     "i": 7908,
      "uuid": "{1F6F8333-7F5C-4B71-BC3A-179449EF35C3}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2526,7 +2526,7 @@
      "egid": 191459270
     }
    ],
-   "buildings": 18,
+   "buildings": 28,
    "photos": 1
   },
   {
@@ -2537,7 +2537,7 @@
    "lon": 8.898216,
    "members": [
     {
-     "i": 7754,
+     "i": 7762,
      "uuid": "{06377705-8AFE-4BB8-9156-6745DF30AF9D}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2552,7 +2552,7 @@
      "egid": 192029489
     }
    ],
-   "buildings": 14,
+   "buildings": 20,
    "photos": 4
   },
   {
@@ -2563,7 +2563,7 @@
    "lon": 8.890295,
    "members": [
     {
-     "i": 7194,
+     "i": 7202,
      "uuid": "{AD0A344F-F64C-45E3-8AFD-AF860DC8B4B6}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2578,7 +2578,7 @@
      "egid": 191854874
     }
    ],
-   "buildings": 22,
+   "buildings": 32,
    "photos": 0
   },
   {
@@ -2589,7 +2589,7 @@
    "lon": 8.894821,
    "members": [
     {
-     "i": 7185,
+     "i": 7193,
      "uuid": "{61BC6D3A-69F1-41C8-AA6E-75271BC9ECA0}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2604,7 +2604,7 @@
      "egid": 191855352
     }
    ],
-   "buildings": 21,
+   "buildings": 29,
    "photos": 0
   },
   {
@@ -2615,7 +2615,7 @@
    "lon": 8.895664,
    "members": [
     {
-     "i": 7755,
+     "i": 7763,
      "uuid": "{56D3001D-9CA9-40CE-ABFB-8FBD9C905DF3}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2630,7 +2630,7 @@
      "egid": 192029359
     }
    ],
-   "buildings": 11,
+   "buildings": 18,
    "photos": 0
   },
   {
@@ -2641,7 +2641,7 @@
    "lon": 8.90204,
    "members": [
     {
-     "i": 8012,
+     "i": 8020,
      "uuid": "{0146CA64-BC59-4A28-A4A3-4C3ABAFB60B7}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2656,7 +2656,7 @@
      "egid": 191857450
     }
    ],
-   "buildings": 16,
+   "buildings": 27,
    "photos": 0
   },
   {
@@ -2667,7 +2667,7 @@
    "lon": 8.885938,
    "members": [
     {
-     "i": 7938,
+     "i": 7946,
      "uuid": "{854FFD4E-8023-4C68-9322-A9AD7B2FAF42}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2682,7 +2682,7 @@
      "egid": 191856046
     }
    ],
-   "buildings": 1,
+   "buildings": 2,
    "photos": 0
   },
   {
@@ -2693,7 +2693,7 @@
    "lon": 8.904147,
    "members": [
     {
-     "i": 7515,
+     "i": 7523,
      "uuid": "{309D34D9-A41C-431F-A711-86BDF12C5000}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2708,7 +2708,7 @@
      "egid": 191855287
     }
    ],
-   "buildings": 13,
+   "buildings": 17,
    "photos": 4
   },
   {
@@ -2719,7 +2719,7 @@
    "lon": 8.905576,
    "members": [
     {
-     "i": 6789,
+     "i": 6797,
      "uuid": "{B3304FB1-10C6-4168-A7B8-C1ED129DE7B1}",
      "kind": "Sakraler Turm",
      "name": null,
@@ -2734,7 +2734,7 @@
      "egid": 192029373
     },
     {
-     "i": 7576,
+     "i": 7584,
      "uuid": "{780CAE42-6ACC-465F-B317-0FA8E29C579A}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2749,7 +2749,7 @@
      "egid": 11101758
     }
    ],
-   "buildings": 21,
+   "buildings": 28,
    "photos": 4
   },
   {
@@ -2760,7 +2760,7 @@
    "lon": 8.910633,
    "members": [
     {
-     "i": 6814,
+     "i": 6822,
      "uuid": "{44D2AA34-7763-4D4B-834A-9D75C9D0D9FD}",
      "kind": "Turm",
      "name": null,
@@ -2775,7 +2775,7 @@
      "egid": null
     }
    ],
-   "buildings": 2,
+   "buildings": 3,
    "photos": 0
   },
   {
@@ -2786,7 +2786,7 @@
    "lon": 8.88933,
    "members": [
     {
-     "i": 7583,
+     "i": 7591,
      "uuid": "{75152506-3E1E-4843-8D5B-4180022547B2}",
      "kind": "Kapelle",
      "name": null,
@@ -2801,7 +2801,7 @@
      "egid": 191928005
     }
    ],
-   "buildings": 13
+   "buildings": 17
   },
   {
    "id": "+02213_+03367",
@@ -2811,7 +2811,7 @@
    "lon": 8.898417,
    "members": [
     {
-     "i": 7443,
+     "i": 7451,
      "uuid": "{58588961-85D2-41CD-927A-352718D98A9B}",
      "kind": "Sakrales Gebaeude",
      "name": "S. Ambrogio",
@@ -2826,7 +2826,7 @@
      "egid": 191459090
     }
    ],
-   "buildings": 11,
+   "buildings": 13,
    "photos": 0
   },
   {
@@ -2837,7 +2837,7 @@
    "lon": 8.908806,
    "members": [
     {
-     "i": 2060,
+     "i": 2068,
      "uuid": "{17A5869E-185B-406A-B468-63B7B79C14C7}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2852,7 +2852,7 @@
      "egid": 192028654
     }
    ],
-   "buildings": 11,
+   "buildings": 17,
    "photos": 4
   },
   {
@@ -2863,7 +2863,7 @@
    "lon": 8.918512,
    "members": [
     {
-     "i": 2298,
+     "i": 2306,
      "uuid": "{9F7030BD-4F57-4E85-833A-3E6EE03440F9}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2878,7 +2878,7 @@
      "egid": 191465051
     }
    ],
-   "buildings": 27,
+   "buildings": 40,
    "photos": 0
   },
   {
@@ -2889,7 +2889,7 @@
    "lon": 8.91246,
    "members": [
     {
-     "i": 1551,
+     "i": 1559,
      "uuid": "{7FED6BB6-8498-472A-8C91-640B27CD90BB}",
      "kind": "Sakrales Gebaeude",
      "name": "Madonna di Cimaronco",
@@ -2915,7 +2915,7 @@
    "lon": 8.916763,
    "members": [
     {
-     "i": 922,
+     "i": 930,
      "uuid": "{A86887FA-AB27-4B4C-B690-62BC037806D5}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2930,7 +2930,7 @@
      "egid": 191854241
     }
    ],
-   "buildings": 23,
+   "buildings": 33,
    "photos": 2
   },
   {
@@ -2941,7 +2941,7 @@
    "lon": 8.900236,
    "members": [
     {
-     "i": 1386,
+     "i": 1394,
      "uuid": "{48013785-B203-4489-8AE0-33667C0CADBC}",
      "kind": "Sakrales Gebaeude",
      "name": null,
@@ -2956,7 +2956,7 @@
      "egid": 191461160
     }
    ],
-   "buildings": 25,
+   "buildings": 35,
    "photos": 6
   },
   {
@@ -2967,7 +2967,7 @@
    "lon": 8.890303,
    "members": [
     {
-     "i": 1965,
+     "i": 1973,
      "uuid": "{8C3DBA58-7B31-4D7A-A398-3CE4D8BBC7D1}",
      "kind": "Gebaeude Einzelhaus",
      "name": null,
@@ -2982,7 +2982,7 @@
      "egid": 191462690
     }
    ],
-   "buildings": 35,
+   "buildings": 50,
    "photos": 6
   },
   {
@@ -2992,7 +2992,7 @@
    "lat": 46.023776,
    "lon": 8.856202,
    "members": [],
-   "buildings": 15,
+   "buildings": 22,
    "photos": 5
   },
   {
@@ -3002,7 +3002,7 @@
    "lat": 46.040782,
    "lon": 8.834707,
    "members": [],
-   "buildings": 3,
+   "buildings": 5,
    "photos": 6
   }
  ]
