@@ -163,14 +163,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2
+      - run: pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 requests==2.33.1
       - uses: actions/download-artifact@v4
         with:
           name: street-catalog
           path: /home/runner/work/magliasinaNG/bm/work/street
       - id: tiles
         working-directory: beamng/pipeline
-        run: echo "tiles=$(python street_tiles.py 64)" >> "$GITHUB_OUTPUT"
+        run: |
+          t=$(python street_tiles.py 64)
+          echo "tiles=$t" >> "$GITHUB_OUTPUT"
 
   area:
     needs: plan
