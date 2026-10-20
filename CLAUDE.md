@@ -31,6 +31,22 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - The game's sites (`city.sites.json`, `facilities.sites.json`) need an `oldId` on every spot and zone, or the level
   stops loading with a Lua error.
 - Restore the player's mod zip, temp cache and remove every test file from the user folder at the end.
+- A game update can move the game's own files the level uses: 0.40 moved 73 of them from `/levels/italy/...` to
+  `/assets/materials/...` and left `.link` redirects, which it follows, except for 3 (the stone wall, italy_plastic):
+  missing textures everywhere (2026-10-20). Read the game log ("Failed to load", NO-MATERIAL) before guessing, then
+  update `dati/game_paths_<version>.json` (finish step `game_paths`) against the installed game.
+- After a version update BeamNG disables every mod in `mods/db.json`, and a relaunch from Steam drops the launch
+  options (`-level`, `-gfx dx11`): the game opened West Coast USA. Check both before every test.
+- Do not use the laptop DESKTOP-EKDTIGL (AMD iGPU, 512 MB video memory) for load tests on 0.40 (michi, 2026-10-20):
+  the released v3.0 took 12-15 min to load and crashed twice "Out of VRAM" while the game converted the sign PNGs.
+  0.40 clears `temp/levels/<level>` at every start, so a relaunch converts them again (no warm cache).
+- A Remote Control session started from a thread reports only to that thread (@parent): forward its notes to the
+  other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
+  long step ends.
+- The 0.40 vehicle AI (`lua/vehicle/ai.lua`) acts on signal actions 1-3 only: a "yield" (4) or "slow" (5) signal
+  is driven through like "go". Give way by giving the minor road piece a lower drivability than the main road.
+- The 0.40 FMOD strings bank keeps the event paths as a prefix trie: a scan for whole `event:/` strings finds none.
+  0.40 has no church bell, bird or cricket events (`dati/ambient_events.json`).
 
 ## Terrain fixes
 
@@ -57,6 +73,10 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Translucent overlay materials need `"translucentZWrite": true` (as Italy has them): without it the game draws
   them in a pass that takes no shadows, and they glow under cars and trees (road wear, 2026-10-18). DecalRoads
   draw on the road meshes only with `overObjects` set, and they do not fix that by themselves.
+- With `translucentZWrite` the overlay layers of one mesh must be drawn lowest first: a higher layer drawn first hides
+  a lower one drawn after it (road wear, 2026-10-20). And a band laid over the road with only 3 rows across lets the
+  road's crown and crests poke through it (holes in the wear): rows at most 2 m apart, lifted where the asphalt is
+  too close (road_wear.clear_of).
 
 ## Working with cat (the owner)
 
@@ -64,3 +84,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   or merges without asking.
 - Keep the README "Known limitations" up to date when one gets fixed.
 - Reply in Italian, times in CEST, few subagents.
+- v3.0.40 and later rounds: one thread integrates and builds; only it opens the release PR. Two other threads opened
+  PRs (#80, #81) from branches that carried the whole integration branch to main and they had to be closed.
+- Untested builds for michi go to the GitHub pre-release "nightly" (`nightly_build.yml`, started by changing
+  `beamng/nightly/stamp.txt`), never the latest release; michi tests them on the main PC.
+- Document every error and failed attempt in this file, under its topic (michi, 2026-10-20: "sempre").
