@@ -469,11 +469,16 @@ def far_trees_step(root, trees_f=None, report=None):
     far["dist"] = surface_distances(tops, cls, far["x"], far["y"])
     print("trees measured %d, kept by the thinning %d, forest items %d, drivable top faces %d; far tree candidates %d"
           % (len(xy), int(kept.sum()), len(have), len(tops), int(cand.sum())))
+    import forest_fill, water                                               # v3.0: the woods outside the survey
+    fill = forest_fill.fill(measured, water.lake_level()) if FILL else None
+    if fill is not None:
+        # the fill keeps the same clearance from the drivable surfaces as the measured far trees (select): up to
+        # the v3.0 release it had none, and where the forest of WorldCover runs over a road (Vezio, the roads of the
+        # corridors in the woods) far trees stood next to and on the carriageway
+        fill["dist"] = surface_distances(tops, cls, fill["x"], fill["y"])
     del tops, cls
     tmp = tempfile.mkdtemp(prefix="magliaso_far_")
     try:
-        import forest_fill, water                                           # v3.0: the woods outside the survey
-        fill = forest_fill.fill(measured, water.lake_level()) if FILL else None
         items = vegetation.far_items(far, tmp, LEVEL_NAME, fill)
         md_name = f"{lv}/art/forest/managedItemData.json"
         managed = json.loads(zi.read(md_name)) if md_name in zi.NameToInfo else {}

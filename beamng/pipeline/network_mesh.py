@@ -63,6 +63,23 @@ SEAM_R = 4.0           # m around a seam between the heights of two lines or two
 SEAM_DZ = 0.01         # m, a smaller difference between the heights of two lines or polygons is no seam
 JUNCTION_BLEND = False # lines meeting at a node blend whatever their heights (JUNCTION_R0/R1)
 JUNCTION_DZ = 1.0      # m, the cells of two lines meeting at a node within JUNCTION_R0 m are one surface up to this
+# v3.0 fix round: two neighbouring cells that take their heights from one line at points more than FOLD_GAP m apart
+# along it (the inside of a hairpin, where the nearest point of the line jumps from one leg to the other) are not one
+# surface by that alone: up to v3.0 they were linked whatever their heights (as the steps of a stair), and the mesh
+# rose by the whole height between the legs from one cell to the next, a step of up to a metre across the lane after
+# the hairpins. Now, up to FOLD_DZ apart, the link is a seam spread by relax_seams (farther apart they stay as they were).
+FOLD_GAP = 3.0
+FOLD_DZ = 1.5
+# v3.0 fix round: a path line (a "1m Weg" ending at a road, a flight of steps beside it) gives no height to a cell that
+# a road line also reaches: up to v3.0 the line nearest the cell in half widths won, and a path, with its half width
+# of 0.5 m, won the cells right over it inside the carriageway, at its own height (0.3-2 m off the road's). Its score
+# is raised by this much (half widths).
+PATH_YIELD = 10.0
+# v3.0 fix round: the cells within BRIDGE_HEAD m of the end of a bridge (its head, past the end of the line leading to it)
+# keep their line's height: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
+BRIDGE_HEAD = 8.0
+STRIP_BLEND_M = 2.0    # m outside a road's carriageway where its weight in a junction strip (strip_height) is a quarter
+STEP_DZ_PIN = 0.05     # m, cells pinned to two different strips that differ more are left free (_pin_strips)
 MAIN_CLASSES = ("Autobahn", "Autostrasse", "10m Strasse", "8m Strasse", "6m Strasse")
 REACH = 6.0            # m beyond its half width a station still gives heights (junction corners)
 NEAR_NET = 25.0        # m, hard surfaces (yards, car parks) farther from any line are left out
@@ -84,6 +101,7 @@ class Network:
         self.x, self.y, self.w = st["x"], st["y"], st["width"]
         self.z_tlm = st["z_tlm"]
         self.seg = st["seg"]
+        self.arc = st["s"]                    # m along its line of every station
         self.z, self.g, self.c = ns["z"], ns["g"], ns["c"]
         self.nx, self.ny = ns["nx"], ns["ny"]
         self.n0 = np.array([sg["nodes"][0] for sg in self.segs], np.int64)     # end nodes of every line
@@ -91,6 +109,9 @@ class Network:
         self.tree = cKDTree(np.column_stack([self.x, self.y]))
         self.bridge = np.array([s["bridge"] for s in self.segs])
         self.main = np.array([s["kind"] == "road" and s["class"] in MAIN_CLASSES for s in self.segs])
+        self.path = np.array([s["kind"] == "path" for s in self.segs])
+        bn = sorted({nd for s in self.segs if s["bridge"] for nd in s["nodes"]})
+        self.bridge_ends = cKDTree(self.node_xy[bn]) if bn else None          # the end nodes of the bridges
         self.polys = []                       # dicts: geom, cls, surface, segs
         self.deck_tops = []                   # bridge deck top triangles (bridges.py)
         self.deck_feet = []                   # (kind, footprint) of every deck built (bridges.py)
@@ -235,8 +256,9 @@ class Network:
         segs_out = np.full(n, -1, np.int64)
         u_out = np.full(n, np.inf)
         e_out = np.zeros(n)
+        a_out = np.full(n, np.nan)
         if n == 0:
-            return (out, segs_out, u_out, e_out) if with_u else ((out, segs_out) if with_seg else out)
+            return (out, segs_out, u_out, e_out, a_out) if with_u else ((out, segs_out) if with_seg else out)
         X = np.asarray(X, np.float64)
         Y = np.asarray(Y, np.float64)
         k = 12
@@ -254,6 +276,7 @@ class Network:
         off = np.zeros((n, k))
         ext = np.zeros((n, k))
         hw = np.ones((n, k))
+        arc = np.zeros((n, k))
         for da, db in ((-1, 0), (0, 1)):
             a = np.clip(jj + da, 0, N - 1)
             b = np.clip(jj + db, 0, N - 1)
@@ -285,6 +308,7 @@ class Network:
             off = np.where(take, t, off)
             ext = np.where(take, e, ext)
             hw = np.where(take, 0.5 * (self.w[a] + s * (self.w[b] - self.w[a])), hw)
+            arc = np.where(take, self.arc[a] + s * (self.arc[b] - self.arc[a]), arc)
         ok &= np.isfinite(h) & (np.abs(off) <= hw + REACH) & (best_d <= hw + REACH)
         # one entry per line and point (neighbouring stations of a line give the same projection)
         order = np.argsort(np.where(ok, best_d, np.inf), axis=1)
@@ -297,7 +321,7 @@ class Network:
         h_o = np.take_along_axis(h, order, 1)
         u = np.abs(np.take_along_axis(off, order, 1)) / np.maximum(np.take_along_axis(hw, order, 1), 0.3)
         e_o = np.abs(np.take_along_axis(ext, order, 1))
-        score = np.where(ok_o, u + 0.05 * e_o, np.inf)
+        score = np.where(ok_o, u + 0.05 * e_o + PATH_YIELD * self.path[seg_o], np.inf)
         best = np.argmin(score, axis=1)
         has = ok_o.any(1)
         zb = h_o[np.arange(n), best]
@@ -316,13 +340,16 @@ class Network:
         wt = wt * np.where(agree, 1.0, fj if JUNCTION_BLEND else 0.0)
         wt[np.arange(n), best] = np.where(has, np.maximum(wt[np.arange(n), best], 1e-12), 0.0)
         ws = wt.sum(1)
+        if getattr(self, "explain", False):           # fix_probe.py: the candidates of every point
+            self.explained = dict(seg=seg_o, h=h_o, u=u, e=e_o, wt=wt, ok=ok_o, best=best)
         good = has & (ws > 0)
         out[good] = (wt * np.nan_to_num(h_o)).sum(1)[good] / ws[good]
         segs_out[good] = seg_o[np.arange(n), best][good]
         u_out[good] = u[np.arange(n), best][good]
         e_out[good] = e_o[np.arange(n), best][good]
+        a_out[good] = np.take_along_axis(arc, order, 1)[np.arange(n), best][good]
         if with_u:
-            return out, segs_out, u_out, e_out
+            return out, segs_out, u_out, e_out, a_out
         return (out, segs_out) if with_seg else out
 
     def _junction_links(self, Ga, Gb, xs, ys):
@@ -343,14 +370,84 @@ class Network:
         out[r[ok & (d < JUNCTION_R0)], c[ok & (d < JUNCTION_R0)]] = True
         return out
 
+    def _pin_strips(self, box, x0, y1, W, H, m, Z, G):
+        """Mask of the cells (m: the polygons' cells that may) beside a strip that take its height (Z set in place)."""
+        pin = np.zeros((H, W), bool)
+        sids = [int(i) for i in self.ptree.query(box, predicate="intersects") if self.polys[i]["cls"].startswith("strip")]
+        if not sids:
+            return pin
+        tr = Affine(RES, 0, x0, 0, -RES, y1)
+        sown = features.rasterize([(self.polys[i]["geom"], i) for i in sids], out_shape=(H, W), transform=tr, fill=-1,
+                                  dtype=np.int32, all_touched=True)
+        near = sown.copy()
+        for dr, dc in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            sh = np.full((H, W), -1, np.int32)
+            sh[max(dr, 0):H + min(dr, 0), max(dc, 0):W + min(dc, 0)] = sown[max(-dr, 0):H + min(-dr, 0), max(-dc, 0):W + min(-dc, 0)]
+            near = np.where(near >= 0, near, sh)
+        cand = m & (near >= 0)
+        if not cand.any():
+            return pin
+        rr, cc = np.nonzero(cand)
+        X, Y = x0 + (cc + 0.5) * RES, y1 - (rr + 0.5) * RES
+        Z_own = Z.copy()
+        pid_of = np.full((H, W), -1, np.int64)
+        for pid in np.unique(near[rr, cc]):
+            k = near[rr, cc] == pid
+            line = self.polys[int(pid)]["own"]
+            g = G[rr[k], cc[k]]
+            gi = np.maximum(g, 0)
+            meet = (g == line) | (g < 0) | (self.n0[gi] == self.n0[line]) | (self.n0[gi] == self.n1[line]) \
+                | (self.n1[gi] == self.n0[line]) | (self.n1[gi] == self.n1[line])
+            zs = self.strip_height(int(pid))(X[k], Y[k])
+            ok = meet & np.isfinite(zs) & (np.abs(zs - Z[rr[k], cc[k]]) < JUNCTION_DZ)
+            Z[rr[k][ok], cc[k][ok]] = zs[ok]
+            pin[rr[k][ok], cc[k][ok]] = True
+            pid_of[rr[k][ok], cc[k][ok]] = pid
+        # where two strips meet (a junction of two lines both meshed as strips), neighbouring cells pinned to different
+        # strips at different heights keep their own: pinned, the step between them stayed (0.47 m under the church of
+        # Arosio); free, relax_seams spreads it
+        clash = np.zeros((H, W), bool)
+        for a, b in (((slice(None), slice(0, -1)), (slice(None), slice(1, None))),
+                     ((slice(0, -1), slice(None)), (slice(1, None), slice(None)))):
+            c = pin[a] & pin[b] & (pid_of[a] != pid_of[b]) & (np.abs(Z[a] - Z[b]) > STEP_DZ_PIN)
+            clash[a] |= c
+            clash[b] |= c
+        Z[clash] = Z_own[clash]
+        pin &= ~clash
+        return pin
+
     def strip_height(self, pid):
         """Height function of a strip polygon: the surface of its own line (nearest station of its
         lines where that finds none)."""
         own = self.polys[pid].get("own")
+        others = sorted(k for k in self.polys[pid]["segs"] if k != own and not self.path[k]) if own is not None else []
 
         def fn(x, y, *_):
             x = np.atleast_1d(np.asarray(x, np.float64)); y = np.atleast_1d(np.asarray(y, np.float64))
             z = self.heights(x, y, np.full(len(x), pid), own=own)
+            if others and not self.path[own]:
+                # v3.0 fix round: near the end nodes of its line a strip takes the weighted mean of its line's surface
+                # and those of the roads meeting there, each weighted by how far the point is outside its carriageway (the
+                # same weights in every strip of the junction, so where two strips overlap they agree). Up to v3.0 each
+                # kept its own line's height and two strips meeting at a junction overlapped 0.6 m apart (under the
+                # church of Arosio). Full within JUNCTION_R0 m of the node, fading out at JUNCTION_R1.
+                ends = self.node_xy[[self.n0[own], self.n1[own]]]
+                d = np.min(np.hypot(x[:, None] - ends[:, 0], y[:, None] - ends[:, 1]), axis=1)
+                f = np.clip((JUNCTION_R1 - d) / (JUNCTION_R1 - JUNCTION_R0), 0.0, 1.0)
+                k = (f > 0) & np.isfinite(z)
+                if k.any():
+                    Pk = np.full(int(k.sum()), pid)
+                    num, den = np.zeros(int(k.sum())), np.zeros(int(k.sum()))
+                    for line in [own] + others:
+                        zl, _, ul, el, _ = self.heights(x[k], y[k], Pk, own=line, with_u=True)
+                        sg = self.segs[line]
+                        hw = max(0.5 * float(np.median(self.w[sg["first"]:sg["first"] + sg["n"]])), 0.3)
+                        dm = np.hypot(np.maximum(ul * hw - hw, 0.0), el)       # m outside its carriageway
+                        wl = np.where(np.isfinite(zl), 1.0 / (1.0 + (dm / STRIP_BLEND_M) ** 2) ** 2, 0.0)
+                        num += wl * np.nan_to_num(zl)
+                        den += wl
+                    zb = np.where(den > 1e-9, num / np.maximum(den, 1e-12), z[k])
+                    z[k] = z[k] + f[k] * (zb - z[k])
             bad = np.isnan(z)
             if bad.any():
                 segs = np.array(sorted(self.polys[pid]["segs"]), int)
@@ -390,7 +487,8 @@ class Network:
         G = np.full((H, W), -1, np.int64)                   # line that gave the height
         U = np.full((H, W), np.inf)
         E = np.zeros((H, W))
-        Z[rr, cc], G[rr, cc], U[rr, cc], E[rr, cc] = self.heights(X, Y, owner[rr, cc], with_seg=True, with_u=True)
+        A = np.full((H, W), np.nan)                          # m along the line that gave the height
+        Z[rr, cc], G[rr, cc], U[rr, cc], E[rr, cc], A[rr, cc] = self.heights(X, Y, owner[rr, cc], with_seg=True, with_u=True)
         # the smoothed DTM on the cells of the window (sampled: the window may reach past the edge
         # of the DTM raster, near the corners of the area)
         Xc = x0 + (np.arange(W) + 0.5) * RES
@@ -403,7 +501,14 @@ class Network:
         # a survey polygon reaching beyond the carriageway of its line onto ground far above or
         # below it (a terrace, a yard behind a wall), or past the end of its line where the line's
         # grade carried on leaves the ground: that part keeps to the ground
-        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF)
+        at_bridge = np.zeros((H, W), bool)
+        if self.bridge_ends is not None:
+            dq, _ = self.bridge_ends.query(np.column_stack([np.tile(Xc, H), np.repeat(Yc, W)]), distance_upper_bound=BRIDGE_HEAD)
+            at_bridge = (G >= 0) & np.isfinite(dq).reshape(H, W)
+        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge
+        if getattr(self, "explain", False):           # fix_probe.py: why a cell left its line
+            self.tile_explained = dict(Z=Z.copy(), G=G.copy(), U=U.copy(), E=E.copy(), A=A.copy(), Ds=Ds.copy(),
+                                       Dlo=Dlo.copy(), off=off.copy(), at_bridge=at_bridge.copy())
         Z[off] = np.nan
         G[off] = -1
         # squares and car parks: smoothed DTM, corrected to meet the roads around
@@ -417,6 +522,15 @@ class Network:
         low = m & (Z < Dlo)
         Z[low] = Dlo[low]
         G[low] = FILLED
+        # v3.0 fix round: the cells beside the strip of a line (its mesh outside the survey polygons, at the line's
+        # own height: strip_height) take the strip's height and keep it, where their own line is the strip's or
+        # meets it at a node (or they are a filled square) and the two differ by less than JUNCTION_DZ; the seam
+        # moves into the polygon and is spread there. Up to v3.0 a strip met a polygon whose cells had been given
+        # another line's height, or relaxed towards a junction, with a step (0.3-0.6 m: Astano, Arosio).
+        main_cell = (G >= 0) & self.main[np.maximum(G, 0)] & (U <= 1.0)
+        pin = self._pin_strips(box, x0, y1, W, H, m & ~main_cell, Z, G)     # a main road does not bend to a strip
+        if getattr(self, "explain", False):
+            self.tile_explained.update(pin=pin.copy(), Z_pinned=Z.copy(), G_final=G.copy())
         # neighbouring cells of a polygon are one surface when their heights come from the same line
         # (continuous however steep the line: stairs, mule tracks) or agree within STEP_Z (junctions,
         # squares); a step (a wall) is left between lines at different heights
@@ -427,6 +541,10 @@ class Network:
         LD[:-1, :] = m[:-1, :] & m[1:, :]
         same_r = (G[:, :-1] == G[:, 1:]) & (G[:, :-1] != -1) & (owner[:, :-1] == owner[:, 1:])
         same_d = (G[:-1, :] == G[1:, :]) & (G[:-1, :] != -1) & (owner[:-1, :] == owner[1:, :])
+        fold_r = same_r & (G[:, :-1] >= 0) & (np.abs(A[:, :-1] - A[:, 1:]) > FOLD_GAP) \
+            & (np.abs(Z[:, :-1] - Z[:, 1:]) < FOLD_DZ)
+        fold_d = same_d & (G[:-1, :] >= 0) & (np.abs(A[:-1, :] - A[1:, :]) > FOLD_GAP) \
+            & (np.abs(Z[:-1, :] - Z[1:, :]) < FOLD_DZ)
         # two lines that meet at a node near the cells are one junction: their cells are linked up to
         # JUNCTION_DZ apart (the step between them is spread by relax_seams, not left as a kerb)
         jun_r = self._junction_links(G[:, :-1], G[:, 1:], x0 + (np.arange(W - 1) + 1.0) * RES,
@@ -437,22 +555,24 @@ class Network:
         LD[:-1, :] &= same_d | (np.abs(Z[:-1, :] - Z[1:, :]) < STEP_Z) | (jun_d & (np.abs(Z[:-1, :] - Z[1:, :]) < JUNCTION_DZ))
         # the carriageways of the main roads keep their surface: the side roads, yards and paths meeting
         # them take up the difference (a main road does not bend to a side road)
-        main_cell = (G >= 0) & self.main[np.maximum(G, 0)] & (U <= 1.0)
-        Z = relax_seams(Z, G, owner, LR, LD, main_cell)
+        pin_r, pin_d = pin[:, :-1] != pin[:, 1:], pin[:-1, :] != pin[1:, :]
+        Z = relax_seams(Z, G, owner, LR, LD, main_cell | pin, (fold_r | pin_r, fold_d | pin_d), pin)
         return surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES), ids
 
 
-def relax_seams(Z, G, owner, LR, LD, fixed_cells=None):
+def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None, pinned=None):
     """Z with the jumps at the seams spread over SEAM_R m. A seam is a link between two cells whose heights
     come from different lines, or that lie in different polygons, and differ by more than SEAM_DZ. Around
     the seams (cells within SEAM_R m, linked) the heights are solved again keeping the height difference
     of every link but the seams', which becomes zero (a gradient-domain edit: the crown, the grade and
     the vertical curves of the roads stay, only the jump is spread smoothly over the zone); the cells
     outside the zone keep their heights, and so do fixed_cells (the carriageways of the main roads) unless
-    the seam is between two of them."""
-    jr = LR[:, :-1] & ((G[:, :-1] != G[:, 1:]) | (owner[:, :-1] != owner[:, 1:])) & \
+    the seam is between two of them. folds: (right, down) link masks of neighbouring cells of one line that are
+    seams too (FOLD_GAP, the cells beside a strip). pinned: cells that keep their heights in any case."""
+    fr_, fd_ = folds if folds is not None else (np.zeros(LR[:, :-1].shape, bool), np.zeros(LD[:-1, :].shape, bool))
+    jr = LR[:, :-1] & ((G[:, :-1] != G[:, 1:]) | (owner[:, :-1] != owner[:, 1:]) | fr_) & \
         (np.abs(Z[:, :-1] - Z[:, 1:]) > SEAM_DZ)
-    jd = LD[:-1, :] & ((G[:-1, :] != G[1:, :]) | (owner[:-1, :] != owner[1:, :])) & \
+    jd = LD[:-1, :] & ((G[:-1, :] != G[1:, :]) | (owner[:-1, :] != owner[1:, :]) | fd_) & \
         (np.abs(Z[:-1, :] - Z[1:, :]) > SEAM_DZ)
     seam = np.zeros(Z.shape, bool)
     seam[:, :-1] |= jr
@@ -477,6 +597,9 @@ def relax_seams(Z, G, owner, LR, LD, fixed_cells=None):
         both[1:, :] |= fd
         free = ndi.binary_dilation(both, iterations=int(round(SEAM_R / RES))) if both.any() else both
         zone &= ~fixed_cells | free
+    if pinned is not None:                              # pinned cells keep their heights whatever the seams around
+        zone &= ~pinned
+    if fixed_cells is not None or pinned is not None:
         if not zone.any():
             return Z
     ur, uc = np.nonzero(zone)
@@ -908,7 +1031,7 @@ def block(args):
     if not ch.any():
         return None
     rr, cc = np.nonzero(ch)
-    return r0 + rr, c0 + cc, Z[core][rr, cc]
+    return r0 + rr, c0 + cc, Z[core][rr, cc], D[core][rr, cc]
 
 
 def terrain_top(Zt, x, y):
@@ -1043,18 +1166,19 @@ def in_cells(cells, x, y):
     return (cells[i] == c) if len(cells) else np.zeros(len(c), bool)
 
 
-def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
+def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_lift=0.0):
     """mats: the materials whose surroundings are raised and whose outer edges go down (default UNPAVED);
     edge_drop: the deepest an edge goes down (0: the faces stay as they are, only the terrain is raised);
     keep_out: sorted 1 m cell ids (cell_ids) whose faces raise no terrain and whose terrain vertices stay as they
-    were (v2.8, network_mesh.paved_edges_step)."""
+    were (v2.8, network_mesh.paved_edges_step); keep_out_lift > 0 (v3.0 fix round): there the faces raise the
+    vertices within SHOULDER m of them by up to this much (m), the others stay as they were."""
     global UN, ALL, Z0, MAXH, QT
     mats = UNPAVED if mats is None else tuple(mats)
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     objs = read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json")
     un, al = top_faces(zi, objs, mats)
-    if keep_out is not None:                    # no terrain raised to the faces there
+    if keep_out is not None and keep_out_lift <= 0:     # no terrain raised to the faces there
         c = un.mean(1)
         un = un[~in_cells(keep_out, c[:, 0], c[:, 1])]
     print("top faces: %d of %s, %d in all" % (len(un), "the unpaved" if mats == UNPAVED else "these", len(al)))
@@ -1071,6 +1195,7 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     cc = np.floor((un[:, :, 0].mean(1) - TER_X0) / TER_SQUARE / BLOCK).astype(int)
     keys = sorted(set(zip(cr.tolist(), cc.tolist())))
     q0 = q.copy()
+    dist = np.full(q.shape, np.inf, np.float32) if keep_out is not None else None    # m from the faces, raised vertices
     tmp = tempfile.mkdtemp(prefix="unpaved_")
 
     ex = pool(tmp, un, al)
@@ -1086,10 +1211,12 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
         out = q0.copy()
         for res in ex.map(block, jobs, chunksize=2):
             if res is not None:
-                rr, cc, z = res
+                rr, cc, z, dd = res
                 qn = np.floor((z - Z0) / MAXH * 65535.0).astype(np.int64)    # down: never over a face
                 up = qn > q0[rr, cc]
                 out[rr[up], cc[up]] = qn[up].astype(np.uint16)
+                if keep_out is not None:
+                    dist[rr[up], cc[up]] = np.minimum(dist[rr[up], cc[up]], dd[up])
         return out
     print("%d blocks with unpaved faces" % len(keys))
     q = run(None)
@@ -1097,6 +1224,15 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None):
     if keep_out is not None:                    # the ground there as it was, also where a face farther off raised it
         rr, cc = np.nonzero(q != q0)
         back = in_cells(keep_out, TER_X0 + cc * TER_SQUARE, TER_Y0 + rr * TER_SQUARE)
+        if keep_out_lift > 0:
+            # v3.0 fix round: but the trench of the carve beside the road (0.1 m under the lowest face within one
+            # terrain step) filled there too, where the edge stands at most keep_out_lift m over the ground within
+            # SHOULDER m of it: a real step (a wall, a kerb, a plinth, the bank behind a guard rail) is higher, and
+            # a vertex that would rise more stays as it was, not raised part of the way
+            lift = (q[rr, cc].astype(np.float64) - q0[rr, cc]) / 65535.0 * MAXH
+            ok = (dist[rr, cc] <= SHOULDER) & (lift <= keep_out_lift)
+            print("terrain vertices in the keep-out raised to the edge of the road beside them: %d" % (back & ok).sum())
+            back &= ~ok
         q[rr[back], cc[back]] = q0[rr[back], cc[back]]
         print("terrain vertices in the keep-out left as they were: %d" % back.sum())
     ch = q != q0
@@ -1166,6 +1302,11 @@ PAVED = tuple(m for g in osm_surface.MATS.values() for c, m in g.items()
               if c in ("hard", "sett", "cobble") and not m.startswith("mp_path_")) + ("mp_road_asphalt_fresh", "mp_sidewalk")
 PAVED_EDGE_DROP = 0.0       # m: the faces stay as they are
 KEEP_OUT = 2.0              # m around guard rails, fences, walls, buildings, railway, parapets
+# v3.0 fix round: in the keep-out the ground within SHOULDER m of a paved edge rises to it where that is at most this
+# much (m). Up to v3.0 it stayed as the carve left it: 530 of 973 km of edges, most of those in the villages (houses,
+# walls and fences on both sides of the narrow roads of Vezio, Arosio, Mugena ...), kept the v2.7 slab with a trench
+# beside it, median 0.21 m, and a wheel leaving the asphalt dropped off and hit the edge coming back.
+KEEP_OUT_LIFT = 0.35
 SAMPLE = 0.5                # m between the samples along the edges of their faces
 KEEP_GROUPS = ("roads/guardrails", "roads/fences", "walls", "buildings", "railway", "level_objects/Water")
 PARAPET = ("mp_bridge_parapet",)
@@ -1277,7 +1418,7 @@ def paved_edges_step(root, report=None):
     before = measure(zi, keep)
     print("before:", before, flush=True)
     q0 = pw.read_ter(zi.read(f"{lv}/theTerrain.ter"))[1].copy()
-    pu.unpaved_step(root, mats=PAVED, edge_drop=PAVED_EDGE_DROP, keep_out=keep)
+    pu.unpaved_step(root, mats=PAVED, edge_drop=PAVED_EDGE_DROP, keep_out=keep, keep_out_lift=KEEP_OUT_LIFT)
     zi = bng.LevelFiles(root)
     after = measure(zi, keep)
     print("after:", after, flush=True)
@@ -1286,7 +1427,7 @@ def paved_edges_step(root, report=None):
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump({"materials": list(PAVED), "edge_drop_m": PAVED_EDGE_DROP,
-                   "terrain_under_faces_m": pu.EPS, "keep_out_m": KEEP_OUT, "keep_out_km2": round(len(keep) / 1e6, 2),
+                   "terrain_under_faces_m": pu.EPS, "keep_out_m": KEEP_OUT, "keep_out_lift_m": KEEP_OUT_LIFT, "keep_out_km2": round(len(keep) / 1e6, 2),
                    "paved_outer_edges_before": before, "paved_outer_edges_after": after,
                    "terrain_vertices_raised": raised}, open(report, "w"), indent=1)
     return 0

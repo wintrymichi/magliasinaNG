@@ -240,11 +240,13 @@ def far_items(far, level_dir, level_name, fill=None):
     keep = far_trees.select(names, radius, far.get("dist"), FAR_CAP, far["h"], far["x"], far["y"])
     if fill is not None and len(fill["x"]):
         n0 = len(names)
-        f_names, f_scale, _ = far_trees.assign(fill["h"], fill["d"], fill["rgb"], fill["conifer"], cols)
+        f_names, f_scale, f_radius = far_trees.assign(fill["h"], fill["d"], fill["rgb"], fill["conifer"], cols)
+        f_keep = far_trees.select(f_names, f_radius, fill.get("dist"), None, fill["h"])
         far = {k: np.concatenate([far[k], fill[k]]) for k in ("x", "y", "z")}
         names, scale = np.concatenate([names, f_names]), np.concatenate([scale, f_scale])
-        keep = np.concatenate([keep, np.ones(len(f_names), bool)])
-        print("forest fill: %d far trees outside the survey" % (len(names) - n0))
+        keep = np.concatenate([keep, f_keep])
+        print("forest fill: %d far trees outside the survey, %d left out in the clearance of a drivable surface"
+              % (len(names) - n0, int((~f_keep).sum())))
     rng = np.random.default_rng(11)
     yaw = rng.uniform(0, 2 * np.pi, len(names))
     out = {}
