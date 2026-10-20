@@ -80,7 +80,7 @@ def bell_chamber(rng, n=2, w=None, h=2.7):
             top = y1 - 0.12 - aw / 2 - 0.05
             bh = min(0.75, aw * 0.85)
             yy = (top - cv.Y) / bh                                  # 0 at the crown, 1 at the lip
-            half = np.where((yy >= 0) & (yy <= 1), aw * (0.17 + 0.16 * yy ** 1.6), 0)
+            half = np.where((yy >= 0) & (yy <= 1), aw * (0.17 + 0.16 * np.clip(yy, 0, 1) ** 1.6), 0)
             bell = (np.abs(cv.X - bx) < half) & (yy >= 0) & (yy <= 1)
             shade = 0.55 + 0.6 * np.clip(1 - np.abs(cv.X - bx) / np.maximum(half, 1e-3), 0, 1)
             cv.paint(bell & m, np.asarray(BRONZE, np.float32)[None, None] * shade[..., None], height=-0.12, rough=0.4)
