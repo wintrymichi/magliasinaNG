@@ -104,6 +104,29 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - The cantonal AI road starts with a hook inside the Magliaso junction, and a start position on the start line
   spawns the car on it: trim turn-backs at the route ends and start the car 15 m before the line.
 
+## Traffic and AI
+
+- Started a full build on GitHub Actions for one thread while the other v3.0.40 threads were still working;
+  michi stopped it. In a combined round, build only once, when every thread is ready (traffic_build.yml is manual).
+- Merging the whole scalini branch into the traffic branch pulled 490 fix_review dumps (~850k lines). Base a
+  thread branch on the integration branch and bring over only your own files.
+- The cloud container cannot reach data.geo.admin.ch and the other data hosts: run analyses that need the
+  downloads on GitHub Actions (traffic_probe.yml), not locally.
+- BeamNG 0.40 vehicle/ai.lua ignores the "yield" signal action (only stop/briefStop/alert are handled). At a
+  junction without a signal the AI yields when it turns or when its road has a lower drivability than another
+  road there, so give way is a short lower-drivability piece (markings_rules.give_way_drivability).
+- DecalRoad `speedLimit` is in m/s; without it the AI guesses the speed from the width (too fast on narrow
+  roads). signals.json `sequences` is an object `{}` as in Italy, not a list.
+- With autoLanes the game gives a road one lane until 5.4 m wide, so two-way cars meet in the middle: set
+  autoLanes false and one lane each way from 4.5 m (ai_roads.lanes).
+- info.json country: the game only knows usa/germany/italy/france/japan; anything else weighs no country.
+- Welding road ends by snapping to the nearest node made V-shaped zigzags: snap an end only onto the other
+  road's end, otherwise insert a node on it (ai_roads.weld, NODE_SNAP 0.5 m).
+- Village speed zone from building counts: 60 buildings within 100 m left Magliaso's roundabouts at 80 km/h;
+  25 within 150 m matches the signs.
+- Roundabout give-way points found on the OSM ways landed on the ring: move them onto the entry road's
+  incoming lane (snap_ring_signals), or the game binds them to the ring.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs
