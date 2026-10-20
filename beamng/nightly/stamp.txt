@@ -1,0 +1,14 @@
+Nightly build of v3.0.40 (writing this file starts .github/workflows/nightly_build.yml)
+
+2026-10-20 10:05 UTC (12:05 CEST): first nightly, every thread of the v3.0.40 round merged:
+- Chiazze chiare sulla strada: textures in BeamNG 0.40 (game_paths), road wear with shadows, without breaks or holes,
+  one file per texture (same_textures)
+- Scalini e alberi in strada: road steps and trees on the roads
+- Caslano e Arosio interi (issue #16)
+- Suoni d'ambiente: rivers, streams, the lake
+- Muri con i buchi (issue #76)
+- Guidabilita e traffico: AI roads, give way, speed limits, Swiss road rules
+- Gare e cronoscalate: 4 time trials
+- Idee per nuove migliorie: direction pointers, English level info and preview
+- Monumenti riconoscibili: churches, bell towers, the Monte Lema cable car (issue #11)
+- Riferimento foto stradali: hedges and fountains from open street photos (3 test zones; measured facades off)
