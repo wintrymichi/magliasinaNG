@@ -787,10 +787,10 @@
   {
    "src": "mapillary",
    "title": null,
-   "id": "515541802960864",
+   "id": "468211351148438",
    "author": "kaitu",
    "license": "CC BY-SA 4.0",
-   "page": "https://www.mapillary.com/app/?pKey=515541802960864",
+   "page": "https://www.mapillary.com/app/?pKey=468211351148438",
    "date": "2012-01-07",
    "dist": 52.19959074723371
   },
@@ -849,10 +849,10 @@
   {
    "src": "mapillary",
    "title": null,
-   "id": "330465065112510",
+   "id": "2906789932933304",
    "author": "kaitu",
    "license": "CC BY-SA 4.0",
-   "page": "https://www.mapillary.com/app/?pKey=330465065112510",
+   "page": "https://www.mapillary.com/app/?pKey=2906789932933304",
    "date": "2019-05-25",
    "dist": 70.40455069959746
   },
@@ -1122,12 +1122,12 @@
   {
    "src": "mapillary",
    "title": null,
-   "id": "339700284351453",
+   "id": "206764134414971",
    "author": "kaitu",
    "license": "CC BY-SA 4.0",
-   "page": "https://www.mapillary.com/app/?pKey=339700284351453",
+   "page": "https://www.mapillary.com/app/?pKey=206764134414971",
    "date": "2019-05-25",
-   "dist": 67.00170775185369
+   "dist": 58.42835658372776
   },
   {
    "src": "mapillary",
@@ -1142,12 +1142,12 @@
   {
    "src": "mapillary",
    "title": null,
-   "id": "2839131303004972",
+   "id": "349959833480588",
    "author": "kaitu",
    "license": "CC BY-SA 4.0",
-   "page": "https://www.mapillary.com/app/?pKey=2839131303004972",
+   "page": "https://www.mapillary.com/app/?pKey=349959833480588",
    "date": "2019-05-25",
-   "dist": 87.85320070512616
+   "dist": 75.59842567420611
   }
  ],
  "-00990_+03735": [
@@ -1164,22 +1164,12 @@
   {
    "src": "mapillary",
    "title": null,
-   "id": "4257216694289456",
+   "id": "3008100316181240",
    "author": "kaitu",
    "license": "CC BY-SA 4.0",
-   "page": "https://www.mapillary.com/app/?pKey=4257216694289456",
+   "page": "https://www.mapillary.com/app/?pKey=3008100316181240",
    "date": "2019-05-25",
-   "dist": 65.18094216278806
-  },
-  {
-   "src": "mapillary",
-   "title": null,
-   "id": "320226556434533",
-   "author": "kaitu",
-   "license": "CC BY-SA 4.0",
-   "page": "https://www.mapillary.com/app/?pKey=320226556434533",
-   "date": "2019-05-25",
-   "dist": 71.62946158498005
+   "dist": 71.99810141469182
   },
   {
    "src": "mapillary",
@@ -1190,6 +1180,16 @@
    "page": "https://www.mapillary.com/app/?pKey=1095399914314888",
    "date": "2019-05-25",
    "dist": 43.1137200500721
+  },
+  {
+   "src": "mapillary",
+   "title": null,
+   "id": "299338471690930",
+   "author": "kaitu",
+   "license": "CC BY-SA 4.0",
+   "page": "https://www.mapillary.com/app/?pKey=299338471690930",
+   "date": "2019-05-25",
+   "dist": 26.831981773335144
   }
  ],
  "+00061_+04632": [
