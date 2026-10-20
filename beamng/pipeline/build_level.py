@@ -832,28 +832,20 @@ def write_info(ctx):
     n_trees = int(round(ctx.get("n_forest", 0) / 1000.0))
     n_villages = sum(1 for s in spawns if s[0] not in ("spawn_magliaso", "spawn_mid", "spawn_pura"))
     info = {
-        "title": "Malcantone - Magliaso, Pura e dintorni",
-        "description": ("Ricostruzione in scala 1:1 di circa %d km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
-                        "Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio e Sessa: "
-                        "ogni strada e "
-                        "sentiero guidabile, %d ponti, %d edifici con facciate, balconi e vetrine, guardrail su tutta "
-                        "la rete, circa %d 000 alberi, traffico IA. La Strada "
-                        "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
-                        "ci sono anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano, il passo sopra "
-                        "Gravesano fino ad Arosio, la strada Arosio - Mugena - Breno - Miglieglia - Novaggio, la "
-                        "cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
-                        "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
-                        "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
-                        "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "
-                        "contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
+        "title": "Malcantone - Magliaso, Pura and around",
+        "description": ("The Malcantone (Ticino, Switzerland) at 1:1 scale: about %d km2 between Lake Lugano, "
+                        "Ponte Tresa, Agno, Arosio and Novaggio. Every real road and trail is drivable, with %d "
+                        "bridges, %d buildings, about %d 000 trees and AI traffic. Built from open data. "
+                        "Sources: (c) swisstopo; Canton Ticino cadastral survey; Federal Register of Buildings; "
+                        "(c) OpenStreetMap contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
                         % (round(km2), n_bridges, n_buildings, n_trees)),
         "previews": [f"{LEVEL_NAME}_preview.jpg"],
         "size": [TER_SIZE, TER_SIZE],
         "authors": "michi (pipeline: Claude)",
-        "biome": "Prealpi ticinesi, bosco di castagni, Lago di Lugano, valle del Vedeggio",
-        "roads": "Strade cantonali, strade comunali, strade forestali, sentieri e mulattiere",
-        "suitablefor": "Guida su strada di montagna, fuoristrada su sentieri",
-        "features": "Scala reale 1:1, terreno LiDAR, 12 x 12 km, %d paesi" % n_villages,
+        "biome": "Ticino pre-Alps, chestnut woods, Lake Lugano",
+        "roads": "Cantonal and village roads, forest roads, trails",
+        "suitablefor": "Mountain road driving, off-road on trails",
+        "features": "Real 1:1 scale, LiDAR terrain, 12 x 12 km, %d villages" % n_villages,
         "isAuxiliary": False, "supportsTraffic": True, "supportsTimeOfDay": True,
         # v3.0.40: Swiss rules for the AI and the traffic (keep right, no turning on red)
         "roadRules": {"rightHandDrive": False, "turnOnRed": False},
@@ -878,12 +870,16 @@ def write_info(ctx):
     ver = os.path.join(WORK, "validation_full", "VERIFICA.md")
     if os.path.exists(ver):
         shutil.copy(ver, level_path("VERIFICA.md"))
-    # preview from the orthophoto (the terrain block; ortho05.tif in builds before v2.0)
-    import rasterio
-    op = os.path.join(WORK, "ortho.tif")
-    with rasterio.open(op if os.path.exists(op) else os.path.join(WORK, "ortho05.tif")) as s:
-        a = s.read(out_shape=(3, 1024, 1024)).transpose(1, 2, 0)
-    Image.fromarray(a).save(level_path(f"{LEVEL_NAME}_preview.jpg"), quality=88)
+    # preview: the in-game shot at the top of the repository README (v3.0.40); the orthophoto if it is missing
+    shot = os.path.join(here, "..", "verifica", "screenshots", "v3.0", "overview-novaggio-miglieglia.jpg")
+    if os.path.exists(shot):
+        shutil.copy(shot, level_path(f"{LEVEL_NAME}_preview.jpg"))
+    else:
+        import rasterio
+        op = os.path.join(WORK, "ortho.tif")
+        with rasterio.open(op if os.path.exists(op) else os.path.join(WORK, "ortho05.tif")) as s:
+            a = s.read(out_shape=(3, 1024, 1024)).transpose(1, 2, 0)
+        Image.fromarray(a).save(level_path(f"{LEVEL_NAME}_preview.jpg"), quality=88)
     json.dump({"header": {"name": "DecalData File", "comments": "", "version": 2}, "instances": {}},
               open(level_path("main.decals.json"), "w"))
 
