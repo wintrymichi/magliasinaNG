@@ -2,12 +2,17 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
-## v3.0 (17 October 2026)
+## v3.0.40 (in preparation)
 
-### Fixes after the release (2026-10-18)
+For BeamNG.drive 0.40, with the fixes after the v3.0 release.
 
+- **Textures in BeamNG 0.40** (`game_paths.py`, `dati/game_paths_0.40.json`): 0.40 moved 73 of the 367 files of the game the map uses from the levels' folders to `/assets/materials/`; three of them left nothing behind at the old place (the colour and normal maps of Italy's medieval stone wall, `italy_plastic_d`) and showed as missing textures. The map points at the new places (checked in an installed 0.40.0.0). The glazing of the bus shelters has its material (`Italy_bld_ind_windows`, which the level never defined).
 - **Road wear takes the shadows** (`italy_mats.OVERLAY`): the tyre tracks, patches, cracked stretches and dusty edges are drawn with Italy's flags for the same textures (translucent with depth writes). Without them the game drew them in a pass without shadows: the cracked stretches stayed very light under cars, trees and walls. Checked in the game on the same patch (car shadow: luma 103 against 203 of the lit patch; before 190 against 203).
-- **Road wear without breaks** (`road_wear.py`): the AI roads that go on as one another are joined before the wear is laid (1,996 points: bridges, changes of name, the road going straight on through a T or a crossing), and the bands go on past a jump of the width up to 40 m long (lay-bys, the mouths of side roads). Tyre tracks 270 → 319 km.
+- **Road wear without breaks** (`road_wear.py`): the AI roads that go on as one another are joined before the wear is laid (1,996 points: bridges, changes of name, the road going straight on through a T or a crossing), and the bands go on past a jump of the width up to 40 m long (lay-bys, the mouths of side roads), and the road going on keeps its tracks where a side road reaches into it. Tyre tracks 270 → 325 km.
+- **Road wear without holes** (`road_wear.py`): the crown of the road, its lane joints and crests came up through the bands of wear over 1-5 % of their area (the bare road showing through the tracks and patches). The bands now have rows of vertices at most 2 m apart across them and are lifted wherever the asphalt comes too close (0.04-0.06 % left, only at real steps of the road surface), and a band no longer hangs over a step like a sheet.
+- **Steps and trees on the roads** (`network_mesh.py`, `far_trees.py`, `vegetation.py`): the steps on narrow roads and at junctions (Vezio, Arosio), the big step after the hairpin below Astano towards Banco, bridge heads; far trees of the forest fill keep clear of the roads (trees standing in the road at Vezio).
+
+## v3.0 (17 October 2026)
 
 ### The review round (2026-10-16/17)
 
