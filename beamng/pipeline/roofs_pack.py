@@ -54,7 +54,11 @@ def main(out):
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     dsm = Grid.load(os.path.join(WORK, "dsm05.npz"))
     arrs, uu = {}, []
-    sel = [b for b in blds if len(b["walls"]) == 0 and len(b["roofs"])]
+    import buildings_mesh
+    fps = [buildings_mesh.footprint(b) for b in blds]
+    ids = buildings_mesh.canopies(blds, fps)
+    print("canopies", len(ids), flush=True)
+    sel = [b for b in blds if b["uuid"] in ids]
     for i, b in enumerate(sel):
         (x0, y0, _), (x1, y1, _) = b["bbox"]
         x0, y0, x1, y1 = x0 - PAD, y0 - PAD, x1 + PAD, y1 + PAD
@@ -62,8 +66,8 @@ def main(out):
         arrs[f"f_{i}"] = np.asarray(b.get("floors", np.zeros((0, 3, 3))), np.float32)
         for name, g in (("dtm", dtm), ("dsm", dsm)):
             sub, r0, c0 = g.window(x0, y0, x1, y1)
-            arrs[f"{name}_{i}"] = np.asarray(sub, np.float32)
-            arrs[f"o{name}_{i}"] = np.array([g.x_min + c0 * g.res, g.y_max - r0 * g.res, g.res])
+            arrs[f"{name}_{i}"] = np.asarray(sub.a, np.float32)
+            arrs[f"o{name}_{i}"] = np.array([sub.x_min, sub.y_max, sub.res])
         uu.append(b["uuid"])
         ortho(x0, y0, x1, y1, os.path.join(out, "ortho", f"{i}.jpg"))
         if i % 50 == 0:

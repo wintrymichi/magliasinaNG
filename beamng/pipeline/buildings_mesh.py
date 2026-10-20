@@ -226,6 +226,38 @@ POST_RAIL = 2.2                                    # m from the axis of a track:
 POST_TONE = np.array([0.50, 0.50, 0.49])          # painted steel or concrete grey
 
 
+CANOPY_COVER = 0.5          # share of a roof plan over the ground plans of buildings with walls: their roof, not a canopy
+
+
+def roof_plan(roofs):
+    """The plan of roof triangles (k, 3, 3): the union of their projections."""
+    g = shapely.union_all([q for q in (shapely.Polygon(t[:, :2]) for t in roofs) if q.is_valid and q.area > 1e-6])
+    return shapely.make_valid(g.buffer(0.02).buffer(-0.02))
+
+
+def canopies(blds, fps):
+    """uuids of the buildings that are roofs on posts: roofs and no walls, and less than CANOPY_COVER of the roof
+    plan over the ground plan of a building with walls. swissBUILDINGS3D keeps the roof and the walls of 3490
+    of its houses here in records of their own, the roof of such a house is no canopy."""
+    wi = [i for i, b in enumerate(blds) if len(b["walls"]) and not fps[i].is_empty]
+    tree = shapely.STRtree([fps[i] for i in wi]) if wi else None
+    out = set()
+    for b in blds:
+        if len(b["walls"]) or not len(b["roofs"]):
+            continue
+        plan = roof_plan(b["roofs"])
+        if plan.is_empty:
+            continue
+        cover = 0.0
+        if tree is not None:
+            hit = tree.query(plan, predicate="intersects")
+            if len(hit):
+                cover = shapely.union_all([fps[wi[j]] for j in hit]).intersection(plan).area / plan.area
+        if cover < CANOPY_COVER:
+            out.add(b["uuid"])
+    return out
+
+
 def _boundary_edges(tris, q=0.02):
     """Edges (k, 2, 3) of the triangles used by one triangle only (the rim of a roof)."""
     E = np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]])
@@ -255,8 +287,7 @@ def canopy(roofs, walled, off, ground):
     A, B = rim[:, 0], rim[:, 1]
     fascia = np.concatenate([np.stack([A, B, B - down], 1), np.stack([A, B - down, A - down], 1)])
     slab = np.concatenate([under, fascia])
-    plan = shapely.union_all([q for q in (shapely.Polygon(t[:, :2]) for t in roofs) if q.is_valid and q.area > 1e-6])
-    plan = shapely.make_valid(plan.buffer(0.02).buffer(-0.02))
+    plan = roof_plan(roofs)
     pts = []
     for poly in _polys(plan):
         ring = poly.buffer(-POST_INSET, join_style="mitre").simplify(0.3)
@@ -714,6 +745,8 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
     wi = [i for i, b in enumerate(blds) if len(b["walls"]) and not fps[i].is_empty]
     walled = shapely.STRtree([fps[i].boundary for i in wi]) if wi else None
     off = keep_off(ways)
+    canopy_ids = canopies(blds, fps)
+    print("roofs on posts (canopies)", len(canopy_ids), flush=True)
     ground = lambda x, y: dtm.sample(x, y)
     mean = lambda k: np.array(means[k], float)
     for (tx, ty), bl in sorted(tiles.items()):
@@ -822,7 +855,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 mb.add("bld_roof_flat", V, uvs=V[:, :2] / 4.0, normals=bng.flat_normals_soup(V),
                        colors=np.r_[np.clip(np.array([0.62, 0.62, 0.60]) / mean("t_roof_flat"), 0, 1), 1.0])
                 stats["chimneys"] = stats.get("chimneys", 0) + len(stack) // 8
-            if not len(ob["walls"]) and len(roofs):          # v3.1: a roof without walls on its posts
+            if b["uuid"] in canopy_ids and len(roofs):         # v3.1: a roof without walls on its posts
                 slab, posts = canopy(roofs, walled, off, ground)
                 for part, col in ((slab, 0.8 * style["tone"]), (posts, POST_TONE)):
                     if len(part):
