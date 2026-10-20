@@ -8,7 +8,10 @@
 --                   (drivability, oneWay, speed limit, lanes ... as this version of the game names them)
 --   signals.json    the signal points the game matched to the graph (if the module answers)
 --   parking.json    the parking spots the game loaded and the parked cars it placed
---   traffic.json    every `every` s the position, speed and road of each traffic car (stuck cars show here)
+--   traffic.json    every `every` s the position, speed, damage and road of each traffic car (stuck cars show here)
+--   state.json      what the traffic module reports after spawning (its data of each car, the player, the
+--                   parking amount), to tell "nothing spawned" from "spawned and stuck"
+--   fps.json        the frame time every `every` s
 --   done.txt        when the test is over
 -- Nothing else is changed; remove the file from lua/ge/extensions after the test (a left-over extension runs on
 -- every level).
@@ -85,6 +88,36 @@ local function dumpParking()
   log('I', 'magliaso_traffic', 'PARKING ' .. tostring(data.spots))
 end
 
+local function dumpState(nTraffic, nParked)
+  local st = {asked = {traffic = nTraffic, parked = nParked}}
+  local tr = gameplay_traffic and gameplay_traffic.getTrafficData and gameplay_traffic.getTrafficData() or {}
+  local n = 0
+  st.cars = {}
+  for id, v in pairs(tr) do
+    n = n + 1
+    if n <= 4 then st.cars[tostring(id)] = plain(v) end
+  end
+  st.traffic_count = n
+  if gameplay_traffic then
+    for _, fn in ipairs({'getState', 'getNumOfTraffic', 'getTrafficVars', 'getIdealSpawnAmount'}) do
+      if type(gameplay_traffic[fn]) == 'function' then
+        local ok, r = pcall(gameplay_traffic[fn])
+        if ok then st[fn] = type(r) == 'table' and plain(r) or r end
+      end
+    end
+  end
+  local pv = be:getPlayerVehicle(0)
+  if pv then local p = pv:getPosition() st.player = {pv:getID(), p.x, p.y, p.z, pv.jbeam} end
+  st.settings = {}
+  for _, k in ipairs({'trafficAmount', 'trafficParkingAmount', 'trafficSmartSelections', 'trafficSimpleVehicles',
+                      'trafficEnableSwitching', 'trafficExtraVehicles', 'trafficLoadForFreeroam'}) do
+    local ok, v = pcall(settings.getValue, k)
+    if ok then st.settings[k] = v end
+  end
+  jsonWriteFile(OUT .. 'state.json', st, false)
+  log('I', 'magliaso_traffic', 'TRAFFIC CARS ' .. n)
+end
+
 local function run()
   if started then return end
   started = true
@@ -108,7 +141,8 @@ local function run()
     end
     job.sleep(20.0)
     pcall(dumpParking)
-    local samples, t = {}, 0
+    pcall(dumpState, nTraffic, nParked)
+    local samples, fps, t = {}, {}, 0
     while t < duration do
       local rows = {}
       local tr = gameplay_traffic and gameplay_traffic.getTrafficData and gameplay_traffic.getTrafficData() or {}
@@ -117,16 +151,22 @@ local function run()
         if obj then
           local p, vel = obj:getPosition(), obj:getVelocity()
           local road = map.findClosestRoad and {map.findClosestRoad(p)} or {}
+          local mo = map.objects and map.objects[id]
           rows[#rows + 1] = {id = id, t = t, x = p.x, y = p.y, z = p.z, v = vel:length(),
-                             a = road[1], b = road[2], d = road[3], state = v.state, model = obj.jbeam}
+                             a = road[1], b = road[2], d = road[3], state = v.state, model = obj.jbeam,
+                             damage = mo and mo.damage, respawns = v.respawnCount}
         end
       end
       samples[#samples + 1] = rows
+      local okf, dt = pcall(function() return be:getLastFrameDeltaTime() end)
+      if okf and type(dt) == 'number' then fps[#fps + 1] = {t, 1 / math.max(1e-3, dt)} end
       if #samples % 30 == 0 then jsonWriteFile(OUT .. 'traffic.json', samples, false) end
       job.sleep(every)
       t = t + every
     end
     jsonWriteFile(OUT .. 'traffic.json', samples, false)
+    jsonWriteFile(OUT .. 'fps.json', fps, false)
+    pcall(dumpState, nTraffic, nParked)
     writeFile(OUT .. 'done.txt', 'done')
     log('I', 'magliaso_traffic', 'DONE')
     if opt.quit then shutdown(0) end
