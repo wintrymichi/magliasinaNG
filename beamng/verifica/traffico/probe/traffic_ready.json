@@ -1,0 +1,44 @@
+{
+ "before": {
+  "roads": 2999,
+  "km": 241.7,
+  "pieces": 43,
+  "km_main_piece": 226.2,
+  "km_off_main": 15.5,
+  "km_off_main_drivable": 14.3,
+  "pieces_off_main_over_500m": 8,
+  "dead_ends": 676
+ },
+ "dropped_nodes": 4,
+ "width_jumps_smoothed": 853,
+ "weld": {
+  "snap_end": 19,
+  "snap_node": 2,
+  "new_node": 20,
+  "moved": 5,
+  "extended": 36,
+  "dead": 633,
+  "gap_max": 6.83
+ },
+ "spurs_cut": 1,
+ "km_per_limit": {
+  "20": 0.6,
+  "30": 12.9,
+  "40": 97.7,
+  "50": 67.4,
+  "60": 52.1,
+  "70": 0.6,
+  "80": 10.5
+ },
+ "cut_off_gated": 74,
+ "after": {
+  "roads": 3018,
+  "km": 241.8,
+  "pieces": 33,
+  "km_main_piece": 235.4,
+  "km_off_main": 6.3,
+  "km_off_main_drivable": 5.3,
+  "pieces_off_main_over_500m": 4,
+  "dead_ends": 634
+ }
+}

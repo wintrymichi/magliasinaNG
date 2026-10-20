@@ -855,6 +855,8 @@ def write_info(ctx):
         "suitablefor": "Guida su strada di montagna, fuoristrada su sentieri",
         "features": "Scala reale 1:1, terreno LiDAR, 12 x 12 km, %d paesi" % n_villages,
         "isAuxiliary": False, "supportsTraffic": True, "supportsTimeOfDay": True,
+        # v3.0.40: Swiss rules for the AI and the traffic (keep right, no turning on red)
+        "roadRules": {"rightHandDrive": False, "turnOnRed": False},
         "defaultSpawnPointName": spawns[0][0] if spawns else None,
         "spawnPoints": [{"objectname": s[0], "translationId": s[0]} for s in spawns],
     }

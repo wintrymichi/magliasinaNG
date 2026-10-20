@@ -75,6 +75,11 @@ FOLD_DZ = 1.5
 # of 0.5 m, won the cells right over it inside the carriageway, at its own height (0.3-2 m off the road's). Its score
 # is raised by this much (half widths).
 PATH_YIELD = 10.0
+# v3.0.40: a survey polygon that only paths reach (a flight of steps, a footpath's polygon beside a road) also takes the
+# heights of the road lines whose carriageway runs into it, on that carriageway only (CARR_REACH m past its edge): the
+# polygon of the steps up from Via Cantonale (Pura, 1980 3337; 1132 -285) gave the edge of the lane the steps' height,
+# 1-2.5 m above the road, and a car's wheels met a wall inside the lane. Off the carriageway the path keeps its own.
+CARR_REACH = 0.25
 # v3.0 fix round: the cells within BRIDGE_HEAD m of the end of a bridge (its head, past the end of the line leading to it)
 # keep their line's height: they were left to the ground of the gully under the bridge, 2-3 m below the deck (above Vezio).
 BRIDGE_HEAD = 8.0
@@ -160,9 +165,17 @@ class Network:
                     if p.geom_type == "Polygon" and p.area >= 0.5:
                         road_like.append((p, kind))
         av_tree = shapely.STRtree([p for p, _ in road_like]) if road_like else None
+        hw_line = [0.5 * float(np.median(self.w[s["first"]:s["first"] + s["n"]])) for s in segs]
         for p, kind in road_like:
             near = ltree.query(p, predicate="dwithin", distance=1.0)
-            self.polys.append({"geom": p, "cls": kind, "surface": "hard", "segs": set(int(i) for i in near)})
+            q = {"geom": p, "cls": kind, "surface": "hard", "segs": set(int(i) for i in near)}
+            if kind == "road" and q["segs"] and all(segs[i]["kind"] == "path" for i in q["segs"]):
+                carr = [int(i) for i in ltree.query(p, predicate="dwithin", distance=8.0)
+                        if segs[i]["kind"] != "path" and not segs[i]["bridge"] and int(i) not in q["segs"]
+                        and lines[i].distance(p) < hw_line[i]]
+                if carr:
+                    q["carr_segs"] = set(carr)
+            self.polys.append(q)
         # strips of the lines outside the survey
         node_segs = {}
         for s in segs:
@@ -203,6 +216,11 @@ class Network:
         rows = np.concatenate([np.full(len(p["segs"]), i) for i, p in enumerate(self.polys)]) if self.polys else []
         cols = np.concatenate([np.array(sorted(p["segs"]), int) for p in self.polys]) if self.polys else []
         self.assoc = sp.csr_matrix((np.ones(len(rows), bool), (rows, cols)), shape=(len(self.polys), n_seg))
+        cr = [(i, k) for i, p in enumerate(self.polys) for k in sorted(p.get("carr_segs", ()))]
+        self.assoc_carr = sp.csr_matrix((np.ones(len(cr), bool), ([a for a, _ in cr], [b for _, b in cr])),
+                                        shape=(len(self.polys), n_seg))
+        print("path polygons with the carriageway of a road: %d (%d road lines)"
+              % (sum(1 for p in self.polys if "carr_segs" in p), len(cr)), flush=True)
         area_by = {}
         for p in self.polys:
             area_by[p["cls"]] = area_by.get(p["cls"], 0) + p["geom"].area / 1e4
@@ -267,6 +285,10 @@ class Network:
         jj = np.where(valid, j, 0)
         seg = self.seg[jj]
         ok = valid & np.asarray(self.assoc[np.repeat(P, k), seg.ravel()]).reshape(n, k)
+        carr = np.zeros_like(ok)
+        if own is None and getattr(self, "assoc_carr", None) is not None and self.assoc_carr.nnz:
+            carr = valid & ~ok & np.asarray(self.assoc_carr[np.repeat(P, k), seg.ravel()]).reshape(n, k)
+            ok |= carr
         if own is not None:
             ok &= seg == own
         N = len(self.x)
@@ -310,6 +332,7 @@ class Network:
             hw = np.where(take, 0.5 * (self.w[a] + s * (self.w[b] - self.w[a])), hw)
             arc = np.where(take, self.arc[a] + s * (self.arc[b] - self.arc[a]), arc)
         ok &= np.isfinite(h) & (np.abs(off) <= hw + REACH) & (best_d <= hw + REACH)
+        ok &= ~carr | ((np.abs(off) <= hw + CARR_REACH) & (best_d <= hw + CARR_REACH))
         # one entry per line and point (neighbouring stations of a line give the same projection)
         order = np.argsort(np.where(ok, best_d, np.inf), axis=1)
         seg_o = np.take_along_axis(seg, order, 1)

@@ -741,6 +741,7 @@ class Paint:
         self.lines = []        # (P (m, 2), z_hint (m,), width, colour, kind, road index)
         self.polys = []        # (ring (m, 2), z_hint, colour, kind)
         self.count = {}
+        self.signals = []      # (position (3,), direction of travel (2,), "stop" / "give_way"): signals.json
 
     def line(self, P, zh, width, colour, kind, road=-1):
         if len(P) >= 2:
@@ -777,6 +778,8 @@ def transverse(junc, roads, paint, stats):
             if line_ok:
                 depth = draw_stop_line(a, s0, others if main else [], paint)
                 a.line = depth > 0
+            if ctl in ("stop", "give_way") and r.drive >= 0.3:
+                signal_point(a, s0, ctl, paint)
             r.cut.append(tuple(sorted((a.s, s0 + a.d * (depth + 0.3)))))
             r.jcut.append(tuple(sorted((a.s, s0 + a.d * (depth + 0.3)))))
             if line_ok and depth > 0 and not r.oneway and W >= R["long_w"]:
@@ -788,6 +791,22 @@ def transverse(junc, roads, paint, stats):
                 pre_announce(a, s0 + a.d * (depth + R["pre_d"]), paint)
             for m in main:
                 m.r.mouths.setdefault("arms", []).append((m, a))
+
+
+def signal_point(a, s0, kind, paint):
+    """The point where the traffic stops or gives way on arm a (signals.json): the middle of its approach
+    lane at the junction side of its line (station s0), the direction of travel towards the junction."""
+    r = a.r
+    i0 = r.idx(s0)
+    c = float(r.c[i0])
+    if r.oneway:
+        t = (float(r.eL[i0]) + float(r.eR[i0])) / 2
+    elif a.d > 0:
+        t = (c + float(r.eL[i0])) / 2
+    else:
+        t = (float(r.eR[i0]) + c) / 2
+    p = r.at(s0 + a.d * 0.5, t)
+    paint.signals.append((np.array([p[0], p[1], float(r.z[i0])]), -unit(r.T[i0] * a.d), kind))
 
 
 def draw_stop_line(a, s0, others, paint):
@@ -1761,6 +1780,8 @@ def roundabout_entries(cx, paint, stats, bbox=None):
                     continue
                 n = int((hi - lo + gap) // (base + gap))
                 start = lo + 0.5 * ((hi - lo) - (n * base + (n - 1) * gap))
+                mid = p - tv * 1.5
+                paint.signals.append((np.array([mid[0], mid[1], z0]), tv, "give_way_ring"))
                 for i in range(n):
                     a = p + nr * (start + i * (base + gap))
                     b = a + nr * base
@@ -1808,6 +1829,7 @@ def paint_level(zi, bbox=None, stats=None):
     decide(junc, cx, stats)
     transverse(junc, roads, paint, stats)
     roundabout_entries(cx, paint, stats, bbox)
+    snap_ring_signals(paint, roads)
     crossings(roads, cx, tr, paint, stats)
     print("junctions %d, crossings (%.0f s)" % (len(junc), time.time() - t0), flush=True)
     for J in junc:
@@ -1919,6 +1941,66 @@ def report_numbers(paint, stats):
     return stats
 
 
+# the game's simple signal controllers (settings/trafficSignals.json): the traffic stops at a STOP line and gives
+# way at a give-way line or a roundabout entry, as the paint and the signs say
+SIGNAL_TYPES = {"stop": ("signStop", "basicStop"), "give_way": ("signYield", "basicYield")}
+SIGNAL_SAME = 3.0          # m: signal points of one kind this close, facing the same way, are one
+
+
+def snap_ring_signals(paint, roads):
+    """The give-way points of the roundabout entries (found on the OSM ways) onto the entry's AI road: the
+    middle of its incoming lane, so the game puts them on the entry and not on the ring."""
+    out = []
+    for p, d, kind in paint.signals:
+        if kind != "give_way_ring":
+            out.append((p, d, kind))
+            continue
+        best = None
+        for r in roads:
+            if r.ring or not (r.lo[0] - 8 < p[0] < r.hi[0] + 8 and r.lo[1] - 8 < p[1] < r.hi[1] + 8):
+                continue
+            dd = np.hypot(*(r.X - p[:2]).T)
+            i = int(np.argmin(dd))
+            c = float(r.T[i] @ d)
+            if dd[i] < 8.0 and abs(c) > 0.8 and (best is None or dd[i] < best[0]):
+                best = (float(dd[i]), r, i, 1.0 if c > 0 else -1.0)
+        if best is None:
+            continue
+        _, r, i, sg = best
+        t = r.T[i] * sg                                  # travel towards the ring
+        right = np.array([t[1], -t[0]])
+        off = 0.0 if r.oneway else float(r.W[i]) / 4
+        q = r.X[i] + right * off
+        out.append((np.array([q[0], q[1], float(r.z[i])]), t, "give_way"))
+    paint.signals[:] = out
+
+
+def signals_json(points, stats=None):
+    """levels/<level>/signals.json of the stop and give-way points: one simple controller per kind, an
+    instance per point (sequence 0: no timer)."""
+    ctrl = {}
+    out = {"instances": [], "controllers": [], "sequences": {}}
+    for kind, (typ, state) in SIGNAL_TYPES.items():
+        ctrl[kind] = len(ctrl) + 1
+        out["controllers"].append({"id": ctrl[kind], "name": kind, "type": typ, "isSimple": True,
+                                   "states": [{"state": state}]})
+    kept = []
+    for p, d, kind in points:
+        if any(k == kind and np.hypot(*(q[:2] - p[:2])) < SIGNAL_SAME and float(e @ d) > 0.7 for q, e, k in kept):
+            continue
+        kept.append((p, d, kind))
+    nid = len(ctrl)
+    for i, (p, d, kind) in enumerate(kept):
+        nid += 1
+        out["instances"].append({"id": nid, "name": "%s %d" % (kind, i + 1), "controllerId": ctrl[kind],
+                                 "sequenceId": 0, "pos": [round(float(v), 3) for v in p],
+                                 "dir": [round(float(d[0]), 4), round(float(d[1]), 4), 0.0],
+                                 "startDisabled": False})
+    if stats is not None:
+        stats["signals"] = {k: sum(1 for _, _, q in kept if q == k) for k in SIGNAL_TYPES}
+    return out
+
+
 def markings_rules_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
@@ -1950,6 +2032,7 @@ def markings_rules_step(root, report=None):
                   bng.material("mp_road_paint_red", base_color=[0.66, 0.46, 0.46, 1], roughness=0.7)):
             mats.setdefault(m["name"], m)
         new_files[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
+        new_files[f"{LV}/signals.json"] = json.dumps(signals_json(paint.signals, stats), indent=1).encode("utf-8")
         parent = next((o["__parent"] for o in mk if "__parent" in o), "markings")
         keep = [o for o in mk if not NET_SHAPE.search(o.get("shapeName", "")) and not OLD_SHAPE.search(o.get("shapeName", ""))]
         for o in objs:
@@ -1969,7 +2052,7 @@ def markings_rules_step(root, report=None):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     stats["seconds"] = round(time.time() - t0)
-    print("markings by the rules:", json.dumps({k: v for k, v in stats.items() if k in ("km", "count", "meshes", "seconds")}), flush=True)
+    print("markings by the rules:", json.dumps({k: v for k, v in stats.items() if k in ("km", "count", "meshes", "seconds", "signals")}), flush=True)
     if report:
         json.dump(stats, open(report, "w"), indent=1, default=float)
     return 0
