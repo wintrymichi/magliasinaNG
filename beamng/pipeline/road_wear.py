@@ -78,6 +78,8 @@ JOIN_D = 1.0                 # m: two AI road ends this close are one point (the
 JOIN_ANGLE = 35.0            # degrees: the most a road may turn there to go on as the other
 CROSS_IN = 0.4               # m: a band is cut where it lies this far inside the carriageway of another AI road
 CROSS_ANGLE = 25.0           # degrees
+CROSS_END = 1.5              # m beyond a band's half width: the end of a road reaching this far in only meets it
+CROSS_WIDER = 0.25           # m of half width: a road this much wider keeps its bands across the other
 BRIDGE_JUMP = 20             # stations (40 m): the longest jump of the width the bands go on past
 BRIDGE_OFF = 3               # stations (6 m): the longest stretch off the asphalt they go on past
 MIN_PIECE = 6                # stations: shorter pieces of a band are left out
@@ -265,7 +267,7 @@ class Carriageways:
     """The carriageways of all the AI roads, sampled every metre along their axes with their half widths:
     where a road meets another (a junction, a roundabout), its bands stop at the other's edge."""
     def __init__(self, roads):
-        pts, half, rid, tang = [], [], [], []
+        pts, half, rid, tang, end_d = [], [], [], [], []
         self.ends = []                                                # (road, point, half width, end 0/1)
         for k, road in enumerate(roads):
             nodes = np.asarray(road["nodes"], np.float64)
@@ -278,9 +280,10 @@ class Carriageways:
             tg = np.gradient(pts[-1], axis=0)
             tang.append(tg / np.maximum(np.linalg.norm(tg, axis=1, keepdims=True), 1e-9))
             rid.append(np.full(len(sd), k))
+            end_d.append(np.minimum(sd, sd[-1] - sd))
             self.ends += [(k, nodes[0, :2], nodes[0, 3] / 2, 0), (k, nodes[-1, :2], nodes[-1, 3] / 2, 1)]
         self.P, self.half, self.rid = np.concatenate(pts), np.concatenate(half), np.concatenate(rid)
-        self.tang = np.concatenate(tang)
+        self.tang, self.end_d = np.concatenate(tang), np.concatenate(end_d)
         self.tree = cKDTree(self.P)
         self.rmax = float(self.half.max())
 
@@ -303,9 +306,12 @@ class Carriageways:
             out.append((p[0], p[1], max(h, float(self.half[on].max())) * 1.2 + JUNCTION_PAD, k))
         return np.array(out).reshape(-1, 4)
 
-    def inside_other(self, C, k):
-        """(n,) bool: the points C (n, 2) of a band lie CROSS_IN m or more inside the carriageway of an AI road
-        other than k (an index or a list of them) that crosses it (more than CROSS_ANGLE off its direction)."""
+    def inside_other(self, C, k, half):
+        """(n,) bool: the points C (n, 2) of a band of AI road k (half widths half (n,)) lie CROSS_IN m or more
+        inside the carriageway of another AI road that crosses it (more than CROSS_ANGLE off its direction) and
+        goes on across it: not the end of a side road reaching into it (the tracks of the road going on broke
+        for 2-4 m at 700 such ends), and not a narrower road (the wider one keeps its bands across a crossing;
+        of two as wide, the one listed first)."""
         out = np.zeros(len(C), bool)
         T = np.gradient(C, axis=0)
         T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
@@ -314,7 +320,10 @@ class Carriageways:
             if not near:
                 continue
             near = np.asarray(near)
-            near = near[~np.isin(self.rid[near], k) & (np.abs(self.tang[near] @ T[i]) < cmax)]
+            near = near[(self.rid[near] != k) & (np.abs(self.tang[near] @ T[i]) < cmax)
+                        & (self.end_d[near] > half[i] + CROSS_END)
+                        & ((self.half[near] > half[i] + CROSS_WIDER)
+                           | ((np.abs(self.half[near] - half[i]) <= CROSS_WIDER) & (self.rid[near] < k)))]
             if len(near):
                 d = np.hypot(*(self.P[near] - C[i]).T)
                 out[i] = bool((d < self.half[near] - CROSS_IN).any())
@@ -574,8 +583,7 @@ def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
 
 
 def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
-    """[(material, triangles, uvs)] of the tracks, patches and cracks of an AI road (k: the indices of the AI
-    roads it is joined from)."""
+    """[(material, triangles, uvs)] of the tracks, patches and cracks of the AI road k (as joined)."""
     import shapely
     nodes, lanes, spans, crack_shift = road_bands(road, rng)
     P = nodes[:, :2]
@@ -624,11 +632,11 @@ def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
     else:
         # not in a junction it ends at (the road that runs on through a T keeps its bands across the mouth of
         # the side road: they stopped there in the first v3.0), nor on a roundabout and its entries
-        for x, y, rad, _ in junc[np.isin(junc[:, 3], k)]:
+        for x, y, rad, _ in junc[junc[:, 3] == k]:
             keep &= np.hypot(Pd[:, 0] - x, Pd[:, 1] - y) > rad
         if rb is not None:
             keep &= ~shapely.contains_xy(rb[0], Pd[:, 0], Pd[:, 1])
-        keep &= ~cw.inside_other(Pd, k)
+        keep &= ~cw.inside_other(Pd, k, np.interp(sd, s, nodes[:, 3]) / 2)
     if keep.sum() < min_piece:
         return []
     mid = (dl_s - dr_s) / 2                                           # the middle of the asphalt, left of the axis
@@ -692,17 +700,17 @@ def road_wear_step(root, report=None):
         add("mp_wear_edge", t, uv)
     print("road wear: edges %.1f km (%.0f s)" % (stats["edge_m"] / 1000, time.time() - t0), flush=True)
     roads = read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json")
-    cw = Carriageways(roads)
     rb = roundabouts()
-    joined, links = cw.continuations(roads, ring_roads(roads, rb))
-    junc = cw.junctions(joined)
+    joined, links = Carriageways(roads).continuations(roads, ring_roads(roads, rb))
+    runs = [r for r, _ in joined_roads(roads, links)]
+    cw = Carriageways(runs)                                           # the roads as they run on, joined
+    junc = cw.junctions()
     rng = np.random.default_rng(23)
-    runs = joined_roads(roads, links)
     stats["joined"] = len(links)
-    for road, members in runs:
+    for k, road in enumerate(runs):
         if len(road.get("nodes", [])) < 2:
             continue
-        bl = lane_bands(road, members, Sa, cw, junc, rb, rng, stats)
+        bl = lane_bands(road, k, Sa, cw, junc, rb, rng, stats)
         if bl:
             stats["roads"] += 1
         for mat, t, uv in bl:
