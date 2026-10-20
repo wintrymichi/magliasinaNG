@@ -147,6 +147,7 @@ class Network:
             lines.append(shapely.LineString(np.column_stack([self.x[a:a + n], self.y[a:a + n]])))
         ltree = shapely.STRtree(lines)
         av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+        dry = network.LakeCut()               # v3.0.40: no surface under the lake (a slipway at Caslano)
         road_like = []
         for cls, kind in AV_CLASSES.items():
             for g, _ in av["LCSF"].get(cls, []):
@@ -156,6 +157,7 @@ class Network:
                 if kind == "hard" and ltree.query(g, predicate="dwithin", distance=NEAR_NET).size == 0:
                     continue
                 g = g.difference(holes_av) if not holes_av.is_empty and g.intersects(holes_av) else g
+                g = dry(g)
                 for p in shapely.get_parts(g):
                     if p.geom_type == "Polygon" and p.area >= 0.5:
                         road_like.append((p, kind))
@@ -189,7 +191,7 @@ class Network:
             for hole in holes + ([ex_geom] if not ex_geom.is_empty else []):
                 if not hole.is_empty and strip.intersects(hole):
                     strip = strip.difference(hole)
-            strip = strip.intersection(keep)
+            strip = dry(strip.intersection(keep))
             own = {s["id"]} | node_segs.get(s["nodes"][0], set()) | node_segs.get(s["nodes"][1], set())
             for p in shapely.get_parts(strip):
                 if p.geom_type == "Polygon" and p.area >= 0.5:
@@ -203,6 +205,7 @@ class Network:
         rows = np.concatenate([np.full(len(p["segs"]), i) for i, p in enumerate(self.polys)]) if self.polys else []
         cols = np.concatenate([np.array(sorted(p["segs"]), int) for p in self.polys]) if self.polys else []
         self.assoc = sp.csr_matrix((np.ones(len(rows), bool), (rows, cols)), shape=(len(self.polys), n_seg))
+        print("surveyed polygons and strips cut at the lake shore: %d" % dry.cut, flush=True)
         area_by = {}
         for p in self.polys:
             area_by[p["cls"]] = area_by.get(p["cls"], 0) + p["geom"].area / 1e4
@@ -215,6 +218,7 @@ class Network:
         p["surface"] is the main one, p["zones"] the parts [(surface, geometry)] where there are several."""
         import osm_surface
         self.line_cat, st = osm_surface.line_categories(self)
+        print("surveyed polygons and strips cut at the lake shore: %d" % dry.cut, flush=True)
         area_by = {}
         for p in self.polys:
             zones = None
