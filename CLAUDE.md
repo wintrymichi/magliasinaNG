@@ -87,6 +87,13 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Check winding/orientation when placing text or UVs along an outline: the fuel station fascia text was
   mirrored on outlines that ran the other way.
 
+- BeamNG 0.40 draws a forest shape's imposters as opaque squares (white or dark grey, from one far tree in ten to the
+  whole slope, for the rest of the session) when it bakes them itself during the session: shape newer than its cached
+  imposter (every new build) or an empty cache. In v3.0 and the first nightlies (2026-10-20). The baked files are
+  byte-identical to good ones: only the in-session bake and hot reload break. The game's own trees ship
+  `<shape>.dae.imposter.dds`, `.imposter_normals.dds` and `.dae.asset.json` and are never baked; far_trees.prebaked
+  does the same from dati/far_imposters (baked by the game, md5 of the DAE in baked.json): no bake, no squares.
+  A test with a warm cache shows nothing wrong: delete `temp/levels/<level>/art/shapes/trees/far_*` first.
 - Translucent overlay materials need `"translucentZWrite": true` (as Italy has them): without it the game draws
   them in a pass that takes no shadows, and they glow under cars and trees (road wear, 2026-10-18). DecalRoads
   draw on the road meshes only with `overObjects` set, and they do not fix that by themselves.
