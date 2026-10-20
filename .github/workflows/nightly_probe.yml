@@ -1,0 +1,106 @@
+# Which code made the worst road places of the v3.0.40 nightly (check_level of nightly #2): fix_probe.py on the
+# nightly level, the cells, lines and polygons there. A development aid of the traffic thread; no build.
+# probe stamp: 1
+name: nightly probe (traffic thread)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/guidabilita-traffico-1sfjw9]
+    paths: [.github/workflows/nightly_probe.yml]
+
+concurrency:
+  group: nightly-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0 playwright==1.55.0
+          python -m playwright install --with-deps chromium
+
+      - name: Downloads from earlier runs
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/magliasinaNG/bm/data
+          key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
+          restore-keys: v3-data-
+
+      - name: Released level v3.0
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist" "$MAGLIASO_BEAMNG_USER"
+          gh release download nightly --pattern magliaso_pura_v3.0.40_nightly.zip --dir "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+          unzip -q "$MAGLIASO_ROOT/dist/magliaso_pura_v3.0.40_nightly.zip" -d "$MAGLIASO_BEAMNG_USER"
+          ls "$MAGLIASO_BEAMNG_USER" "$MAGLIASO_BEAMNG_USER/levels"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_worldcover.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+
+      - name: Rasters and network
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python network.py
+          python network_surface.py
+
+      - name: Probe of the worst places of the nightly
+                working-directory: beamng/pipeline
+        run: |
+          O=../verifica/traffico/nightly
+          rm -rf "$O"; mkdir -p "$O"
+          python fix_probe.py "$O" --level "$MAGLIASO_BEAMNG_USER/levels/magliaso_pura" --places \
+            sotto_magliaso:873.2:-1302.3,caslano_a:1147.9:-2885.7,caslano_b:1497:-3142.2,caslano_c:1337.3:-2927.4,arosio_alto:2475.8:6403.1,fuori_profilo_max:-6007.1:171.2,fuori_breno:-44.2:4442.1
+
+      - name: Commit the renders
+        run: |
+          git checkout -- beamng/dati || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/verifica/traffico
+          git commit -m "nightly probe: worst road places" || exit 0
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 5; done
