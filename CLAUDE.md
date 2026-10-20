@@ -127,6 +127,20 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Roundabout give-way points found on the OSM ways landed on the ring: move them onto the entry road's
   incoming lane (snap_ring_signals), or the game binds them to the ring.
 
+## Sounds
+
+- Event names copied from an old forum list (BeamNG 0.2x: `Church_Bells_01`, `Jungle Rock>River Large 01`, Italy
+  `Water QP04`...) do not exist in 0.40, and a whole feature (bells on the hour, birds/crickets by time of day with a
+  mod Lua) was built on them and thrown away. Check the event list of the installed game (`dati/ambient_events.json`)
+  before designing around a sound. 0.40 ambient events: `Ambient>Water>River/Waves/Waterfall`, `Roomtones>*`, `Wind>*`.
+- Never rerun `ambient_sounds.py --scan` on 0.40: it finds no paths in the trie bank and would overwrite the
+  hand-written `ambient_events.json` with an empty list.
+- An FMOD event fixes its own range and looping (`isLooping`, `maxDistance` of the SFXEmitter do nothing with `track`);
+  a 2D event (or a roomtone that may be one) placed as an emitter is heard everywhere at full volume. Turn such a
+  sound on only after listening in the game (the "use" entry of `ambient_events.json`).
+- The cloud container cannot reach documentation.beamng.com or the game files (proxy 403): get facts about the game
+  from the PC (the integrator's RC session), not from guesses.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs
