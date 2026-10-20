@@ -2,7 +2,7 @@
 # (their buildings of swissBUILDINGS3D, the register, ground and orthophoto around them, reference photos with an
 # open licence on contact sheets, the cable lines of swissTLM3D), committed to beamng/verifica/monumenti/pack on the
 # branch: the cloud session that writes the models cannot reach swisstopo, Commons or Mapillary.
-# stamp: 1
+# stamp: 2
 name: landmarks pack
 
 on:
@@ -50,7 +50,7 @@ jobs:
             opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 matplotlib==3.11.2 pyogrio==0.13.0
 
       - name: Downloads of the build runs
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         with:
           path: /home/runner/work/magliasinaNG/bm/data
           key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}

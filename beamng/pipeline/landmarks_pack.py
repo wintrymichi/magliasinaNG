@@ -258,7 +258,11 @@ def main(out):
         sites.append({"members": members, "geom": g})
     for k, (x, y) in st_local.items():
         sites.append({"id": k, "members": [], "geom": shapely.Point(x, y).buffer(25)})
-    tree = shapely.STRtree(fps)
+    # by the boxes of the buildings: the roofs the survey keeps as objects of their own (no walls, no floor) too
+    tree = shapely.STRtree([shapely.box(b["bbox"][0][0], b["bbox"][0][1], b["bbox"][1][0], b["bbox"][1][1]) for b in blds])
+    nw = sum(1 for b in blds if not len(b["walls"]))
+    nr = sum(1 for b in blds if not len(b["roofs"]))
+    print(len(blds), "buildings,", nw, "without walls,", nr, "without roofs", flush=True)
     credits = {}
     index = []
     for s in sites:

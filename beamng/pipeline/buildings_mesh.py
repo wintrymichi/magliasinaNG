@@ -787,7 +787,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                                  "instanceEmissive": True}),
             bng.material("bld_ashlar", T("t_bld_ashlar", "b.color.png"), T("t_bld_ashlar", "nm.normal.png"),
                          T("t_bld_ashlar", "r.data.png"), T("t_bld_ashlar", "ao.data.png"), vert_color=True),
-            bng.material("bld_iron", base_color=(0.10, 0.10, 0.10, 1.0), roughness=0.55, metallic=0.7)]
+            bng.material("bld_iron", base_color=(0.03, 0.03, 0.03, 1.0), roughness=0.55, metallic=0.7)]
     for kind in bld_textures.ROOF_TILE:
         n = f"t_roof_{kind}"
         ao = T(n, "ao.data.png") if kind != "flat" else None              # v2.4

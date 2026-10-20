@@ -288,12 +288,62 @@ def band_all(lem, fs, z, height, out, color):
         lem.box(f["o"], f["a"], f["n"], ua - out, ub + out, z, z + height, out, color)
 
 
+TOWER_PLAN = (5.0, 110.0)     # m2: plan of a bell tower inside a church building of the survey
+TOWER_OVER = 4.0              # m its roof rises at least over the rest of the roofs
+
+
+def tower_part(walls, roofs):
+    """The bell tower inside a church of the survey (most churches of the area are one building with their tower):
+    the separate piece of roof that is small (TOWER_PLAN) and rises TOWER_OVER m over every other roof. Returns
+    (mask of the wall triangles of the tower, its roof triangles) or None."""
+    if roofs is None or len(roofs) < 2:
+        return None
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    V = np.round(roofs.reshape(-1, 3), 2)
+    _, ids = np.unique(V, axis=0, return_inverse=True)
+    ids = ids.reshape(-1, 3)
+    k = len(ids)
+    rows = np.repeat(np.arange(k), 3)
+    M = coo_matrix((np.ones(3 * k), (rows, ids.ravel() + k)), shape=(k + ids.max() + 1, k + ids.max() + 1))
+    _, lab = connected_components(M, directed=False)
+    lab = lab[:k]
+    best = None
+    for c in np.unique(lab):
+        R = roofs[lab == c]
+        P = R.reshape(-1, 3)
+        plan = shapely.MultiPoint(P[:, :2]).convex_hull
+        others = roofs[lab != c]
+        if not len(others) or not TOWER_PLAN[0] <= plan.area <= TOWER_PLAN[1]:
+            continue
+        if P[:, 2].max() < others[..., 2].max() + TOWER_OVER or P[:, 2].min() < others[..., 2].max() - 1.0:
+            continue
+        if best is None or P[:, 2].max() > best[2]:
+            best = (plan, R, P[:, 2].max())
+    if best is None:
+        return None
+    plan, R, _ = best
+    zone = plan.buffer(0.35)
+    shapely.prepare(zone)
+    W = walls.reshape(-1, 3)
+    inside = shapely.contains_xy(zone, W[:, 0], W[:, 1]).reshape(-1, 3).all(1)
+    if inside.sum() < 4:
+        return None
+    return inside, R
+
+
 def layout(b, walls, style, ctx, em, lem, roofs=None):
     """The landmark details of one building (walls: its wall triangles, outward); the number of modules placed."""
+    use = style["use"]
+    if use == "church" and roofs is not None:
+        tp = tower_part(walls, roofs)
+        if tp is not None:                    # the church and its bell tower, each with its own details
+            mask, troofs = tp
+            n = layout(b, walls[mask], dict(style, use="tower"), ctx, em, lem, troofs)
+            return n + layout(b, walls[~mask], style, ctx, em, lem, None)
     fs = faces(b, walls, ctx)
     if not fs:
         return 0
-    use = style["use"]
     spec = style.get("landmark") or {}
     rng = np.random.default_rng(style["seed"])
     stone_col = np.array(spec.get("trim", (0.66, 0.65, 0.62)), float)
