@@ -117,20 +117,21 @@ def main():
 
 
 def add():
-    """v3.0.40: the elements over the whole villages (area.villages()) missing from the pinned extracts."""
-    import shapely
-    g = shapely.union_all([p for _, _, p in area.villages()]).buffer(MARGIN)
-    b = bbox(g.bounds)
+    """v3.0.40: the elements over each whole village (area.villages(), one small query each) missing from the pinned
+    extracts."""
     for path, query in ((OUT, QUERY), (POIS, QUERY_POIS)):
         pinned = PINNED[path]
         d = json.load(gzip.open(pinned, "rt", encoding="utf-8"))
         have = {(e["type"], e["id"]) for e in d["elements"]}
-        new = [e for e in overpass(query.replace("{bbox}", b))["elements"] if (e["type"], e["id"]) not in have]
-        d["elements"] += new
-        d.setdefault("added_bbox", []).append(b)
+        for key, _, g in area.villages():
+            b = bbox(g.buffer(MARGIN).bounds)
+            new = [e for e in overpass(query.replace("{bbox}", b))["elements"] if (e["type"], e["id"]) not in have]
+            have |= {(e["type"], e["id"]) for e in new}
+            d["elements"] += new
+            d.setdefault("added_bbox", []).append(b)
+            print(os.path.basename(pinned), key, "+%d elements over" % len(new), b, flush=True)
         with gzip.open(pinned, "wt", encoding="utf-8", compresslevel=9) as f:
             json.dump(d, f)
-        print(os.path.basename(pinned), "+%d elements over" % len(new), b, flush=True)
 
 
 if __name__ == "__main__":
