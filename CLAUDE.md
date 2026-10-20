@@ -140,6 +140,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   grep for an existing name before adding a helper.
 - Torch with default threads in parallel zone runs oversubscribed the CPU (hours): STREET_THREADS=1 per process.
 - pkill with a pattern that is also in your own command line kills your shell (exit 144): kill by PID.
+- A workflow's commit step pushed nothing: `git pull --rebase` refused because street_collect also rewrote a file
+  that was not committed (street_facades.json). Restore the rest (`git checkout -- beamng/dati`) before pulling.
+  Tile results stay in the run's artifacts: rerun only the collect with mode=area from_run=<run id>.
 
 ## Races (time trials, races.py)
 

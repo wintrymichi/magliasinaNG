@@ -21,6 +21,9 @@ on:
       photos:
         description: "photos per tile (area)"
         default: "60"
+      from_run:
+        description: "collect only: the run id of an earlier area run whose tile results to gather"
+        default: ""
 
 concurrency:
   group: street-reference-${{ github.ref }}
@@ -154,7 +157,7 @@ jobs:
 
   plan:
     needs: catalog
-    if: inputs.mode == 'area'
+    if: inputs.mode == 'area' && inputs.from_run == ''
     runs-on: ubuntu-24.04
     outputs:
       tiles: ${{ steps.tiles.outputs.tiles }}
@@ -238,8 +241,11 @@ jobs:
 
   collect:
     needs: area
-    if: always() && needs.area.result != 'skipped'
+    if: always() && inputs.mode == 'area' && (needs.area.result != 'skipped' || inputs.from_run != '')
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -249,6 +255,8 @@ jobs:
         with:
           pattern: street-zone-*
           path: /home/runner/work/magliasinaNG/bm/zones
+          run-id: ${{ inputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
       - name: The files the build reads
         working-directory: beamng/pipeline
         run: |
@@ -261,4 +269,5 @@ jobs:
           git add beamng/dati/street_hedges.json beamng/dati/street_fountains.json beamng/dati/street_roofs.json \
             beamng/dati/street_objects.json
           git commit -m "street reference: hedges, fountains and roofs of the whole area" || exit 0
+          git checkout -- beamng/dati                 # street_facades.json: the build does not use it yet
           for i in 1 2 3 4 5; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 10; done
