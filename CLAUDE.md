@@ -110,6 +110,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Finding them in a built level: union the roof faces per tile and look for faces of other materials near the
   outline that reach down from the eaves (check_level.floating_roofs). Counting "wall feet above the terrain" per
   vertex column gave only noise (chimneys, upper storeys, plinth decals): drop that approach.
+- Posts are not right for every roof without walls: the cadastral survey says which are open (SOSF riparo,
+  altra_parte_di_edificio: posts) and which are houses (LCSF edificio: walls along it). The unknown ones got walls
+  under the roof at first, which turned a roof 12 m over a railway yard into a box across the tracks: walls only up
+  to eaves SHED_EAVE m high (buildings_mesh.close_roofs). A pack made without missing_buildings.py counts 912
+  instead of 620, because the survey's buildings it adds stand under 292 of these roofs: test against the built level.
 - An attempt to add posts under roofs that overhang their walls by more than 1.8 m (issue #13) found 1260 roofs,
   mostly garage decks at ground level and canopies merged into a house's roof: not done, #13 stays open.
 - render3d.Renderer resolves the shapes by the level folder's name: a test copy of a level must be called
