@@ -1,11 +1,12 @@
 # v3.0.40: the whole villages of Caslano and Arosio (beamng/dati/paesi_interi.json, paesi_interi.py), which the area
 # had only within 100 m of the roads; the buildings of the register in the grown area added to the pinned extract
-# (beamng/dati/gwr_area.json.gz, download_gwr.py --add, the others stay as pinned); top and oblique views of the area
+# (beamng/dati/gwr_area.json.gz, download_gwr.py --add, the others stay as pinned) and the OpenStreetMap elements over
+# the villages to the pinned OSM extracts (download_osm.py --add); top and oblique views of the area
 # before and after over SWISSIMAGE in beamng/verifica/paesi_interi/. swisstopo cannot be reached from the cloud
 # sessions, so this runs here and commits the files back to the branch it runs on.
 #
 # It runs on demand (workflow_dispatch) or when this file or paesi_interi.py changes on the branch of the villages.
-# run stamp: 1
+# run stamp: 2
 name: paesi interi
 
 on:
@@ -60,6 +61,10 @@ jobs:
         working-directory: beamng/pipeline
         run: python download_gwr.py --add
 
+      - name: OpenStreetMap over the villages (download_osm.py --add)
+        working-directory: beamng/pipeline
+        run: python download_osm.py --add
+
       - name: Views before and after
         working-directory: beamng/pipeline
         run: |
@@ -70,8 +75,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add beamng/dati/paesi_interi.json beamng/dati/gwr_area.json.gz beamng/verifica/paesi_interi
+          git add beamng/dati/paesi_interi.json beamng/dati/gwr_area.json.gz beamng/dati/osm_area.json.gz \
+            beamng/dati/osm_pois.json.gz beamng/verifica/paesi_interi
           git diff --cached --stat
           if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
-          git commit -m "Whole villages: Caslano and Arosio (paesi_interi.py)"
+          git commit -m "Whole villages: Caslano and Arosio (paesi_interi.py, download_gwr/osm --add)"
           git push origin HEAD:${{ github.ref_name }}

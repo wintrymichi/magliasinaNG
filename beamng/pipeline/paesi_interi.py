@@ -9,7 +9,8 @@ Output: dati/paesi_interi.json (the polygons in LV95); area.py joins them to the
 data they are computed from.
 
     python paesi_interi.py               -> dati/paesi_interi.json (downloads what it needs: swissNAMES3D, the register,
-                                            swissALTI3D 2 m around Caslano)
+                                            swissALTI3D 2 m around Caslano); the villages already in it are kept,
+                                            --again computes them all again
     python paesi_interi.py --preview DIR -> top and oblique views of the old and the new area over SWISSIMAGE 2 m
 """
 import csv, gzip, io, json, os, sys, zipfile
@@ -112,9 +113,18 @@ def settlement(commune_poly, name):
     return parts[0] if parts else shapely.Point(centre).buffer(HOUSE)
 
 
-def compute():
+def compute(again=False):
+    """VILLAGES -> dati/paesi_interi.json. A village already in the file is kept as it is (a newer register or DTM would
+    move the area of a released version), unless `again`."""
+    kept = {}
+    if not again and os.path.exists(OUT):
+        kept = {v["key"]: v for v in json.load(open(OUT, encoding="utf-8"))["villages"]}
     out = []
     for key, name, com, sett in VILLAGES:
+        if key in kept:
+            out.append(kept[key])
+            print("%s: kept, %.2f km2" % (key, kept[key]["area_m2"] / 1e6), flush=True)
+            continue
         C = commune(com)
         g = C.intersection(land(C).buffer(SHORE_WATER)) if sett is None else settlement(C, sett)
         g = shapely.Polygon(max(shapely.get_parts(g), key=lambda p: p.area).exterior) if sett is None else g
@@ -197,4 +207,4 @@ if __name__ == "__main__":
     if "--preview" in sys.argv:
         preview(sys.argv[sys.argv.index("--preview") + 1])
     else:
-        compute()
+        compute(again="--again" in sys.argv)

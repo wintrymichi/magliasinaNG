@@ -12,6 +12,9 @@ Re-runnable: existing files are kept. The release is built with the extract kept
 (dati/osm_area.json.gz, dati/osm_communes.json.gz, dati/osm_pois.json.gz), so that it does not change with OSM or depend on
 the Overpass servers; --pin copies the downloaded files there.
     python download_osm.py [--pin]
+    python download_osm.py --add  (v3.0.40) adds to the extracts kept in the repository only the elements over the whole
+                                  villages of area.villages() (+ MARGIN) that they do not have yet; the rest stays as
+                                  pinned
 (c) OpenStreetMap contributors, ODbL 1.0: the extracts in dati/ are under the ODbL.
 """
 import gzip, json, os, shutil, sys, time
@@ -66,8 +69,8 @@ out body geom qt;
 """
 
 
-def bbox():
-    x0, y0, x1, y1 = area.bounds(MARGIN)
+def bbox(bounds=None):
+    x0, y0, x1, y1 = bounds or area.bounds(MARGIN)
     ll = [lv95_to_wgs(*local_to_lv95(x, y)) for x in (x0, x1) for y in (y0, y1)]
     return "%.6f,%.6f,%.6f,%.6f" % (min(p[0] for p in ll), min(p[1] for p in ll), max(p[0] for p in ll),
                                     max(p[1] for p in ll))
@@ -113,5 +116,25 @@ def main():
             print("kept in the repository:", pinned)
 
 
+def add():
+    """v3.0.40: the elements over the whole villages (area.villages()) missing from the pinned extracts."""
+    import shapely
+    g = shapely.union_all([p for _, _, p in area.villages()]).buffer(MARGIN)
+    b = bbox(g.bounds)
+    for path, query in ((OUT, QUERY), (POIS, QUERY_POIS)):
+        pinned = PINNED[path]
+        d = json.load(gzip.open(pinned, "rt", encoding="utf-8"))
+        have = {(e["type"], e["id"]) for e in d["elements"]}
+        new = [e for e in overpass(query.replace("{bbox}", b))["elements"] if (e["type"], e["id"]) not in have]
+        d["elements"] += new
+        d.setdefault("added_bbox", []).append(b)
+        with gzip.open(pinned, "wt", encoding="utf-8", compresslevel=9) as f:
+            json.dump(d, f)
+        print(os.path.basename(pinned), "+%d elements over" % len(new), b, flush=True)
+
+
 if __name__ == "__main__":
-    main()
+    if "--add" in sys.argv[1:]:
+        add()
+    else:
+        main()

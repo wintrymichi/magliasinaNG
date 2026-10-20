@@ -82,7 +82,7 @@ def main(pin=False, add=False):
             have = {r.get("egid") for r in old["buildings"]}
             new = [r for r in rows if r.get("egid") not in have]
             print("GWR: %d buildings added to the extract of %s" % (len(new), old.get("date")))
-            rows, date = old["buildings"] + new, "%s (+%s)" % (old.get("date"), date)
+            rows, date = old["buildings"] + new, ("%s (+%s)" % (old.get("date"), date)) if new else old.get("date")
         with gzip.open(PINNED, "wt", encoding="utf-8") as f:
             json.dump({"source": "BFS/UST, Registro federale degli edifici e delle abitazioni (GWR), dati pubblici",
                        "date": date, "buildings": rows}, f, separators=(",", ":"))
