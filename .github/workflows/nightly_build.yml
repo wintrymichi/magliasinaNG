@@ -1,0 +1,152 @@
+# Nightly build of v3.0.40: the complete level built from scratch on the integration branch (every thread of
+# v3.0.40 merged into claude/chiazze-chiare-strada-eci3wc), as fix_build.yml of the v3.0 fixes: downloads, rasters,
+# road network, build_level.py with every finishing step inside, the automatic checks (check_level.py,
+# drive_test.py) and the package. The zip goes to GitHub as the pre-release "nightly" (michi 2026-10-20: "mettila
+# tipo in una cartella nightly builds su github"), replacing the previous one: a build to test in the game, never
+# the latest release. The checks, the reports and the build log are an artifact of the run.
+#
+# It runs when beamng/nightly/stamp.txt changes on the integration branch (write the date and what is in it there to
+# start a build), or on demand.
+name: nightly build (v3.0.40)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/chiazze-chiare-strada-eci3wc]
+    paths: [beamng/nightly/stamp.txt]
+
+concurrency:
+  group: nightly-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  nightly-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+      ZIP_NAME: magliaso_pura_v3.0.40_nightly
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: Downloads from earlier runs
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/magliasinaNG/bm/data     # MAGLIASO_ROOT/data, written out: the cache takes no '..'
+          key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
+          restore-keys: v3-data-
+
+      - name: Release v1.1 (objects of the original route, neutral textures)
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_worldcover.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+          du -sh "$MAGLIASO_ROOT/data"/* || true
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: Road network
+        working-directory: beamng/pipeline
+        run: |
+          python network.py
+          python network_surface.py
+
+      - name: Level (build_level.py, every finishing step inside)
+        working-directory: beamng/pipeline
+        run: |
+          python build_level.py | tee "$MAGLIASO_ROOT/build_level.log"
+          df -h .
+
+      - name: Checks
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          mkdir -p "$O"
+          python check_level.py || true
+          cp ../verifica/check_level.json "$O/check_level.json"
+          python drive_test.py || true
+          cp ../verifica/drive_test.json "$O/drive_test.json"
+          git checkout -- ../verifica/check_level.json ../verifica/drive_test.json
+
+      - name: Package
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          python package.py "$ZIP_NAME" | tee "$O/package.log"
+          mkdir -p "$GITHUB_WORKSPACE/zip"
+          mv "$MAGLIASO_ROOT/dist/$ZIP_NAME.zip" "$GITHUB_WORKSPACE/zip/"
+          cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
+          cp "$MAGLIASO_ROOT/build_level.log" "$O/"
+          ls -la "$O" "$GITHUB_WORKSPACE/zip"
+          md5sum "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-build-reports
+          path: out/
+
+      - name: Pre-release "nightly"
+        run: |
+          N="$RUNNER_TEMP/notes.md"
+          {
+            echo "**Nightly build of v3.0.40, to test in the game. Not the release.** Built $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\` of \`$GITHUB_REF_NAME\`."
+            echo
+            echo "For BeamNG.drive 0.40. Before installing: remove or disable \`magliaso_pura_v3.0.zip\` in the mods folder (both are the same level). After updating the game to 0.40, BeamNG disables every mod: enable this one in the mod manager."
+            echo
+            echo "What is in it (CHANGELOG, v3.0.40):"
+            echo
+            awk '/^## v3.0.40/{on=1; next} /^## /{on=0} on' CHANGELOG.md
+            echo
+            echo "Automatic checks, reports and the build log: artifact \"nightly-build-reports\" of run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          } > "$N"
+          gh release delete nightly --yes --cleanup-tag || true
+          gh release create nightly "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip" --prerelease --latest=false \
+            --target "$GITHUB_SHA" --title "Nightly builds: v3.0.40 ($(date -u '+%Y-%m-%d'))" --notes-file "$N"
