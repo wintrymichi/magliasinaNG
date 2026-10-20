@@ -102,6 +102,22 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 
 ## Meshes
 
+- Floating roofs (v3.1): 620 roofs of swissBUILDINGS3D have no walls at all (canopies, covered parkings, boat houses,
+  platform roofs; OBJEKTART says "Gebaeude Einzelhaus", only 5 are "Flugdach"), so a kind filter finds none of
+  them. 3490 more records are roofs alone too, but their house's walls are a separate record under them: tell them
+  apart by the roof plan over the ground plans of buildings with walls (buildings_mesh.canopies), never by
+  `len(walls) == 0` alone, or every such house gets posts and a slab.
+- Finding them in a built level: union the roof faces per tile and look for faces of other materials near the
+  outline that reach down from the eaves (check_level.floating_roofs). Counting "wall feet above the terrain" per
+  vertex column gave only noise (chimneys, upper storeys, plinth decals): drop that approach.
+- An attempt to add posts under roofs that overhang their walls by more than 1.8 m (issue #13) found 1260 roofs,
+  mostly garage decks at ground level and canopies merged into a house's roof: not done, #13 stays open.
+- render3d.Renderer resolves the shapes by the level folder's name: a test copy of a level must be called
+  `magliaso_pura` (a copy named otherwise renders terrain only). Use `cp -al` (hard links) and replace the files you
+  change by new files, so the original level is not touched.
+- The cloud container cannot reach swisstopo: data packs come from a workflow that commits them to the branch
+  (roofs_pack.yml, landmarks.yml). prepare_work.py crashed on the folder dati/far_imposters (fixed: folders skipped).
+
 - Check winding/orientation when placing text or UVs along an outline: the fuel station fascia text was
   mirrored on outlines that ran the other way.
 
