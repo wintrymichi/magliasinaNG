@@ -28,7 +28,10 @@ of 64 pixels across. Now:
   of a side road (the first v3.0 broke them for 15 m at 1157 such points and 410 width jumps).
 Every layer at its own height, LIFT m over the top faces of the asphalt, translucent with depth writes as Italy
 draws them (italy_mats.OVERLAY: they take the shadows) (the height of the face under it,
-never the deck of a bridge above it). One mesh per TILE m tile in MissionGroup/roads/markings, without
+never the deck of a bridge above it), and as high over the asphalt between its vertices too: rows of vertices at
+most ROW_STEP m apart across a band, every triangle lifted where the crown or a crest of the road came through it
+(clear_of: the v3.0 bands had holes in 1-5 % of their area), a triangle that would hang over a step of the road
+left out; in every mesh the layers from the lowest up, the order the game draws them in. One mesh per TILE m tile in MissionGroup/roads/markings, without
 collision; the textures in art/shapes/roads. Everything else is copied as it is.
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish road_wear
@@ -83,6 +86,16 @@ CROSS_WIDER = 0.25           # m of half width: a road this much wider keeps its
 BRIDGE_JUMP = 20             # stations (40 m): the longest jump of the width the bands go on past
 BRIDGE_OFF = 3               # stations (6 m): the longest stretch off the asphalt they go on past
 MIN_PIECE = 6                # stations: shorter pieces of a band are left out
+ROW_STEP = 2.0               # m at most between the rows of vertices across a band
+# where the faces of the road are higher between the vertices of a band (the crown, a crest, the joint of two
+# meshes) the band was under them, the road over it: holes in the wear (1-5 % of the bands of the first v3.0).
+# The band is checked at these points of every triangle (barycentric) and lifted where the road comes too close
+CLEAR_AT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1 / 3, 1 / 3, 1 / 3], [.5, .5, 0], [0, .5, .5], [.5, 0, .5],
+                     [.75, .25, 0], [.25, .75, 0], [0, .75, .25], [0, .25, .75], [.25, 0, .75], [.75, 0, .25],
+                     [2 / 3, 1 / 6, 1 / 6], [1 / 6, 2 / 3, 1 / 6], [1 / 6, 1 / 6, 2 / 3]])
+CLEAR_MAX = 0.10             # m: a face higher than this over the band is another level (a bridge), not its road
+FLOAT_MAX = 0.10             # m: a triangle of a band this high over the road somewhere spans a step of the road
+                             # (the band would hang over the lower side like a sheet): left out
 SHAPE = re.compile(r"art/shapes/roads/road_wear_[-+]\d+_[-+]\d+\.dae$")
 # material: (lift m over the road, m of road per repeat of the texture for a band 1 m wide)
 LAYER = {"mp_wear_variation": (0.006, 112.0 / 6.0), "mp_wear_cracks": (0.008, 16.0 / 4.0),
@@ -254,8 +267,9 @@ def edge_bands(A, Sa, Sall, Sp, stats):
             down = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])[:, 2] < 0
             t[down] = t[down][:, ::-1]
             uv[down] = uv[down][:, ::-1]
-            tris.append(t)
-            uvs.append(uv)
+            t, ok = clear_of(t, Sa, lift)
+            tris.append(t[ok])
+            uvs.append(uv[ok])
             stats["edge_m"] += float(s[b - 1] - s[a])
     if not tris:
         return np.zeros((0, 3, 3)), np.zeros((0, 3, 2))
@@ -549,24 +563,54 @@ def bridge(keep, ok, arrays):
     return out, vals
 
 
+def clear_of(t, S, lift):
+    """The triangles t (k, 3, 3) of a band (a soup: a corner of several triangles is one vertex) lifted so that
+    at every point CLEAR_AT of every triangle the band is at least `lift` m over the faces S under it: each
+    triangle's shortfall is added to its three corners (a vertex shared by several takes the largest), so the
+    band stays whole. A face more than CLEAR_MAX m over the band is left out (the deck of a bridge above).
+    Returns (triangles, keep (k,)): keep false for a triangle more than FLOAT_MAX m over the road somewhere."""
+    if not len(t):
+        return t, np.ones(0, bool)
+    P = np.einsum("bk,tkd->tbd", CLEAR_AT, t)                         # (k, m, 3)
+    x, y, z = P[..., 0].ravel(), P[..., 1].ravel(), P[..., 2].ravel()
+    zs = S.height(x, y, "near", zhint=z - lift)
+    short = np.where(np.isfinite(zs) & (zs - z < CLEAR_MAX - lift), zs + lift - z, 0.0).reshape(len(t), -1)
+    up = np.maximum(short.max(1), 0.0)
+    if up.any():
+        key = np.round(t[..., :2].reshape(-1, 2) * 1e4).astype(np.int64)
+        _, inv = np.unique(key, axis=0, return_inverse=True)
+        inv = inv.ravel()
+        lift_v = np.zeros(inv.max() + 1)
+        np.maximum.at(lift_v, inv, np.repeat(up, 3))
+        t = t.copy()
+        t[..., 2] += lift_v[inv].reshape(len(t), 3)
+        z = np.einsum("bk,tk->tb", CLEAR_AT, t[..., 2]).ravel()            # the band's points, lifted
+    over = np.where(np.isfinite(zs), z - lift - zs, 0.0).reshape(len(t), -1)
+    return t, over.max(1) <= FLOAT_MAX
+
+
 def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
     """Triangles and texture coordinates of a band of widths (n,) about the points C (n, 2) (heights zc) on the
-    asphalt Sa, only where keep (n,) is true; u across the band, v along it."""
-    tris, uvs = [], []
+    asphalt Sa, only where keep (n,) is true; u across the band, v along it. Rows of vertices at most ROW_STEP
+    m apart across it, the whole band clear of the asphalt (clear_of). Returns (triangles, uvs, m of band)."""
+    tris, uvs, length = [], [], 0.0
     e = np.flatnonzero(np.diff(np.r_[0, keep.astype(int), 0]))
     for a, b in zip(e[::2], e[1::2]):
         if b - a < (min_piece or MIN_PIECE):
             continue
+        m = max(2, 2 * int(np.ceil(float(np.nanmax(width[a:b])) / (2 * ROW_STEP))))   # an even number: a middle row
         rows = []
-        for k in (1, 0, -1):                                          # left side, middle, right side
-            Q = C[a:b] + Nl[a:b] * (k * width[a:b] / 2)[:, None]
-            z = zc[a:b] if k == 0 else Sa.height(Q[:, 0], Q[:, 1], "near", zhint=zc[a:b])
+        for j in range(m + 1):                                       # left side, ..., middle, ..., right side
+            f = 1 - 2 * j / m
+            Q = C[a:b] + Nl[a:b] * (f * width[a:b] / 2)[:, None]
+            z = zc[a:b] if 2 * j == m else Sa.height(Q[:, 0], Q[:, 1], "near", zhint=zc[a:b])
             z = np.where(np.isfinite(z), z, zc[a:b])
             rows.append(np.column_stack([Q, z + lift]))
         v = s[a:b] / v_tile
         n1 = b - a - 1
         ts, us = [], []
-        for (Lr, uL), (Rr, uR) in (((rows[1], 0.5), (rows[2], 1.0)), ((rows[0], 0.0), (rows[1], 0.5))):
+        for j in range(m):
+            Lr, uL, Rr, uR = rows[j], j / m, rows[j + 1], (j + 1) / m
             ts.append(np.stack([Rr[:-1], Rr[1:], Lr[1:], Rr[:-1], Lr[1:], Lr[:-1]], 1))
             us.append(np.stack([np.c_[np.full(n1, uR), v[:-1]], np.c_[np.full(n1, uR), v[1:]], np.c_[np.full(n1, uL), v[1:]],
                                 np.c_[np.full(n1, uR), v[:-1]], np.c_[np.full(n1, uL), v[1:]], np.c_[np.full(n1, uL), v[:-1]]], 1))
@@ -575,11 +619,13 @@ def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
         down = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])[:, 2] < 0
         t[down] = t[down][:, ::-1]
         uv[down] = uv[down][:, ::-1]
-        tris.append(t)
-        uvs.append(uv)
+        t, ok = clear_of(t, Sa, lift)
+        tris.append(t[ok])
+        uvs.append(uv[ok])
+        length += float(s[b - 1] - s[a])
     if not tris:
-        return np.zeros((0, 3, 3)), np.zeros((0, 3, 2))
-    return np.concatenate(tris), np.concatenate(uvs)
+        return np.zeros((0, 3, 3)), np.zeros((0, 3, 2)), 0.0
+    return np.concatenate(tris), np.concatenate(uvs), length
 
 
 def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
@@ -650,10 +696,11 @@ def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
         zq = np.where(np.isfinite(zq) & (np.abs(zq - zc) < 0.4), zq, zc)
         if not inside.any():
             return
-        t, uv = strip(C, width, zq, Nl, Sa, inside, lift, per_m * float(np.nanmedian(width[inside])), sd, min_piece)
+        t, uv, length = strip(C, width, zq, Nl, Sa, inside, lift, per_m * float(np.nanmedian(width[inside])), sd,
+                              min_piece)
         if len(t):
             out.append((mat, t, uv))
-            stats[mat[8:] + "_m"] += float(len(t) / 4 * STEP)
+            stats[mat[8:] + "_m"] += length
     # patches over the carriageway, 0.4 m in from both edges
     lay("mp_wear_variation", mid, np.maximum(Ws - 0.8, 1.6), keep & np.isfinite(Ws))
     # tyre tracks: a pair in the middle of every lane (one pair in the middle of a narrow road)
@@ -685,16 +732,14 @@ def road_wear_step(root, report=None):
     Sp = TriSurface(np.concatenate(other) if other else np.zeros((0, 3, 3)))
     stats = {"roads": 0, "ring_roads": 0, "track_m": 0.0, "edge_m": 0.0, "variation_m": 0.0, "cracks_m": 0.0,
              "bridged_m": 0.0}
-    builders = {}
+    pieces = {}                                                       # tile -> material -> [(t, uv)]
 
     def add(mat, t, uv):
         c = t.mean(1)
         keys = np.floor(c[:, :2] / TILE).astype(int)
         for key in {tuple(q) for q in keys.tolist()}:
             m = (keys[:, 0] == key[0]) & (keys[:, 1] == key[1])
-            V = t[m].reshape(-1, 3)
-            builders.setdefault(key, bng.MeshBuilder()).add(mat, V, uvs=uv[m].reshape(-1, 2),
-                                                            normals=np.repeat([[0, 0, 1.0]], len(V), 0))
+            pieces.setdefault(key, {}).setdefault(mat, []).append((t[m], uv[m]))
     t, uv = edge_bands(A, Sa, Sall, Sp, stats)
     if len(t):
         add("mp_wear_edge", t, uv)
@@ -716,6 +761,15 @@ def road_wear_step(root, report=None):
         for mat, t, uv in bl:
             add(mat, t, uv)
     stats["junctions"] = int(len(junc))
+    # in every mesh the layers from the lowest to the highest: the game draws them in this order, and with depth
+    # writes a layer drawn first would hide the parts of a lower one drawn after it under its triangles
+    builders = {}
+    for key, by_mat in pieces.items():
+        mb = builders[key] = bng.MeshBuilder()
+        for mat in sorted(by_mat, key=lambda m: LAYER[m][0]):
+            for t, uv in by_mat[mat]:
+                V = t.reshape(-1, 3)
+                mb.add(mat, V, uvs=uv.reshape(-1, 2), normals=np.repeat([[0, 0, 1.0]], len(V), 0))
     tmp = tempfile.mkdtemp(prefix="magliaso_wear_")
     try:
         new_files = {}
