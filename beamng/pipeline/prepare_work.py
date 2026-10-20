@@ -15,7 +15,8 @@ def main():
     n = 0
     for f in sorted(os.listdir(DATI)):
         dst = os.path.join(WORK, f)
-        if not os.path.exists(dst):
+        # v3.0.40: folders of dati (far_imposters) are read from there, not copied
+        if os.path.isfile(os.path.join(DATI, f)) and not os.path.exists(dst):
             shutil.copy(os.path.join(DATI, f), dst)
             n += 1
     print(n, "files copied from dati to", WORK)
