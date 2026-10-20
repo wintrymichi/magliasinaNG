@@ -665,7 +665,8 @@ def raise_roof(b, dz):
 def load_buildings():
     """The buildings of the level: swissBUILDINGS3D (buildings.pkl) without the ones gone from the ground
     and with the ones of the cadastral survey it does not model (missing_buildings.py, v2.2); v3.0.40: the roofs
-    the street photos see higher or lower moved there (street_roofs.py, dati/street_roofs.json)."""
+    the street photos see higher or lower moved there (street_roofs.py, dati/street_roofs.json); v3.1: walls under
+    the roofs without walls that the cadastral survey does not call open (close_roofs)."""
     blds = pickle.load(open(os.path.join(WORK, "buildings.pkl"), "rb"))
     diff = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "buildings_diff.json")
     added = os.path.join(WORK, "buildings_added.pkl")
@@ -677,7 +678,102 @@ def load_buildings():
     if os.path.exists(STREET_ROOFS):
         roofs = json.load(open(STREET_ROOFS))
         blds = [raise_roof(b, roofs[b["uuid"]]["dz"]) if b["uuid"] in roofs else b for b in blds]
-    return blds
+    return close_roofs(blds)
+
+
+# v3.1: of the roofs without walls (canopies), the cadastral survey tells the open ones from the closed: over a shelter
+# (SOSF riparo, 469 of the 912) or another part of a building (SOSF altra_parte_di_edificio: porches, lean-tos) a roof
+# stands on posts (canopy); over a building of the survey (LCSF edificio, 111: houses, a block round a courtyard,
+# sheds) it is a house whose walls swissBUILDINGS3D lacks, and gets them along the survey's outline under the roof;
+# over neither (396: garden sheds and huts under the trees, barns, too small for the survey) walls too, OVERHANG m in
+# from the edge of the roof, where the eaves are at most SHED_EAVE m over the ground: a higher roof the survey does not
+# call a building is open (a roof 12 m over a railway yard became a box across its tracks, a loading-bay roof 5 m
+# high beside a hall another). The walls stand from WALL_SINK m under the lowest ground of the outline up to the roof.
+OPEN_KINDS = ("riparo", "altra_parte_di_edificio")
+OPEN_COVER = 0.5
+OVERHANG = 0.3
+WALL_SINK = 0.3
+SHED_EAVE = 3.0
+WALL_STEP = 1.0          # m, longest piece of a wall: its top follows the roof
+
+
+def walls_under(roofs, outline, ground):
+    """Wall triangles (k, 3, 3) along the rings of polygon `outline` from under the ground up to the roof."""
+    out = []
+    for poly in _polys(outline):
+        poly = shapely.geometry.polygon.orient(poly.simplify(0.1), 1.0)
+        for ring in [poly.exterior] + list(poly.interiors):
+            c = np.asarray(ring.coords)
+            q = [c[0]]
+            for a, b in zip(c[:-1], c[1:]):
+                n = max(int(np.ceil(np.linalg.norm(b - a) / WALL_STEP)), 1)
+                q += [a + (b - a) * k / n for k in range(1, n + 1)]
+            q = np.array(q)
+            zt = roof_height(roofs, q) - 0.02
+            zb = float(np.min(ground(q[:, 0], q[:, 1]))) - WALL_SINK
+            for i in range(len(q) - 1):
+                A, B = np.r_[q[i], zb], np.r_[q[i + 1], zb]
+                C, D = np.r_[q[i + 1], zt[i + 1]], np.r_[q[i], zt[i]]
+                out += [[A, B, C], [A, C, D]]
+    return np.array(out, float).reshape(-1, 3, 3)
+
+
+def close_roofs(blds):
+    """The buildings with walls under the roofs without walls that the cadastral survey does not call open
+    (OPEN_KINDS); without the survey (work/av_local.pkl) every one stays a canopy."""
+    avf = os.path.join(WORK, "av_local.pkl")
+    if not os.path.exists(avf):
+        return blds
+    av = pickle.load(open(avf, "rb"))
+    fps = [footprint(b) for b in blds]
+    ids = canopies(blds, fps)
+    if not ids:
+        return blds
+    from geo import Grid
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    ground = lambda x, y: dtm.sample(x, y)
+    trees = {}
+    for layer, kinds in (("LCSF", ("edificio",)), ("SOSF", OPEN_KINDS)):
+        g = [x for k in kinds for x, _ in av.get(layer, {}).get(k, [])]
+        trees[layer] = (shapely.STRtree(g), g) if g else None
+
+    def cover(plan, layer):
+        if trees[layer] is None:
+            return shapely.Polygon()
+        t, g = trees[layer]
+        hit = t.query(plan, predicate="intersects")
+        return shapely.union_all([g[i] for i in hit]).intersection(plan) if len(hit) else shapely.Polygon()
+    out, n = [], {"open": 0, "survey": 0, "roof": 0}
+    for b in blds:
+        if b["uuid"] not in ids:
+            out.append(b)
+            continue
+        plan = roof_plan(b["roofs"])
+        if plan.is_empty or cover(plan, "SOSF").area >= OPEN_COVER * plan.area:
+            n["open"] += 1
+            out.append(b)
+            continue
+        mu = cover(plan, "LCSF")
+        if mu.area >= OPEN_COVER * plan.area:
+            outline, how = shapely.make_valid(mu.buffer(-0.05)), "survey"
+        else:
+            P = np.asarray(plan.representative_point().coords)
+            ring = np.concatenate([np.asarray(q.exterior.coords) for q in _polys(plan)] + [P])
+            if float(b["roofs"][:, :, 2].min()) - float(np.median(ground(ring[:, 0], ring[:, 1]))) > SHED_EAVE:
+                n["open"] += 1
+                out.append(b)
+                continue
+            outline, how = shapely.make_valid(plan.buffer(-OVERHANG, join_style="mitre")), "roof"
+        walls = walls_under(b["roofs"], outline, ground)
+        if not len(walls):
+            out.append(b)
+            continue
+        n[how] += 1
+        allp = np.concatenate([walls, b["roofs"]]).reshape(-1, 3)
+        out.append({**b, "walls": walls, "bbox": [allp.min(0).tolist(), allp.max(0).tolist()]})
+    print("roofs without walls: %d open (canopies), %d closed along the survey, %d closed under the roof"
+          % (n["open"], n["survey"], n["roof"]), flush=True)
+    return out
 
 
 def street_index(net):
