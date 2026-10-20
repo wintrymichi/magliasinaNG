@@ -1,0 +1,181 @@
+{
+ "fields": [
+  "UUID",
+  "DATUM_AEND",
+  "DATUM_ERST",
+  "ERSTELL_J",
+  "ERSTELL_M",
+  "REVISION_J",
+  "REVISION_M",
+  "GRUND_AEND",
+  "HERKUNFT",
+  "HERKUNFT_J",
+  "HERKUNFT_M",
+  "OBJEKTART",
+  "REVISION_Q",
+  "OEV_NAME_U",
+  "NAME",
+  "AUSSER_BET",
+  "STUFE",
+  "BETRIEBSBA",
+  "EROEFFNUNG"
+ ],
+ "lines": [
+  {
+   "props": {
+    "UUID": "{F132034D-3836-4B66-B275-E781218DBF15}",
+    "DATUM_AEND": "20210903",
+    "DATUM_ERST": "20090105",
+    "ERSTELL_J": 2001,
+    "ERSTELL_M": null,
+    "REVISION_J": 2024,
+    "REVISION_M": 6,
+    "GRUND_AEND": "Verbessert",
+    "HERKUNFT": "swisstopo",
+    "HERKUNFT_J": 2021,
+    "HERKUNFT_M": 6,
+    "OBJEKTART": "Skilift",
+    "REVISION_Q": "Akt",
+    "OEV_NAME_U": "{46882AE4-972C-438E-95A7-FF00DB6FBB8E}",
+    "NAME": "Bedeia",
+    "AUSSER_BET": "Falsch",
+    "STUFE": "1",
+    "BETRIEBSBA": "Falsch",
+    "EROEFFNUNG": ""
+   },
+   "parts": [
+    [
+     [
+      -415.08,
+      1827.81,
+      686.46
+     ],
+     [
+      -422.31,
+      1834.9,
+      687.01
+     ],
+     [
+      -520.23,
+      1936.07,
+      662.42
+     ],
+     [
+      -580.01,
+      1997.82,
+      645.7
+     ],
+     [
+      -613.38,
+      2032.26,
+      636.6
+     ],
+     [
+      -639.41,
+      2059.38,
+      628.71
+     ]
+    ]
+   ]
+  },
+  {
+   "props": {
+    "UUID": "{CAA8813B-B8CF-48C2-ACCB-F01C169F3AE9}",
+    "DATUM_AEND": "20210816",
+    "DATUM_ERST": "20090105",
+    "ERSTELL_J": 2001,
+    "ERSTELL_M": null,
+    "REVISION_J": 2024,
+    "REVISION_M": 6,
+    "GRUND_AEND": "Verbessert",
+    "HERKUNFT": "swisstopo",
+    "HERKUNFT_J": 2021,
+    "HERKUNFT_M": 6,
+    "OBJEKTART": "Luftseilbahn",
+    "REVISION_Q": "Akt",
+    "OEV_NAME_U": "{9595541F-D9CF-4A26-960F-4492E2F32A66}",
+    "NAME": "Miglieglia-Monte Lema",
+    "AUSSER_BET": "Falsch",
+    "STUFE": "1",
+    "BETRIEBSBA": "Falsch",
+    "EROEFFNUNG": ""
+   },
+   "parts": [
+    [
+     [
+      -1066.03,
+      3553.53,
+      711.4
+     ],
+     [
+      -1087.51,
+      3576.52,
+      721.11
+     ],
+     [
+      -1240.02,
+      3743.5,
+      800.93
+     ],
+     [
+      -1704.99,
+      4253.14,
+      1049.1
+     ],
+     [
+      -2481.16,
+      5103.76,
+      1429.55
+     ],
+     [
+      -2733.05,
+      5379.81,
+      1565.32
+     ],
+     [
+      -2758.96,
+      5407.29,
+      1565.07
+     ]
+    ]
+   ]
+  },
+  {
+   "props": {
+    "UUID": "{C5AE37CE-D2EE-4429-9F6A-6A81006E87BD}",
+    "DATUM_AEND": "20210816",
+    "DATUM_ERST": "20210816",
+    "ERSTELL_J": 2021,
+    "ERSTELL_M": 6,
+    "REVISION_J": 2024,
+    "REVISION_M": 6,
+    "GRUND_AEND": "Verbessert",
+    "HERKUNFT": "swisstopo",
+    "HERKUNFT_J": 2021,
+    "HERKUNFT_M": 6,
+    "OBJEKTART": "Transportseil",
+    "REVISION_Q": "Akt",
+    "OEV_NAME_U": "",
+    "NAME": "",
+    "AUSSER_BET": "Falsch",
+    "STUFE": "2",
+    "BETRIEBSBA": "Wahr",
+    "EROEFFNUNG": ""
+   },
+   "parts": [
+    [
+     [
+      -3324.01,
+      230.87,
+      354.39
+     ],
+     [
+      -3251.0,
+      126.27,
+      350.71
+     ]
+    ]
+   ]
+  }
+ ]
+}

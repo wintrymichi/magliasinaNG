@@ -167,6 +167,28 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - The cloud container cannot reach documentation.beamng.com or the game files (proxy 403): get facts about the game
   from the PC (the integrator's RC session), not from guesses.
 
+## Landmarks (churches, bell towers, cable car)
+
+- The cloud container cannot reach swisstopo, Commons or Mapillary, and Actions artifacts and logs are blocked by
+  the proxy: `.github/workflows/landmarks.yml` (bump its `# stamp:` line to rerun) commits a small dev pack to
+  `beamng/verifica/monumenti/pack` and `landmarks_preview.py` renders before/after from it in about 4 min a site.
+- Actions caches are per branch: the first run of a new branch downloads everything again (about 13 min).
+- Contact sheets made of CC BY-SA photos must not go into git (they are derivatives, the repo is CC BY-NC):
+  they are in .gitignore, only `sheets/credits.json` is kept.
+- The survey often keeps a church's roof as a separate object without walls: query buildings by their boxes,
+  and take the roofs over a footprint from those objects (`landmarks.roofs_of`), or towers come out roofless.
+- Round towers are many narrow facets (none wide enough for a module): use `landmarks.round_faces`. A tower with a
+  lantern on top: take the eaves of its widest faces, not the median of all.
+- A facade polygon can be split by a slot of a few cm (a downpipe in the survey): close it before `fits`, or one
+  side of a tower got no bell chamber.
+- A sacred block of the survey can hold a whole village core (Bedigliora) and the register gives it to a house:
+  `landmarks.split_tower` draws its tower anyway.
+- Heights stored as uint16 cm wrap after 655 m: the cable car climbs 900 m (decimetres there, `dtm_unit`).
+- `bng.write_dae` subtracts the origin itself; do not subtract it again in the geometry.
+- `landmarks_preview.py --before` must also switch off `landmarks.USES`, or the "before" shows the new details.
+- Force-pushing this branch or merging another thread's branch into it was blocked: hand the branch over and let
+  the integrator merge it.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs

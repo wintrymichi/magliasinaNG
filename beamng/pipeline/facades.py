@@ -324,6 +324,8 @@ def roof_kind(style, slope_deg, rgb):
     orthophoto (a small roof in the shade of its neighbours) tells nothing: its covering follows the age."""
     if slope_deg < 8.0:
         return "flat"
+    if style.get("roof"):                              # v3.0.40: the covering a landmark has (landmarks.py)
+        return style["roof"]
     r, g, b = rgb
     mx, mn = max(rgb), min(rgb)
     sat = (mx - mn) / max(mx, 1e-6)
@@ -341,7 +343,7 @@ def roof_kind(style, slope_deg, rgb):
         if use in ("rural", "shed") or age in ("old", "interwar"):
             return "piode"
         return "tegole"                                # grey concrete tiles of the newer houses
-    if age in ("old", "interwar") or use in ("church", "tower"):
+    if age in ("old", "interwar") or use in ("church", "tower", "chapel"):
         return "coppi"
     return "tegole" if age in ("late", "new") else ("coppi" if (style["seed"] % 3) else "tegole")
 

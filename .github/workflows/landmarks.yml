@@ -1,0 +1,88 @@
+# Landmarks of v3.0.40 (churches, bell towers, the Monte Lema cable car): the development pack of landmarks_pack.py
+# (their buildings of swissBUILDINGS3D, the register, ground and orthophoto around them, reference photos with an
+# open licence on contact sheets, the cable lines of swissTLM3D), committed to beamng/verifica/monumenti/pack on the
+# branch: the cloud session that writes the models cannot reach swisstopo, Commons or Mapillary.
+# stamp: 4
+name: landmarks pack
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/monumenti-c953yv]
+    paths: [.github/workflows/landmarks.yml]
+
+concurrency:
+  group: landmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    env:
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_OSM_PINNED: "1"
+      MAPILLARY_TOKEN: ${{ secrets.MAPILLARY_TOKEN }}
+      PYTHONHASHSEED: "0"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: Downloads of the build runs
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/magliasinaNG/bm/data
+          key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
+          restore-keys: v3-data-
+
+      - name: Download (what the cache lacks)
+        working-directory: beamng/pipeline
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/work" "$MAGLIASO_ROOT/data"
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_av.py
+          python download_gwr.py
+          python download_tlm.py
+          du -sh "$MAGLIASO_ROOT/data"/* || true
+
+      - name: Buildings
+        working-directory: beamng/pipeline
+        run: python extract_buildings.py
+
+      - name: Pack
+        working-directory: beamng/pipeline
+        run: |
+          rm -rf ../verifica/monumenti/pack
+          python landmarks_pack.py ../verifica/monumenti/pack
+          du -sh ../verifica/monumenti/pack/*
+
+      - name: Commit the pack
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/verifica/monumenti/pack
+          git commit -m "landmarks: development pack (buildings, ground, reference photos)" || exit 0
+          for i in 1 2 3 4 5; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 10; done

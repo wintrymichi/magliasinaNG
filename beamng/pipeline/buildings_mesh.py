@@ -551,11 +551,17 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
         v1_walls = (cKDTree(wp), wc) if len(wp) else None
     # v2.2: original procedural textures (bld_textures.py): plaster, stone, plinth, openings, roofs
     index, means = bld_textures.build(shp_dir)
+    # v3.0.40: the churches, chapels and bell towers (landmarks.py) and their textures (landmark_textures.py)
+    import landmarks
+    import landmark_textures
+    lindex, ashlar_mean = landmark_textures.build(shp_dir)
+    lem = landmarks.Emitter(lindex)
     L = f"/levels/{level_name}/art/shapes/buildings"
     rcol = roof_colors(blds)
     fps = [footprint(b) for b in blds]
     pos = {b["uuid"]: i for i, b in enumerate(blds)}
     gwr = facades.gwr_join(blds, fps)
+    landmarks.prepare(blds, fps, gwr)
     measured = {}
     if os.path.exists(facades.FACADE_COLORS):
         measured = json.load(open(facades.FACADE_COLORS))
@@ -631,6 +637,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             style = facades.style_of(b, rec, fp.area, height, rcol.get(b["uuid"]), measured=wall_col,
                                      shutter=(sv["shutter"], sv.get("shutter_frac", 0.0)) if sv.get("shutter") else None,
                                      shop=b["uuid"] in with_shop)
+            style = landmarks.apply(style, b, fp, wall_col)
             stats["gwr"] += bool(rec)
             stats["measured"] += wall_col is not None
             stats["use"][style["use"]] = stats["use"].get(style["use"], 0) + 1
@@ -642,12 +649,17 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             # its own record of the register, style, floors, door and tone (a row of houses of a village core)
             rest, groups = houses(b, rest, style, rec, height, rcol.get(b["uuid"]), wall_col, sv, parts.get(b["uuid"]),
                                   by_egid, shop_pts)
+            groups = [(sel, landmarks.apply(pst, b, fp, wall_col)) for sel, pst in groups]
+            groups = landmarks.split_tower(b, rest, groups, fp, roofs)
             if len(groups) > 1:
                 stats["parts"] = stats.get("parts", 0) + len(groups)
             # windows, doors and plinth on the walls of the building (of every house of a block)
             if len(rest) and style["use"] != "none":
                 for sel, pst in groups:
-                    if pst["use"] != "none":
+                    if pst["use"] in landmarks.USES:
+                        stats["landmarks"] = stats.get("landmarks", 0) + 1
+                        stats["openings"] += landmarks.layout(b, rest[sel], pst, ctx, em, lem, landmarks.roofs_of(fp, roofs))
+                    elif pst["use"] != "none":
                         stats["openings"] += facades.layout_building(b, rest[sel], pst, ctx, em)
                     stats["shops"] = stats.get("shops", 0) + int(pst["shop"])
             if len(shell):
@@ -726,6 +738,22 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
             stats["balconies"] = stats.get("balconies", 0) + len(em.BC) // 5
         em.LV, em.LUV = [], []
         em.V, em.UV, em.PV, em.PUV, em.PC, em.BV, em.BC = [], [], [], [], [], [], []
+        # v3.0.40: the bell chambers, clock faces, portals, windows and quoins of the landmarks, their granite bands
+        if lem.V:
+            V = np.concatenate(lem.V).reshape(-1, 3)
+            mb.add("bld_landmark", V, uvs=np.concatenate(lem.UV).reshape(-1, 2), normals=bng.flat_normals_soup(V))
+        if lem.LV:
+            V = np.concatenate(lem.LV).reshape(-1, 3)
+            mb.add("bld_landmark_lit", V, uvs=np.concatenate(lem.LUV).reshape(-1, 2), normals=bng.flat_normals_soup(V))
+        if lem.AV:
+            V = np.concatenate(lem.AV).reshape(-1, 3)
+            C = np.repeat(np.array([np.r_[np.clip(c / np.array(ashlar_mean), 0, 1), 1.0] for c in lem.AC]), 6, 0)
+            mb.add("bld_ashlar", V, uvs=np.concatenate(lem.AUV).reshape(-1, 2), normals=bng.flat_normals_soup(V),
+                   colors=C)
+        if lem.XV:
+            V = np.concatenate(lem.XV).reshape(-1, 3)
+            mb.add("bld_iron", V, normals=bng.flat_normals_soup(V))
+        lem.clear()
         if mb.empty():
             continue
         rel = f"art/shapes/buildings/bld_{tx:+03d}_{ty:+03d}.dae"
@@ -747,7 +775,20 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                          T("t_bld_openings", "r.data.png"), T("t_bld_openings", "ao.data.png"), alpha_test=110,
                          detail={"opacityMap": T("t_bld_openings", "o.data.png"),
                                  "emissiveMap": T("t_bld_openings", "e.color.png"), "emissiveFactor": [1, 1, 1],
-                                 "instanceEmissive": True})]
+                                 "instanceEmissive": True}),
+            # v3.0.40: the landmarks atlas (bell chambers, portals, windows, quoins), the clock faces lit at night
+            # like the windows, and the squared granite of the cornices, string courses and plinths
+            bng.material("bld_landmark", T("t_bld_landmark", "b.color.png"), T("t_bld_landmark", "nm.normal.png"),
+                         T("t_bld_landmark", "r.data.png"), T("t_bld_landmark", "ao.data.png"), alpha_test=110,
+                         detail={"opacityMap": T("t_bld_landmark", "o.data.png")}),
+            bng.material("bld_landmark_lit", T("t_bld_landmark", "b.color.png"), T("t_bld_landmark", "nm.normal.png"),
+                         T("t_bld_landmark", "r.data.png"), T("t_bld_landmark", "ao.data.png"), alpha_test=110,
+                         detail={"opacityMap": T("t_bld_landmark", "o.data.png"),
+                                 "emissiveMap": T("t_bld_landmark", "e.color.png"), "emissiveFactor": [1, 1, 1],
+                                 "instanceEmissive": True}),
+            bng.material("bld_ashlar", T("t_bld_ashlar", "b.color.png"), T("t_bld_ashlar", "nm.normal.png"),
+                         T("t_bld_ashlar", "r.data.png"), T("t_bld_ashlar", "ao.data.png"), vert_color=True),
+            bng.material("bld_iron", base_color=(0.03, 0.03, 0.03, 1.0), roughness=0.55, metallic=0.7)]
     for kind in bld_textures.ROOF_TILE:
         n = f"t_roof_{kind}"
         ao = T(n, "ao.data.png") if kind != "flat" else None              # v2.4
@@ -759,7 +800,7 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
         mats.append(bng.material(f"mp_bld_photo_{i}", f"/levels/{level_name}/{rel}", roughness=0.85, extra=WALL_TWO_SIDED))
     bng.write_materials(os.path.join(shp_dir, "main.materials.json"), mats)
     # the atlas index and the texture means are for this build only (not level files)
-    for fn in ("bld_openings.json", "bld_textures.json"):
+    for fn in ("bld_openings.json", "bld_textures.json", "bld_landmark.json"):
         if os.path.exists(os.path.join(shp_dir, fn)):
             os.replace(os.path.join(shp_dir, fn), os.path.join(WORK, fn))
     stats["photo_facades"] = n_photo

@@ -46,7 +46,9 @@ def features(g, lname):
 
 def main():
     gdbs = sorted(glob.glob(os.path.join(DATA, "buildings3d", "unz", "*.gdb")))
-    keep_area = area.polygon().buffer(MARGIN)
+    # v3.0.40: and the landmarks out of the area seen from it (the summit of Monte Lema, landmarks.FAR_SITES)
+    import landmarks
+    keep_area = shapely.union_all([area.polygon().buffer(MARGIN)] + landmarks.far_zones())
     shapely.prepare(keep_area)
     blds = {}
     for g in gdbs:

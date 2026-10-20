@@ -1,0 +1,219 @@
+{
+ "_doc": "v3.0.40 landmarks (landmarks.py): churches, chapels and bell towers known from the reference photos (beamng/verifica/monumenti/pack/classified.json); a point inside the footprint, a radius, and what differs from the defaults",
+ "landmarks": [
+  {
+   "x": 102.8,
+   "y": 4725.6,
+   "r": 3.0,
+   "site": "+00103_+04726",
+   "roof": "coppi",
+   "clock": 0,
+   "quoins": false
+  },
+  {
+   "x": 530.2,
+   "y": -1553.9,
+   "r": 3.0,
+   "site": "+00538_-01547",
+   "roof": "coppi",
+   "clock": 0,
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": 546.1,
+   "y": -1539.4,
+   "r": 3.0,
+   "site": "+00538_-01547",
+   "roof": "coppi",
+   "clock": 0,
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": 1145.5,
+   "y": -2184.1,
+   "r": 3.0,
+   "site": "+01145_-02184",
+   "name": "San Cristoforo (Caslano)",
+   "tone": [
+    0.933,
+    0.91,
+    0.831
+   ],
+   "bells": 1,
+   "quoins": true
+  },
+  {
+   "x": 1529.4,
+   "y": 6361.3,
+   "r": 3.0,
+   "site": "+01529_+06361",
+   "walls": "stone",
+   "tone": [
+    0.549,
+    0.502,
+    0.431
+   ],
+   "roof": "coppi",
+   "clock": 0,
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": 2299.5,
+   "y": 6281.3,
+   "r": 3.0,
+   "site": "+02300_+06282",
+   "name": "San Michele (Arosio)",
+   "walls": "stone",
+   "tone": [
+    0.686,
+    0.596,
+    0.463
+   ],
+   "roof": "coppi",
+   "clock": 0,
+   "quoins": false
+  },
+  {
+   "x": 3260.1,
+   "y": 5556.2,
+   "r": 3.0,
+   "site": "+03260_+05556",
+   "name": "Madonna di Cimaronco",
+   "tone": [
+    0.941,
+    0.941,
+    0.922
+   ],
+   "roof": "coppi",
+   "clock": 0,
+   "quoins": false
+  },
+  {
+   "x": -14.1,
+   "y": -635.3,
+   "r": 3.0,
+   "site": "-00014_-00635",
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": -589.7,
+   "y": 413.6,
+   "r": 3.0,
+   "site": "-00589_+00413",
+   "roof": "coppi",
+   "clock": 0,
+   "quoins": false
+  },
+  {
+   "x": -989.4,
+   "y": 3735.3,
+   "r": 3.0,
+   "site": "-00990_+03735",
+   "name": "Santo Stefano (Miglieglia)",
+   "walls": "stone",
+   "tone": [
+    0.463,
+    0.447,
+    0.412
+   ],
+   "clock": 0
+  },
+  {
+   "x": -1052.2,
+   "y": 2043.3,
+   "r": 3.0,
+   "site": "-01052_+02044",
+   "walls": "stone",
+   "tone": [
+    0.686,
+    0.647,
+    0.569
+   ]
+  },
+  {
+   "x": -3668.3,
+   "y": -66.1,
+   "r": 3.0,
+   "site": "-03668_-00066",
+   "name": "Oratorio di Santa Maria (Ramello)",
+   "tone": [
+    0.922,
+    0.882,
+    0.804
+   ],
+   "roof": "coppi",
+   "clock": 0,
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": -3884.2,
+   "y": 2129.1,
+   "r": 3.0,
+   "site": "-03897_+02135",
+   "name": "San Pietro (Astano)",
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": -3910.1,
+   "y": 2141.0,
+   "r": 3.0,
+   "site": "-03897_+02135",
+   "name": "San Pietro (Astano)",
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": -4152.7,
+   "y": 910.8,
+   "r": 3.0,
+   "site": "-04152_+00911",
+   "name": "Oratorio Santa Maria di Corte",
+   "tone": [
+    0.941,
+    0.933,
+    0.902
+   ],
+   "roof": "coppi",
+   "clock": 0,
+   "bells": 2,
+   "quoins": false
+  },
+  {
+   "x": -4900.8,
+   "y": -38.8,
+   "r": 3.0,
+   "site": "-04901_-00038",
+   "name": "Oratorio San Valentino (Crocivaglio)",
+   "tone": [
+    0.886,
+    0.824,
+    0.667
+   ],
+   "clock": 0,
+   "bells": 1,
+   "quoins": false
+  },
+  {
+   "x": -5963.6,
+   "y": 761.7,
+   "r": 3.0,
+   "site": "-05964_+00762",
+   "name": "Oratorio di Santa Rita (Termine)",
+   "tone": [
+    0.961,
+    0.961,
+    0.941
+   ],
+   "roof": "coppi",
+   "clock": 0,
+   "bells": 1,
+   "quoins": false
+  }
+ ]
+}
