@@ -508,8 +508,15 @@ def wall_holes(lv, ter, places):
             crest.append(np.full(len(t), mat.endswith("_top")))
     tri, crest = np.concatenate(tri), np.concatenate(crest)
     P = tri.reshape(-1, 3)
-    _, wid = np.unique(np.round(P * 200).astype(np.int64), axis=0, return_inverse=True)
-    tw = wid.ravel().reshape(-1, 3)
+    # welded: the corners within 5 mm of each other are one (a grid of 5 mm alone split corners 1 mm apart on
+    # either side of a line of it)
+    U, wid = np.unique(np.round(P * 1000).astype(np.int64), axis=0, return_inverse=True)
+    pairs = cKDTree(U / 1000.0).query_pairs(0.005, output_type="ndarray")
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    _, lab = connected_components(coo_matrix((np.ones(len(pairs)), (pairs[:, 0], pairs[:, 1])),
+                                             shape=(len(U), len(U))), directed=False)
+    tw = lab[wid.ravel()].reshape(-1, 3)
     ok = (tw[:, 0] != tw[:, 1]) & (tw[:, 1] != tw[:, 2]) & (tw[:, 2] != tw[:, 0])
     k3 = np.flatnonzero(ok)
     # every edge with the vertex opposite it; the edges of one triangle only
@@ -547,6 +554,7 @@ def wall_holes(lv, ter, places):
     # of a top (its side, a road face that took the place of the side: walls.double_faces_step), or behind the edge
     # of a side (the top, the faces of another wall)
     n = np.cross(B - A, O - A)
+    width = np.linalg.norm(n, axis=1) / np.maximum(L, 1e-12)                # of the triangle across the edge
     u = np.cross(n, B - A)
     u /= np.maximum(np.linalg.norm(u, axis=1, keepdims=True), 1e-12)
     u *= -np.sign(np.einsum("ij,ij->i", u, O - A))[:, None]
@@ -564,30 +572,48 @@ def wall_holes(lv, ter, places):
         Nn = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0])
         Nn /= np.maximum(np.linalg.norm(Nn, axis=1, keepdims=True), 1e-12)
         fs = FaceSet(T, Nn)
-        for j in range(len(A)):
-            for f, dv in ((f, dv) for dv in dirs for f in (0.25, 0.5, 0.75)):
-                p = A[j] + (B[j] - A[j]) * f + HOLE_STEP * dv[j]
-                for k in fs.near(p):
-                    t, nk = T[k], Nn[k]
-                    d = (p - t[0]) @ nk
-                    if abs(d) > 0.04:
-                        continue
-                    # not the triangle of the edge itself
-                    if min(np.abs(t - A[j]).max(1).min(), np.abs(t - B[j]).max(1).min()) < 0.005:
-                        continue
-                    q = p - d * nk
-                    inside = True
-                    for a, b in ((0, 1), (1, 2), (2, 0)):        # metres inside every edge, 2 cm allowed
-                        w = np.cross(nk, t[b] - t[a])
-                        w /= max(np.linalg.norm(w), 1e-12)
-                        if (q - t[a]) @ w * np.sign((t[3 - a - b] - t[a]) @ w) < -0.02:
-                            inside = False
-                            break
-                    if inside:
-                        closed[j] = True
+
+        def lies_in(j, p, back=False, tol=0.04):
+            """p lies in a face of the walls or roads other than the triangle of edge j (back: one facing the
+            other way, in its plane), within tol m of its plane and half as far out of its edges (2 cm at most)."""
+            for k in fs.near(p):
+                t, nk = T[k], Nn[k]
+                if back and nk @ n[j] > -0.95:
+                    continue
+                d = (p - t[0]) @ nk
+                if abs(d) > tol:
+                    continue
+                # not the triangle of the edge itself, the one with all three of its corners (skipping every one
+                # with a corner of the edge, the first v3.0.40 nightly had 10 m of a wall face doubled along the side
+                # of another taken for holes)
+                if max(np.abs(t - c).max(1).min() for c in (A[j], B[j], O[j])) < 0.005:
+                    continue
+                q = p - d * nk
+                inside = True
+                for a, b in ((0, 1), (1, 2), (2, 0)):        # metres inside every edge, 2 cm allowed
+                    w = np.cross(nk, t[b] - t[a])
+                    w /= max(np.linalg.norm(w), 1e-12)
+                    if (q - t[a]) @ w * np.sign((t[3 - a - b] - t[a]) @ w) < -min(tol / 2, 0.02):
+                        inside = False
                         break
-                if closed[j]:
-                    break
+                if inside:
+                    return True
+            return False
+        for j in range(len(A)):
+            # no face one sees, no hole beside it: a triangle of no width (corners in a line: the top of a sliver
+            # left of a wall cut along the side of another, walls.wall_footprints) or one lying back to back in
+            # another face (the two faces of such a sliver, two walls touching): 30 m of the 38 m of v3.0.40 nightly 1
+            if width[j] < 0.01 or any(lies_in(j, A[j] + (B[j] - A[j]) * f - min(HOLE_STEP, width[j] / 3) * u[j], True)
+                                      for f in (0.25, 0.5, 0.75)):
+                closed[j] = True
+                continue
+            # an edge lying in other faces along its whole length is held by them: a T joint on the edge of a top, a
+            # steep lid (walls.wall_gaps_step) between two walls of different heights ending on the side of the higher
+            if all(lies_in(j, A[j] + (B[j] - A[j]) * f, tol=0.005) for f in (0.1, 0.5, 0.9)):
+                closed[j] = True
+                continue
+            closed[j] = any(lies_in(j, A[j] + (B[j] - A[j]) * f + HOLE_STEP * dv[j])
+                            for dv in dirs for f in (0.25, 0.5, 0.75))
     hole = ~closed
     if hole.any() and places is not None:
         places.add("buco nel muro", M[hole, 0], M[hole, 1], M[hole, 2], L[hole])
