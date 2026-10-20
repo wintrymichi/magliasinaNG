@@ -8,26 +8,24 @@ MissionGroup/ambient_sounds, where a driver hears them:
   crosses them, at most one every STREAM_STEP m;
 - the lake: on the shore of Lake Lugano (terrain at the WaterBlock's level, its largest water body), one every
   LAKE_STEP m within NEAR_ROAD m of a road;
-- church bells: at the churches and chapels of the Federal Register of Buildings (GWR class 1272), one per
-  BELL_MERGE m, BELL_UP m over the ground (the tower); they do not play on their own: the mod's Lua
-  (lua/ge/extensions/magliasoAmbient.lua) rings them on the hour, from BELL_FIRST to BELL_LAST o'clock;
 - the woods: where the forest of the level is dense (at least WOOD_DENSITY trees per hectare, counted in
-  WOOD_CELL m squares) and near a road, one place every WOOD_STEP m with two emitters: birds by day, crickets
-  by night; the Lua plays one or the other by the game's time of day (birds play on their own when the level
-  loads, it starts by day).
-Without the Lua (another packaging) only the water, the lake and the birds play, all day.
+  WOOD_CELL m squares) and near a road, one emitter every WOOD_STEP m. BeamNG 0.40 has no birds, crickets or
+  church bells (beamng/dati/ambient_events.json); its forest beds (Ambient>Roomtones>Roomtone_ConiferousDeciduous_*)
+  may be 2D, heard everywhere at full volume, so the woods are silent unless the "use" entry of that file names
+  an event after listening in the game ("forest": "...").
 
 Which events exist: beamng/dati/ambient_events.json, the ambient events of the game read once from an install
 (python ambient_sounds.py --scan <BeamNG.drive folder>: every `track` of an SFXEmitter in the vanilla levels,
 content/levels/*.zip, and every event path in the FMOD strings banks), kept in the repository so that two builds
 of a commit are the same with or without the game. For each sound the first of its candidates the game has, else
 the first event matching its pattern (3D events only: a 2D event would be heard everywhere at full volume).
-Without that file the first candidate (names of BeamNG 0.2x-0.3x, from its editor) and the report says "not
-checked": a sound whose event the game lacks is silent, it breaks nothing.
+Without that file the first candidate and the report says "not checked": a sound whose event the game lacks is
+silent, it breaks nothing. In 0.40 the strings bank keeps the paths as a prefix trie and --scan finds none of
+them: the file of 0.40 was written by hand from the trie (its "_about").
 
 A finishing step of build_level.py (FINISH); alone: python build_level.py --finish ambient_sounds
 """
-import gzip, json, os, re, sys, time, zipfile
+import json, os, re, sys, time, zipfile
 import numpy as np
 import shapely
 from scipy import ndimage as ndi
@@ -45,34 +43,20 @@ RIVER_STEP = 150.0         # m between two emitters along a river
 STREAM_STEP = 450.0        # m between two emitters on the streams (at the road crossings)
 STREAM_MIN = 150.0         # m: a stream shorter than this makes no sound of its own
 LAKE_STEP = 160.0          # m between two emitters on the shore
-BELL_MERGE = 200.0         # m: churches closer than this ring as one
-BELL_UP = 12.0             # m over the ground: the belfry
-BELL_FIRST, BELL_LAST = 7, 21   # o'clock: the first and the last hour rung
 WOOD_CELL = 100.0          # m, the squares the trees are counted in
 WOOD_DENSITY = 30.0        # trees per hectare at least: a wood
 WOOD_STEP = 450.0          # m between two places in the woods
 OVER = 1.0                 # m over the ground or the water: the emitters of water and woods
 DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
-GWR_PINNED = os.path.join(DATI, "gwr_area.json.gz")
 EVENTS_PINNED = os.path.join(DATI, "ambient_events.json")
 
-# (role, subgroup, candidates, pattern, volume, playOnAdd): candidates in order of preference, pattern for any
-# other 3D event of the game that fits; playOnAdd False: the Lua plays it
+# (role, subgroup, candidates, pattern, volume): candidates in order of preference (BeamNG 0.40), pattern for any
+# other 3D event of the game that fits (None: candidates only)
 SOUNDS = [
-    ("river", "ambient_water", ["event:>Ambient>Maps>Jungle Rock>River Large 01",
-                                "event:>Ambient>Maps>Jungle Rock>River Large 02"],
-     r"river|torrent|rapids", 1.0, True),
-    ("stream", "ambient_water", ["event:>Ambient>Maps>Italy>Water QP04 369_1",
-                                 "event:>Ambient>Maps>Utah>Water QP04 374"],
-     r"stream|creek|brook|water qp", 0.8, True),
-    ("lake", "ambient_water", ["event:>Ambient>Maps>Italy>Water QP04 369_1"], r"lake|shore|lapping|waves?\b", 0.8, True),
-    ("bells", "ambient_bells", ["event:>Ambient>3D Shared>Church_Bells_01",
-                                "event:>Ambient>3D Shared>Church_Bells_02",
-                                "event:>Ambient>3D Shared>Church_Bells_03"],
-     r"church|bell", 1.0, False),
-    ("birds", "ambient_day", [], r"bird|songbird|chirp|forest.?day|dawn", 0.9, True),
-    ("crickets", "ambient_night", ["event:>Ambient>3D Shared>Insect Forest Cricket Mono"],
-     r"cricket|insect|cicada|night", 0.9, False),
+    ("river", "ambient_water", ["event:>Ambient>Water>River"], r"river|torrent|rapids", 1.0),
+    ("stream", "ambient_water", ["event:>Ambient>Water>River"], None, 0.45),     # the river, quieter
+    ("lake", "ambient_water", ["event:>Ambient>Water>Waves"], r"lake|shore|lapping|waves?\b", 0.8),
+    ("forest", "ambient_woods", [], None, 0.7),                                 # see the docstring
 ]
 
 
@@ -134,7 +118,7 @@ def pick_events(events, use=None):
     """{role: (event or None, how)}: how 'chosen' (the "use" entry), 'game' (the game has a candidate),
     'pattern' (a matching event of the game), 'not checked' (no list of the game's events: the first candidate)."""
     out = {}
-    for role, _, cand, pat, _, _ in SOUNDS:
+    for role, _, cand, pat, _ in SOUNDS:
         if use and role in use:
             out[role] = (use[role] or None, "chosen")
             continue
@@ -144,6 +128,9 @@ def pick_events(events, use=None):
         have = next((c for c in cand if c in events), None)
         if have:
             out[role] = (have, "game")
+            continue
+        if pat is None:
+            out[role] = (None, "not in the game")
             continue
         rx = re.compile(pat, re.I)
         m = sorted(e for e in events if ">2D>" not in e and "Vehicle" not in e and rx.search(e.split(">", 2)[-1]))
@@ -216,17 +203,6 @@ def lake_places(q, wl, roads, stride=8):
     return P[thin(P, LAKE_STEP)]
 
 
-def church_places():
-    if not os.path.exists(GWR_PINNED):
-        return np.zeros((0, 2))
-    b = json.load(gzip.open(GWR_PINNED, "rt", encoding="utf-8"))["buildings"]
-    P = np.array([[x["x"], x["y"]] for x in b if x.get("gklas") == 1272 and x.get("gstat", 1004) == 1004]).reshape(-1, 2)
-    # the larger church of a group first: order by size
-    area = np.array([x.get("garea") or 0 for x in b if x.get("gklas") == 1272 and x.get("gstat", 1004) == 1004])
-    P = P[np.argsort(-area)] if len(P) else P
-    return P[thin(P, BELL_MERGE)]
-
-
 def wood_places(zi, lv, roads):
     xy = []
     for n in zi.namelist():
@@ -247,10 +223,10 @@ def wood_places(zi, lv, roads):
     return P[thin(P, WOOD_STEP)], len(dense)
 
 
-def emitter(name, pos, event, volume, play, parent):
+def emitter(name, pos, event, volume, parent):
     return {"class": "SFXEmitter", "name": name, "persistentId": bng.pid(), "__parent": parent,
             "position": [round(float(v), 2) for v in pos], "track": event, "fileName": "",
-            "playOnAdd": bool(play), "useTrackDescriptionOnly": False, "is3D": True, "isLooping": True,
+            "playOnAdd": True, "useTrackDescriptionOnly": False, "is3D": True, "isLooping": True,
             "volume": float(volume)}
 
 
@@ -278,7 +254,6 @@ def ambient_sounds_step(root, report=None):
     ways, _ = osm.load()
     river, stream = river_places(ways, roads)
     lake = lake_places(q, wl, roads) if wl is not None else np.zeros((0, 2))
-    bells = church_places()
     woods, n_dense = wood_places(zi, lv, roads)
 
     def z_of(P, up):
@@ -286,12 +261,12 @@ def ambient_sounds_step(root, report=None):
 
     places = {"river": z_of(river, OVER), "stream": z_of(stream, OVER),
               "lake": np.column_stack([lake, np.full(len(lake), (wl or 0) + OVER)]) if len(lake) else np.zeros((0, 3)),
-              "bells": z_of(bells, BELL_UP), "birds": z_of(woods, OVER + 4.0), "crickets": z_of(woods, OVER)}
+              "forest": z_of(woods, OVER + 3.0)}
     objs, subgroups = [], {}
     rep = {"events": {r: {"event": e, "how": h} for r, (e, h) in ev.items()},
            "game_events": None if events is None else len(events),
            "emitters": {}, "silent": [], "dense_wood_cells": int(n_dense)}
-    for role, sub, _, _, vol, play in SOUNDS:
+    for role, sub, _, _, vol in SOUNDS:
         e = ev[role][0]
         P = places[role]
         if e is None:
@@ -300,7 +275,7 @@ def ambient_sounds_step(root, report=None):
             continue
         subgroups[sub] = True
         for i, p in enumerate(P):
-            objs.append(emitter(f"amb_{role}_{i:03d}", p, e, vol, play, sub))
+            objs.append(emitter(f"amb_{role}_{i:03d}", p, e, vol, sub))
         rep["emitters"][role] = len(P)
     files = {}
     rows = [{"name": GROUP, "class": "SimGroup", "persistentId": bng.pid(), "__parent": "MissionGroup"}]
