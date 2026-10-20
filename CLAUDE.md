@@ -140,6 +140,12 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   grep for an existing name before adding a helper.
 - Torch with default threads in parallel zone runs oversubscribed the CPU (hours): STREET_THREADS=1 per process.
 - pkill with a pattern that is also in your own command line kills your shell (exit 144): kill by PID.
+- A workflow's commit step pushed nothing: `git pull --rebase` refused because street_collect also rewrote a file
+  that was not committed (street_facades.json). Restore the rest (`git checkout -- beamng/dati`) before pulling.
+  Tile results stay in the run's artifacts: rerun only the collect with mode=area from_run=<run id>.
+- The whole-area run measured 31 roofs off by 0.5-2.9 m, 28 of them too LOW in the game, while the three test zones
+  had a +0.15 m bias and nothing to move: a one-sided shift smells of a measurement bias, so they are kept in
+  verifica/street/roofs_measured.json and not applied (dati/street_roofs.json empty) until sheets of them are checked.
 
 ## Races (time trials, races.py)
 

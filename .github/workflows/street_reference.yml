@@ -5,15 +5,25 @@
 # - catalog: every open photo in the area and how much of the streets they see (street_catalog.py); the full
 #   catalogue is cached between runs (it is rebuilt when street_catalog.py changes) and handed to the other jobs
 # - devpack: one development pack per test zone (street_devpack.py: the 3D scene, a few photos, their segmentation by
-#   Mapillary and by the open model of street_segment.py)
-# stamp: 6
+#   Mapillary and by the open model of street_segment.py); only when run with mode "devpack"
+# - area (mode "area"): the tiles of the whole area with photos (street_tiles.py), each analysed in its own job
+#   (street_devpack.py into the runner's work folder, street_zone.py without the facades), then street_collect.py
+#   gathers them into beamng/dati/street_*.json, the files the build reads; no photo is committed
+# stamp: 7
 name: street reference (open street-level photos)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [claude/streetview-riferimento-kexswq]
-    paths: [.github/workflows/street_reference.yml]
+    inputs:
+      mode:
+        description: "devpack (three test zones, photos committed) or area (the whole area, results only)"
+        default: area
+      photos:
+        description: "photos per tile (area)"
+        default: "60"
+      from_run:
+        description: "collect only: the run id of an earlier area run whose tile results to gather"
+        default: ""
 
 concurrency:
   group: street-reference-${{ github.ref }}
@@ -91,6 +101,7 @@ jobs:
 
   devpack:
     needs: catalog
+    if: inputs.mode == 'devpack'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -143,3 +154,120 @@ jobs:
           git add beamng/verifica/street/devpack/${{ matrix.zone.name }}
           git commit -m "street reference: development pack of ${{ matrix.zone.name }}" || exit 0
           for i in 1 2 3 4 5 6; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep $((5 * i)); done
+
+  plan:
+    needs: catalog
+    if: inputs.mode == 'area' && inputs.from_run == ''
+    runs-on: ubuntu-24.04
+    outputs:
+      tiles: ${{ steps.tiles.outputs.tiles }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 requests==2.33.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: street-catalog
+          path: /home/runner/work/magliasinaNG/bm/work/street
+      - id: tiles
+        working-directory: beamng/pipeline
+        run: |
+          t=$(python street_tiles.py 64)
+          echo "tiles=$t" >> "$GITHUB_OUTPUT"
+
+  area:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        tile: ${{ fromJSON(needs.plan.outputs.tiles) }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      STREET_PACKS: /home/runner/work/magliasinaNG/bm/packs
+      STREET_THREADS: "2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 requests==2.33.1 \
+            matplotlib==3.11.2 mapbox-vector-tile==2.2.0 rasterio==1.4.4 pyogrio==0.13.0 pillow==12.3.0 \
+            opencv-python-headless==4.13.0.92
+          pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install transformers==5.20.2
+
+      - name: Models from an earlier run
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: street-models-mask2former-gdino-tiny
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: street-catalog
+          path: /home/runner/work/magliasinaNG/bm/work/street
+
+      - name: Photos and scene of ${{ matrix.tile.name }}
+        working-directory: beamng/pipeline
+        timeout-minutes: 120
+        run: python street_devpack.py ${{ matrix.tile.name }} ${{ matrix.tile.rect }} ${{ inputs.photos }}
+
+      - name: Analysis of ${{ matrix.tile.name }}
+        working-directory: beamng/pipeline
+        timeout-minutes: 200
+        run: |
+          out=/home/runner/work/magliasinaNG/bm/zones/${{ matrix.tile.name }}
+          python street_zone.py "$STREET_PACKS/${{ matrix.tile.name }}" "$out" --no-facades
+          rm -rf "$out/check" "$out/facades"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: street-zone-${{ matrix.tile.name }}
+          path: /home/runner/work/magliasinaNG/bm/zones/${{ matrix.tile.name }}
+          retention-days: 14
+          if-no-files-found: ignore
+
+  collect:
+    needs: area
+    if: always() && inputs.mode == 'area' && (needs.area.result != 'skipped' || inputs.from_run != '')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: street-zone-*
+          path: /home/runner/work/magliasinaNG/bm/zones
+          run-id: ${{ inputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: The files the build reads
+        working-directory: beamng/pipeline
+        run: |
+          ls /home/runner/work/magliasinaNG/bm/zones
+          python street_collect.py /home/runner/work/magliasinaNG/bm/zones/*
+      - name: Commit the results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/dati/street_hedges.json beamng/dati/street_fountains.json beamng/dati/street_roofs.json \
+            beamng/dati/street_objects.json
+          git commit -m "street reference: hedges, fountains and roofs of the whole area" || exit 0
+          git checkout -- beamng/dati                 # street_facades.json: the build does not use it yet
+          for i in 1 2 3 4 5; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 10; done

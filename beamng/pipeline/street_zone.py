@@ -13,7 +13,7 @@ the street photos, run on a development pack (street_devpack.py) or on a zone of
 Output (out folder): poses.json, roofs.json (roof_columns.json: the columns measured in every photo), objects.json,
 hedges.json, fountains.json, facades.json, facades/<key>.jpg (the fused facade; _det.jpg with the openings found), and
 the check images: check/<photo>.jpg (the photo with the outlines of the scene's buildings at the fitted pose).
-    python street_zone.py <pack folder> <out folder>
+    python street_zone.py <pack folder> <out folder> [limit] [--reuse] [--no-facades]
 """
 import gzip, json, math, os, sys, time
 from collections import defaultdict
@@ -222,7 +222,7 @@ def contact_sheet(paths, out_path, cols=3, width=640, captions=None):
     sheet.save(out_path, quality=85)
 
 
-def run(pack, out, limit=None, detect=True, reuse=False):
+def run(pack, out, limit=None, detect=True, reuse=False, facades=True):
     """reuse: the poses of an earlier run in out/poses.json are kept (only the photos without one are fitted)."""
     os.makedirs(os.path.join(out, "check"), exist_ok=True)
     os.makedirs(os.path.join(out, "facades"), exist_ok=True)
@@ -334,7 +334,7 @@ def run(pack, out, limit=None, detect=True, reuse=False):
             hv += street_hedges.votes(p["cam"], pano, cm, p["seg_names"], cells)
         if detect and fpts:
             fobs += street_fountains.look(p["cam"], pano, rgb, fpts, ground, p["id"], save=os.path.join(out, "fountains"))
-        for bi in np.unique(pano.bid[pano.bid >= 0]):
+        for bi in (np.unique(pano.bid[pano.bid >= 0]) if facades else []):
             if bi not in fcache:
                 fcache[bi] = sf.facades_of(blds[bi])
             for f in fcache[bi]:
@@ -359,7 +359,9 @@ def run(pack, out, limit=None, detect=True, reuse=False):
     json.dump({"points": [{k: v for k, v in q.items() if k != "tags"} for q in fpts], "observations": fobs,
                "fountains": fnt}, open(os.path.join(out, "fountains.json"), "w"), indent=1)
     print(len(fpts), "fountains of OSM,", sum(1 for v in fnt.values() if v["found"]), "found in the photos", flush=True)
-    # the facades
+    # the facades (not in the runs over the whole area: the build does not use them yet, facades.street_measured)
+    if not facades:
+        return
     index = {}
     for key, views in seen.items():
         img, w = sf.fuse([v[2] for v in views])
@@ -383,4 +385,4 @@ def run(pack, out, limit=None, detect=True, reuse=False):
 
 if __name__ == "__main__":
     a = [x for x in sys.argv[1:] if not x.startswith("--")]
-    run(a[0], a[1], int(a[2]) if len(a) > 2 else None, reuse="--reuse" in sys.argv)
+    run(a[0], a[1], int(a[2]) if len(a) > 2 else None, reuse="--reuse" in sys.argv, facades="--no-facades" not in sys.argv)
