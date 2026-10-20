@@ -317,6 +317,30 @@ def main(out):
             lines.append({"props": ft["props"], "parts": parts_l})
         json.dump({"fields": d["fields"], "lines": lines}, open(os.path.join(out, "cableway.json"), "w"), indent=1)
         print(len(lines), "cable lines", flush=True)
+        # the corridor of the Monte Lema line: ground and orthophoto 2 m, the buildings within CORRIDOR m of it
+        for ln in lines:
+            if "Lema" not in str(ln["props"].get("NAME")):
+                continue
+            P = np.array(ln["parts"][0])
+            x0, y0 = P[:, 0].min() - 250, P[:, 1].min() - 250
+            x1, y1 = P[:, 0].max() + 250, P[:, 1].max() + 250
+            dtm = raster("swissalti3d_2/*.tif", x0, y0, x1, y1, 2.0)
+            d05 = raster("swissalti3d_05/*.tif", x0, y0, x1, y1, 2.0)
+            if dtm is not None and d05 is not None:
+                dtm = np.where(np.isnan(d05), dtm, d05)
+            ortho = raster("swissimage_2/*.tif", x0, y0, x1, y1, 2.0)
+            zone = shapely.LineString(P[:, :2]).buffer(60.0)
+            sb = [blds[j] for j in tree.query(zone)]
+            z0 = float(np.nanmin(dtm))
+            pack = {"id": "cableway", "bounds": (x0, y0, x1, y1), "members": [], "buildings": sb,
+                    "gwr": {b["uuid"]: gwr[b["uuid"]] for b in sb if b["uuid"] in gwr}, "parts": {}, "by_egid": {},
+                    "dtm_res": 2.0, "dtm_z0": z0,
+                    "dtm": np.round((np.nan_to_num(dtm[0], nan=z0) - z0) * 100).astype(np.uint16),
+                    "ortho": None if ortho is None else np.nan_to_num(ortho).clip(0, 255).astype(np.uint8),
+                    "line": P.tolist()}
+            with gzip.open(os.path.join(out, "sites", "cableway.pkl.gz"), "wb") as f:
+                pickle.dump(pack, f)
+            print("cableway corridor", dtm.shape, len(sb), "buildings", flush=True)
 
 
 if __name__ == "__main__":

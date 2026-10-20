@@ -713,6 +713,17 @@ def stage_buildings(scene, ctx):
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
                                                           annotation="BUILDINGS", **buildings_mesh.NIGHT))
     print("building tiles", len(tiles), "triangles", sum(t[2] for t in tiles))
+    # v3.0.40: the Miglieglia - Monte Lema cable car and the radar and mast on the summit (landmarks.py), on the
+    # terrain as stage_terrain built it
+    import landmarks
+    import forest_fill
+    from config import wgs_to_local
+    ground = forest_fill.terrain_sampler()
+    near = wgs_to_local(*landmarks.LEMA_BOTTOM)
+    for shape, origin, ntri, coll in landmarks.cableway(LEVEL_DIR, LEVEL_NAME, ground, near) + \
+            landmarks.summit(LEVEL_DIR, LEVEL_NAME, ground):
+        scene.add("MissionGroup/landmarks", bng.tsstatic(shape, origin, collision=coll, decal=False,
+                                                        **({"annotation": "BUILDINGS"} if coll else {})))
 
 
 def stage_vegetation(scene, ctx):

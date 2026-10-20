@@ -376,7 +376,7 @@ def tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim):
     H = z_e - g_lo
     if H < 5.0:
         return 0
-    faces_ok = [i for i, f in enumerate(fs) if f["W"] >= 1.2 and f["zmax"] > z_e - 0.5]
+    faces_ok = [i for i, f in enumerate(fs) if f["W"] >= 0.9 and f["zmax"] > z_e - 0.5]
     front = front_of(fs, ctx, faces_ok)
     # the cornice under the eaves, the bell chamber under it
     cz = z_e - CORNICE[0]
@@ -422,9 +422,10 @@ def tower(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim):
             placed += 1
             count += 1
     # quoins up the corners, slits on the stone towers, the door at the foot of the front
-    if spec.get("quoins", True):
+    # (none on a round or polygonal tower: more than six faces)
+    if spec.get("quoins", True) and len([f for f in fs if f["W"] >= 0.8]) <= 6:
         for i, f in enumerate(fs):
-            if f["W"] >= 1.2:
+            if f["W"] >= 1.6:
                 quoins(lem, f, float(np.nanmin(f["g"])) - 0.3, (zb_min - COURSE[0] - 0.05) if count else z_e - CORNICE[0],
                        i % 2)
     if front >= 0:
@@ -508,7 +509,7 @@ def church(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim, chapel=False):
                     count += 1
     if not chapel or sum(f["W"] for f in fs) > 22:
         for i, f in enumerate(fs):
-            if f["W"] >= 2.0:
+            if f["W"] >= 2.5:
                 quoins(lem, f, float(np.nanmin(f["g"])) - 0.3, z_e - CORNICE[0], i % 2)
     return count
 
@@ -522,13 +523,14 @@ def church(fs, z_e, g_lo, style, spec, ctx, lem, rng, trim, chapel=False):
 #   saddles), as high as the ropes over them;
 # - the cabins hanging on the ropes, CABIN_EVERY m apart, the colours of the line.
 CABLE_KINDS = ("Luftseilbahn", "Gondelbahn", "Kabinenbahn", "Pendelbahn", "Umlaufbahn")
-CABLE_GAUGE = 5.0
+CABLE_GAUGE = 5.4
 CABLE_SAG = 0.025
 CABLE_STATION_H = 5.5
 CABLE_R = 0.03
-CABIN_EVERY = 90.0
-CABIN = (2.0, 1.6, 2.1)            # m: length (along the line), width, height of a cabin
-CABIN_COLOR = (0.78, 0.10, 0.08)
+CABIN_EVERY = 72.0
+CABIN = (1.7, 1.5, 1.9)            # m: length (along the line), width, height of a cabin (four seats)
+CABIN_COLOR = (0.08, 0.30, 0.62)   # linear: the blue cabins of the Monte Lema line, a green band under the windows
+CABIN_BAND = (0.20, 0.55, 0.10)
 STEEL = (0.42, 0.44, 0.45)
 
 
@@ -631,12 +633,14 @@ def cabin(p, axis):
     across = np.array([-axis[1], axis[0], 0.0])
     L, W, H = CABIN
     body_top = p[2] - 2.4
-    body = _box(p[:2], axis[:2], across[:2], H, L / 2, W / 2, body_top - H)
+    body = _box(p[:2], axis[:2], across[:2], H - 1.0, L / 2, W / 2, body_top - H)
+    band = _box(p[:2], axis[:2], across[:2], 0.22, L / 2 + 0.01, W / 2 + 0.01, body_top - H + 0.5)
     roof = _box(p[:2], axis[:2], across[:2], 0.12, L / 2 + 0.05, W / 2 + 0.05, body_top)
     glass = [_box(p[:2], axis[:2], across[:2], 0.75, L / 2 + 0.01, W / 2 + 0.01, body_top - 1.05)]
     hanger = _tube(np.r_[p[:2], body_top + 0.1], np.r_[p[:2], p[2] - 0.1], 0.05)
     carriage = _box(p[:2], axis[:2], across[:2], 0.25, 0.6, 0.12, p[2] - 0.2)
-    return body, np.concatenate([roof, hanger, carriage]), np.concatenate(glass)
+    top = _box(p[:2], axis[:2], across[:2], 0.25, L / 2, W / 2, body_top - 0.25)
+    return np.concatenate([body, top]), np.concatenate([roof, hanger, carriage]), np.concatenate(glass), band
 
 
 def cableway(level_dir, level_name, ground, near):
@@ -654,12 +658,15 @@ def cableway(level_dir, level_name, ground, near):
     sup = []
     for k, (x, y, z) in enumerate(P):
         end = k in (0, len(P) - 1)
-        h = CABLE_STATION_H if end else (z - g[k] if np.isfinite(z) and z - g[k] > 6 else 14.0)
+        # the line's height over the ground where it is a plausible height of the rope (the survey draws it on the
+        # saddles of the pylons and at the stations' wheels), else the defaults
+        h = z - g[k] if np.isfinite(z) and 3.0 <= z - g[k] <= 45.0 else (CABLE_STATION_H if end else 14.0)
         sup.append((np.array([x, y, g[k]]), g[k] + h, end))
     axis_all = (P[-1, :2] - P[0, :2]) / np.linalg.norm(P[-1, :2] - P[0, :2])
     origin = np.array([P[0, 0], P[0, 1], 0.0])
-    mb = bng.MeshBuilder()
-    mc = bng.MeshBuilder()
+    mb = bng.MeshBuilder()              # the ropes
+    mp = bng.MeshBuilder()              # the pylons (collision)
+    mc = bng.MeshBuilder()              # the cabins
     span_len = 0.0
     cab_at = CABIN_EVERY / 2
     for (b0, t0, e0), (b1, t1, e1) in zip(sup[:-1], sup[1:]):
@@ -673,7 +680,7 @@ def cableway(level_dir, level_name, ground, near):
             p1 = np.r_[b1[:2], t1 + 0.3] + off
             R = rope(p0, p1, CABLE_SAG * L)
             for a, b in zip(R[:-1], R[1:]):
-                mb.add("lm_cable_rope", (_tube(a, b, CABLE_R) - origin).reshape(-1, 3))
+                mb.add("lm_cable_rope", _tube(a, b, CABLE_R).reshape(-1, 3))
             # cabins along this span, at their place along the whole line (up on one track, down on the other)
             s = cab_at
             while s < span_len + L:
@@ -681,30 +688,119 @@ def cableway(level_dir, level_name, ground, near):
                     f = (s - span_len) / L
                     q = p0 + (p1 - p0) * f
                     q[2] -= 4 * CABLE_SAG * L * f * (1 - f)
-                    body, rest, glass = cabin(q, ax)
-                    mc.add("lm_cabin", (body - origin).reshape(-1, 3))
-                    mc.add("lm_cabin_steel", (rest - origin).reshape(-1, 3))
-                    mc.add("lm_cabin_glass", (glass - origin).reshape(-1, 3))
+                    body, rest, glass, band = cabin(q, ax)
+                    mc.add("lm_cabin_band", band.reshape(-1, 3))
+                    mc.add("lm_cabin", body.reshape(-1, 3))
+                    mc.add("lm_cabin_steel", rest.reshape(-1, 3))
+                    mc.add("lm_cabin_glass", glass.reshape(-1, 3))
                 s += CABIN_EVERY
         span_len += L
     for k, (b, t, end) in enumerate(sup):
         if end:
             continue
-        mb.add("lm_pylon", (pylon(b, t, axis_all) - origin).reshape(-1, 3))
+        mp.add("lm_pylon", pylon(b, t, axis_all).reshape(-1, 3))
     out = []
     os.makedirs(os.path.join(level_dir, "art", "shapes", "landmarks"), exist_ok=True)
-    for m, name in ((mb, "cableway"), (mc, "cableway_cabins")):
+    for m, name, coll in ((mb, "cableway_ropes", False), (mp, "cableway_pylons", True), (mc, "cableway_cabins", False)):
         if m.empty():
             continue
         rel = f"art/shapes/landmarks/{name}.dae"
-        m.write_dae(os.path.join(level_dir, rel), name=name, origin=origin)
-        out.append((f"/levels/{level_name}/{rel}", origin, m.triangle_count()))
+        m.write_dae(os.path.join(level_dir, rel), name=name.replace("_", ""), origin=origin)
+        out.append((f"/levels/{level_name}/{rel}", origin, m.triangle_count(), coll))
     mats = [bng.material("lm_cable_rope", base_color=(0.12, 0.12, 0.12, 1), roughness=0.5, metallic=0.8),
             bng.material("lm_pylon", base_color=STEEL + (1,), roughness=0.6, metallic=0.6, double_sided=True),
             bng.material("lm_cabin", base_color=CABIN_COLOR + (1,), roughness=0.35, metallic=0.2),
+            bng.material("lm_cabin_band", base_color=CABIN_BAND + (1,), roughness=0.35, metallic=0.2),
             bng.material("lm_cabin_steel", base_color=(0.3, 0.31, 0.32, 1), roughness=0.5, metallic=0.7),
             bng.material("lm_cabin_glass", base_color=(0.12, 0.15, 0.17, 1), roughness=0.08, metallic=0.1)]
     bng.write_materials(os.path.join(level_dir, "art", "shapes", "landmarks", "main.materials.json"), mats)
     print("cableway:", props.get("NAME") or props.get("OBJEKTART"), len(P), "vertices,", len(sup) - 2, "pylons,",
           round(span_len), "m")
     return out
+
+
+# ------------------------------------------------------------------ Monte Lema
+# The summit of Monte Lema (1621 m) over the top station, seen from the whole map: the weather radar of MeteoSwiss,
+# a white dome on a short concrete tower, and the tall slender mast of the transmitter beside it; on the highest
+# ground within SUMMIT_SEARCH m of the top station (the DTM). The buildings of the summit (the top station, the
+# Ristorante-Ostello Vetta) come from swissBUILDINGS3D (extract_buildings.py keeps FAR_SITES too).
+LEMA_TOP = (46.040782, 8.834707)      # WGS84 of the top station (OSM aerialway=station)
+LEMA_BOTTOM = (46.023776, 8.856202)   # the valley station at Miglieglia
+FAR_SITES = [(LEMA_TOP, 250.0)]       # (WGS84, radius m): buildings kept outside the area
+SUMMIT_SEARCH = 260.0
+RADAR = (7.0, 5.0)                    # m: diameter of the dome, height of its tower
+MAST = (48.0, 1.1, 0.45)              # m: height, base and top diameter of the transmitter mast
+
+
+def far_zones():
+    """Local shapely zones of FAR_SITES."""
+    from config import wgs_to_local
+    return [shapely.Point(*wgs_to_local(*ll)).buffer(r) for ll, r in FAR_SITES]
+
+
+def _cyl(c, z0, z1, r0, r1, n=16, cap=True):
+    a = np.linspace(0, 2 * np.pi, n + 1)
+    P0 = np.column_stack([c[0] + r0 * np.cos(a), c[1] + r0 * np.sin(a), np.full(n + 1, z0)])
+    P1 = np.column_stack([c[0] + r1 * np.cos(a), c[1] + r1 * np.sin(a), np.full(n + 1, z1)])
+    tris = []
+    for k in range(n):
+        tris += [[P0[k], P0[k + 1], P1[k + 1]], [P0[k], P1[k + 1], P1[k]]]
+        if cap:
+            tris.append([P1[k], P1[k + 1], np.array([c[0], c[1], z1])])
+    return np.array(tris)
+
+
+def _dome(c, z, r, n=24, m=10):
+    """A sphere of radius r on the point (c, z) (its foot), cut a little at the bottom."""
+    out = []
+    th = np.linspace(-0.35 * np.pi, 0.5 * np.pi, m + 1)
+    ph = np.linspace(0, 2 * np.pi, n + 1)
+    P = lambda i, j: np.array([c[0] + r * np.cos(th[i]) * np.cos(ph[j]), c[1] + r * np.cos(th[i]) * np.sin(ph[j]),
+                               z + r * np.sin(0.35 * np.pi) + r * np.sin(th[i])])
+    for i in range(m):
+        for j in range(n):
+            out += [[P(i, j), P(i, j + 1), P(i + 1, j + 1)], [P(i, j), P(i + 1, j + 1), P(i + 1, j)]]
+    return np.array(out)
+
+
+def summit(level_dir, level_name, ground):
+    """The radar and the mast on the summit of Monte Lema: [(shape, origin, triangles)]. ground: (x, y) -> z of the
+    terrain."""
+    import bng
+    from config import wgs_to_local
+    tx, ty = wgs_to_local(*LEMA_TOP)
+    g = np.arange(-SUMMIT_SEARCH, SUMMIT_SEARCH + 1, 2.0)
+    X, Y = np.meshgrid(tx + g, ty + g)
+    Z = np.asarray(ground(X.ravel(), Y.ravel()), float)
+    if not np.isfinite(Z).any():
+        return []
+    k = int(np.nanargmax(Z))
+    x, y, z = float(X.ravel()[k]), float(Y.ravel()[k]), float(Z[k])
+    origin = np.array([x, y, z])
+    mb = bng.MeshBuilder()
+    rd, rh = RADAR
+    mb.add("lm_concrete", (_cyl((0, 0), -1.0, rh, 2.6, 2.4, 8) ).reshape(-1, 3))
+    mb.add("lm_concrete", (_cyl((0, 0), rh - 0.2, rh + 0.4, 3.4, 3.4, 16)).reshape(-1, 3))
+    mb.add("lm_radome", _dome((0, 0), rh + 0.2, rd / 2).reshape(-1, 3))
+    # the mast 18 m down the ridge towards the station, with a few panels of antennas
+    d = np.array([tx - x, ty - y])
+    d = d / max(np.linalg.norm(d), 1e-6) * 18.0
+    gm = float(np.asarray(ground(np.array([x + d[0]]), np.array([y + d[1]])))[0]) - z
+    h, b0, b1 = MAST
+    mb.add("lm_mast", _cyl(d, gm - 1.0, gm + h, b0 / 2, b1 / 2, 12).reshape(-1, 3))
+    for k, zz in enumerate((0.55, 0.7, 0.85)):
+        for ang in (0, 2.1, 4.2):
+            c = d + 0.6 * np.array([np.cos(ang + k), np.sin(ang + k)])
+            mb.add("lm_mast", _box(c, (np.cos(ang + k), np.sin(ang + k)), (-np.sin(ang + k), np.cos(ang + k)), 2.2,
+                                   0.08, 0.3, gm + zz * h).reshape(-1, 3))
+    mb.add("lm_mast_red", _cyl(d, gm + h - 0.6, gm + h + 0.3, 0.3, 0.2, 8).reshape(-1, 3))
+    os.makedirs(os.path.join(level_dir, "art", "shapes", "landmarks"), exist_ok=True)
+    rel = "art/shapes/landmarks/lema_summit.dae"
+    mb.write_dae(os.path.join(level_dir, rel), name="lemasummit", origin=np.zeros(3))
+    bng.write_materials(os.path.join(level_dir, "art", "shapes", "landmarks", "main.materials.json"), [
+        bng.material("lm_concrete", base_color=(0.55, 0.55, 0.53, 1), roughness=0.9),
+        bng.material("lm_radome", base_color=(0.85, 0.85, 0.84, 1), roughness=0.45),
+        bng.material("lm_mast", base_color=(0.70, 0.71, 0.72, 1), roughness=0.5, metallic=0.5),
+        bng.material("lm_mast_red", base_color=(0.6, 0.03, 0.02, 1), roughness=0.5)])
+    print("Monte Lema: radar and mast at", np.round(origin, 1))
+    return [(f"/levels/{level_name}/{rel}", origin, mb.triangle_count(), True)]
