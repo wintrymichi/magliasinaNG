@@ -916,6 +916,7 @@ FINISH = [
     ("bus_shelters", "bus_shelters", "bus_shelters_step", {"report": True}),   # v3.0 review: shelters at the bus stops
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
+    ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: water, bells, birds
 ]
 
 
