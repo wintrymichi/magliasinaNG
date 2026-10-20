@@ -119,6 +119,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   to the branch (strade_extra.yml, paesi_interi.yml), and test the code locally with stand-in inputs first.
 - Growing the area (area.py) changes what the pinned extracts in beamng/dati must cover: re-pinning them pulls newer
   data for the whole map. Add only what is new (download_gwr.py --add) and check the OSM extract's bbox.
+- `osm_area.json.gz` is Overpass `out geom`: a way's points are in its own `geometry`, the `node` elements are only
+  tagged nodes, and the `bbox` is the nodes' bbox. Looking ways up through node elements found none near a Caslano
+  slipway and the integrator wrongly reported Caslano missing from the extract (2026-10-20).
+- Overpass answered 502/504 from GitHub runners to every query on 2026-10-20, even 1 km boxes, for hours: read OSM
+  from the Geofabrik extract with osmium instead (download_osm.py --add).
 
 ## Street photo reference (street_*.py)
 

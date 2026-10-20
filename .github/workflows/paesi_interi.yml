@@ -6,7 +6,7 @@
 # sessions, so this runs here and commits the files back to the branch it runs on.
 #
 # It runs on demand (workflow_dispatch) or when this file or paesi_interi.py changes on the branch of the villages.
-# run stamp: 4
+# run stamp: 5
 name: paesi interi
 
 on:
@@ -45,7 +45,8 @@ jobs:
       - name: Dependencies
         run: |
           pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
-            requests==2.33.1 matplotlib==3.11.2
+            requests==2.33.1 matplotlib==3.11.2 osmium==4.3.2
+          sudo apt-get install -y -q osmium-tool
 
       - name: swissNAMES3D
         working-directory: beamng/pipeline
@@ -61,7 +62,7 @@ jobs:
         working-directory: beamng/pipeline
         run: python download_gwr.py --add
 
-      - name: OpenStreetMap over the villages (download_osm.py --add)
+      - name: OpenStreetMap over the villages (download_osm.py --add, Geofabrik extract)
         working-directory: beamng/pipeline
         run: python download_osm.py --add
 
