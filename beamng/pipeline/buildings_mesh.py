@@ -205,6 +205,96 @@ def soffits(b, roofs, drop=0.03):
     return tris
 
 
+# v3.1: the roofs without walls of swissBUILDINGS3D (Flugdach: carports, platform and loading-dock canopies, open
+# sheds, the canopies of the piers; 620 of them in nightly #2 of v3.0.40) were drawn as their roof alone, a sheet
+# hanging in the air seen from above and nothing seen from below (the game draws a face from its front only): the
+# survey models the roof of an open building, not the posts it stands on. Now such a roof is a slab CANOPY_THICK m
+# thick (an underside facing down and a fascia round its edge) on square posts POST_W m wide: at the corners of its
+# outline (POST_INSET m in) and every POST_STEP m along it, down into the ground (POST_SINK m under the DTM). No
+# post where a wall of a building is within POST_ATTACH m (a lean-to carries that side), on the band of a road or
+# path (network_ways, the canopy over a road at Ponte Tresa) or within POST_RAIL m of the axis of a track (the
+# canopies of the platforms), or where the roof is less than POST_MIN m over the ground (a roof at ground level, over
+# a garage in a slope)
+CANOPY_THICK = 0.18
+POST_W = 0.20
+POST_INSET = 0.30
+POST_STEP = 5.0
+POST_SINK = 0.5
+POST_ATTACH = 1.0
+POST_MIN = 0.6
+POST_RAIL = 2.2                                    # m from the axis of a track: the trains' clearance
+POST_TONE = np.array([0.50, 0.50, 0.49])          # painted steel or concrete grey
+
+
+def _boundary_edges(tris, q=0.02):
+    """Edges (k, 2, 3) of the triangles used by one triangle only (the rim of a roof)."""
+    E = np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]])
+    k = np.round(E / q).astype(np.int64) + (1 << 20)                          # 21 bits a coordinate: +-20 km
+    v = (k[..., 0] << 42) | (k[..., 1] << 21) | k[..., 2]                      # one integer a vertex
+    _, inv, cnt = np.unique(np.sort(v, axis=1), axis=0, return_inverse=True, return_counts=True)
+    return E[cnt[inv.ravel()] == 1]
+
+
+def keep_off(ways):
+    """STRtree of the places no post of a canopy stands on: the bands beside the roads and paths (network_ways)
+    and POST_RAIL m around the axes of the tracks."""
+    import railway
+    polys = [w[2] for w in ways or []]
+    polys += [shapely.LineString(Q[:, :2]).buffer(POST_RAIL) for _, Q in railway.tracks()]
+    return shapely.STRtree(polys) if polys else None
+
+
+def canopy(roofs, walled, off, ground):
+    """(slab, posts) of a roof without walls: the slab's underside and fascia (k, 3, 3), the posts (m, 3, 3).
+    walled: STRtree of the outlines of the buildings with walls; off: keep_off; ground(x, y): the bare ground."""
+    if not len(roofs):
+        return np.zeros((0, 3, 3)), np.zeros((0, 3, 3))
+    down = np.array([0.0, 0.0, CANOPY_THICK])
+    under = (roofs - down)[:, ::-1]                                             # facing down
+    rim = _boundary_edges(roofs)
+    A, B = rim[:, 0], rim[:, 1]
+    fascia = np.concatenate([np.stack([A, B, B - down], 1), np.stack([A, B - down, A - down], 1)])
+    slab = np.concatenate([under, fascia])
+    plan = shapely.union_all([q for q in (shapely.Polygon(t[:, :2]) for t in roofs) if q.is_valid and q.area > 1e-6])
+    plan = shapely.make_valid(plan.buffer(0.02).buffer(-0.02))
+    pts = []
+    for poly in _polys(plan):
+        ring = poly.buffer(-POST_INSET, join_style="mitre").simplify(0.3)
+        for r in _polys(ring):
+            c = np.asarray(r.exterior.coords)[:-1]
+            for i in range(len(c)):
+                a, b = c[i], c[(i + 1) % len(c)]
+                n = max(int(np.ceil(np.linalg.norm(b - a) / POST_STEP)), 1)
+                pts += [a + (b - a) * k / n for k in range(n)]
+    if not pts:                                                                 # a roof narrower than two insets
+        pts = [np.array(plan.representative_point().coords[0])] if not plan.is_empty else []
+    posts = []
+    for p in pts:
+        P = shapely.Point(p)
+        if walled is not None and len(walled.query(P, predicate="dwithin", distance=POST_ATTACH)):
+            continue
+        if off is not None and len(off.query(P, predicate="intersects")):
+            continue
+        top = float(roof_height(roofs, p[None])[0]) - CANOPY_THICK
+        g = float(ground(p[0:1], p[1:2])[0])
+        if top - g < POST_MIN:
+            continue
+        posts.append(_post(p, g - POST_SINK, top))
+    return slab, np.concatenate(posts) if posts else np.zeros((0, 3, 3))
+
+
+def _post(c, z0, z1, w=POST_W):
+    """The four sides (8, 3, 3) of a square post centred on c from z0 to z1."""
+    h = w / 2
+    q = np.array([[-h, -h], [h, -h], [h, h], [-h, h]]) + c
+    out = []
+    for i in range(4):
+        a, b = q[i], q[(i + 1) % 4]
+        A0, B0, A1, B1 = [a[0], a[1], z0], [b[0], b[1], z0], [a[0], a[1], z1], [b[0], b[1], z1]
+        out += [[A0, B0, B1], [A0, B1, A1]]
+    return np.array(out)
+
+
 def roof_colors(blds):
     """Median orthophoto colour of every roof (footprint eroded 1.5 m against relief displacement)."""
     from geo import ortho_sampler
@@ -620,6 +710,11 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
     out, n_photo, n_pass = [], 0, 0
     stats = {"openings": 0, "gwr": 0, "measured": 0, "roofs": {}, "use": {}, "stone": 0}
     wtree = shapely.STRtree([w[1] for w in ways]) if ways else None
+    # v3.1: the walls a roof without walls of its own may lean on (canopy)
+    wi = [i for i, b in enumerate(blds) if len(b["walls"]) and not fps[i].is_empty]
+    walled = shapely.STRtree([fps[i].boundary for i in wi]) if wi else None
+    off = keep_off(ways)
+    ground = lambda x, y: dtm.sample(x, y)
     mean = lambda k: np.array(means[k], float)
     for (tx, ty), bl in sorted(tiles.items()):
         mb = bng.MeshBuilder()
@@ -727,6 +822,15 @@ def build(level_dir, level_name, keep=None, ways=None, net=None):
                 mb.add("bld_roof_flat", V, uvs=V[:, :2] / 4.0, normals=bng.flat_normals_soup(V),
                        colors=np.r_[np.clip(np.array([0.62, 0.62, 0.60]) / mean("t_roof_flat"), 0, 1), 1.0])
                 stats["chimneys"] = stats.get("chimneys", 0) + len(stack) // 8
+            if not len(ob["walls"]) and len(roofs):          # v3.1: a roof without walls on its posts
+                slab, posts = canopy(roofs, walled, off, ground)
+                for part, col in ((slab, 0.8 * style["tone"]), (posts, POST_TONE)):
+                    if len(part):
+                        V = part.reshape(-1, 3)
+                        mb.add("bld_plaster", V, uvs=wall_uvs(part) / 5.0, normals=bng.flat_normals_soup(V),
+                               colors=np.r_[np.clip(col / mean("t_bld_plaster"), 0, 1), 1.0])
+                stats["canopies"] = stats.get("canopies", 0) + 1
+                stats["canopy_posts"] = stats.get("canopy_posts", 0) + len(posts) // 8
             sof = soffits(b, roofs)
             if len(sof):
                 V = sof.reshape(-1, 3)
