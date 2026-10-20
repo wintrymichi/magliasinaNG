@@ -12,3 +12,10 @@ Nightly build of v3.0.40 (writing this file starts .github/workflows/nightly_bui
 - Idee per nuove migliorie: direction pointers, English level info and preview
 - Monumenti riconoscibili: churches, bell towers, the Monte Lema cable car (issue #11)
 - Riferimento foto stradali: hedges and fountains from open street photos (3 test zones; measured facades off)
+
+2026-10-20 14:20 UTC (16:20 CEST): second nightly (michi: "Sì, adesso"), what changed since the first:
+- Riferimento foto stradali: the whole area (hedges, fountains, street furniture; measured roofs held back), and
+  the photo hedges actually applied in the build (vegetation.py; the first nightly had none of them)
+- Caslano e Arosio interi: dead ends that run down into the lake stop at the shore (no road under the water)
+- Monumenti: no warning in landmark_textures
+- the reports of the build also as nightly_reports.zip on the pre-release
