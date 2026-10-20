@@ -16,7 +16,7 @@ from PIL import Image
 import street_fetch, street_scene
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(REPO, "verifica", "street", "devpack")
+OUT = os.environ.get("STREET_PACKS") or os.path.join(REPO, "verifica", "street", "devpack")
 
 
 def spread(photos, n):
