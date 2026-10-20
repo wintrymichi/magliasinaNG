@@ -6,13 +6,13 @@
   "persistentId": "e2ef0c7a-3e38-4689-962c-cf8a8de05200",
   "Stages": [
    {
-    "colorMap": "/levels/italy/art/shapes/buildings/italy_curb_concrete_d.dds",
+    "colorMap": "/assets/materials/trim/concrete/italy_curb_concrete/italy_curb_concrete_d.dds",
     "detailScale": [
      6,
      6
     ],
-    "normalMap": "/levels/italy/art/shapes/buildings/italy_curb_concrete_n.dds",
-    "specularMap": "/levels/italy/art/shapes/buildings/italy_curb_concrete_s.dds",
+    "normalMap": "/assets/materials/trim/concrete/italy_curb_concrete/italy_curb_concrete_n.dds",
+    "specularMap": "/assets/materials/trim/concrete/italy_curb_concrete/italy_curb_concrete_s.dds",
     "useAnisotropic": true,
     "vertColor": true
    },
@@ -33,13 +33,13 @@
   "persistentId": "eff15c8f-7476-4094-842a-817fceb2d6bd",
   "Stages": [
    {
-    "colorMap": "/levels/italy/art/shapes/buildings/it_concrete_roadside_walls_d.dds",
+    "colorMap": "/assets/materials/tileable/concrete/it_concrete_roadside_walls/it_concrete_roadside_walls_d.dds",
     "detailScale": [
      0.300000012,
      0.300000012
     ],
-    "normalMap": "/levels/italy/art/shapes/buildings/it_concrete_roadside_walls_n.dds",
-    "specularMap": "/levels/italy/art/shapes/buildings/it_concrete_roadside_walls_s.dds",
+    "normalMap": "/assets/materials/tileable/concrete/it_concrete_roadside_walls/it_concrete_roadside_walls_n.dds",
+    "specularMap": "/assets/materials/tileable/concrete/it_concrete_roadside_walls/it_concrete_roadside_walls_s.dds",
     "useAnisotropic": true,
     "vertColor": true
    },
