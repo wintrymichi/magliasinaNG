@@ -211,10 +211,11 @@ def soffits(b, roofs, drop=0.03):
 # survey models the roof of an open building, not the posts it stands on. Now such a roof is a slab CANOPY_THICK m
 # thick (an underside facing down and a fascia round its edge) on square posts POST_W m wide: at the corners of its
 # outline (POST_INSET m in) and every POST_STEP m along it, down into the ground (POST_SINK m under the DTM). No
-# post where a wall of a building is within POST_ATTACH m (a lean-to carries that side), on the band of a road or
-# path (network_ways, the canopy over a road at Ponte Tresa) or within POST_RAIL m of the axis of a track (the
-# canopies of the platforms), or where the roof is less than POST_MIN m over the ground (a roof at ground level, over
-# a garage in a slope)
+# post where a wall of a building is within POST_ATTACH m (a lean-to carries that side), on the carriageway of a road
+# or path (network_ways, the canopy over a road at Ponte Tresa) or within POST_RAIL m of the axis of a track (the
+# canopies of the platforms), nor where the roof is less than POST_MIN m over the ground (a roof at ground level, over
+# a garage in a slope); none on the bands beside the roads either, unless that leaves the canopy with no post. The
+# roofs alone of swissBUILDINGS3D over a house whose walls are another record are no canopies (canopies)
 CANOPY_THICK = 0.18
 POST_W = 0.20
 POST_INSET = 0.30
