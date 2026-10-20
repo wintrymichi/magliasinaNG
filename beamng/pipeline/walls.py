@@ -32,7 +32,7 @@ from scipy.spatial import cKDTree
 from config import WORK, NO_PHOTO
 from geo import Grid
 import bng
-import argparse, json, os, re, struct, sys, tempfile, time, zipfile
+import argparse, collections, json, os, re, struct, sys, tempfile, time, zipfile
 import groundcover
 import optimize_level
 from config import LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
@@ -1421,6 +1421,268 @@ def wall_feet_step(root, report=None):
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
     res["seconds"] = round(time.time() - t0)
     print("wall feet:", res, flush=True)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(res, open(report, "w"), indent=1)
+    return res
+
+
+# ------------------------------------------------------------------ v3.0.40: no groove between two walls
+# A finishing step of build_level.py (FINISH, after wall_feet), on the built level; alone:
+# python build_level.py --finish wall_gaps
+GAP_MAX = 0.25           # m: a gap between the tops of the walls narrower than this gets a lid
+GAP_MIN_AREA = 0.002     # m2: the smaller ones are left (joints of the triangles)
+GAP_MIN_WIDTH = 0.002    # m: and the thinner ones (twice the area over the outline: slivers between two tops)
+GAP_RISE = 3.0           # m: a gap whose sides differ more in height is between two walls at two levels: left
+GAP_CELL = 100.0         # m: the cells the tops are joined in
+
+
+def _plane_z(t, x, y):
+    """Height at (x, y) on the plane of the triangle t (3, 3), within its heights."""
+    n = np.cross(t[1] - t[0], t[2] - t[0])
+    if abs(n[2]) < 1e-9:
+        return float(t[:, 2].max())
+    z = t[0, 2] - (n[0] * (x - t[0, 0]) + n[1] * (y - t[0, 1])) / n[2]
+    return float(np.clip(z, t[:, 2].min(), t[:, 2].max()))
+
+
+def _xy_width(t):
+    """How thin the triangle t (three (x, y) corners) is: twice its area over its longest edge; and where that edge
+    starts."""
+    p = np.asarray(t, np.float64)
+    e = np.linalg.norm(p - np.roll(p, -1, 0), axis=1)
+    d1, d2 = p[1] - p[0], p[2] - p[0]
+    return abs(d1[0] * d2[1] - d1[1] * d2[0]) / max(e.max(), 1e-12), int(np.argmax(e))
+
+
+def _no_slivers(tris, eps=0.01):
+    """The triangles tris (three (x, y) corners each) of a lid without slivers. Where the outline of a gap has a corner
+    of almost 180 degrees the triangulation can join it with the two corners beside it in one triangle a few mm thin,
+    and that triangle stands up as a fin (open edges in the check) where the top beside the gap bends at that corner.
+    The triangle across the long edge of such a sliver gives it its far corner and takes the middle one (an edge flip,
+    valid as the four corners make a convex outline), when that makes the thinner of the two triangles thicker: then
+    every triangle reaches across the gap and the lid follows the heights of both sides. Returns the triangles and how
+    many were flipped; the slivers left (the zero-width spikes and strips of an outline) cover nothing."""
+    tris = [list(t) for t in tris]
+    flips = 0
+    for _ in range(4 * len(tris)):
+        for ti, t in enumerate(tris):
+            w, i = _xy_width(t)
+            if w >= eps:
+                continue
+            a, c, b = t[i], t[(i + 1) % 3], t[(i + 2) % 3]           # long edge a-c, middle corner b
+            tj = next((j for j, s in enumerate(tris) if j != ti and a in s and c in s), None)
+            if tj is None:
+                continue
+            d = next(v for v in tris[tj] if v != a and v != c)
+            new = [[a, b, d], [b, c, d]]
+            if min(_xy_width(s)[0] for s in new) > min(w, _xy_width(tris[tj])[0]):
+                tris[ti], tris[tj] = new
+                flips += 1
+                break
+        else:
+            break
+    return tris, flips
+
+
+def wall_gaps_step(root, report=None):
+    """v3.0.40: no groove between two walls. The survey draws many walls as two lines (their two faces) and where
+    paired_lines does not join them the level has two walls 0.30 m thick side by side a few cm apart; other walls
+    have notches where the survey has a pillar (no wall): 1,100 gaps narrower than GAP_MAX m between the tops of the
+    walls, 8.6 km of dark grooves in v3.0 and in the first v3.0.40 build, seen from the road as cracks and holes in
+    the walls. Every such gap (the closing of the union of the wall tops by GAP_MAX m, less the tops) gets a lid: its
+    outline triangulated (without slivers, _no_slivers) at the height of the top beside every corner (the lower one
+    where two tops meet), and where the gap opens at the end of the walls a face from the edge of the lid down under
+    the ground. Only triangles are added to the wall shapes, in the materials of the tops and sides beside them."""
+    t0 = time.time()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
+               if o.get("class") == "TerrainBlock")
+    z0, maxh = float(blk["position"][2]), float(blk["maxHeight"])
+    data = zi.read(f"{lv}/theTerrain.ter")
+    n = struct.unpack("<I", data[1:5])[0]
+    Q = np.frombuffer(data[5:5 + 2 * n * n], "<u2").reshape(n, n)
+    rtree, rz = _road_ground(zi, lv)
+    shapes = []
+    tops, top_of, sides, side_of = [], [], [], []
+    for o in read_items(zi, f"{lv}/main/MissionGroup/walls/items.level.json"):
+        sn = o.get("shapeName", "").lstrip("/")
+        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo or not sn.endswith(".dae") or "backfill" in sn:
+            continue
+        text = zi.read(sn).decode("utf-8")
+        if "<triangles" not in text:
+            continue
+        V, N, UV, C, parts, node = optimize_level.parse(text)
+        pos = np.asarray(o.get("position", [0, 0, 0]), np.float64)
+        si = len(shapes)
+        shapes.append(dict(name=sn, V=V, N=N, UV=UV, C=C, parts=parts, node=node, pos=pos))
+        for mat, idx in parts:
+            t = (V + pos)[idx[:, 0]].reshape(-1, 3, 3)
+            if mat.endswith("_top"):
+                d1, d2 = t[:, 1, :2] - t[:, 0, :2], t[:, 2, :2] - t[:, 0, :2]
+                ok = np.abs(d1[:, 0] * d2[:, 1] - d1[:, 1] * d2[:, 0]) > 1e-6
+                tops.append(t[ok])
+                top_of += [(si, mat)] * int(ok.sum())
+            elif not re.search(r"photo", mat):
+                col = C[idx[0::3, 3]] if C is not None and idx.shape[1] > 3 else np.ones((len(t), 4))
+                sides.append(t.mean(1))
+                side_of += [(si, mat, tuple(c)) for c in col]
+    res = {"gaps": 0, "lids": 0, "lid_m2": 0.0, "lid_m": 0.0, "end_faces": 0, "left_two_levels": 0, "flips": 0,
+           "slivers_left": 0, "shapes_rewritten": 0}
+    if not tops:
+        print("wall gaps: no wall tops", flush=True)
+        return res
+    T = np.concatenate(tops)
+    polys = shapely.polygons(np.concatenate([T[:, :, :2], T[:, :1, :2]], 1))
+    tree = shapely.STRtree(polys)
+    S = np.concatenate(sides) if sides else np.zeros((0, 3))
+    stree = cKDTree(S[:, :2]) if len(S) else None
+    add = {}                                         # shape -> {material: ([triangles (k, 3, 3) world], [colors])}
+
+    def put(si, mat, tri, col=(1.0, 1.0, 1.0, 1.0)):
+        a = add.setdefault(si, {}).setdefault(mat, ([], []))
+        a[0].append(tri)
+        a[1].append(np.tile(col, (len(tri) * 3, 1)))
+
+    def top_z(x, y):
+        """The height of the wall tops at (x, y): the lowest of those within 1 cm, else the nearest; and its
+        triangle."""
+        p = shapely.Point(x, y)
+        ii = tree.query(p, predicate="dwithin", distance=GAP_MAX)
+        if not len(ii):
+            return None, None
+        d = shapely.distance(polys[ii], p)
+        on = ii[d < 0.01]
+        if len(on):
+            z = [_plane_z(T[k], x, y) for k in on]
+            j = int(np.argmin(z))
+            return z[j], int(on[j])
+        k = int(ii[np.argmin(d)])
+        return _plane_z(T[k], x, y), k
+
+    def ground(x, y):
+        z = float(_ter_min(Q, z0, maxh, np.array([x]), np.array([y]))[0]) - FOOT_DEPTH
+        if rtree is not None:
+            ii = rtree.query_ball_point([x, y], r=FOOT_ROAD)
+            if ii:
+                z = min(z, float(rz[ii].min()) - FOOT_DEPTH)
+        return z
+
+    cen = T[:, :, :2].mean(1)
+    rises = []
+    for kx, ky in np.unique(np.floor(cen / GAP_CELL).astype(np.int64), axis=0):
+        box = shapely.box(kx * GAP_CELL, ky * GAP_CELL, (kx + 1) * GAP_CELL, (ky + 1) * GAP_CELL)
+        ii = tree.query(box.buffer(2 * GAP_MAX))
+        U = shapely.union_all(polys[ii], grid_size=0.0005)
+        G = U.buffer(GAP_MAX / 2, join_style="mitre").buffer(-GAP_MAX / 2, join_style="mitre").difference(U)
+        for g in polygons(G):
+            if (g.area < GAP_MIN_AREA or 2 * g.area / g.length < GAP_MIN_WIDTH
+                    or not box.contains(g.representative_point())):
+                continue
+            res["gaps"] += 1
+            z, k = {}, {}
+            for ring in [g.exterior] + list(g.interiors):
+                for x, y in np.asarray(ring.coords)[:-1]:
+                    z[(x, y)], k[(x, y)] = top_z(x, y)
+            if any(v is None for v in z.values()):
+                continue
+            # the shape and material of the top nearest the middle of the gap take the lid
+            c = g.representative_point()
+            kc = top_z(c.x, c.y)[1]
+            si, tmat = top_of[kc]
+            cdt, flips = _no_slivers([[tuple(p) for p in np.asarray(t.exterior.coords)[:3]]
+                                      for t in polygons(shapely.constrained_delaunay_triangles(g))])
+            res["flips"] += flips
+            keep = []
+            for q in cdt:
+                if any(p not in z for p in q):
+                    continue
+                if _xy_width(q)[0] < GAP_MIN_WIDTH:          # a sliver left: a fin standing up, it covers nothing
+                    res["slivers_left"] += 1
+                    continue
+                keep.append(q)
+            if not keep:
+                continue
+            lid = np.array([np.column_stack([np.array(q), [z[p] for p in q]]) for q in keep])
+            down = np.cross(lid[:, 1] - lid[:, 0], lid[:, 2] - lid[:, 0])[:, 2] < 0
+            lid[down] = lid[down][:, ::-1]
+            # across the gap (in one triangle of the lid: along the gap the walls may climb with the road)
+            rise = float(np.ptp(lid[:, :, 2], axis=1).max())
+            rises.append(rise)
+            if rise > GAP_RISE:
+                res["left_two_levels"] += 1
+                continue
+            put(si, tmat, lid)
+            res["lids"] += 1
+            res["lid_m2"] += g.area
+            res["lid_m"] += g.length / 2
+            # where the gap opens (an edge of the lid away from every top): a face from the lid down under the ground.
+            # The edges of the lid, not of the gap's outline: a sliver left out of the lid opens one of its edges.
+            ecount = collections.Counter(frozenset(e) for q in keep for e in zip(q, q[1:] + q[:1]))
+            for q in keep:
+                for i in range(3):
+                    a, b, o = (np.array(q[(i + k) % 3]) for k in range(3))
+                    m = (a + b) / 2
+                    if ecount[frozenset((q[i], q[(i + 1) % 3]))] > 1 or np.linalg.norm(b - a) < 0.005 or len(
+                            tree.query(shapely.Point(m), predicate="dwithin", distance=0.005)):
+                        continue
+                    za, zb = z[q[i]], z[q[(i + 1) % 3]]
+                    ga, gb = ground(*a), ground(*b)
+                    F = np.array([[*a, za], [*a, ga], [*b, gb], [*a, za], [*b, gb], [*b, zb]]).reshape(2, 3, 3)
+                    out = np.array([b[1] - a[1], a[0] - b[0]])
+                    if out @ (o - a) > 0:                            # away from the lid
+                        out = -out
+                    nf = np.cross(F[0, 1] - F[0, 0], F[0, 2] - F[0, 0])[:2]
+                    if nf @ out < 0:
+                        F = F[:, ::-1]
+                    smat, col = tmat[:-4], (1.0, 1.0, 1.0, 1.0)
+                    if stree is not None:
+                        d, j = stree.query(m, distance_upper_bound=1.0)
+                        if np.isfinite(d):
+                            smat, col = side_of[j][1], side_of[j][2]
+                    put(si, smat, F, col)
+                    res["end_faces"] += 1
+    new_dae = {}
+    tmp = tempfile.mkdtemp()
+    for si, mats in add.items():
+        s = shapes[si]
+        mb = bng.MeshBuilder()
+        for mat, idx in s["parts"]:
+            col = s["C"][idx[:, 3]] if s["C"] is not None and idx.shape[1] > 3 else None
+            mb.add(mat, s["V"][idx[:, 0]], uvs=s["UV"][idx[:, 2]], normals=s["N"][idx[:, 1]], colors=col)
+        for mat, (tris, cols) in mats.items():
+            W = np.concatenate(tris).reshape(-1, 3)
+            tile = WALL_TILE.get(mat, 1.6)
+            if mat.endswith("_top"):
+                uv = W[:, :2] / tile                             # as the tops: along the ground, seamless with them
+            else:
+                # the faces: along their bottom edge and up
+                Wt = W.reshape(-1, 3, 3)
+                u = np.linalg.norm(Wt[:, :, :2] - Wt[:, :1, :2], axis=2).ravel()
+                uv = np.column_stack([u, W[:, 2]]) / tile
+            mb.add(mat, W - s["pos"], uvs=uv, normals=bng.flat_normals_soup(W), colors=np.concatenate(cols))
+        base, detail = re.match(r"(.*)_a(\d+)$", s["node"]).groups()
+        path = os.path.join(tmp, "s.dae")
+        mb.write_dae(path, name=base, origin=(0, 0, 0), detail=int(detail))
+        new_dae[s["name"]] = open(path, "rb").read()
+        os.remove(path)
+    os.rmdir(tmp)
+    with zi.writer() as zo:
+        now = time.localtime()[:6]
+        for i in zi.infolist():
+            if i.filename in new_dae:
+                ni = zipfile.ZipInfo(i.filename, now)          # a new date: the game converts the shape again
+                ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
+                zo.writestr(ni, new_dae[i.filename])
+            else:
+                zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+    res["shapes_rewritten"] = len(new_dae)
+    res["lid_m2"], res["lid_m"] = round(res["lid_m2"], 1), round(res["lid_m"])
+    if rises:
+        res["rise_m_p50_p90_p99"] = [round(float(v), 2) for v in np.quantile(rises, [0.5, 0.9, 0.99])]
+    res["seconds"] = round(time.time() - t0)
+    print("wall gaps:", res, flush=True)
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)

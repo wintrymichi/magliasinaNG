@@ -107,10 +107,25 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Counting holes: an edge of only one triangle over the ground is a hole unless another face closes it. Weld all
   the wall shapes together and look across the edge in its triangle's plane, under a top's edge and behind a
   side's edge (check_level.wall_holes). A test only "15 cm under the edge" counted the edge's own quad as cover.
+  Weld by distance (cKDTree pairs), not by rounding to a 5 mm grid: rounding split corners 1 mm apart across a grid
+  line. The edge's own triangle is the one with all three of its corners: skipping every triangle that touched one
+  end skipped a face doubled along another's side (10 m counted). Not holes, nothing to see: triangles of no width
+  (slivers left by the `difference` cuts of wall_footprints), faces back to back, edges lying in other faces (T
+  joints). With these the 56 m of the first v3.0.40 nightly were 8.5 m of cm cracks.
+- Two walls side by side a few cm apart (the two lines the survey draws for one wall, left unjoined by
+  walls.paired_lines; pillar notches) show a dark groove from above that the hole check cannot see (no open edge):
+  1,100 gaps, 8.6 km in v3.0 and the first v3.0.40 nightly. walls.wall_gaps_step lays a lid on every gap narrower
+  than 25 cm between the tops. Measure the rise across the gap per lid triangle: over the whole gap it skipped the
+  walls climbing with the road (4.8 km left). A CDT of the outline joins three corners in a line into a mm-thin
+  triangle that stands up as a fin (open edges): flip it with its neighbour (walls._no_slivers). Why paired_lines
+  leaves these pairs is not known; one suspect is `ga.intersects(gb)` (lines that touch are never paired). Not
+  changed: the AV survey is blocked in the cloud, so it could not be tested.
 - A released zip can be checked in the cloud without a build: unzip the parts a finish step reads and run it on that
   folder (bng.LevelFiles takes a folder). pip install shapely pyproj rasterio opencv-python-headless playwright;
   render3d needs three.js from `npm pack three@0.170.0` (set render3d.THREE). Cameras placed by guess ended
-  inside meshes: put them on a road vertex beside the target, at eye height, looking at it.
+  inside meshes: put them on a road vertex beside the target, at eye height, looking at it. The merged shapes
+  (walls_m3_*) have their position at a corner of a 384 m chunk: a scratch script that read the shapes within
+  200 m of a point missed the walls there.
 
 ## Data from the cloud sessions
 
