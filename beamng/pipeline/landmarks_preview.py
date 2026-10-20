@@ -46,6 +46,7 @@ def level(pack, root, before=False):
     vanilla.have_game = lambda: True
     if before:
         landmarks.apply = lambda style, b, fp, measured=None: style
+        landmarks.USES = ()                     # the churches with the windows and doors of any building
     tiles = buildings_mesh.build(lv, LEVEL_NAME, ways=None, net=None)
     scene = bng.Scene()
     for shape, origin, ntri in tiles:
@@ -99,6 +100,20 @@ def views(pack, k=4):
             eye = c[:2] + 45 * side - 25 * d
             ez = max(g(*eye) + 2.0, c[2] - 8.0)
             out.append((f"linea{j}", Camera.look((eye[0], eye[1], ez), (c[0], c[1], c[2] - 6.0), fov=60)))
+        # the summit: the radar, the mast and the station from down the ridge
+        import landmarks
+        from config import wgs_to_local
+        tx, ty = wgs_to_local(*landmarks.LEMA_TOP)
+        Z = heights(pack)
+        x0, y0, x1, y1 = pack["bounds"]
+        r0, c0 = int((y1 - ty) / pack["dtm_res"]), int((tx - x0) / pack["dtm_res"])
+        k = int(landmarks.SUMMIT_SEARCH / pack["dtm_res"])
+        ra, ca = max(r0 - k, 0), max(c0 - k, 0)
+        win = Z[ra:r0 + k + 1, ca:c0 + k + 1]
+        i, jj = np.unravel_index(np.argmax(win), win.shape)
+        sx, sy, sz = x0 + (ca + jj) * pack["dtm_res"], y1 - (ra + i) * pack["dtm_res"], float(win.max())
+        for j, az in enumerate((120, 200)):
+            out.append((f"vetta{j}", Camera.orbit(sx, sy, sz + 12.0, 140.0, az, 10, fov=50)))
         return out
     blds = [b for b in pack["buildings"] if b["uuid"] in pack["members"]] or pack["buildings"]
     P = np.concatenate([np.concatenate([b["walls"], b["roofs"]]).reshape(-1, 3) for b in blds])
