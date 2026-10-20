@@ -8,7 +8,8 @@ the game keeps the times of every run in the mission's leaderboard. Each route c
 
 A route follows the AI roads of the level as built (MissionGroup/AIRoads, ai_roads.py), so the races stay on the
 roads the game's traffic drives:
-- a route given as the name of an AI road (the measured Strada Cantonale Magliaso - Pura) is that road;
+- a route given as the name of an AI road (the measured Strada Cantonale Magliaso - Pura) is that road, with the
+  pieces "<name>_<n>" it is cut into where its speed limit changes (ai_roads.speed_limits), in order;
 - a route given as waypoints (village spawn points or local coordinates) is the chain of shortest ways between
   them over the AI roads, where a road costs its length / drivability**ROUTE_POWER (so the cantonal roads are
   taken over the village lanes) and two roads meet where their nodes lie within JOIN m (and JOIN_DZ m in height).
@@ -119,11 +120,20 @@ class RoadGraph:
 def route_line(graph, route, places):
     """(n, 4) x, y, z, width along the route."""
     if isinstance(route, str):
-        k = [i for i, r in enumerate(graph.roads) if r.get("name") == route]
-        if not k:
+        # the road and the pieces ai_roads.speed_limits cut it into where its limit changes ("<name>_<n>", in
+        # order, each starting on the end node of the one before)
+        ks = [i for i, r in enumerate(graph.roads) if r.get("name") == route or
+              r.get("name", "").startswith(route + "_") and r["name"][len(route) + 1:].isdigit()]
+        if not ks:
             raise ValueError(f"no AI road {route}")
-        m = graph.R == k[0]
-        return np.column_stack([graph.P[m], graph.W[m]])
+        ks.sort(key=lambda i: 0 if graph.roads[i]["name"] == route else int(graph.roads[i]["name"][len(route) + 1:]))
+        parts = [np.column_stack([graph.P[graph.R == k], graph.W[graph.R == k]]) for k in ks]
+        out = parts[0]
+        for q in parts[1:]:
+            if np.hypot(*(q[0, :2] - out[-1, :2])) > JOIN and np.hypot(*(q[-1, :2] - out[-1, :2])) <= JOIN:
+                q = q[::-1]                                   # a piece written the other way round
+            out = np.vstack([out, q[1:] if np.hypot(*(q[0, :2] - out[-1, :2])) < 0.05 else q])
+        return out
     pts = [places[w] if isinstance(w, str) else w for w in route]
     nodes = []
     for a, b in zip(pts, pts[1:]):
