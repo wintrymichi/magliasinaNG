@@ -77,6 +77,23 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   a lower one drawn after it (road wear, 2026-10-20). And a band laid over the road with only 3 rows across lets the
   road's crown and crests poke through it (holes in the wear): rows at most 2 m apart, lifted where the asphalt is
   too close (road_wear.clear_of).
+- The game draws one side of a face, so any gap in a mesh is a hole you see through. The roadside walls
+  (walls.build_roadside) were only a face and a 1.75 m cap: where a run ended one saw under the cap into the bank
+  (issue #76, 2026-10-20). Close every solid: back and end faces (walls.roadside_shut).
+- walls.wall_feet_step took "a vertex lower than another at the same x, y" for a foot: where two wall pieces of
+  different heights meet, or the two faces of a thin wall touch, it pulled the lower TOP corners to the ground
+  (5,831 notches in v3.0). Vertices of `*_top` triangles are never feet. A first fix (measure "wall on a bridge"
+  from the highest terrain vertex) raised the notches to 7,986 before that exclusion: after moving vertices,
+  check which triangles (top or side) they belong to.
+- A road can stand metres over the terrain carved under it: wall feet measured only against the terrain hung over
+  the asphalt (slots up to 60 cm). The road surface within 1 m is the ground too (wall_feet_step, FOOT_ROAD).
+- Counting holes: an edge of only one triangle over the ground is a hole unless another face closes it. Weld all
+  the wall shapes together and look across the edge in its triangle's plane, under a top's edge and behind a
+  side's edge (check_level.wall_holes). A test only "15 cm under the edge" counted the edge's own quad as cover.
+- A released zip can be checked in the cloud without a build: unzip the parts a finish step reads and run it on that
+  folder (bng.LevelFiles takes a folder). pip install shapely pyproj rasterio opencv-python-headless playwright;
+  render3d needs three.js from `npm pack three@0.170.0` (set render3d.THREE). Cameras placed by guess ended
+  inside meshes: put them on a road vertex beside the target, at eye height, looking at it.
 
 ## Working with cat (the owner)
 
