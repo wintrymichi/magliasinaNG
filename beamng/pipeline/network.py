@@ -155,6 +155,45 @@ def measure_width(P, N, polys, nominal):
     return width, off
 
 
+class LakeCut:
+    """v3.0.40: g -> g without the lake: the dtm05 cells between LOW m under and WET m over the lake level (the lake is
+    flat in swissALTI3D), for the surveyed paved polygons that reach into it (a slipway at Caslano). Identity when the
+    lake level or dtm05 is not there."""
+
+    def __init__(self):
+        import water
+        from geo import Grid
+        try:
+            self.level, self.dtm = water.lake_level(), Grid.load(os.path.join(WORK, "dtm05.npz"))
+        except (FileNotFoundError, OSError):
+            self.dtm = None
+        self.cut = 0
+
+    def wet(self, x, y):
+        h = np.nan_to_num(self.dtm.sample(x, y), nan=1e4)
+        return (h < self.level + WET) & (h >= self.level - LOW)
+
+    def __call__(self, g):
+        if self.dtm is None or g.is_empty:
+            return g
+        B = shapely.get_coordinates(shapely.segmentize(g.boundary, 2.0))
+        if not self.wet(B[:, 0], B[:, 1]).any():
+            return g
+        from rasterio import features
+        from rasterio.transform import Affine
+        win, _, _ = self.dtm.window(*g.bounds, pad=2)
+        a = np.asarray(win.a if win.a.ndim == 2 else win.a[0], np.float32)
+        a = np.nan_to_num(a, nan=1e4)
+        m = ((a < self.level + WET) & (a >= self.level - LOW)).astype(np.uint8)
+        tr = Affine(win.res, 0, win.x_min, 0, -win.res, win.y_max)
+        wet = shapely.union_all([shapely.geometry.shape(q) for q, v in features.shapes(m, mask=m.astype(bool),
+                                                                                         transform=tr) if v])
+        if wet.is_empty:
+            return g
+        self.cut += 1
+        return g.difference(wet)
+
+
 def dry_ends(lines, ends, node_pos):
     """v3.0.40: cut every dead end that runs down into the lake where the ground (dtm05) reaches the lake level + WET;
     its node moves to the cut. A line wholly in the water is dropped. Returns the lines and their ends."""
