@@ -78,6 +78,14 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   road's crown and crests poke through it (holes in the wear): rows at most 2 m apart, lifted where the asphalt is
   too close (road_wear.clear_of).
 
+## Data from the cloud sessions
+
+- swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
+  cloud container (proxy 403). Compute anything that needs them in a small GitHub workflow that commits its result
+  to the branch (strade_extra.yml, paesi_interi.yml), and test the code locally with stand-in inputs first.
+- Growing the area (area.py) changes what the pinned extracts in beamng/dati must cover: re-pinning them pulls newer
+  data for the whole map. Add only what is new (download_gwr.py --add) and check the OSM extract's bbox.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs
