@@ -220,6 +220,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   25 within 150 m matches the signs.
 - Roundabout give-way points found on the OSM ways landed on the ring: move them onto the entry road's
   incoming lane (snap_ring_signals), or the game binds them to the ring.
+- A workflow edited by a script got a mis-indented step and failed at once on GitHub (no jobs): check every
+  edited workflow with `python3 -c "import yaml; yaml.safe_load(open(f))"` before pushing.
 
 ## Sounds
 
