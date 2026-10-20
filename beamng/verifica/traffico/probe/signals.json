@@ -1,0 +1,4415 @@
+{
+ "instances": [
+  {
+   "id": 3,
+   "name": "stop 1",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -6134.599,
+    -73.159,
+    294.797
+   ],
+   "dir": [
+    0.5802,
+    0.8145,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 4,
+   "name": "give_way 2",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -6277.084,
+    29.763,
+    299.621
+   ],
+   "dir": [
+    -0.3132,
+    -0.9497,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 5,
+   "name": "give_way 3",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -6184.819,
+    -29.385,
+    295.93
+   ],
+   "dir": [
+    -0.4669,
+    -0.8843,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 6,
+   "name": "stop 4",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -4055.046,
+    -133.474,
+    256.148
+   ],
+   "dir": [
+    -0.3701,
+    -0.929,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 7,
+   "name": "stop 5",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -4653.548,
+    -192.322,
+    252.924
+   ],
+   "dir": [
+    -0.2649,
+    -0.9643,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 8,
+   "name": "give_way 6",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3287.079,
+    -393.229,
+    266.313
+   ],
+   "dir": [
+    -0.0097,
+    -1.0,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 9,
+   "name": "give_way 7",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2384.628,
+    662.781,
+    278.543
+   ],
+   "dir": [
+    -0.3701,
+    0.929,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 10,
+   "name": "give_way 8",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3020.95,
+    2585.433,
+    309.523
+   ],
+   "dir": [
+    0.8904,
+    -0.4551,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 11,
+   "name": "stop 9",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1753.71,
+    -1525.544,
+    281.037
+   ],
+   "dir": [
+    -0.8655,
+    -0.5008,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 12,
+   "name": "give_way 10",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1941.663,
+    -1139.725,
+    275.454
+   ],
+   "dir": [
+    -0.3984,
+    -0.9172,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 13,
+   "name": "give_way 11",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    648.239,
+    -1368.549,
+    294.182
+   ],
+   "dir": [
+    0.905,
+    -0.4253,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 14,
+   "name": "give_way 12",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2496.419,
+    1554.986,
+    281.044
+   ],
+   "dir": [
+    -0.869,
+    0.4949,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 15,
+   "name": "give_way 13",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2622.261,
+    1902.803,
+    288.826
+   ],
+   "dir": [
+    0.8294,
+    -0.5587,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 16,
+   "name": "give_way 14",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2870.487,
+    2327.934,
+    302.679
+   ],
+   "dir": [
+    -0.4886,
+    0.8725,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 17,
+   "name": "give_way 15",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1535.218,
+    -890.234,
+    282.312
+   ],
+   "dir": [
+    -0.6804,
+    0.7328,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 18,
+   "name": "give_way 16",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1497.342,
+    -894.787,
+    282.885
+   ],
+   "dir": [
+    0.2595,
+    -0.9657,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 19,
+   "name": "give_way 17",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2838.701,
+    2294.713,
+    303.562
+   ],
+   "dir": [
+    0.786,
+    -0.6182,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 20,
+   "name": "give_way 18",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2353.512,
+    -817.681,
+    268.502
+   ],
+   "dir": [
+    -0.4926,
+    -0.8703,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 21,
+   "name": "give_way 19",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2445.039,
+    -765.671,
+    268.044
+   ],
+   "dir": [
+    0.6494,
+    -0.7605,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 22,
+   "name": "give_way 20",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2283.31,
+    664.368,
+    283.628
+   ],
+   "dir": [
+    0.9992,
+    -0.0395,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 23,
+   "name": "give_way 21",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2786.449,
+    2205.199,
+    301.185
+   ],
+   "dir": [
+    -0.7189,
+    0.6952,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 24,
+   "name": "give_way 22",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1449.759,
+    -911.842,
+    283.886
+   ],
+   "dir": [
+    -0.4026,
+    0.9154,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 25,
+   "name": "give_way 23",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    101.65,
+    -1989.523,
+    280.41
+   ],
+   "dir": [
+    -0.6445,
+    0.7646,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 26,
+   "name": "give_way 24",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    67.163,
+    -2011.733,
+    279.968
+   ],
+   "dir": [
+    0.7148,
+    -0.6993,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 27,
+   "name": "give_way 25",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    547.028,
+    -1570.701,
+    289.928
+   ],
+   "dir": [
+    -0.778,
+    0.6282,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 28,
+   "name": "give_way 26",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3433.322,
+    3037.232,
+    286.476
+   ],
+   "dir": [
+    -0.9545,
+    0.2983,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 29,
+   "name": "give_way 27",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -801.805,
+    -2637.804,
+    273.198
+   ],
+   "dir": [
+    -0.6473,
+    -0.7622,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 30,
+   "name": "give_way 28",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2752.198,
+    2161.241,
+    298.297
+   ],
+   "dir": [
+    -0.6179,
+    0.7863,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 31,
+   "name": "give_way 29",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3564.037,
+    3434.896,
+    288.104
+   ],
+   "dir": [
+    -0.8792,
+    0.4765,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 32,
+   "name": "give_way 30",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -331.412,
+    -2315.906,
+    276.153
+   ],
+   "dir": [
+    0.4168,
+    -0.909,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 33,
+   "name": "give_way 31",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2689.515,
+    2064.765,
+    294.007
+   ],
+   "dir": [
+    -0.5923,
+    0.8057,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 34,
+   "name": "give_way 32",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2679.297,
+    2074.503,
+    294.761
+   ],
+   "dir": [
+    0.538,
+    -0.8429,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 35,
+   "name": "give_way 33",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2222.794,
+    244.182,
+    275.168
+   ],
+   "dir": [
+    -0.8469,
+    0.5318,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 36,
+   "name": "give_way 34",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2323.281,
+    497.346,
+    276.124
+   ],
+   "dir": [
+    -0.9474,
+    0.32,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 37,
+   "name": "give_way 35",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3236.155,
+    2818.768,
+    293.254
+   ],
+   "dir": [
+    0.1953,
+    -0.9807,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 38,
+   "name": "give_way 36",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2563.352,
+    1734.675,
+    286.828
+   ],
+   "dir": [
+    0.8297,
+    -0.5582,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 39,
+   "name": "give_way 37",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2378.213,
+    1257.887,
+    284.073
+   ],
+   "dir": [
+    0.8296,
+    -0.5584,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 40,
+   "name": "give_way 38",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2401.489,
+    1322.792,
+    283.814
+   ],
+   "dir": [
+    0.5094,
+    0.8605,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 41,
+   "name": "give_way 39",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -5612.809,
+    52.451,
+    259.483
+   ],
+   "dir": [
+    -0.4255,
+    -0.9049,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 42,
+   "name": "give_way 40",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4438.104,
+    5847.28,
+    321.322
+   ],
+   "dir": [
+    0.8523,
+    0.523,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 43,
+   "name": "give_way 41",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3770.061,
+    4056.811,
+    293.333
+   ],
+   "dir": [
+    -0.9185,
+    0.3954,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 44,
+   "name": "stop 42",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    4135.148,
+    5210.939,
+    323.334
+   ],
+   "dir": [
+    0.9413,
+    -0.3375,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 45,
+   "name": "give_way 43",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4149.255,
+    5207.033,
+    322.544
+   ],
+   "dir": [
+    -0.9808,
+    0.1952,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 46,
+   "name": "give_way 44",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4131.174,
+    4672.699,
+    300.212
+   ],
+   "dir": [
+    -0.9733,
+    0.2296,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 47,
+   "name": "give_way 45",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4068.568,
+    4572.652,
+    299.738
+   ],
+   "dir": [
+    0.9063,
+    -0.4227,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 48,
+   "name": "stop 46",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -735.951,
+    -2693.407,
+    272.906
+   ],
+   "dir": [
+    -0.8646,
+    -0.5025,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 49,
+   "name": "give_way 47",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -789.533,
+    -2648.972,
+    273.102
+   ],
+   "dir": [
+    -0.9433,
+    -0.3318,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 50,
+   "name": "give_way 48",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2336.275,
+    1045.457,
+    288.461
+   ],
+   "dir": [
+    0.9965,
+    0.0837,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 51,
+   "name": "give_way 49",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2332.742,
+    1004.278,
+    288.714
+   ],
+   "dir": [
+    -0.9747,
+    0.2233,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 52,
+   "name": "give_way 50",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2310.489,
+    967.518,
+    290.683
+   ],
+   "dir": [
+    0.9923,
+    -0.1238,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 53,
+   "name": "give_way 51",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    828.017,
+    -1040.571,
+    300.344
+   ],
+   "dir": [
+    0.755,
+    -0.6557,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 54,
+   "name": "give_way 52",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -476.013,
+    -2377.519,
+    276.301
+   ],
+   "dir": [
+    0.7183,
+    -0.6957,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 55,
+   "name": "give_way 53",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -608.671,
+    -2451.931,
+    274.378
+   ],
+   "dir": [
+    0.6592,
+    -0.752,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 56,
+   "name": "stop 54",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    4121.894,
+    5453.167,
+    332.826
+   ],
+   "dir": [
+    -0.9943,
+    -0.1063,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 57,
+   "name": "give_way 55",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2270.935,
+    812.668,
+    289.4
+   ],
+   "dir": [
+    0.9725,
+    -0.2331,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 58,
+   "name": "give_way 56",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2281.489,
+    819.818,
+    289.062
+   ],
+   "dir": [
+    -0.9988,
+    0.0483,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 59,
+   "name": "give_way 57",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    963.098,
+    -997.607,
+    295.079
+   ],
+   "dir": [
+    -0.2379,
+    0.9713,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 60,
+   "name": "give_way 58",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    730.363,
+    -1221.502,
+    297.376
+   ],
+   "dir": [
+    -0.6897,
+    0.7241,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 61,
+   "name": "give_way 59",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3840.259,
+    4256.0,
+    294.885
+   ],
+   "dir": [
+    0.8894,
+    -0.4572,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 62,
+   "name": "give_way 60",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2079.411,
+    6306.435,
+    840.751
+   ],
+   "dir": [
+    -0.9284,
+    -0.3715,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 63,
+   "name": "give_way 61",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1558.853,
+    6360.879,
+    817.735
+   ],
+   "dir": [
+    0.4522,
+    0.8919,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 64,
+   "name": "give_way 62",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2321.899,
+    6179.352,
+    833.55
+   ],
+   "dir": [
+    -0.7982,
+    -0.6024,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 65,
+   "name": "give_way 63",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2534.957,
+    6183.042,
+    817.686
+   ],
+   "dir": [
+    -0.4555,
+    -0.8902,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 66,
+   "name": "give_way 64",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2328.845,
+    6164.511,
+    832.418
+   ],
+   "dir": [
+    0.306,
+    0.952,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 67,
+   "name": "give_way 65",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2605.393,
+    6149.505,
+    807.036
+   ],
+   "dir": [
+    0.1739,
+    0.9848,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 68,
+   "name": "give_way 66",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2385.397,
+    6147.1,
+    830.709
+   ],
+   "dir": [
+    -0.7076,
+    -0.7066,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 69,
+   "name": "give_way 67",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2395.637,
+    6135.968,
+    830.39
+   ],
+   "dir": [
+    0.0664,
+    0.9978,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 70,
+   "name": "give_way 68",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    988.394,
+    6085.674,
+    773.371
+   ],
+   "dir": [
+    -0.7502,
+    -0.6612,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 71,
+   "name": "give_way 69",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4151.696,
+    5742.737,
+    326.524
+   ],
+   "dir": [
+    -0.8399,
+    -0.5428,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 72,
+   "name": "stop 70",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    3807.742,
+    5693.767,
+    352.193
+   ],
+   "dir": [
+    -0.6264,
+    -0.7795,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 73,
+   "name": "give_way 71",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3884.387,
+    5614.025,
+    346.328
+   ],
+   "dir": [
+    0.6762,
+    0.7367,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 74,
+   "name": "give_way 72",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4064.815,
+    5578.344,
+    332.934
+   ],
+   "dir": [
+    -0.2622,
+    -0.965,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 75,
+   "name": "give_way 73",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3958.416,
+    5614.77,
+    340.881
+   ],
+   "dir": [
+    -0.2722,
+    0.9622,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 76,
+   "name": "give_way 74",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3742.786,
+    5683.806,
+    356.954
+   ],
+   "dir": [
+    -0.4498,
+    0.8931,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 77,
+   "name": "give_way 75",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3550.665,
+    5526.484,
+    390.806
+   ],
+   "dir": [
+    -0.3748,
+    0.9271,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 78,
+   "name": "give_way 76",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3404.691,
+    5381.064,
+    425.14
+   ],
+   "dir": [
+    -0.9106,
+    0.4132,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 79,
+   "name": "give_way 77",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    618.965,
+    5372.678,
+    829.542
+   ],
+   "dir": [
+    -0.6055,
+    0.7958,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 80,
+   "name": "give_way 78",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3367.029,
+    5360.562,
+    431.092
+   ],
+   "dir": [
+    0.7524,
+    0.6587,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 81,
+   "name": "give_way 79",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    583.978,
+    5367.688,
+    832.326
+   ],
+   "dir": [
+    -0.2571,
+    -0.9664,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 82,
+   "name": "give_way 80",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    122.112,
+    4903.347,
+    801.632
+   ],
+   "dir": [
+    -0.16,
+    -0.9871,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 83,
+   "name": "give_way 81",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    110.309,
+    4871.426,
+    799.023
+   ],
+   "dir": [
+    -0.9606,
+    0.278,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 84,
+   "name": "give_way 82",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    97.522,
+    4724.03,
+    791.456
+   ],
+   "dir": [
+    -0.5853,
+    0.8108,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 85,
+   "name": "give_way 83",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -255.511,
+    4569.626,
+    744.331
+   ],
+   "dir": [
+    -0.1822,
+    -0.9833,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 86,
+   "name": "give_way 84",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3005.026,
+    3907.167,
+    531.404
+   ],
+   "dir": [
+    0.0675,
+    0.9977,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 87,
+   "name": "give_way 85",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -913.058,
+    3799.586,
+    713.005
+   ],
+   "dir": [
+    -0.0961,
+    0.9954,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 88,
+   "name": "stop 86",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2205.292,
+    3562.959,
+    715.167
+   ],
+   "dir": [
+    0.4373,
+    -0.8993,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 89,
+   "name": "give_way 87",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -975.424,
+    3553.281,
+    704.853
+   ],
+   "dir": [
+    -0.1709,
+    0.9853,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 90,
+   "name": "give_way 88",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2188.999,
+    3533.424,
+    717.1
+   ],
+   "dir": [
+    0.5057,
+    0.8627,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 91,
+   "name": "stop 89",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1029.207,
+    3485.88,
+    699.817
+   ],
+   "dir": [
+    1.0,
+    -0.0069,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 92,
+   "name": "give_way 90",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2239.409,
+    3496.146,
+    696.411
+   ],
+   "dir": [
+    -0.5634,
+    0.8262,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 93,
+   "name": "stop 91",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1027.303,
+    3445.853,
+    696.969
+   ],
+   "dir": [
+    -0.6105,
+    0.792,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 94,
+   "name": "stop 92",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    1274.814,
+    3434.651,
+    810.972
+   ],
+   "dir": [
+    -0.2046,
+    -0.9788,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 95,
+   "name": "give_way 93",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1247.788,
+    3431.243,
+    808.775
+   ],
+   "dir": [
+    -0.9359,
+    -0.3521,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 96,
+   "name": "give_way 94",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    407.232,
+    3438.346,
+    750.963
+   ],
+   "dir": [
+    -0.5849,
+    0.8111,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 97,
+   "name": "give_way 95",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1399.528,
+    3325.834,
+    801.21
+   ],
+   "dir": [
+    -0.9744,
+    -0.2249,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 98,
+   "name": "give_way 96",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1474.716,
+    3201.701,
+    788.084
+   ],
+   "dir": [
+    -0.5774,
+    -0.8165,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 99,
+   "name": "give_way 97",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1496.778,
+    3186.667,
+    786.133
+   ],
+   "dir": [
+    -0.8964,
+    -0.4432,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 100,
+   "name": "give_way 98",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    113.396,
+    3109.491,
+    742.978
+   ],
+   "dir": [
+    -0.4868,
+    0.8735,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 101,
+   "name": "give_way 99",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1686.189,
+    3103.378,
+    764.791
+   ],
+   "dir": [
+    -0.0723,
+    0.9974,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 102,
+   "name": "give_way 100",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1585.976,
+    3076.628,
+    773.587
+   ],
+   "dir": [
+    0.0648,
+    0.9979,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 103,
+   "name": "give_way 101",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3003.647,
+    2911.252,
+    349.264
+   ],
+   "dir": [
+    -1.0,
+    -0.0082,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 104,
+   "name": "give_way 102",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2872.152,
+    2697.341,
+    319.696
+   ],
+   "dir": [
+    -0.6385,
+    -0.7696,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 105,
+   "name": "give_way 103",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2839.476,
+    2796.256,
+    327.539
+   ],
+   "dir": [
+    0.9838,
+    0.1794,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 106,
+   "name": "give_way 104",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    875.099,
+    2686.912,
+    769.089
+   ],
+   "dir": [
+    -0.9958,
+    -0.091,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 107,
+   "name": "give_way 105",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2901.607,
+    2655.323,
+    316.797
+   ],
+   "dir": [
+    -0.5887,
+    -0.8084,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 108,
+   "name": "give_way 106",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2830.864,
+    2578.037,
+    314.966
+   ],
+   "dir": [
+    0.8033,
+    -0.5955,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 109,
+   "name": "stop 107",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2755.99,
+    2477.808,
+    315.56
+   ],
+   "dir": [
+    -0.4385,
+    0.8987,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 110,
+   "name": "give_way 108",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2586.816,
+    2413.342,
+    325.032
+   ],
+   "dir": [
+    0.2135,
+    0.9769,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 111,
+   "name": "give_way 109",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3056.174,
+    2347.403,
+    292.766
+   ],
+   "dir": [
+    -0.8395,
+    -0.5434,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 112,
+   "name": "give_way 110",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3051.374,
+    2340.084,
+    292.683
+   ],
+   "dir": [
+    0.7037,
+    0.7105,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 113,
+   "name": "give_way 111",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -966.009,
+    2326.523,
+    634.348
+   ],
+   "dir": [
+    -0.8903,
+    -0.4553,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 114,
+   "name": "give_way 112",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -974.537,
+    2261.741,
+    635.549
+   ],
+   "dir": [
+    0.6867,
+    0.7269,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 115,
+   "name": "give_way 113",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -990.983,
+    2017.079,
+    633.679
+   ],
+   "dir": [
+    0.7976,
+    -0.6032,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 116,
+   "name": "give_way 114",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1194.848,
+    1991.62,
+    638.648
+   ],
+   "dir": [
+    -0.677,
+    -0.736,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 117,
+   "name": "stop 115",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1053.123,
+    1937.033,
+    631.296
+   ],
+   "dir": [
+    0.4606,
+    0.8876,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 118,
+   "name": "give_way 116",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1050.21,
+    1939.355,
+    631.355
+   ],
+   "dir": [
+    -0.7476,
+    0.6642,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 119,
+   "name": "give_way 117",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2047.969,
+    1929.369,
+    490.683
+   ],
+   "dir": [
+    0.2456,
+    -0.9694,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 120,
+   "name": "stop 118",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2050.238,
+    1918.872,
+    490.011
+   ],
+   "dir": [
+    0.1473,
+    0.9891,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 121,
+   "name": "give_way 119",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -878.866,
+    1943.608,
+    626.268
+   ],
+   "dir": [
+    0.5658,
+    0.8246,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 122,
+   "name": "give_way 120",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1408.412,
+    1867.28,
+    624.458
+   ],
+   "dir": [
+    0.9561,
+    -0.2931,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 123,
+   "name": "give_way 121",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1123.005,
+    1959.254,
+    634.508
+   ],
+   "dir": [
+    0.6828,
+    0.7307,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 124,
+   "name": "give_way 122",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -856.904,
+    1738.132,
+    610.386
+   ],
+   "dir": [
+    0.9404,
+    0.34,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 125,
+   "name": "give_way 123",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1324.5,
+    1602.596,
+    577.239
+   ],
+   "dir": [
+    0.677,
+    -0.736,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 126,
+   "name": "give_way 124",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -906.46,
+    1579.499,
+    587.556
+   ],
+   "dir": [
+    0.5244,
+    -0.8515,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 127,
+   "name": "stop 125",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    1009.768,
+    1444.517,
+    685.713
+   ],
+   "dir": [
+    -0.9268,
+    0.3755,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 128,
+   "name": "give_way 126",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1682.009,
+    1382.61,
+    552.939
+   ],
+   "dir": [
+    0.7377,
+    -0.6752,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 129,
+   "name": "give_way 127",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    996.497,
+    1335.045,
+    683.964
+   ],
+   "dir": [
+    0.3769,
+    -0.9262,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 130,
+   "name": "give_way 128",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -944.678,
+    1187.667,
+    545.993
+   ],
+   "dir": [
+    -0.9226,
+    -0.3858,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 131,
+   "name": "give_way 129",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -886.117,
+    1156.074,
+    542.897
+   ],
+   "dir": [
+    0.2633,
+    -0.9647,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 132,
+   "name": "give_way 130",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -700.963,
+    1202.36,
+    559.389
+   ],
+   "dir": [
+    0.877,
+    -0.4805,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 133,
+   "name": "give_way 131",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -626.771,
+    1138.633,
+    555.598
+   ],
+   "dir": [
+    -0.7553,
+    -0.6553,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 134,
+   "name": "give_way 132",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -625.644,
+    1122.969,
+    553.804
+   ],
+   "dir": [
+    0.982,
+    -0.1891,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 135,
+   "name": "give_way 133",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -716.631,
+    1102.823,
+    537.658
+   ],
+   "dir": [
+    0.5811,
+    0.8139,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 136,
+   "name": "give_way 134",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -750.375,
+    1048.753,
+    534.062
+   ],
+   "dir": [
+    -0.0863,
+    -0.9963,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 137,
+   "name": "stop 135",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2075.813,
+    628.316,
+    309.928
+   ],
+   "dir": [
+    0.9809,
+    -0.1943,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 138,
+   "name": "stop 136",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2373.165,
+    566.245,
+    276.979
+   ],
+   "dir": [
+    -0.3018,
+    -0.9534,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 139,
+   "name": "give_way 137",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1485.361,
+    595.433,
+    567.329
+   ],
+   "dir": [
+    -0.12,
+    0.9928,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 140,
+   "name": "stop 138",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2037.696,
+    429.075,
+    323.56
+   ],
+   "dir": [
+    -0.9051,
+    0.4252,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 141,
+   "name": "stop 139",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    2002.88,
+    415.675,
+    325.751
+   ],
+   "dir": [
+    0.5234,
+    -0.8521,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 142,
+   "name": "give_way 140",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1432.997,
+    105.279,
+    472.559
+   ],
+   "dir": [
+    -0.987,
+    -0.1604,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 143,
+   "name": "stop 141",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -117.064,
+    -384.973,
+    412.859
+   ],
+   "dir": [
+    0.8133,
+    0.5818,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 144,
+   "name": "stop 142",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -126.358,
+    -387.57,
+    413.873
+   ],
+   "dir": [
+    -0.9984,
+    0.0572,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 145,
+   "name": "give_way 143",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    53.615,
+    -596.296,
+    389.905
+   ],
+   "dir": [
+    0.4402,
+    -0.8979,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 146,
+   "name": "give_way 144",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    37.127,
+    -583.952,
+    390.847
+   ],
+   "dir": [
+    -0.9805,
+    0.1966,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 147,
+   "name": "give_way 145",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1413.245,
+    -656.871,
+    319.766
+   ],
+   "dir": [
+    0.9959,
+    0.0906,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 148,
+   "name": "give_way 146",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1425.202,
+    -655.625,
+    318.706
+   ],
+   "dir": [
+    -0.9978,
+    -0.0656,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 149,
+   "name": "give_way 147",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    20.961,
+    -662.018,
+    386.632
+   ],
+   "dir": [
+    0.9999,
+    0.0102,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 150,
+   "name": "give_way 148",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    79.696,
+    -801.684,
+    377.77
+   ],
+   "dir": [
+    0.7237,
+    0.6901,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 151,
+   "name": "give_way 149",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    137.842,
+    -862.21,
+    376.072
+   ],
+   "dir": [
+    0.0293,
+    0.9996,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 152,
+   "name": "give_way 150",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    465.25,
+    -966.195,
+    350.028
+   ],
+   "dir": [
+    -0.5215,
+    0.8533,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 153,
+   "name": "stop 151",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    698.716,
+    -1055.241,
+    303.395
+   ],
+   "dir": [
+    0.3264,
+    -0.9452,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 154,
+   "name": "stop 152",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1373.877,
+    -1556.344,
+    358.007
+   ],
+   "dir": [
+    0.5584,
+    0.8296,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 155,
+   "name": "stop 153",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    1054.009,
+    -2182.125,
+    274.897
+   ],
+   "dir": [
+    -0.6856,
+    -0.7279,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 156,
+   "name": "give_way 154",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1102.045,
+    -2079.281,
+    348.683
+   ],
+   "dir": [
+    -0.9587,
+    0.2843,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 157,
+   "name": "stop 155",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    1091.19,
+    -2231.968,
+    274.048
+   ],
+   "dir": [
+    -0.8621,
+    -0.5068,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 158,
+   "name": "stop 156",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    1088.678,
+    -2243.167,
+    273.923
+   ],
+   "dir": [
+    0.7693,
+    0.6389,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 159,
+   "name": "give_way 157",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1029.222,
+    -2238.575,
+    336.915
+   ],
+   "dir": [
+    -0.7756,
+    -0.6312,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 160,
+   "name": "stop 158",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    616.849,
+    -2326.107,
+    275.151
+   ],
+   "dir": [
+    -0.5709,
+    -0.821,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 161,
+   "name": "stop 159",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    555.692,
+    -2286.235,
+    275.448
+   ],
+   "dir": [
+    -0.5509,
+    -0.8346,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 162,
+   "name": "stop 160",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    675.092,
+    -2365.796,
+    275.364
+   ],
+   "dir": [
+    0.8525,
+    -0.5227,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 163,
+   "name": "stop 161",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    689.438,
+    -2363.38,
+    275.592
+   ],
+   "dir": [
+    -0.9372,
+    0.3488,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 164,
+   "name": "stop 162",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -874.907,
+    -2386.868,
+    318.056
+   ],
+   "dir": [
+    -0.0441,
+    -0.999,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 165,
+   "name": "give_way 163",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -751.371,
+    -2447.938,
+    295.834
+   ],
+   "dir": [
+    -0.2865,
+    0.9581,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 166,
+   "name": "give_way 164",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    561.706,
+    -2540.635,
+    278.213
+   ],
+   "dir": [
+    0.8202,
+    -0.572,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 167,
+   "name": "stop 165",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -805.032,
+    -2458.991,
+    298.79
+   ],
+   "dir": [
+    0.1121,
+    0.9937,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 168,
+   "name": "give_way 166",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4037.894,
+    2186.797,
+    631.416
+   ],
+   "dir": [
+    -0.289,
+    -0.9573,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 169,
+   "name": "give_way 167",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3989.802,
+    2162.968,
+    630.927
+   ],
+   "dir": [
+    0.0743,
+    0.9972,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 170,
+   "name": "give_way 168",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3926.219,
+    835.517,
+    390.551
+   ],
+   "dir": [
+    0.5227,
+    0.8525,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 171,
+   "name": "give_way 169",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3925.665,
+    843.476,
+    390.629
+   ],
+   "dir": [
+    -0.2718,
+    -0.9623,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 172,
+   "name": "give_way 170",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4833.491,
+    312.39,
+    422.075
+   ],
+   "dir": [
+    0.618,
+    -0.7862,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 173,
+   "name": "stop 171",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -4956.698,
+    287.372,
+    411.076
+   ],
+   "dir": [
+    -0.0577,
+    0.9983,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 174,
+   "name": "give_way 172",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2498.48,
+    2365.94,
+    584.667
+   ],
+   "dir": [
+    0.8168,
+    -0.5769,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 175,
+   "name": "give_way 173",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1891.068,
+    1890.861,
+    574.865
+   ],
+   "dir": [
+    -0.698,
+    -0.7161,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 176,
+   "name": "give_way 174",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3386.523,
+    1739.714,
+    561.838
+   ],
+   "dir": [
+    0.4287,
+    0.9034,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 177,
+   "name": "give_way 175",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3778.354,
+    431.886,
+    370.676
+   ],
+   "dir": [
+    -0.7571,
+    -0.6533,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 178,
+   "name": "give_way 176",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3863.923,
+    489.79,
+    377.808
+   ],
+   "dir": [
+    0.016,
+    -0.9999,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 179,
+   "name": "give_way 177",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3503.911,
+    -122.155,
+    278.959
+   ],
+   "dir": [
+    -0.5882,
+    0.8087,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 180,
+   "name": "give_way 178",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3738.717,
+    -188.621,
+    267.121
+   ],
+   "dir": [
+    0.7387,
+    -0.6741,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 181,
+   "name": "give_way 179",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2725.886,
+    968.43,
+    475.727
+   ],
+   "dir": [
+    0.96,
+    -0.2801,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 182,
+   "name": "stop 180",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1921.374,
+    895.663,
+    531.824
+   ],
+   "dir": [
+    0.7501,
+    0.6613,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 183,
+   "name": "give_way 181",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2026.833,
+    657.408,
+    518.795
+   ],
+   "dir": [
+    0.42,
+    -0.9075,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 184,
+   "name": "give_way 182",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2311.38,
+    66.488,
+    423.134
+   ],
+   "dir": [
+    -0.9529,
+    0.3034,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 185,
+   "name": "stop 183",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -2540.089,
+    -125.337,
+    351.188
+   ],
+   "dir": [
+    0.4902,
+    -0.8716,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 186,
+   "name": "give_way 184",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2391.322,
+    -166.29,
+    362.528
+   ],
+   "dir": [
+    -0.3202,
+    0.9473,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 187,
+   "name": "give_way 185",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2364.533,
+    -47.806,
+    396.269
+   ],
+   "dir": [
+    -0.5338,
+    -0.8456,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 188,
+   "name": "stop 186",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -2121.05,
+    -372.351,
+    352.555
+   ],
+   "dir": [
+    0.9918,
+    0.1278,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 189,
+   "name": "give_way 187",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2353.8,
+    -411.229,
+    290.428
+   ],
+   "dir": [
+    -0.9555,
+    -0.2951,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 190,
+   "name": "give_way 188",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2647.712,
+    -547.408,
+    271.115
+   ],
+   "dir": [
+    0.6694,
+    -0.7429,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 191,
+   "name": "give_way 189",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2639.061,
+    -550.985,
+    271.108
+   ],
+   "dir": [
+    -0.7042,
+    0.71,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 192,
+   "name": "give_way 190",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1802.634,
+    -820.6,
+    353.23
+   ],
+   "dir": [
+    -0.9779,
+    -0.209,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 193,
+   "name": "give_way 191",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -1653.444,
+    -979.413,
+    359.26
+   ],
+   "dir": [
+    -0.2469,
+    -0.9691,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 194,
+   "name": "stop 192",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    -1478.376,
+    -1208.792,
+    371.065
+   ],
+   "dir": [
+    0.6801,
+    0.7331,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 195,
+   "name": "give_way 193",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -5096.362,
+    1197.931,
+    391.766
+   ],
+   "dir": [
+    0.2423,
+    0.9702,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 196,
+   "name": "give_way 194",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -5103.62,
+    1207.144,
+    392.07
+   ],
+   "dir": [
+    -0.0017,
+    -1.0,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 197,
+   "name": "give_way 195",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4623.626,
+    1054.365,
+    383.323
+   ],
+   "dir": [
+    -0.3096,
+    -0.9509,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 198,
+   "name": "give_way 196",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4476.033,
+    1002.009,
+    380.242
+   ],
+   "dir": [
+    -0.3423,
+    -0.9396,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 199,
+   "name": "give_way 197",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4245.521,
+    968.433,
+    379.818
+   ],
+   "dir": [
+    -0.4566,
+    -0.8897,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 200,
+   "name": "give_way 198",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4025.505,
+    651.903,
+    374.621
+   ],
+   "dir": [
+    0.9731,
+    0.2303,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 201,
+   "name": "give_way 199",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4013.16,
+    659.246,
+    375.545
+   ],
+   "dir": [
+    -0.9591,
+    -0.283,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 202,
+   "name": "give_way 200",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -4243.026,
+    550.155,
+    372.33
+   ],
+   "dir": [
+    -0.8015,
+    0.598,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 203,
+   "name": "give_way 201",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2977.853,
+    2798.503,
+    341.972
+   ],
+   "dir": [
+    0.972,
+    -0.2348,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 204,
+   "name": "give_way 202",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -57.115,
+    -410.993,
+    407.573
+   ],
+   "dir": [
+    0.2097,
+    0.9778,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 205,
+   "name": "give_way 203",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3002.448,
+    2979.489,
+    353.853
+   ],
+   "dir": [
+    -0.9777,
+    -0.21,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 206,
+   "name": "give_way 204",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3848.607,
+    833.795,
+    396.268
+   ],
+   "dir": [
+    -0.9962,
+    0.0866,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 207,
+   "name": "give_way 205",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3929.1,
+    484.805,
+    377.43
+   ],
+   "dir": [
+    0.2736,
+    0.9618,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 208,
+   "name": "give_way 206",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2849.133,
+    2361.853,
+    588.857
+   ],
+   "dir": [
+    -0.1651,
+    -0.9863,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 209,
+   "name": "give_way 207",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2795.922,
+    1091.216,
+    477.38
+   ],
+   "dir": [
+    -0.9578,
+    -0.2876,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 210,
+   "name": "stop 208",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    3292.904,
+    2887.999,
+    291.655
+   ],
+   "dir": [
+    -0.9994,
+    0.0344,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 211,
+   "name": "give_way 209",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2927.585,
+    4010.012,
+    552.629
+   ],
+   "dir": [
+    -0.5194,
+    -0.8545,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 212,
+   "name": "give_way 210",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    95.792,
+    -831.427,
+    377.726
+   ],
+   "dir": [
+    0.9008,
+    0.4342,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 213,
+   "name": "give_way 211",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1019.126,
+    312.429,
+    610.381
+   ],
+   "dir": [
+    -0.4528,
+    0.8916,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 214,
+   "name": "give_way 212",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    931.452,
+    297.519,
+    617.423
+   ],
+   "dir": [
+    -0.0847,
+    -0.9964,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 215,
+   "name": "give_way 213",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    52.432,
+    2897.731,
+    726.678
+   ],
+   "dir": [
+    0.9906,
+    -0.1369,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 216,
+   "name": "stop 214",
+   "controllerId": 1,
+   "sequenceId": 0,
+   "pos": [
+    1681.931,
+    18.819,
+    348.416
+   ],
+   "dir": [
+    -0.272,
+    -0.9623,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 217,
+   "name": "give_way 215",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -654.122,
+    -2585.331,
+    272.746
+   ],
+   "dir": [
+    -0.9388,
+    0.3445,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 218,
+   "name": "give_way 216",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1207.353,
+    -290.988,
+    424.141
+   ],
+   "dir": [
+    -0.7113,
+    0.7029,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 219,
+   "name": "give_way 217",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2895.936,
+    -383.329,
+    265.439
+   ],
+   "dir": [
+    -0.4899,
+    -0.8718,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 220,
+   "name": "give_way 218",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    624.078,
+    -1090.216,
+    330.144
+   ],
+   "dir": [
+    0.9886,
+    0.1505,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 221,
+   "name": "give_way 219",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -3657.219,
+    -74.781,
+    275.784
+   ],
+   "dir": [
+    -1.0,
+    -0.009,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 222,
+   "name": "give_way 220",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2702.966,
+    -582.233,
+    267.956
+   ],
+   "dir": [
+    0.6612,
+    -0.7502,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 223,
+   "name": "give_way 221",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2679.786,
+    -582.444,
+    268.323
+   ],
+   "dir": [
+    -0.7065,
+    -0.7077,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 224,
+   "name": "give_way 222",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    -2677.012,
+    -604.356,
+    268.344
+   ],
+   "dir": [
+    -0.7199,
+    0.694,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 225,
+   "name": "give_way 223",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    779.453,
+    -1138.608,
+    298.98
+   ],
+   "dir": [
+    -0.5506,
+    0.8348,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 226,
+   "name": "give_way 224",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    760.467,
+    -1141.992,
+    299.165
+   ],
+   "dir": [
+    0.3634,
+    0.9316,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 227,
+   "name": "give_way 225",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    776.815,
+    -1105.699,
+    300.232
+   ],
+   "dir": [
+    -0.4974,
+    -0.8675,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 228,
+   "name": "give_way 226",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    753.487,
+    -1107.59,
+    300.535
+   ],
+   "dir": [
+    0.5094,
+    -0.8605,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 229,
+   "name": "give_way 227",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1129.691,
+    -961.561,
+    292.291
+   ],
+   "dir": [
+    -0.9818,
+    -0.19,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 230,
+   "name": "give_way 228",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1114.121,
+    -950.18,
+    292.69
+   ],
+   "dir": [
+    0.0889,
+    -0.996,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 231,
+   "name": "give_way 229",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    1122.806,
+    -979.932,
+    292.264
+   ],
+   "dir": [
+    -0.4011,
+    0.916,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 232,
+   "name": "give_way 230",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2946.597,
+    2461.205,
+    304.336
+   ],
+   "dir": [
+    0.5173,
+    0.8558,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 233,
+   "name": "give_way 231",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2967.571,
+    2465.198,
+    303.648
+   ],
+   "dir": [
+    -0.5731,
+    0.8195,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 234,
+   "name": "give_way 232",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    2963.277,
+    2491.734,
+    304.96
+   ],
+   "dir": [
+    -0.5327,
+    -0.8463,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 235,
+   "name": "give_way 233",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3357.349,
+    2871.296,
+    286.608
+   ],
+   "dir": [
+    0.9512,
+    0.3086,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 236,
+   "name": "give_way 234",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3378.97,
+    2891.709,
+    286.14
+   ],
+   "dir": [
+    -0.2961,
+    -0.9552,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 237,
+   "name": "give_way 235",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3392.963,
+    2875.355,
+    285.925
+   ],
+   "dir": [
+    -0.9746,
+    0.224,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 238,
+   "name": "give_way 236",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3371.934,
+    2856.743,
+    286.32
+   ],
+   "dir": [
+    0.3002,
+    0.9539,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 239,
+   "name": "give_way 237",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3639.051,
+    3408.722,
+    290.073
+   ],
+   "dir": [
+    -0.4251,
+    -0.9052,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 240,
+   "name": "give_way 238",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3627.895,
+    3379.922,
+    289.707
+   ],
+   "dir": [
+    0.406,
+    0.9139,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 241,
+   "name": "give_way 239",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3618.98,
+    3399.27,
+    289.645
+   ],
+   "dir": [
+    0.8892,
+    -0.4576,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 242,
+   "name": "give_way 240",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3781.225,
+    5205.844,
+    362.543
+   ],
+   "dir": [
+    -0.2883,
+    0.9575,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 243,
+   "name": "give_way 241",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3770.641,
+    5215.731,
+    363.857
+   ],
+   "dir": [
+    0.9611,
+    -0.2761,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 244,
+   "name": "give_way 242",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3787.339,
+    5221.9,
+    362.035
+   ],
+   "dir": [
+    -0.8835,
+    -0.4684,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 245,
+   "name": "give_way 243",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4019.492,
+    4595.76,
+    301.603
+   ],
+   "dir": [
+    -0.9316,
+    0.3636,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 246,
+   "name": "give_way 244",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4009.857,
+    4587.325,
+    301.703
+   ],
+   "dir": [
+    -0.1742,
+    0.9847,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 247,
+   "name": "give_way 245",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    3991.664,
+    4605.111,
+    302.197
+   ],
+   "dir": [
+    0.9065,
+    -0.4222,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 248,
+   "name": "give_way 246",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4004.468,
+    4616.023,
+    302.642
+   ],
+   "dir": [
+    -0.0285,
+    -0.9996,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 249,
+   "name": "give_way 247",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4026.268,
+    4516.205,
+    299.595
+   ],
+   "dir": [
+    0.3807,
+    -0.9247,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 250,
+   "name": "give_way 248",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4050.5,
+    4492.175,
+    299.361
+   ],
+   "dir": [
+    -0.7966,
+    0.6045,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 251,
+   "name": "give_way 249",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4043.59,
+    4516.895,
+    299.714
+   ],
+   "dir": [
+    -0.5073,
+    -0.8618,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 252,
+   "name": "give_way 250",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4023.068,
+    4488.771,
+    299.264
+   ],
+   "dir": [
+    0.6951,
+    0.719,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 253,
+   "name": "give_way 251",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4098.375,
+    5548.1,
+    331.544
+   ],
+   "dir": [
+    -0.3322,
+    0.9432,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 254,
+   "name": "give_way 252",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4104.055,
+    5574.778,
+    330.41
+   ],
+   "dir": [
+    -0.6675,
+    -0.7446,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 255,
+   "name": "give_way 253",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4077.234,
+    5566.137,
+    331.793
+   ],
+   "dir": [
+    0.9303,
+    -0.3669,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 256,
+   "name": "give_way 254",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4163.898,
+    5691.483,
+    327.546
+   ],
+   "dir": [
+    0.6102,
+    0.7922,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 257,
+   "name": "give_way 255",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4180.103,
+    4954.117,
+    305.561
+   ],
+   "dir": [
+    0.356,
+    0.9345,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 258,
+   "name": "give_way 256",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4207.631,
+    4970.036,
+    305.278
+   ],
+   "dir": [
+    -0.9932,
+    0.1167,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 259,
+   "name": "give_way 257",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4175.012,
+    4988.584,
+    306.632
+   ],
+   "dir": [
+    0.389,
+    -0.9212,
+    0.0
+   ],
+   "startDisabled": false
+  },
+  {
+   "id": 260,
+   "name": "give_way 258",
+   "controllerId": 2,
+   "sequenceId": 0,
+   "pos": [
+    4196.469,
+    4992.079,
+    306.041
+   ],
+   "dir": [
+    -0.3494,
+    -0.937,
+    0.0
+   ],
+   "startDisabled": false
+  }
+ ],
+ "controllers": [
+  {
+   "id": 1,
+   "name": "stop",
+   "type": "signStop",
+   "isSimple": true,
+   "states": [
+    {
+     "state": "basicStop"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "give_way",
+   "type": "signYield",
+   "isSimple": true,
+   "states": [
+    {
+     "state": "basicYield"
+    }
+   ]
+  }
+ ],
+ "sequences": {}
+}
