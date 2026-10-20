@@ -268,17 +268,20 @@ def _boundary_edges(tris, q=0.02):
 
 
 def keep_off(ways):
-    """STRtree of the places no post of a canopy stands on: the bands beside the roads and paths (network_ways)
-    and POST_RAIL m around the axes of the tracks."""
+    """(hard, soft) STRtrees of the places no post of a canopy stands on: hard the carriageways of the roads and
+    paths (network_ways, the band through) and POST_RAIL m around the axes of the tracks, soft the bands beside the
+    roads (the way of a car round the line), left free unless no post of the canopy stands otherwise."""
     import railway
-    polys = [w[2] for w in ways or []]
-    polys += [shapely.LineString(Q[:, :2]).buffer(POST_RAIL) for _, Q in railway.tracks()]
-    return shapely.STRtree(polys) if polys else None
+    hard = [w[1] for w in ways or []]
+    hard += [shapely.LineString(Q[:, :2]).buffer(POST_RAIL) for _, Q in railway.tracks()]
+    soft = [w[2] for w in ways or []]
+    return tuple(shapely.STRtree(p) if p else None for p in (hard, soft))
 
 
 def canopy(roofs, walled, off, ground):
     """(slab, posts) of a roof without walls: the slab's underside and fascia (k, 3, 3), the posts (m, 3, 3).
-    walled: STRtree of the outlines of the buildings with walls; off: keep_off; ground(x, y): the bare ground."""
+    walled: STRtree of the outlines of the buildings with walls; off: keep_off (a tree or a tuple of trees, the
+    later ones given up when they leave no post); ground(x, y): the bare ground."""
     if not len(roofs):
         return np.zeros((0, 3, 3)), np.zeros((0, 3, 3))
     down = np.array([0.0, 0.0, CANOPY_THICK])
@@ -299,18 +302,22 @@ def canopy(roofs, walled, off, ground):
                 pts += [a + (b - a) * k / n for k in range(n)]
     if not pts:                                                                 # a roof narrower than two insets
         pts = [np.array(plan.representative_point().coords[0])] if not plan.is_empty else []
-    posts = []
-    for p in pts:
-        P = shapely.Point(p)
-        if walled is not None and len(walled.query(P, predicate="dwithin", distance=POST_ATTACH)):
-            continue
-        if off is not None and len(off.query(P, predicate="intersects")):
-            continue
-        top = float(roof_height(roofs, p[None])[0]) - CANOPY_THICK
-        g = float(ground(p[0:1], p[1:2])[0])
-        if top - g < POST_MIN:
-            continue
-        posts.append(_post(p, g - POST_SINK, top))
+    offs = [t for t in (off if isinstance(off, tuple) else (off,)) if t is not None]
+    for n in range(len(offs), -1, -1):
+        posts = []
+        for p in pts:
+            P = shapely.Point(p)
+            if walled is not None and len(walled.query(P, predicate="dwithin", distance=POST_ATTACH)):
+                continue
+            if any(len(t.query(P, predicate="intersects")) for t in offs[:n]):
+                continue
+            top = float(roof_height(roofs, p[None])[0]) - CANOPY_THICK
+            g = float(ground(p[0:1], p[1:2])[0])
+            if top - g < POST_MIN:
+                continue
+            posts.append(_post(p, g - POST_SINK, top))
+        if posts or n <= 1:                     # the hard places (carriageways, tracks) are never given up
+            break
     return slab, np.concatenate(posts) if posts else np.zeros((0, 3, 3))
 
 
