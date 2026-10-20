@@ -1,7 +1,7 @@
 # Floating roofs of v3.1: the development pack of roofs_pack.py (the buildings of swissBUILDINGS3D with roofs and no
 # walls, the DTM/DSM under them, SWISSIMAGE 10 cm over them), committed to beamng/verifica/tetti/pack on the branch:
 # the cloud session that writes the posts under them cannot reach swisstopo.
-# stamp: 4
+# stamp: 5
 name: roofs pack
 
 on:
@@ -70,12 +70,12 @@ jobs:
         working-directory: beamng/pipeline
         run: |
           python build_rasters.py
+          python landcover.py
           python extract_buildings.py
 
       - name: Pack
         working-directory: beamng/pipeline
         run: |
-          rm -rf ../verifica/tetti/pack
           python roofs_pack.py ../verifica/tetti/pack
           git checkout -- ../dati || true
           du -sh ../verifica/tetti/pack/*
