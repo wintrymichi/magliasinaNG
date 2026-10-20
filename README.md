@@ -72,6 +72,7 @@ AI traffic works on the whole road network, with one-way streets, roundabouts an
 | The game stalls after loading, or the whole PC lags | The map needs about 12 GB at its peak. Close the browser, Discord and other programs before loading it. |
 | The level is missing from the Freeroam list, or loads the wrong version | Check that only one `magliaso_pura_v*.zip` is in the `mods` folder and that it is still zipped. |
 | Missing textures on the stone walls and some plastic parts on BeamNG.drive 0.40 | That is v3.0 on 0.40: the game moved some of its own textures the map uses. Install v3.0.40. |
+| White or dark grey squares among the far trees on BeamNG.drive 0.40 | That is v3.0 on 0.40: the game draws the far trees' pictures as squares when it makes them itself while you play. v3.0.40 ships them ready made. Install it. |
 | The map is missing from the Freeroam list after updating the game | 0.40 switches every mod off after the update: enable the map in the mod manager. |
 | The first load is slow | That is normal: the game converts the shapes once (v2.8 about 130 s in the test), then loads faster. |
 | After updating, parts of the map still look like the old version | The game may still show shapes it converted for the old zip. Delete the `temp/levels/magliaso_pura/` folder in the game's user folder (the one that holds `mods`) and load the level again. |
@@ -370,6 +371,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │       ├── final_build_test.yml              # Final v2.8 build from scratch, checks, doubles and the zip (v2.8)
 │       ├── landmarks.yml                     # Development pack of the churches, bell towers and cable car (v3.0.40)
 │       ├── nightly_build.yml                 # Nightly build from scratch to the pre-release "nightly" (v3.0.40)
+│       ├── nightly_patch.yml                 # Patches the nightly zip in place: the far trees' imposters (v3.0.40)
 │       ├── paesi_interi.yml                  # The whole villages of Caslano and Arosio, computed and pinned (v3.0.40)
 │       ├── pages.yml                         # Publishes web/ on GitHub Pages when web/ changes on main
 │       ├── release_notes.yml                 # Updates the notes of a published release from beamng/RELEASE_<tag>.md
@@ -428,7 +430,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── drive_test.py                     # Virtual quarter-car drive test of every road and path (v2.2)
 │   │   ├── extract_buildings.py              # Extractor of swissBUILDINGS3D LOD2 walls, roofs and floors
 │   │   ├── facades.py                        # Facades: windows, doors, shops, balconies, roofs (v2.2)
-│   │   ├── far_trees.py                      # Far trees away from roads: drawn models, imposters (v2.7)
+│   │   ├── far_trees.py                      # Far trees away from roads: drawn models, imposters (v2.7, baked since v3.0.40)
 │   │   ├── fences.py                         # Railings and fences on roadside wall crests, from panoramas
 │   │   ├── final_screenshots.py              # Final in-game check views: signs, markings, tracks (v2.7)
 │   │   ├── fix_probe.py                      # Why a road has a step: cells and top faces around it (v3.0)
@@ -483,6 +485,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── package.py                        # Zips the built level as a BeamNG mod into dist/, its digest
 │   │   ├── palms.py                          # Windmill palms in lakeside gardens, model drawn here (v2.4)
 │   │   ├── pano_strip.py                     # Straightened road strip coloured from Street View panoramas
+│   │   ├── patch_far_imposters.py            # Patch: the baked far tree imposters into a built zip (v3.0.40)
 │   │   ├── patch_release.py                  # Patch: the v1.1 road fixes into the v1.0 zip (v1.1)
 │   │   ├── paved_tour.py                     # Sites and before/after views of the paved edges check (v2.8)
 │   │   ├── photo_votes.py                    # Multi-view label votes of segmented panoramas at 3D points
@@ -589,6 +592,7 @@ Every file of the repository and what it is; the folders of screenshots and rend
 │   │   ├── camera_height_calib.json          # Ground-registration score per panorama and camera height
 │   │   ├── cantonale_gravesano.json          # Magliaso–Gravesano cantonal road line in LV95 (v2.0)
 │   │   ├── facade_colors.json                # Plaster and shutter colours per building, from photos (v2.2)
+│   │   ├── far_imposters/                    # Far tree imposters baked by BeamNG 0.40, md5 of their models (v3.0.40)
 │   │   ├── fences.json                       # Railings and fences on Magliaso–Pura walls, from panoramas
 │   │   ├── guardrails_final.json             # Magliaso–Pura guardrails from photo votes and LiDAR
 │   │   ├── guardrails_sv.json                # Guardrails of the whole network seen in Street View (v2.2)
