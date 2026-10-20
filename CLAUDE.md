@@ -101,6 +101,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   and check_level `far_models_without_imposters` goes over 0. Then bake them again in the game (empty cache, load,
   copy the two DDS of each model from temp) into dati/far_imposters and update the md5 in baked.json.
   Nightly #2 was patched in place (nightly_patch.yml), not built with them: the nightlies from #3 carry them from the build.
+  dati/far_imposters is the first folder in dati: prepare_work.py shutil.copy'd every entry of dati and a fresh build
+  failed at its first step (IsADirectoryError, found by "Tetti fluttuanti"). It now skips folders; far_trees reads
+  them from dati itself. A new folder in dati needs the same: check that prepare_work and package skip or read it.
 - Translucent overlay materials need `"translucentZWrite": true` (as Italy has them): without it the game draws
   them in a pass that takes no shadows, and they glow under cars and trees (road wear, 2026-10-18). DecalRoads
   draw on the road meshes only with `overObjects` set, and they do not fix that by themselves.
