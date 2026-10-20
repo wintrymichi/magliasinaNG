@@ -37,6 +37,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - The game's sites (`city.sites.json`, `facilities.sites.json`) need an `oldId` on every spot and zone, or the level
   stops loading with a Lua error.
 - Restore the player's mod zip, temp cache and remove every test file from the user folder at the end.
+- A screenshot on michi's PC while he uses it took his real desktop (browser, terminal) instead of the game, because
+  Windows did not bring BeamNG to the front (2026-10-20; deleted at once). Capture only the game window or the virtual
+  display, never the whole screen, and check the picture shows the game before keeping it.
 - A game update can move the game's own files the level uses: 0.40 moved 73 of them from `/levels/italy/...` to
   `/assets/materials/...` and left `.link` redirects, which it follows, except for 3 (the stone wall, italy_plastic):
   missing textures everywhere (2026-10-20). Read the game log ("Failed to load", NO-MATERIAL) before guessing, then
@@ -94,6 +97,10 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   `<shape>.dae.imposter.dds`, `.imposter_normals.dds` and `.dae.asset.json` and are never baked; far_trees.prebaked
   does the same from dati/far_imposters (baked by the game, md5 of the DAE in baked.json): no bake, no squares.
   A test with a warm cache shows nothing wrong: delete `temp/levels/<level>/art/shapes/trees/far_*` first.
+  The imposters fit only the DAE they were baked from: when a far model changes, far_trees prints "no imposter of ..."
+  and check_level `far_models_without_imposters` goes over 0. Then bake them again in the game (empty cache, load,
+  copy the two DDS of each model from temp) into dati/far_imposters and update the md5 in baked.json.
+  Nightly #2 was patched in place (nightly_patch.yml), not built with them: the nightlies from #3 carry them from the build.
 - Translucent overlay materials need `"translucentZWrite": true` (as Italy has them): without it the game draws
   them in a pass that takes no shadows, and they glow under cars and trees (road wear, 2026-10-18). DecalRoads
   draw on the road meshes only with `overObjects` set, and they do not fix that by themselves.

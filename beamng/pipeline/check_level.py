@@ -79,6 +79,8 @@ LIMITS = {"terrain_over_road": 50, "terrain_over_road_max_m": 1.5, "road_seams":
           # v2.1 (canopy.py): what is left is at the tolerance of the rule (0.3 m of crown over an edge)
           "crowns_in_profile": 10, "trunks_in_solids": 10, "forest_floating": 0, "forest_buried": 10,
           "missing_files": 0,
+          # v3.0.40: a far model without its baked imposters is baked by BeamNG 0.40 in the session: squares
+          "far_models_without_imposters": 0,
           # v2.4: wall faces of the buildings turned into them (seen from outside the house is transparent)
           "building_walls_inward_share": 0.02}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
@@ -876,6 +878,9 @@ def main(lv=None):
             res["network_road_pieces_over_1km"] = LIMITS["ai_components_over_1km"]
     missing, vanilla = file_refs(lv)
     res["missing_files"] = len(missing)
+    far = sorted(glob.glob(os.path.join(lv, "art", "shapes", "trees", "far_*.dae")))
+    res["far_models_without_imposters"] = sum(1 for f in far if not all(
+        os.path.exists(f + s) for s in (".asset.json", ".imposter.dds", ".imposter_normals.dds")))
     res["missing_file_list"] = dict(sorted(missing.items())[:50])
     res["vanilla_file_list"] = vanilla
     size = 0
