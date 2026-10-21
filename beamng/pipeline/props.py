@@ -24,10 +24,12 @@ F = 800.0   # focal length (px) of the dataset views
 # v3.1: the light of a street lamp is a SpotLight aimed down, as the game's Italy level lights its road lamps
 # (s_lamp_post_street_single_01: 1500 lm, range 30 m, cone 100/140 deg, ~7 m up; the highway lamps 7500 lm from 12 m).
 # Up to v3.0.40 it was a PointLight of 14 m radius: from a head 8.4 m up it lit a pool of a few metres under the lamp
-# and left the 30 m between two lamps dark. Ours stand 8.4 m up and 30 m apart: a little more light than Italy's.
-LAMP_RANGE = 32.0           # m the cone reaches (the road midway between two lamps is 17 m from each head)
-LAMP_INNER, LAMP_OUTER = 100.0, 145.0   # deg, full cone angles
-LAMP_LUMEN = 3000.0
+# and left the 30 m between two lamps dark. Ours stand 8.4 m up and 30 m apart. Calibrated in the game (0.40.1,
+# 2026-10-21, seven variants from one view above Magliaso): the range and the cone width lit the road between the
+# lamps; the lumen changed little (3000 and 6000 looked alike). Range 40 m with a 120/165 deg cone lit it end to end.
+LAMP_RANGE = 40.0           # m the cone reaches (the road midway between two lamps is 17 m from each head)
+LAMP_INNER, LAMP_OUTER = 120.0, 165.0   # deg, full cone angles
+LAMP_LUMEN = 6000.0
 LAMP_BRIGHTNESS = LAMP_LUMEN / 5000.0   # the older field: Italy has brightness = lumen / 5000
 LAMP_DOWN = [1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0]   # the cone's axis (local +Y) turned to -Z, as Italy's
 
