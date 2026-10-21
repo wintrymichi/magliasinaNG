@@ -156,6 +156,39 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 | 📷 *Screenshot to come*<br>*Caslano and the whole Monte Caslano* (`overview-monte-caslano.jpg`) | 📷 *Screenshot to come*<br>*Arosio, the whole village* (`overview-arosio.jpg`) |
 | 📷 *Screenshot to come*<br>*The map in the game's level list, in English* (`level-list.jpg`) | 📷 *Screenshot to come*<br>*Behind the car on the cantonal road, with the traffic* (`chase-cantonale-traffic.jpg`) |
 
+### Coming in v3.1
+
+> v3.1 is the next version, in the works now. The pictures below are **3D renders of the test level, not in-game screenshots**: the v3.0.40 level on the left, the v3.1 fix on the right. Nothing of this is in a release yet.
+
+**The Magliaso bridge rebuilt from the survey.** The Via Cantonale bridge over the Magliasina at the Magliaso roundabout becomes one 25 m deck taken from the outline of the cadastral survey, its height fitted to the swissSURFACE3D lidar (within about 0.2 m), instead of two narrow strips with the river showing between them and parapets in the middle of the road (issues [#73](https://github.com/wintrymichi/magliasinaNG/issues/73), [#78](https://github.com/wintrymichi/magliasinaNG/issues/78)). The channelled banks of the river are stone instead of grey asphalt ramps.
+
+| |
+|---|
+| ![The Magliaso bridge from the south, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/bridge-magliaso-from-south.jpg)<br>*The Magliaso bridge from the south: two strips and the river through them (left), one deck and stone banks (right)* |
+| ![Driving up to the Magliaso bridge, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/bridge-magliaso-driver.jpg)<br>*Driving up to the bridge from the roundabout* |
+
+**No more floating roofs.** About 620 roofs of swissBUILDINGS3D had no walls under them (canopies, covered car parks, boat houses, sheds) and hung in the air. In v3.1 the cadastral survey decides what each one is: shelters get a slab and posts, kept off roads and tracks, while houses and low sheds get walls. In the test level the floating roofs drop from 469 to 8.
+
+| |
+|---|
+| ![A canopy between two industrial buildings, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/roofs-canopy-industry.jpg)<br>*A canopy between two industrial buildings, now on posts* |
+| ![A covered car park, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/roofs-covered-car-park.jpg)<br>*A covered car park by the railway* |
+| ![Two sheds, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/roofs-sheds-closed.jpg)<br>*Two sheds in the fields: roofs lying on the grass (left) get their walls (right)* |
+
+**Lids over the grooves between walls.** Where the survey draws one wall as two lines, or a wall has a notch at a pillar, two walls stood a few centimetres apart and showed a dark groove from above (1,100 gaps, 8.6 km): every gap narrower than 25 cm between the tops gets a lid.
+
+| |
+|---|
+| ![A wall along the cantonal road with its groove, before and after](beamng/verifica/screenshots/v3.1-preview/walls-groove-lids.jpg)<br>*A wall along the road: the dark groove on its top (left) closed by a lid (right)* |
+
+**Also in v3.1:** the slipway at Caslano stops at the lake shore instead of going on under the water; the strip of Arosio the OpenStreetMap extract did not cover; the far trees' pictures for the distance made by the build itself (v3.0.40 got them by a patch of its zip).
+
+**Next, after v3.1:**
+- **AI traffic that flows.** The spawn points off the carriageway, a test with the player driving, and the junctions where the traffic stops (see *Known limitations*).
+- **A Swiss licence plate** for the cars of the map, instead of the game's default.
+- The pale bands on some wall tops and the pale patches in the grass at Agno ([#73](https://github.com/wintrymichi/magliasinaNG/issues/73)), the windowless street façade of the Panetteria Magliasino ([#74](https://github.com/wintrymichi/magliasinaNG/issues/74)), the palm at Magliaso and the ochre of Bedigliora ([#77](https://github.com/wintrymichi/magliasinaNG/issues/77)), the ground against the walls ([#78](https://github.com/wintrymichi/magliasinaNG/issues/78)).
+- **Windows and doors measured from the open street photos**, once the detector finds more than about half of them; and the roofs the photos measured off by 0.5–2.9 m, once they are checked one by one.
+
 ### v3.0 in the game: the review round
 
 > v3.0 was released on 17 October 2026 for BeamNG.drive 0.39. After the first v3.0 test build (the `v3 build test` workflow) came a review round with the fixes and additions below. It was built on a PC from scratch and **tested in the game** (BeamNG.drive 0.39.4, native Linux, RTX 4070, 2560 × 1440, Ultra): the frame rate at 13 fixed places before and after, and the screenshots below. Full test in [`beamng/verifica/v3.0/ingame_test_report.md`](beamng/verifica/v3.0/ingame_test_report.md), all screenshots in [`beamng/verifica/screenshots/v3.0/`](beamng/verifica/screenshots/v3.0).
