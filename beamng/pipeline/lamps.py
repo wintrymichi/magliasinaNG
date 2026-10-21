@@ -177,7 +177,7 @@ if __name__ == "__main__":
 #   are the ones the photos show;
 # - the model of the lamps already on the map (italy_light_single.dae of the game's Italy level, referred
 #   to, not copied), scale 1, its arm (local +x, as measured on the cantonal road) towards the road;
-# - a PointLight under the head of every lamp (the head measured in the panoramas for the cantonal road,
+# - a light under the head of every lamp (the head measured in the panoramas for the cantonal road,
 #   dati/lamps.json; else HEAD: 1.2 m along the arm and 8.75 m up at scale 1, the median of those), warm,
 #   without shadows, as
 #   props.py: for the 73 lamps of v2.7 always, for the new ones only with --village-lights (thousands of
@@ -305,10 +305,12 @@ def lamps_step(root, village_lights=True, report=None):
     lights_f = f"{lv}/main/MissionGroup/props/street_lights/items.level.json"
     old = read_items(zi, lights_f)
     old_lamps = [o for o in old if o.get("class") == "TSStatic" and o.get("shapeName") == LIGHT]
-    have_light = any(o.get("class") == "PointLight" for o in old)
-    for o in old:                                   # v2.8: every lamp light on at night only (props.lamp_light)
-        if o.get("class") == "PointLight":
-            o["isEnabled"], o["nightLight"] = False, "1"
+    have_light = any(o.get("class") in ("PointLight", "SpotLight") for o in old)
+    for k, o in enumerate(old):                     # v3.1: every lamp light as props.lamp_light makes it now
+        if o.get("class") in ("PointLight", "SpotLight"):    # (the v2.4 PointLights of 14 m left the road dark)
+            n = props.lamp_light(*o["position"])
+            n["__parent"] = o.get("__parent", "street_lights")
+            old[k] = n
 
     # the axes of the AI roads every metre, which road each point is on
     roads = [o for o in read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json") if o.get("class") == "DecalRoad"]

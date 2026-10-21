@@ -237,6 +237,15 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - The cantonal AI road starts with a hook inside the Magliaso junction, and a start position on the start line
   spawns the car on it: trim turn-backs at the route ends and start the car 15 m before the line.
 
+## Night lights
+
+- The street lamps' lights were PointLights of 14 m radius under a head 8.4 m up, one lamp every 30 m: the road was lit
+  only in a pool under each lamp (michi, 2026-10-21, "la strada non si vede"). Italy lights its road lamps with a
+  SpotLight aimed down (rotationMatrix [1,0,0, 0,0,-1, 0,1,0]; s_lamp_post_street_single_01 1500 lm, range 30,
+  inner/outer 100/140; highway 7500 lm from 12 m), brightness = lumen/5000, nightLight "1", isEnabled false.
+  Read Italy's values from `content/levels/italy.zip` on the PC before guessing a light's numbers.
+- fuel_stations.LIGHT (the canopy lights) is defined but never placed: the v3.0.40 zip has no light but the lamps'.
+
 ## Traffic and AI
 
 - Started a full build on GitHub Actions for one thread while the other v3.0.40 threads were still working;

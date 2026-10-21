@@ -21,19 +21,27 @@ import camera
 LIGHT = "/levels/italy/art/shapes/buildings/italy_light_single.dae"
 WOODPOLE = "/art/shapes/common/power_lines_procedural/electric_pole_wood_old_01.dae"
 F = 800.0   # focal length (px) of the dataset views
-LAMP_RADIUS = 14.0          # m lit by the light of a street lamp (v2.4)
-LAMP_BRIGHTNESS = 1.2
-LAMP_LUMEN = 6000.0         # a street light of a village road
+# v3.1: the light of a street lamp is a SpotLight aimed down, as the game's Italy level lights its road lamps
+# (s_lamp_post_street_single_01: 1500 lm, range 30 m, cone 100/140 deg, ~7 m up; the highway lamps 7500 lm from 12 m).
+# Up to v3.0.40 it was a PointLight of 14 m radius: from a head 8.4 m up it lit a pool of a few metres under the lamp
+# and left the 30 m between two lamps dark. Ours stand 8.4 m up and 30 m apart: a little more light than Italy's.
+LAMP_RANGE = 32.0           # m the cone reaches (the road midway between two lamps is 17 m from each head)
+LAMP_INNER, LAMP_OUTER = 100.0, 145.0   # deg, full cone angles
+LAMP_LUMEN = 3000.0
+LAMP_BRIGHTNESS = LAMP_LUMEN / 5000.0   # the older field: Italy has brightness = lumen / 5000
+LAMP_DOWN = [1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0, 0.0]   # the cone's axis (local +Y) turned to -Z, as Italy's
 
 
 def lamp_light(x, y, z):
-    """The PointLight of a street lamp at (x, y, z): warm, without shadows (cheap). v2.8: nightLight, as the game's
-    own levels have it (core_environment switches every light with it on at dusk and off at dawn), so by day the
-    lamps cost nothing."""
-    return {"class": "PointLight", "persistentId": bng.pid(), "position": [float(x), float(y), float(z)],
-            "radius": LAMP_RADIUS, "intensity": LAMP_LUMEN, "intensityUnit": "lm",
-            "brightness": LAMP_BRIGHTNESS,        # the older field, as a fallback
-            "color": [1.0, 0.82, 0.58, 1.0], "castShadows": False, "isEnabled": False, "nightLight": "1"}
+    """The light of a street lamp at (x, y, z), under its head: a warm cone aimed at the road, without shadows (about
+    2,100 lamps: cheap). nightLight, as the game's own levels have it (core_environment switches every light with it
+    on at dusk and off at dawn), so by day the lamps cost nothing."""
+    return {"class": "SpotLight", "persistentId": bng.pid(), "position": [float(x), float(y), float(z)],
+            "rotationMatrix": LAMP_DOWN, "range": LAMP_RANGE, "innerAngle": LAMP_INNER, "outerAngle": LAMP_OUTER,
+            "intensity": LAMP_LUMEN, "intensityUnit": "lm", "brightness": LAMP_BRIGHTNESS,
+            "color": [1.0, 0.615, 0.344, 1.0], "useColorTemperature": "true", "colorTemperatureKelvin": "3845",
+            "colorTemperatureFilamentId": "blackbody", "colorTemperatureDegradation": "0.000000",
+            "castShadows": False, "isEnabled": False, "nightLight": "1"}
 
 
 def tube(c, z0, z1, r=0.045, n=10):

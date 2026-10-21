@@ -256,7 +256,7 @@ Also in v2.8, in the stages of the build:
   game's own collision mesh replaces the pipeline's meshes, whose collisions were broken. The two materials only the
   Italy level defines are copied into the level (`dati/italy_guardrail_materials.json`); the checks
   (`check_level.py`), the canopy, the lamps and the paved edges see the modules as solids (`guardrail_mesh.module_faces`).
-- **Street lamps lit at night** (`props.lamp_light`, `lamps.py`): every lamp's PointLight, those of the cantonal road
+- **Street lamps lit at night** (`props.lamp_light`, `lamps.py`): every lamp's light (since v3.1 a SpotLight aimed at the road as in Italy, before a PointLight of 14 m that lit only under the lamp), those of the cantonal road
   and of the villages, is off by day and lit by the game at night (`nightLight`); no shadows.
 - **Windows lit at night** (`bld_textures.emissive`, `facades.lit_window`, `buildings_mesh.NIGHT`): the glass of the
   openings has an emissive map (`t_bld_openings_e.color.png`, 1024 x 512); a share of the windows with glass that shows
