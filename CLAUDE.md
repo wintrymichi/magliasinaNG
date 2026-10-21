@@ -49,6 +49,10 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Do not use the laptop DESKTOP-EKDTIGL (AMD iGPU, 512 MB video memory) for load tests on 0.40 (michi, 2026-10-20):
   the released v3.0 took 12-15 min to load and crashed twice "Out of VRAM" while the game converted the sign PNGs.
   0.40 clears `temp/levels/<level>` at every start, so a relaunch converts them again (no warm cache).
+- On michi's PC the Remote Control permission check refused to move or even copy the installed mod zip out of `mods`
+  ("Irreversible Local Destruction"), so the v3.0 comparison run (swap the zips) was dropped (2026-10-21). Plan a test
+  that needs another version as a second install or ask michi to swap the zip himself; and the game had auto-updated
+  overnight (0.40 -> 0.40.1): read the version in the log before comparing with an earlier test.
 - A Remote Control session started from a thread reports only to that thread (@parent): forward its notes to the
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
   long step ends.
