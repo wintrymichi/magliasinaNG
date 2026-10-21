@@ -152,7 +152,7 @@ class Network:
             lines.append(shapely.LineString(np.column_stack([self.x[a:a + n], self.y[a:a + n]])))
         ltree = shapely.STRtree(lines)
         av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
-        dry = network.LakeCut()               # v3.0.40: no surface under the lake (a slipway at Caslano)
+        dry = network.LakeCut(av)             # v3.0.40: no surface under the lake (a slipway at Caslano)
         road_like = []
         for cls, kind in AV_CLASSES.items():
             for g, _ in av["LCSF"].get(cls, []):

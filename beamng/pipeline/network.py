@@ -157,17 +157,26 @@ def measure_width(P, N, polys, nominal):
 
 class LakeCut:
     """v3.0.40: g -> g without the lake: the dtm05 cells between LOW m under and WET m over the lake level (the lake is
-    flat in swissALTI3D), for the surveyed paved polygons that reach into it (a slipway at Caslano). Identity when the
-    lake level or dtm05 is not there."""
+    flat in swissALTI3D), for the surveyed paved polygons that reach into it (a slipway at Caslano). Only the patches of
+    such cells that touch the surveyed lake (MU specchio_acqua) are cut: the floor of the Tresa valley below Ponte Tresa
+    lies in the same band and its yards and roads were cut away (v3.1 test build). Identity when the lake level, dtm05
+    or the survey's lake is not there."""
 
-    def __init__(self):
+    def __init__(self, av=None):
         import water
         from geo import Grid
+        self.cut = 0
         try:
             self.level, self.dtm = water.lake_level(), Grid.load(os.path.join(WORK, "dtm05.npz"))
+            if av is None:
+                av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
         except (FileNotFoundError, OSError):
             self.dtm = None
-        self.cut = 0
+            return
+        lake = [g for g, _ in av["LCSF"].get("specchio_acqua", [])]
+        self.lake = shapely.STRtree(lake) if lake else None
+        if self.lake is None:
+            self.dtm = None
 
     def wet(self, x, y):
         h = np.nan_to_num(self.dtm.sample(x, y), nan=1e4)
@@ -186,12 +195,13 @@ class LakeCut:
         a = np.nan_to_num(a, nan=1e4)
         m = ((a < self.level + WET) & (a >= self.level - LOW)).astype(np.uint8)
         tr = Affine(win.res, 0, win.x_min, 0, -win.res, win.y_max)
-        wet = shapely.union_all([shapely.geometry.shape(q) for q, v in features.shapes(m, mask=m.astype(bool),
-                                                                                         transform=tr) if v])
-        if wet.is_empty:
+        wet = [shapely.geometry.shape(q) for q, v in features.shapes(m, mask=m.astype(bool), transform=tr) if v]
+        # the patches that touch the lake (within a cell and a half of it), not dry ground as low as the lake
+        wet = [q for q in wet if len(self.lake.query(q, predicate="dwithin", distance=1.5 * win.res))]
+        if not wet:
             return g
         self.cut += 1
-        return g.difference(wet)
+        return g.difference(shapely.union_all(wet))
 
 
 def dry_ends(lines, ends, node_pos):

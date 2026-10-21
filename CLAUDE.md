@@ -69,6 +69,10 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Do not tell the side of a wall from a vertex's own height: the DTM smears walls into slopes. Read the
   ground a few metres out on both sides (walls.wall_side), and read beyond any vertex that may itself be raised.
 - Anything that raises ground near the railway must respect its bed (railway.bed_fn, network_mesh rail caps).
+- A height band is not the lake: network.LakeCut cut every dtm05 cell between lake level -2 m and +0.15 m out of the
+  surveyed paved polygons, and the floor of the Tresa valley below Ponte Tresa (268.6-270.5 m, lake 270.48) lost its
+  yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
+  Cut only the low patches that touch the surveyed lake (MU specchio_acqua), and check a lake cut by the area it removes.
 
 ## Checking a finish step in the cloud container
 
