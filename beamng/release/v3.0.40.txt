@@ -1,0 +1,1 @@
+Release v3.0.40: 2026-10-21, zip of nightly #2 (md5 cb162c9552da74949a03fca2af7718dc), after PR #86
