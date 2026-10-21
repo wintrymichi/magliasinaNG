@@ -62,7 +62,18 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   and `$W` are one variable (the first packing attempt wrote nowhere).
 - A Remote Control session started from a thread reports only to that thread (@parent): forward its notes to the
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
-  long step ends.
+  long step ends. `send_message` to it is refused: new instructions go through `start_rc_session` with a message id of
+  this thread (it delivers them to the running session).
+- The permission check on michi's PC also refused deleting the test's own leftovers (output folder, scripts, the result
+  zip; "Irreversible Local Destruction", 2026-10-21): michi deletes them by hand. Write test output into one folder
+  and tell michi its path at the end.
+- `core_camera.setByName(0, "driver")` right after spawning the car did not take on 0.40.1: the 11 "cockpit" shots of
+  the v3.0.40 test are chase-camera views behind the car. Check one picture before taking a series.
+- Time of day 0.5 and 0.4 (`tod`) are real night on this level: the "clock lit at night" shots were black. Pick an earlier
+  time and check one picture before the series.
+- Screenshot points found by searching a road point with a free line of sight (`road_look`) put a wall or an alley in
+  front of the churches of Miglieglia and Novaggio and of the fountain: give churches and small objects a hand-picked
+  camera, or several candidates to choose from.
 
 ## Terrain fixes
 
