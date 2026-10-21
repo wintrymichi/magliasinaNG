@@ -100,6 +100,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   commits it; `ponte_test.yml` builds the level to a DRAFT release (not public) whose zip the session can download.
   The raw window (rif/, 6 MB of swisstopo data) is not kept in git: run ponte_ref.yml on a scratch branch to get it
   again, and delete the draft release when the test is read.
+- A force-push that rebuilds a branch counts every file as changed: it started ponte_ref.yml and ponte_test.yml
+  (path triggers on their stamps) and the first would have committed the raw data again. Cancel them at once
+  (`gh api -X POST .../actions/runs/<id>/cancel`) or give such workflows only `workflow_dispatch`.
 - A bridge drawn as a strip along the swissTLM3D line is only as wide as one carriageway: the Magliasina bridge is
   one 25 m deck carrying two roads, and the strip left the river showing through it for three versions. The
   survey (SOSF ponte_passerella) has the true outline, swissSURFACE3D the deck top (LiDAR class 17).
