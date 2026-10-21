@@ -28,12 +28,19 @@ Nothing is taken from a photograph: the leaf and needle shapes are drawn here, a
 (opacityMap) of each leaf material; the colour is the material's own (baseColorFactor) times a vertex
 colour per card. With a colour texture the game baked the imposters grey: it bakes them at load,
 before the texture is there, and kept that picture in its cache.
+
+v3.0.40: BeamNG.drive 0.40 drew about one far tree in ten as an opaque white square (aerial views, DX12) when it
+baked the imposters itself during the session (shape newer than its cached imposter: the first load of a new build,
+an emptied cache). Its own trees ship their imposters baked, beside the shape (<shape>.dae.imposter.dds,
+<shape>.dae.imposter_normals.dds) with the settings in <shape>.dae.asset.json, and it never bakes those. So do the
+far trees: the pictures the game 0.40 baked of these very models are kept in dati/far_imposters (baked.json: the
+md5 of the DAE each was baked from) and go beside the DAEs while the models stay the same (prebaked).
 """
 import os, struct
 import numpy as np
 import bng
 from bld_textures import noise
-import json, os, re, shutil, sys, tempfile, zipfile
+import json, os, re, shutil, sys, tempfile, time, zipfile
 from scipy.spatial import cKDTree
 import vegetation
 from config import LEVEL_NAME, WORK
@@ -51,6 +58,7 @@ MESH_PX = 5000            # detail size of the mesh: within about 12 m of a 20 m
 BB_PX = 100               # detail size of the imposter (any size under MESH_PX: the last detail is never culled)
 BB = {"BB::EQUATOR_STEPS": 8, "BB::POLAR_STEPS": 0, "BB::POLAR_ANGLE": 25, "BB::DL": 0,
       "BB::DIM": 256, "BB::INCLUDE_POLES": 1}
+IMPOSTERS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "far_imposters")
 CARD_SHADE = (0.78, 1.0)   # vertex colour of each leaf card (the shade colour is the material's at the top)
 # v3.0: clearance of the far trees from the drivable surfaces, per surface class of canopy.py (carriageways and
 # the surveyed tracks, sidewalks and yards, paths): the trunk at least TRUNK_GAP m from the surface, no foliage
@@ -329,9 +337,39 @@ def build(level_dir, level_name, cols):
             n = name(form, k)
             mb.write_dae(os.path.join(d, f"{n}.dae"), name=n, detail=MESH_PX,
                          billboard=(BB_PX, BB))
+            prebaked(d, n)
             P = np.concatenate(allv)
             out[n] = (f"{L}/{n}.dae", P.min(0).tolist(), P.max(0).tolist())
     return out
+
+
+def asset():
+    """The <shape>.dae.asset.json of a far model, as the game's own trees have it: its imposter (detail level 1,
+    after the mesh) with the BB settings of the DAE."""
+    return {"imposters": [{"detailLevel": 1, "dimension": BB["BB::DIM"], "equatorSteps": BB["BB::EQUATOR_STEPS"],
+                           "includePoles": bool(BB["BB::INCLUDE_POLES"]), "polarAngle": BB["BB::POLAR_ANGLE"],
+                           "polarSteps": BB["BB::POLAR_STEPS"], "size": BB_PX}]}
+
+
+def prebaked(d, n):
+    """Beside the DAE of far model n (in folder d): its asset.json and, if dati/far_imposters has pictures baked
+    from this same DAE, its imposters (the game then does not bake them). True if the imposters went in."""
+    import hashlib
+    dae = os.path.join(d, f"{n}.dae")
+    with open(dae + ".asset.json", "w") as f:
+        json.dump(asset(), f)
+    try:
+        baked = json.load(open(os.path.join(IMPOSTERS, "baked.json")))["dae_md5"]
+    except (OSError, KeyError, ValueError):
+        baked = {}
+    md5 = hashlib.md5(open(dae, "rb").read()).hexdigest()
+    if baked.get(n) != md5:
+        print("far trees: no imposter of %s baked from this model in dati/far_imposters (the game bakes it at the first "
+              "load, white squares in 0.40)" % n, flush=True)
+        return False
+    for suffix in (".imposter.dds", ".imposter_normals.dds"):
+        shutil.copyfile(os.path.join(IMPOSTERS, n + ".dae" + suffix), dae + suffix)
+    return True
 
 
 def crown_reach(names_, h, radius, top):
@@ -469,11 +507,16 @@ def far_trees_step(root, trees_f=None, report=None):
     far["dist"] = surface_distances(tops, cls, far["x"], far["y"])
     print("trees measured %d, kept by the thinning %d, forest items %d, drivable top faces %d; far tree candidates %d"
           % (len(xy), int(kept.sum()), len(have), len(tops), int(cand.sum())))
+    import forest_fill, water                                               # v3.0: the woods outside the survey
+    fill = forest_fill.fill(measured, water.lake_level()) if FILL else None
+    if fill is not None:
+        # the fill keeps the same clearance from the drivable surfaces as the measured far trees (select): up to
+        # the v3.0 release it had none, and where the forest of WorldCover runs over a road (Vezio, the roads of the
+        # corridors in the woods) far trees stood next to and on the carriageway
+        fill["dist"] = surface_distances(tops, cls, fill["x"], fill["y"])
     del tops, cls
     tmp = tempfile.mkdtemp(prefix="magliaso_far_")
     try:
-        import forest_fill, water                                           # v3.0: the woods outside the survey
-        fill = forest_fill.fill(measured, water.lake_level()) if FILL else None
         items = vegetation.far_items(far, tmp, LEVEL_NAME, fill)
         md_name = f"{lv}/art/forest/managedItemData.json"
         managed = json.loads(zi.read(md_name)) if md_name in zi.NameToInfo else {}
@@ -498,7 +541,12 @@ def far_trees_step(root, trees_f=None, report=None):
             for n, data in sorted(new_files.items()):
                 ctype = zipfile.ZIP_STORED if n.endswith(".png") else zipfile.ZIP_DEFLATED
                 zo.writestr(n, data, compress_type=ctype)
+        later = time.time() + 10
+        for n in new_files:
+            if ".dae.imposter" in n and os.path.exists(zi.path(n)):
+                os.utime(zi.path(n), (later, later))      # newer than its shape: the game keeps it
         counts = {k[0]: len(v) for k, v in items.items()}
-        print("%d far trees %s" % (sum(counts.values()), counts))
+        print("%d far trees %s; baked imposters beside %d of %d far models" % (
+            sum(counts.values()), counts, sum(".dae.imposter.dds" in n for n in new_files), len(names())))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

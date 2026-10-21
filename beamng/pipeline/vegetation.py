@@ -240,11 +240,13 @@ def far_items(far, level_dir, level_name, fill=None):
     keep = far_trees.select(names, radius, far.get("dist"), FAR_CAP, far["h"], far["x"], far["y"])
     if fill is not None and len(fill["x"]):
         n0 = len(names)
-        f_names, f_scale, _ = far_trees.assign(fill["h"], fill["d"], fill["rgb"], fill["conifer"], cols)
+        f_names, f_scale, f_radius = far_trees.assign(fill["h"], fill["d"], fill["rgb"], fill["conifer"], cols)
+        f_keep = far_trees.select(f_names, f_radius, fill.get("dist"), None, fill["h"])
         far = {k: np.concatenate([far[k], fill[k]]) for k in ("x", "y", "z")}
         names, scale = np.concatenate([names, f_names]), np.concatenate([scale, f_scale])
-        keep = np.concatenate([keep, np.ones(len(f_names), bool)])
-        print("forest fill: %d far trees outside the survey" % (len(names) - n0))
+        keep = np.concatenate([keep, f_keep])
+        print("forest fill: %d far trees outside the survey, %d left out in the clearance of a drivable surface"
+              % (len(names) - n0, int((~f_keep).sum())))
     rng = np.random.default_rng(11)
     yaw = rng.uniform(0, 2 * np.pi, len(names))
     out = {}
@@ -319,7 +321,12 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
     # shrubs and hedges along the route (understory.py)
     us_f = os.path.join(WORK, "understory.npz")
     if os.path.exists(us_f):
-        u = np.load(us_f)
+        # v3.0.40: the hedges the street photos saw (understory.photo_hedges), here as well: the build takes
+        # understory.npz from dati as it is (prepare_work.py) and never runs understory.py; applied twice it
+        # drops and adds nothing more
+        import understory
+        from geo import Grid
+        u = understory.photo_hedges(dict(np.load(us_f)), Grid.load(os.path.join(WORK, "dtm05.npz")))
         bush_models = [p for p in MODELS["bush"] if p in dims] + [T + "trees_aspen/tree_aspen_small_a.dae"]
         bush_models = [p for p in bush_models if p in dims or p in asset_bounds.cached([p])]
         dims.update({p: (np.array(asset_bounds.cached([p])[p][1])[2] - max(np.array(asset_bounds.cached([p])[p][0])[2], -0.5),

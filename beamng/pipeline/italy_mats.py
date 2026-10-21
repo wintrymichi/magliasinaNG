@@ -17,8 +17,11 @@ ASPHALT_TILE = 4.0      # m of road per repeat of Italy's asphalt (its macro det
 STONE_TILE = 3.0        # m of wall per repeat of Italy's medieval stone wall
 KEYS = {"d": "detailMap", "dn": "detailNormalMap", "o": "opacityMap"}
 VALUES = ("detailScale", "detailNormalMapStrength", "opacityFactor", "roughnessFactor")
-OVERLAY = {"translucent": True, "translucentBlendOp": "LerpAlpha", "translucentZWrite": False,
-           "castShadows": False}
+# the overlays of the road (road_wear.py) with the flags Italy gives the same textures: translucent WITH depth
+# writes. Without them (the first v3.0) the game drew the overlays in a pass that takes no shadows: the cracked
+# stretches, tracks and dusty edges stayed bright under the cars, trees and walls (checked in the game,
+# 2026-10-18: the same patch with these flags takes the car's shadow, 103 against 203 of luma)
+OVERLAY = {"translucent": True, "translucentZWrite": True, "castShadows": False}
 
 
 def material(name, src, ground_type=None, tint=None, overlay=False, base_color=None):

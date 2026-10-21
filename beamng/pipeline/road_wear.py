@@ -20,11 +20,18 @@ of 64 pixels across. Now:
   (italy_asphalt_overlay_light), in every lane two tyre tracks TRACK_W m wide TRACK_GAP m apart (Italy's
   m_asphalt_trackwear; one pair in the middle of a road narrower than NARROW m), and on stretches of CRACK_LEN m
   now and then (one about every CRACK_EVERY m) Italy's cracked and patched asphalt (italy_road_cracks);
-  none of them inside a junction (JUNCTION_PAD m beyond the carriageways of the roads that meet there), on a
-  roundabout and its entries (ROUNDABOUT_PAD m around the ring OpenStreetMap maps), where the measured
-  width jumps (a lay-by, a widening, the mouth of a side road) or where they would leave the asphalt.
-Every layer at its own height, LIFT m over the top faces of the asphalt (the height of the face under it,
-never the deck of a bridge above it). One mesh per TILE m tile in MissionGroup/roads/markings, without
+  none of them inside a junction a road ends at (JUNCTION_PAD m beyond the carriageways of the roads that meet
+  there), on a roundabout and its entries (ROUNDABOUT_PAD m around the ring OpenStreetMap maps), where the
+  measured width jumps for longer than BRIDGE_JUMP stations or where they would leave the asphalt. The AI roads
+  that go on as one another (split at a bridge, a junction, a change of name) are joined first, so the bands
+  run on through those points, through a T for the road that goes straight on and past a lay-by or the mouth
+  of a side road (the first v3.0 broke them for 15 m at 1157 such points and 410 width jumps).
+Every layer at its own height, LIFT m over the top faces of the asphalt, translucent with depth writes as Italy
+draws them (italy_mats.OVERLAY: they take the shadows) (the height of the face under it,
+never the deck of a bridge above it), and as high over the asphalt between its vertices too: rows of vertices at
+most ROW_STEP m apart across a band, every triangle lifted where the crown or a crest of the road came through it
+(clear_of: the v3.0 bands had holes in 1-5 % of their area), a triangle that would hang over a step of the road
+left out; in every mesh the layers from the lowest up, the order the game draws them in. One mesh per TILE m tile in MissionGroup/roads/markings, without
 collision; the textures in art/shapes/roads. Everything else is copied as it is.
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish road_wear
@@ -70,9 +77,25 @@ MEASURE_MAX = 8.0            # m from the axis: the farthest an edge is looked f
 CONT_DZ = 0.10               # m between two samples 0.25 m apart across the road: still the same asphalt
 WIDTH_LOCAL = 15             # stations (30 m): a road widening through a bend follows its own local median
 RING_SHARE = 0.6             # of an AI road's stations on a roundabout's ring: the ring itself
+JOIN_D = 1.0                 # m: two AI road ends this close are one point (the road goes on as another)
+JOIN_ANGLE = 35.0            # degrees: the most a road may turn there to go on as the other
 CROSS_IN = 0.4               # m: a band is cut where it lies this far inside the carriageway of another AI road
 CROSS_ANGLE = 25.0           # degrees
+CROSS_END = 1.5              # m beyond a band's half width: the end of a road reaching this far in only meets it
+CROSS_WIDER = 0.25           # m of half width: a road this much wider keeps its bands across the other
+BRIDGE_JUMP = 20             # stations (40 m): the longest jump of the width the bands go on past
+BRIDGE_OFF = 3               # stations (6 m): the longest stretch off the asphalt they go on past
 MIN_PIECE = 6                # stations: shorter pieces of a band are left out
+ROW_STEP = 2.0               # m at most between the rows of vertices across a band
+# where the faces of the road are higher between the vertices of a band (the crown, a crest, the joint of two
+# meshes) the band was under them, the road over it: holes in the wear (1-5 % of the bands of the first v3.0).
+# The band is checked at these points of every triangle (barycentric) and lifted where the road comes too close
+CLEAR_AT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1 / 3, 1 / 3, 1 / 3], [.5, .5, 0], [0, .5, .5], [.5, 0, .5],
+                     [.75, .25, 0], [.25, .75, 0], [0, .75, .25], [0, .25, .75], [.25, 0, .75], [.75, 0, .25],
+                     [2 / 3, 1 / 6, 1 / 6], [1 / 6, 2 / 3, 1 / 6], [1 / 6, 1 / 6, 2 / 3]])
+CLEAR_MAX = 0.10             # m: a face higher than this over the band is another level (a bridge), not its road
+FLOAT_MAX = 0.10             # m: a triangle of a band this high over the road somewhere spans a step of the road
+                             # (the band would hang over the lower side like a sheet): left out
 SHAPE = re.compile(r"art/shapes/roads/road_wear_[-+]\d+_[-+]\d+\.dae$")
 # material: (lift m over the road, m of road per repeat of the texture for a band 1 m wide)
 LAYER = {"mp_wear_variation": (0.006, 112.0 / 6.0), "mp_wear_cracks": (0.008, 16.0 / 4.0),
@@ -244,8 +267,9 @@ def edge_bands(A, Sa, Sall, Sp, stats):
             down = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])[:, 2] < 0
             t[down] = t[down][:, ::-1]
             uv[down] = uv[down][:, ::-1]
-            tris.append(t)
-            uvs.append(uv)
+            t, ok = clear_of(t, Sa, lift)
+            tris.append(t[ok])
+            uvs.append(uv[ok])
             stats["edge_m"] += float(s[b - 1] - s[a])
     if not tris:
         return np.zeros((0, 3, 3)), np.zeros((0, 3, 2))
@@ -257,8 +281,8 @@ class Carriageways:
     """The carriageways of all the AI roads, sampled every metre along their axes with their half widths:
     where a road meets another (a junction, a roundabout), its bands stop at the other's edge."""
     def __init__(self, roads):
-        pts, half, rid, tang = [], [], [], []
-        self.ends = []
+        pts, half, rid, tang, end_d = [], [], [], [], []
+        self.ends = []                                                # (road, point, half width, end 0/1)
         for k, road in enumerate(roads):
             nodes = np.asarray(road["nodes"], np.float64)
             if len(nodes) < 2:
@@ -270,17 +294,21 @@ class Carriageways:
             tg = np.gradient(pts[-1], axis=0)
             tang.append(tg / np.maximum(np.linalg.norm(tg, axis=1, keepdims=True), 1e-9))
             rid.append(np.full(len(sd), k))
-            self.ends += [(k, nodes[0, :2], nodes[0, 3] / 2), (k, nodes[-1, :2], nodes[-1, 3] / 2)]
+            end_d.append(np.minimum(sd, sd[-1] - sd))
+            self.ends += [(k, nodes[0, :2], nodes[0, 3] / 2, 0), (k, nodes[-1, :2], nodes[-1, 3] / 2, 1)]
         self.P, self.half, self.rid = np.concatenate(pts), np.concatenate(half), np.concatenate(rid)
-        self.tang = np.concatenate(tang)
+        self.tang, self.end_d = np.concatenate(tang), np.concatenate(end_d)
         self.tree = cKDTree(self.P)
         self.rmax = float(self.half.max())
 
-    def junctions(self):
-        """(n, 3): x, y, radius of every junction: the end of an AI road on or near another AI road (a T,
-        a crossing, the ends of three roads at one point); the radius takes in the carriageways that meet."""
+    def junctions(self, joined=()):
+        """(n, 4): x, y, radius and road of every junction: the end of an AI road on or near another AI road (a
+        T, a crossing, the ends of three roads at one point); the radius takes in the carriageways that meet.
+        Not the ends in joined ((road, end) pairs, see continuations): there the road just goes on."""
         out = []
-        for k, p, h in self.ends:
+        for k, p, h, e in self.ends:
+            if (k, e) in joined:
+                continue
             near = np.asarray(self.tree.query_ball_point(p, self.rmax + 1.5))
             if not len(near):
                 continue
@@ -289,12 +317,15 @@ class Carriageways:
             on = near[d < self.half[near] + 1.5]
             if not len(on):
                 continue
-            out.append((p[0], p[1], max(h, float(self.half[on].max())) * 1.2 + JUNCTION_PAD))
-        return np.array(out).reshape(-1, 3)
+            out.append((p[0], p[1], max(h, float(self.half[on].max())) * 1.2 + JUNCTION_PAD, k))
+        return np.array(out).reshape(-1, 4)
 
-    def inside_other(self, C, k):
-        """(n,) bool: the points C (n, 2) of a band lie CROSS_IN m or more inside the carriageway of an AI road
-        other than k that crosses it (more than CROSS_ANGLE off its direction)."""
+    def inside_other(self, C, k, half):
+        """(n,) bool: the points C (n, 2) of a band of AI road k (half widths half (n,)) lie CROSS_IN m or more
+        inside the carriageway of another AI road that crosses it (more than CROSS_ANGLE off its direction) and
+        goes on across it: not the end of a side road reaching into it (the tracks of the road going on broke
+        for 2-4 m at 700 such ends), and not a narrower road (the wider one keeps its bands across a crossing;
+        of two as wide, the one listed first)."""
         out = np.zeros(len(C), bool)
         T = np.gradient(C, axis=0)
         T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
@@ -303,11 +334,134 @@ class Carriageways:
             if not near:
                 continue
             near = np.asarray(near)
-            near = near[(self.rid[near] != k) & (np.abs(self.tang[near] @ T[i]) < cmax)]
+            near = near[(self.rid[near] != k) & (np.abs(self.tang[near] @ T[i]) < cmax)
+                        & (self.end_d[near] > half[i] + CROSS_END)
+                        & ((self.half[near] > half[i] + CROSS_WIDER)
+                           | ((np.abs(self.half[near] - half[i]) <= CROSS_WIDER) & (self.rid[near] < k)))]
             if len(near):
                 d = np.hypot(*(self.P[near] - C[i]).T)
                 out[i] = bool((d < self.half[near] - CROSS_IN).any())
         return out
+
+
+    def continuations(self, roads, rings=frozenset()):
+        """The (road, end) pairs where an AI road goes on as another one: two ends of two roads at one point
+        (within JOIN_D m), running on within JOIN_ANGLE degrees of each other, with the same lanes; where three
+        or four ends meet (a T, a crossing, the main road split there), the straightest such pairs. The network
+        splits its roads at bridges, at a change of name or speed limit and at every junction: the first v3.0
+        took every such point for a junction and broke all the wear of the road going on for 15 m there.
+        A road of a roundabout's ring (rings: their indices) goes on only as another one of the ring."""
+        E = np.array([e[1] for e in self.ends]).reshape(-1, 2)
+        tree = cKDTree(E)
+        joined, links, seen = set(), [], set()
+        for i in range(len(E)):
+            if i in seen:
+                continue
+            group = sorted(tree.query_ball_point(E[i], JOIN_D))
+            seen |= set(group)
+            if not 2 <= len(group) <= 4 or len({self.ends[g][0] for g in group}) < len(group):
+                continue
+            d = {}
+            for g in group:
+                k, _, _, e = self.ends[g]
+                n = np.asarray(roads[k]["nodes"], float)
+                d[g] = self._away(n if e == 0 else n[::-1])        # leaving the point along the road, ~5 m in
+            pairs = []
+            for x in range(len(group)):
+                for y in range(x + 1, len(group)):
+                    gi, gj = group[x], group[y]
+                    (ki, _, _, ei), (kj, _, _, ej) = self.ends[gi], self.ends[gj]
+                    if d[gi] is None or d[gj] is None:
+                        continue
+                    if (ki in rings) != (kj in rings):
+                        continue
+                    straight = -float(d[gi] @ d[gj])
+                    if straight >= np.cos(np.radians(JOIN_ANGLE)) and \
+                            lane_key(roads[ki], ei == 1) == lane_key(roads[kj], ej == 0):
+                        pairs.append((straight, gi, gj))
+            used = set()
+            for _, gi, gj in sorted(pairs, reverse=True):
+                if gi in used or gj in used:
+                    continue
+                used |= {gi, gj}
+                (ki, _, _, ei), (kj, _, _, ej) = self.ends[gi], self.ends[gj]
+                joined |= {(ki, ei), (kj, ej)}
+                links.append(((ki, ei), (kj, ej)))
+        return joined, links
+
+    @staticmethod
+    def _away(nodes):
+        s = np.r_[0, np.cumsum(np.hypot(*np.diff(nodes[:, :2], axis=0).T))]
+        if s[-1] < 0.5:
+            return None
+        q = np.array([np.interp(min(5.0, s[-1]), s, nodes[:, 0]), np.interp(min(5.0, s[-1]), s, nodes[:, 1])])
+        d = q - nodes[0, :2]
+        return d / max(np.linalg.norm(d), 1e-9)
+
+
+def lane_key(road, forward):
+    """The lanes of an AI road (left, right) as seen running along it (forward) or against it."""
+    ll, lr = road.get("lanesLeft"), road.get("lanesRight")
+    return (ll, lr) if forward else (lr, ll)
+
+
+def joined_roads(roads, links):
+    """The AI roads joined into one where they go on as another (links: ((road, end), (road, end)) pairs):
+    [(road dict with the nodes of the whole run, [member road indices])]. The wear runs on along them without a
+    break, its texture without a seam."""
+    nb = {}
+    for a, b in links:
+        nb[a], nb[b] = b, a
+    done, out = set(), []
+
+    def walk(k, e):
+        """Members (road, reversed) from road k entered at its end e."""
+        run = []
+        while k not in done:
+            done.add(k)
+            run.append((k, e == 1))                                   # entered at its end: run it backwards
+            nxt = nb.get((k, 1 - e))
+            if nxt is None:
+                break
+            k, e = nxt
+        return run
+    starts = [k for k in range(len(roads)) if (k, 0) not in nb or (k, 1) not in nb]
+    for k in starts + list(range(len(roads))):                        # open runs first, then closed loops
+        if k in done:
+            continue
+        e = 0 if (k, 0) not in nb else 1
+        run = walk(k, e)
+        nodes, members = [], []
+        for m, rev in run:
+            n = list(roads[m]["nodes"])
+            n = n[::-1] if rev else n
+            nodes += n if not nodes else n[1:]
+            members.append(m)
+        first, rev0 = run[0]
+        r = dict(roads[first])
+        r["nodes"] = nodes
+        r["lanesLeft"], r["lanesRight"] = lane_key(roads[first], not rev0)
+        out.append((r, members))
+    return out
+
+
+def ring_roads(roads, rb):
+    """The indices of the AI roads that run round a roundabout's ring (on_ring)."""
+    if rb is None:
+        return frozenset()
+    out = set()
+    for k, road in enumerate(roads):
+        n = np.asarray(road.get("nodes", []), float).reshape(-1, 4)
+        if len(n) < 2:
+            continue
+        s = np.r_[0, np.cumsum(np.hypot(*np.diff(n[:, :2], axis=0).T))]
+        sd = np.linspace(0, s[-1], max(int(np.ceil(s[-1] / STEP)), 1) + 1)
+        P = np.column_stack([np.interp(sd, s, n[:, 0]), np.interp(sd, s, n[:, 1])])
+        T = np.gradient(P, axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        if on_ring(P, T, rb[1]):
+            out.add(k)
+    return frozenset(out)
 
 
 def roundabouts():
@@ -388,24 +542,75 @@ def road_bands(road, rng):
     return nodes, lanes, spans, rng.uniform(-0.3, 0.3)
 
 
+def bridge(keep, ok, arrays):
+    """(n,) bool: the stations of the gaps of keep (n,) between two kept stations that are filled: up to
+    BRIDGE_JUMP stations where the asphalt was measured (ok, a jump of the width), up to BRIDGE_OFF anywhere.
+    And the arrays (n,), interpolated over them from the stations either side."""
+    out = np.zeros(len(keep), bool)
+    e = np.flatnonzero(np.diff(np.r_[0, (~keep).astype(int), 0]))
+    for a, b in zip(e[::2], e[1::2]):
+        if a == 0 or b == len(keep):
+            continue
+        if b - a <= BRIDGE_OFF or (b - a <= BRIDGE_JUMP and ok[a:b].all()):
+            out[a:b] = True
+    vals = []
+    for v in arrays:
+        v = v.copy()
+        if out.any():
+            i = np.flatnonzero(keep & np.isfinite(v))
+            v[out] = np.interp(np.flatnonzero(out), i, v[i])
+        vals.append(v)
+    return out, vals
+
+
+def clear_of(t, S, lift):
+    """The triangles t (k, 3, 3) of a band (a soup: a corner of several triangles is one vertex) lifted so that
+    at every point CLEAR_AT of every triangle the band is at least `lift` m over the faces S under it: each
+    triangle's shortfall is added to its three corners (a vertex shared by several takes the largest), so the
+    band stays whole. A face more than CLEAR_MAX m over the band is left out (the deck of a bridge above).
+    Returns (triangles, keep (k,)): keep false for a triangle more than FLOAT_MAX m over the road somewhere."""
+    if not len(t):
+        return t, np.ones(0, bool)
+    P = np.einsum("bk,tkd->tbd", CLEAR_AT, t)                         # (k, m, 3)
+    x, y, z = P[..., 0].ravel(), P[..., 1].ravel(), P[..., 2].ravel()
+    zs = S.height(x, y, "near", zhint=z - lift)
+    short = np.where(np.isfinite(zs) & (zs - z < CLEAR_MAX - lift), zs + lift - z, 0.0).reshape(len(t), -1)
+    up = np.maximum(short.max(1), 0.0)
+    if up.any():
+        key = np.round(t[..., :2].reshape(-1, 2) * 1e4).astype(np.int64)
+        _, inv = np.unique(key, axis=0, return_inverse=True)
+        inv = inv.ravel()
+        lift_v = np.zeros(inv.max() + 1)
+        np.maximum.at(lift_v, inv, np.repeat(up, 3))
+        t = t.copy()
+        t[..., 2] += lift_v[inv].reshape(len(t), 3)
+        z = np.einsum("bk,tk->tb", CLEAR_AT, t[..., 2]).ravel()            # the band's points, lifted
+    over = np.where(np.isfinite(zs), z - lift - zs, 0.0).reshape(len(t), -1)
+    return t, over.max(1) <= FLOAT_MAX
+
+
 def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
     """Triangles and texture coordinates of a band of widths (n,) about the points C (n, 2) (heights zc) on the
-    asphalt Sa, only where keep (n,) is true; u across the band, v along it."""
-    tris, uvs = [], []
+    asphalt Sa, only where keep (n,) is true; u across the band, v along it. Rows of vertices at most ROW_STEP
+    m apart across it, the whole band clear of the asphalt (clear_of). Returns (triangles, uvs, m of band)."""
+    tris, uvs, length = [], [], 0.0
     e = np.flatnonzero(np.diff(np.r_[0, keep.astype(int), 0]))
     for a, b in zip(e[::2], e[1::2]):
         if b - a < (min_piece or MIN_PIECE):
             continue
+        m = max(2, 2 * int(np.ceil(float(np.nanmax(width[a:b])) / (2 * ROW_STEP))))   # an even number: a middle row
         rows = []
-        for k in (1, 0, -1):                                          # left side, middle, right side
-            Q = C[a:b] + Nl[a:b] * (k * width[a:b] / 2)[:, None]
-            z = zc[a:b] if k == 0 else Sa.height(Q[:, 0], Q[:, 1], "near", zhint=zc[a:b])
+        for j in range(m + 1):                                       # left side, ..., middle, ..., right side
+            f = 1 - 2 * j / m
+            Q = C[a:b] + Nl[a:b] * (f * width[a:b] / 2)[:, None]
+            z = zc[a:b] if 2 * j == m else Sa.height(Q[:, 0], Q[:, 1], "near", zhint=zc[a:b])
             z = np.where(np.isfinite(z), z, zc[a:b])
             rows.append(np.column_stack([Q, z + lift]))
         v = s[a:b] / v_tile
         n1 = b - a - 1
         ts, us = [], []
-        for (Lr, uL), (Rr, uR) in (((rows[1], 0.5), (rows[2], 1.0)), ((rows[0], 0.0), (rows[1], 0.5))):
+        for j in range(m):
+            Lr, uL, Rr, uR = rows[j], j / m, rows[j + 1], (j + 1) / m
             ts.append(np.stack([Rr[:-1], Rr[1:], Lr[1:], Rr[:-1], Lr[1:], Lr[:-1]], 1))
             us.append(np.stack([np.c_[np.full(n1, uR), v[:-1]], np.c_[np.full(n1, uR), v[1:]], np.c_[np.full(n1, uL), v[1:]],
                                 np.c_[np.full(n1, uR), v[:-1]], np.c_[np.full(n1, uL), v[1:]], np.c_[np.full(n1, uL), v[:-1]]], 1))
@@ -414,15 +619,17 @@ def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
         down = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])[:, 2] < 0
         t[down] = t[down][:, ::-1]
         uv[down] = uv[down][:, ::-1]
-        tris.append(t)
-        uvs.append(uv)
+        t, ok = clear_of(t, Sa, lift)
+        tris.append(t[ok])
+        uvs.append(uv[ok])
+        length += float(s[b - 1] - s[a])
     if not tris:
-        return np.zeros((0, 3, 3)), np.zeros((0, 3, 2))
-    return np.concatenate(tris), np.concatenate(uvs)
+        return np.zeros((0, 3, 3)), np.zeros((0, 3, 2)), 0.0
+    return np.concatenate(tris), np.concatenate(uvs), length
 
 
-def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
-    """[(material, triangles, uvs)] of the tracks, patches and cracks of AI road k."""
+def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
+    """[(material, triangles, uvs)] of the tracks, patches and cracks of the AI road k (as joined)."""
     import shapely
     nodes, lanes, spans, crack_shift = road_bands(road, rng)
     P = nodes[:, :2]
@@ -456,19 +663,26 @@ def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
     # as long as the bend, follows the local median and is kept (tight bends had no wear at all)
     Wloc = median_filter(np.where(ok, Ws, Wm), WIDTH_LOCAL, mode="nearest")
     keep = ok & ((np.abs(Ws - Wm) < WIDTH_JUMP) | (np.abs(Ws - Wloc) < WIDTH_JUMP))
+    # ... but the bands of the road go on past it at the width before and after (they stopped there, 410 times
+    # over the map), and past a station or two off the asphalt (a joint, a gap of the survey)
+    filled, (dl_s, dr_s, za) = bridge(keep, ok, (dl_s, dr_s, za))
+    if filled.any():
+        Ws = dl_s + dr_s
+        keep |= filled
+        stats["bridged_m"] += float(filled.sum() * STEP)
     # the ring of a roundabout carries its own tracks and patches all round, across the mouths of its entries
     ring = rb is not None and on_ring(Pd, T, rb[1])
     min_piece = 3 if ring else MIN_PIECE                              # the ring comes in short pieces between entries
     if ring:
         stats["ring_roads"] += 1
     else:
-        # not in a junction, nor on a roundabout and its entries
-        if len(junc):
-            d, j = jtree.query(Pd)
-            keep &= d > junc[j, 2]
+        # not in a junction it ends at (the road that runs on through a T keeps its bands across the mouth of
+        # the side road: they stopped there in the first v3.0), nor on a roundabout and its entries
+        for x, y, rad, _ in junc[junc[:, 3] == k]:
+            keep &= np.hypot(Pd[:, 0] - x, Pd[:, 1] - y) > rad
         if rb is not None:
             keep &= ~shapely.contains_xy(rb[0], Pd[:, 0], Pd[:, 1])
-        keep &= ~cw.inside_other(Pd, k)
+        keep &= ~cw.inside_other(Pd, k, np.interp(sd, s, nodes[:, 3]) / 2)
     if keep.sum() < min_piece:
         return []
     mid = (dl_s - dr_s) / 2                                           # the middle of the asphalt, left of the axis
@@ -482,10 +696,11 @@ def lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats):
         zq = np.where(np.isfinite(zq) & (np.abs(zq - zc) < 0.4), zq, zc)
         if not inside.any():
             return
-        t, uv = strip(C, width, zq, Nl, Sa, inside, lift, per_m * float(np.nanmedian(width[inside])), sd, min_piece)
+        t, uv, length = strip(C, width, zq, Nl, Sa, inside, lift, per_m * float(np.nanmedian(width[inside])), sd,
+                              min_piece)
         if len(t):
             out.append((mat, t, uv))
-            stats[mat[8:] + "_m"] += float(len(t) / 4 * STEP)
+            stats[mat[8:] + "_m"] += length
     # patches over the carriageway, 0.4 m in from both edges
     lay("mp_wear_variation", mid, np.maximum(Ws - 0.8, 1.6), keep & np.isfinite(Ws))
     # tyre tracks: a pair in the middle of every lane (one pair in the middle of a narrow road)
@@ -515,36 +730,46 @@ def road_wear_step(root, report=None):
     Sall = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in markings_net.CARRIAGE_MATS]))
     other = [up_faces(t) for m, t in surf.items() if m in PAVED]
     Sp = TriSurface(np.concatenate(other) if other else np.zeros((0, 3, 3)))
-    stats = {"roads": 0, "ring_roads": 0, "track_m": 0.0, "edge_m": 0.0, "variation_m": 0.0, "cracks_m": 0.0}
-    builders = {}
+    stats = {"roads": 0, "ring_roads": 0, "track_m": 0.0, "edge_m": 0.0, "variation_m": 0.0, "cracks_m": 0.0,
+             "bridged_m": 0.0}
+    pieces = {}                                                       # tile -> material -> [(t, uv)]
 
     def add(mat, t, uv):
         c = t.mean(1)
         keys = np.floor(c[:, :2] / TILE).astype(int)
         for key in {tuple(q) for q in keys.tolist()}:
             m = (keys[:, 0] == key[0]) & (keys[:, 1] == key[1])
-            V = t[m].reshape(-1, 3)
-            builders.setdefault(key, bng.MeshBuilder()).add(mat, V, uvs=uv[m].reshape(-1, 2),
-                                                            normals=np.repeat([[0, 0, 1.0]], len(V), 0))
+            pieces.setdefault(key, {}).setdefault(mat, []).append((t[m], uv[m]))
     t, uv = edge_bands(A, Sa, Sall, Sp, stats)
     if len(t):
         add("mp_wear_edge", t, uv)
     print("road wear: edges %.1f km (%.0f s)" % (stats["edge_m"] / 1000, time.time() - t0), flush=True)
     roads = read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json")
-    cw = Carriageways(roads)
-    junc = cw.junctions()
-    jtree = cKDTree(junc[:, :2]) if len(junc) else None
     rb = roundabouts()
+    joined, links = Carriageways(roads).continuations(roads, ring_roads(roads, rb))
+    runs = [r for r, _ in joined_roads(roads, links)]
+    cw = Carriageways(runs)                                           # the roads as they run on, joined
+    junc = cw.junctions()
     rng = np.random.default_rng(23)
-    for k, road in enumerate(roads):
+    stats["joined"] = len(links)
+    for k, road in enumerate(runs):
         if len(road.get("nodes", [])) < 2:
             continue
-        bl = lane_bands(road, k, Sa, cw, junc, jtree, rb, rng, stats)
+        bl = lane_bands(road, k, Sa, cw, junc, rb, rng, stats)
         if bl:
             stats["roads"] += 1
         for mat, t, uv in bl:
             add(mat, t, uv)
     stats["junctions"] = int(len(junc))
+    # in every mesh the layers from the lowest to the highest: the game draws them in this order, and with depth
+    # writes a layer drawn first would hide the parts of a lower one drawn after it under its triangles
+    builders = {}
+    for key, by_mat in pieces.items():
+        mb = builders[key] = bng.MeshBuilder()
+        for mat in sorted(by_mat, key=lambda m: LAYER[m][0]):
+            for t, uv in by_mat[mat]:
+                V = t.reshape(-1, 3)
+                mb.add(mat, V, uvs=uv.reshape(-1, 2), normals=np.repeat([[0, 0, 1.0]], len(V), 0))
     tmp = tempfile.mkdtemp(prefix="magliaso_wear_")
     try:
         new_files = {}
@@ -582,7 +807,7 @@ def road_wear_step(root, report=None):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     stats.update(meshes=len(builders), seconds=round(time.time() - t0))
-    for kind in ("track", "edge", "variation", "cracks"):
+    for kind in ("track", "edge", "variation", "cracks", "bridged"):
         stats[kind + "_km"] = round(stats.pop(kind + "_m") / 1000, 1)
     print("road wear:", stats, flush=True)
     if report:

@@ -1,0 +1,69 @@
+# Patch the zip of the pre-release "nightly" without building it again (v3.0.40): download it, add the baked
+# imposters of the far trees (patch_far_imposters.py: BeamNG 0.40 drew far trees as white squares when it baked
+# them itself), upload it again under the same name and add a line about it to the notes.
+#
+# It runs when beamng/nightly/patch_stamp.txt changes on the integration branch, or on demand. Never while
+# nightly_build.yml runs (that one replaces the whole pre-release at its end).
+name: nightly patch (v3.0.40)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/chiazze-chiare-strada-eci3wc]
+    paths: [beamng/nightly/patch_stamp.txt]
+
+concurrency:
+  group: nightly-build-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  nightly-patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      ZIP_NAME: magliaso_pura_v3.0.40_nightly
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow opencv-python-headless
+
+      - name: Download the nightly zip
+        run: |
+          mkdir -p "$RUNNER_TEMP/z"
+          gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
+          ls -l "$RUNNER_TEMP/z"
+
+      - name: Add the far tree imposters
+        working-directory: beamng/pipeline
+        run: |
+          python patch_far_imposters.py "$RUNNER_TEMP/z/$ZIP_NAME.zip" | tee "$RUNNER_TEMP/patch.log"
+          grep -q "files added beside 9 of 9" "$RUNNER_TEMP/patch.log"
+          python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+
+      - name: Upload it again
+        run: |
+          gh release upload nightly "$RUNNER_TEMP/z/$ZIP_NAME.zip" --clobber
+          gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
+          {
+            echo
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the far trees carry their imposters baked (BeamNG 0.40 drew about one far tree in ten as a white square when it baked them itself)."
+          } >> "$RUNNER_TEMP/notes.md"
+          gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"

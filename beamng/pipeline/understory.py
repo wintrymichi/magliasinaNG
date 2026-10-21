@@ -7,6 +7,9 @@ The binary low-vegetation mask is analysed with the structure tensor: coherent, 
 (< 3 m) strips are hedges -> hedge segments every 2 m along their orientation at the
 measured height; the rest is sampled on a 2 m grid -> bushes scaled to the measured
 height. Points within 2.5 m of a detected tree top are skipped (the tree covers them).
+v3.0.40: the strips the street photos saw (street_hedges.py, dati/street_hedges.json): a hedge wherever they see
+vegetation, also away from the route (every 2 m along the strip, at its height), and no hedge where they see a
+wall, a fence, a building (a strip the surface model alone takes for a hedge).
 Output: work/understory.npz (x, y, z, h, yaw, kind 0=bush 1=hedge)
 """
 import os
@@ -27,6 +30,8 @@ import walls as pw
 from config import LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
 
 CORRIDOR = 60.0
+STREET_HEDGES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "street_hedges.json")
+PHOTO_NEAR = 1.0              # m: a strip point this near a cell the photos saw takes its verdict
 
 
 def main():
@@ -80,9 +85,37 @@ def main():
         for key, val in (("x", x), ("y", y), ("z", z), ("h", h), ("yaw", yaw), ("kind", np.full(len(x), kind))):
             out[key].append(val)
     res = {k: np.concatenate(v) for k, v in out.items()}
+    res = photo_hedges(res, dtm)
     np.savez_compressed(os.path.join(WORK, "understory.npz"), **res)
     print("hedge segments", int((res["kind"] == 1).sum()), "bushes", int((res["kind"] == 0).sum()),
           "height median %.1f m" % np.median(res["h"]))
+
+
+def photo_hedges(res, dtm, path=STREET_HEDGES):
+    """The hedges of the strips the street photos saw: the route's hedge points where a photo sees no vegetation
+    dropped, a hedge every 2 m of the strips where they see it added."""
+    import json
+    if not os.path.exists(path):
+        return res
+    S = np.array(json.load(open(path))["cells"], float).reshape(-1, 6)       # x, y, h, theta, vegetation, other
+    if not len(S):
+        return res
+    yes = S[:, 4] > S[:, 5]
+    tree = cKDTree(S[:, :2])
+    d, j = tree.query(np.column_stack([res["x"], res["y"]]))
+    drop = (res["kind"] == 1) & (d < PHOTO_NEAR) & ~yes[j]
+    res = {k: v[~drop] for k, v in res.items()}
+    # the cells of 1 m every 2 m, away from the hedges there are
+    Y = S[yes]
+    Y = Y[np.unique(np.floor(Y[:, :2] / 2.0).astype(np.int64), axis=0, return_index=True)[1]]
+    have = cKDTree(np.column_stack([res["x"], res["y"]])[res["kind"] == 1]) if (res["kind"] == 1).any() else None
+    if have is not None and len(Y):
+        Y = Y[have.query(Y[:, :2])[0] > PHOTO_NEAR]
+    add = {"x": Y[:, 0], "y": Y[:, 1], "z": dtm.sample(Y[:, 0], Y[:, 1]), "h": Y[:, 2],
+           "yaw": -Y[:, 3],                                  # back to the image frame of the strips (rows south)
+           "kind": np.ones(len(Y), np.int64)}
+    print("street photos: %d hedge points dropped (no vegetation there), %d added" % (int(drop.sum()), len(Y)))
+    return {k: np.concatenate([res[k], np.asarray(add[k], res[k].dtype)]) for k in res}
 
 
 if __name__ == "__main__":

@@ -52,6 +52,14 @@ BAL_MODE = {"mid": {"each": 60, "pair": 40}, "late": {"each": 30, "pair": 40, "r
 BAL_RAILS = {"mid": {"dark": 50, "green": 20, "light": 30}, "late": {"dark": 40, "light": 40, "glass": 20},
              "new": {"glass": 50, "light": 30, "dark": 20}}
 FACADE_COLORS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "facade_colors.json")
+# v3.0.40: the facades measured in the open street photos (street_reference.py): their openings and where the photos
+# see them; a facade found there gets its own windows, doors, shop fronts, garage doors and balconies
+STREET_FACADES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "street_facades.json")
+SEEN_CELL = 0.5          # m, cells of the mask of what the photos see of a facade
+SEEN_SHARE = 0.5         # an opening of the layout gives way to the photos where they see this much of its box
+MEAS_AZ, MEAS_OFF = 8.0, 0.6     # degrees, m: a facade of the layout is the measured one within these
+MEAS_DENSITY = 25.0      # m² of seen wall per opening: a measured facade with fewer openings than this is no evidence
+MEAS_MIN_SEEN = 6.0      # m² seen: under this the density test does not apply (a narrow strip, one window)
 
 # plaster tones (sRGB) by age, from what is seen along the streets of the Malcantone
 TONES = {
@@ -78,6 +86,111 @@ PERIOD_YEAR = {8011: 1880, 8012: 1932, 8013: 1953, 8014: 1965, 8015: 1975, 8016:
 
 def rng_of(key):
     return np.random.default_rng(int(hashlib.md5(key.encode()).hexdigest()[:12], 16))
+
+
+# ------------------------------------------------------------------ facades measured in the street photos (v3.0.40)
+_street = None
+
+
+def street_measured():
+    """{building uuid: {"facades": [...], "floors": ...}} of dati/street_facades.json ({} without it)."""
+    global _street
+    if _street is None:
+        # off unless asked for: on the development zones the detector misses about as many openings as it finds
+        # and takes ground-floor arcades for garages, so the measured facades are not yet better than the layout
+        on = os.environ.get("MAGLIASO_STREET_FACADES") == "1"
+        _street = json.load(open(STREET_FACADES)) if on and os.path.exists(STREET_FACADES) else {}
+    return _street
+
+
+class Measured:
+    """A facade measured in the street photos: its openings [kind, u0, u1, z0, z1, score] (u along the facade's
+    axis a, z up) and the mask of the cells (`cell` m, else SEEN_CELL) the photos see (rows from z1 down, columns
+    from u0)."""
+
+    def __init__(self, rec):
+        self.az, self.off = rec["az"], rec["off"]
+        self.u0, self.z1 = rec["u0"], rec["z1"]
+        self.cell = rec.get("cell", SEEN_CELL)
+        self.mask = np.array([[c == "1" for c in row] for row in rec["seen"]], bool) if rec.get("seen") else \
+            np.zeros((0, 0), bool)
+        self.openings = clean_measured(rec.get("openings", []))
+
+    def area(self):
+        """m² of the facade the photos see."""
+        return float(self.mask.sum()) * self.cell ** 2
+
+    def evidence(self):
+        """Whether the openings found are evidence about the seen wall: a detector that found nothing (or one opening
+        on a large seen wall) missed them more likely than the wall is blank, and must not blank it."""
+        n = sum(1 for o in self.openings if o[0] != "balcony")
+        a = self.area()
+        return n > 0 and (a < MEAS_MIN_SEEN or n >= a / MEAS_DENSITY)
+
+    def seen(self, ua, ub, za, zb):
+        """Share of the box (ua..ub, za..zb) the photos see."""
+        if not self.mask.size:
+            return 0.0
+        c0 = int(np.floor((ua - self.u0) / self.cell))
+        c1 = int(np.ceil((ub - self.u0) / self.cell))
+        r0 = int(np.floor((self.z1 - zb) / self.cell))
+        r1 = int(np.ceil((self.z1 - za) / self.cell))
+        h, w = self.mask.shape
+        cells = (max(1, c1 - c0)) * (max(1, r1 - r0))
+        c0, c1, r0, r1 = max(c0, 0), min(c1, w), max(r0, 0), min(r1, h)
+        if c1 <= c0 or r1 <= r0:
+            return 0.0
+        return float(self.mask[r0:r1, c0:c1].sum()) / cells
+
+
+def clean_measured(ops):
+    """The openings a facade's photos show, without the balconies nothing stands on: a balcony needs a door or a tall
+    window whose foot is on its slab (the eaves band of a roof or a cornice is found as a balcony otherwise)."""
+    tall = [o for o in ops if o[0] in ("door", "window") and o[4] - o[3] >= 1.6]
+    out = []
+    for o in ops:
+        if o[0] == "balcony":
+            if not any(min(o[2], t[2]) - max(o[1], t[1]) >= 0.4 and o[3] - 0.3 <= t[3] <= o[3] + 0.8 for t in tall):
+                continue
+        out.append(o)
+    return out
+
+
+def measured_facade(uid, n, d0):
+    """The facade of building uid with outward normal n and plane offset d0 as the street photos measured it."""
+    rec = street_measured().get(uid)
+    if not rec:
+        return None
+    az = float(np.degrees(np.arctan2(n[0], n[1])) % 360)
+    best = None
+    for f in rec.get("facades", []):
+        daz = abs((f["az"] - az + 180) % 360 - 180)
+        doff = abs(f["off"] - d0)
+        if daz < MEAS_AZ and doff < MEAS_OFF and (best is None or daz / MEAS_AZ + doff / MEAS_OFF < best[0]):
+            best = (daz / MEAS_AZ + doff / MEAS_OFF, f)
+    if not best:
+        return None
+    m = Measured(best[1])
+    return m if m.evidence() else None
+
+
+def measured_floors(meas, sill=0.9):
+    """(bottom of the lowest floor, floor height) from the rows of windows the photos show on a building's facades
+    (their sills), None where fewer than two rows or an implausible height."""
+    z = sorted(o[3] for m in meas if m is not None for o in m.openings if o[0] == "window")
+    rows = []
+    for v in z:
+        if rows and v - rows[-1][-1] < 0.6:
+            rows[-1].append(v)
+        else:
+            rows.append([v])
+    levels = [float(np.median(r)) for r in rows if len(r) >= 1]
+    if len(levels) < 2:
+        return None
+    h = float(np.median(np.diff(levels)))
+    if not 2.4 <= h <= 4.2:
+        return None
+    return levels[0] - sill, h
 
 
 def pick(rng, mix):
@@ -324,6 +437,8 @@ def roof_kind(style, slope_deg, rgb):
     orthophoto (a small roof in the shade of its neighbours) tells nothing: its covering follows the age."""
     if slope_deg < 8.0:
         return "flat"
+    if style.get("roof"):                              # v3.0.40: the covering a landmark has (landmarks.py)
+        return style["roof"]
     r, g, b = rgb
     mx, mn = max(rgb), min(rgb)
     sat = (mx - mn) / max(mx, 1e-6)
@@ -341,7 +456,7 @@ def roof_kind(style, slope_deg, rgb):
         if use in ("rural", "shed") or age in ("old", "interwar"):
             return "piode"
         return "tegole"                                # grey concrete tiles of the newer houses
-    if age in ("old", "interwar") or use in ("church", "tower"):
+    if age in ("old", "interwar") or use in ("church", "tower", "chapel"):
         return "coppi"
     return "tegole" if age in ("late", "new") else ("coppi" if (style["seed"] % 3) else "tegole")
 
@@ -454,9 +569,12 @@ class Emitter:
         t = [(uv[0], uv[1]), (uv[2], uv[1]), (uv[2], uv[3]), (uv[0], uv[3])]
         return np.array([[c[0], c[1], c[2]], [c[0], c[2], c[3]]]), np.array([[t[0], t[1], t[2]], [t[0], t[2], t[3]]])
 
-    def opening(self, name, o, a, n, uc, zb):
+    def opening(self, name, o, a, n, uc, zb, w=None, h=None):
+        """The module `name` with the middle of its bottom at (uc, zb) of the facade (o, a along it, n out); w, h:
+        its size if not the module's own (v3.0.40: an opening measured in the street photos)."""
         m = self.index[name]
-        V, T = self.quad(o, a, n, uc - m["w"] / 2, uc + m["w"] / 2, zb, zb + m["h"], m["uv"], OFFSET)
+        w, h = w or m["w"], h or m["h"]
+        V, T = self.quad(o, a, n, uc - w / 2, uc + w / 2, zb, zb + h, m["uv"], OFFSET)
         if lit_window(name, m, o + uc * a + np.array([0.0, 0.0, zb])):
             self.LV.append(V)
             self.LUV.append(T)
@@ -540,6 +658,98 @@ def door_name(style, rng):
 
 SILL = {"win": 0.9, "roller": 0.9, "modern": 0.7, "french": 0.0, "modern_tall": 0.05}
 
+# v3.0.40: the opening of every module of the atlas (bld_textures.py) in its own canvas: (width, height of the window,
+# door or shop front without its surround, shutters and sill; height of its bottom over the module's bottom). An
+# opening measured in the street photos sets the size of its module through these (the photos see the opening).
+GLASS = (("win_verde_scuro_boards", (0.8, 1.1, 0.07)), ("win_legno_boards", (0.8, 1.1, 0.07)),
+         ("_granite", (0.9, 1.3, 0.07)), ("win_", (1.0, 1.4, 0.07)), ("french_", (1.0, 2.25, 0.07)),
+         ("bal_roller", (1.2, 2.2, 0.07)), ("bal_", (0.95, 2.2, 0.07)), ("roller_", (1.2, 1.45, 0.07)),
+         ("modern_tall", (1.4, 2.3, 0.05)), ("modern_", (1.6, 1.5, 0.05)), ("door_", (1.05, 2.15, 0.15)),
+         ("barn_door", (1.4, 2.0, 0.15)), ("garage_", (2.5, 2.15, 0.0)), ("shop", (3.0, 2.6, 0.0)),
+         ("small_grille", (0.6, 0.55, 0.05)), ("small", (0.5, 0.7, 0.05)), ("ribbon", (3.0, 1.2, 0.08)))
+SCALE = (0.75, 1.35)     # how far a module may be stretched to the measured opening
+
+
+def glass_of(name):
+    for k, v in GLASS:
+        if name.startswith(k) or (k.startswith("_") and k in name):
+            return v
+    return None
+
+
+def measured_module(kind, w, h, style, rng, k):
+    """The module of the atlas for an opening the street photos show: its kind, width and height (m) and the
+    building's style (window family, shutter colour); k the floor (0 ground)."""
+    fam, sh = style["family"], style["shutter"]
+    roller = {"bianco": "white", "grigio": "grey", "marrone": "brown", "legno": "brown"}.get(sh, "white")
+    if kind == "door":
+        return door_name(style, rng)
+    if kind == "garage":
+        return "garage_wood" if style["age"] in ("old", "interwar") else \
+            ["garage_white", "garage_grey", "garage_brown"][int(style["seed"] % 3)]
+    if kind == "shop":
+        return "shop" if rng.random() < 0.6 else "shop_light"
+    # windows: tall ones are French windows (onto a small balcony or a railing), small ones the small windows of
+    # cellars, stairs and bathrooms
+    if w < 0.75 and h < 1.0:
+        return "small_grille" if k <= 0 else "small"
+    if h >= 1.9:
+        if fam in ("shutters", "granite"):
+            return "french_" + sh
+        if fam == "roller":
+            return "bal_roller_" + roller
+        return "modern_tall"
+    if fam == "modern" and w > 2.6:
+        return "ribbon"
+    return window_name(style, rng, k)
+
+
+def place_measured(mz, style, rng, o, a, n, fits, gl, fb0, h_f, em):
+    """The openings of a facade measured in the street photos (mz: Measured), each with the module of its kind
+    and of the building's style stretched to its size; balconies with the building's slab and railing."""
+    count = 0
+    for kind, u0, u1, z0, z1, *_ in mz.openings:
+        uc, w, h = 0.5 * (u0 + u1), u1 - u0, z1 - z0
+        k = int(np.floor((z0 - fb0) / max(h_f, 1e-6) + 0.2))
+        if kind == "balcony":
+            ua, ub = u0 + 0.05, u1 - 0.05
+            zf = z0 + BAL_SLAB                          # the slab under the railing the photos show
+            if ub - ua >= 1.0 and fits(0.5 * (ua + ub), ub - ua, zf - BAL_SLAB, BAL_RAIL + BAL_SLAB, measured=True):
+                em.balcony(o, a, n, ua, ub, zf, style["bal_depth"], "railing_" + style["bal_rail"],
+                           np.clip(np.asarray(style["tone"]) * 1.04, 0, 1))
+                count += 1
+            continue
+        if kind == "door" and z0 - gl(uc) > 1.0:
+            kind = "window"                             # a door on an upper floor: the French window of a balcony
+        name = measured_module(kind, w, h, style, rng, k)
+        m = em.index.get(name)
+        gw = glass_of(name)
+        if m is None or gw is None:
+            continue
+        sw_ = float(np.clip(w / gw[0], *SCALE))
+        sh_ = float(np.clip(h / gw[1], *SCALE))
+        if kind == "shop" and w > m["w"] * 1.3:          # a long shop front: modules side by side
+            nmod = int(round(w / m["w"]))
+            ww = w / nmod
+            for j in range(nmod):
+                uj = u0 + (j + 0.5) * ww
+                zg = gl(uj)
+                if fits(uj, ww, zg - 0.03, m["h"] * sh_, ground_gap=-0.4, measured=True):
+                    em.opening(name, o, a, n, uj, zg - 0.03, w=ww, h=m["h"] * sh_)
+                    count += 1
+            continue
+        mw, mh = m["w"] * sw_, m["h"] * sh_
+        if kind in ("door", "garage", "shop"):
+            zb = gl(uc) - 0.03                          # on the ground in front of the wall
+            gap = -0.4
+        else:
+            zb = z0 - gw[2] * sh_                       # the sill of the module under the measured opening
+            gap = 0.0                                   # a window the photos show is above the ground there
+        if fits(uc, mw, zb, mh, ground_gap=gap, measured=True):
+            em.opening(name, o, a, n, uc, zb, w=mw, h=mh)
+            count += 1
+    return count
+
 
 def layout_building(b, walls, style, ctx, em):
     """Openings and plinth of one building (walls: its wall triangles, outward)."""
@@ -551,6 +761,7 @@ def layout_building(b, walls, style, ctx, em):
     cx, cy = walls[..., :2].reshape(-1, 2).mean(0)
     sdir, sdist, main = ctx.street_dir(cx, cy)
     facs = []
+    meas = []                                            # v3.0.40: the facades as the street photos measured them
     for idx, n, d0 in groups:
         tris = walls[idx]
         a = np.array([-n[1], n[0], 0.0])
@@ -571,6 +782,7 @@ def layout_building(b, walls, style, ctx, em):
         if not np.isfinite(top).any() or not np.isfinite(g).any():
             continue
         facs.append((tris, np.asarray(n, float), a, o, F, us, g, top))
+        meas.append(measured_facade(b["uuid"], n, d0))
     if not facs:
         return 0
     # the floors of the building, from the eaves down
@@ -649,6 +861,13 @@ def layout_building(b, walls, style, ctx, em):
     n_f = max(1, int(round(H / h_f)))
     h_f = float(np.clip(H / n_f, 2.4, 3.9))
     fb0 = z_e - EAVE_GAP - n_f * h_f                   # bottom of the ground floor (at the front)
+    # v3.0.40: the floors the street photos show (the sills of the rows of windows), where they show two or more:
+    # the openings of the facades no photo sees line up with the measured ones
+    mf = measured_floors(meas)
+    if mf is not None:
+        fb_m, h_f = mf
+        fb0 = fb_m + round((fb0 - fb_m) / h_f) * h_f
+        n_f = max(1, int(round((z_e - EAVE_GAP - fb0) / h_f)))
     # shop fronts on the ground floor of the front: a shop of OSM in the building, a mixed-use building of
     # the register on a main street, a public building (offices, trade) on a main street
     shops = style.get("shop") or (main and sdist < 15.0 and (use == "public" or (use == "house" and style.get("mixed"))))
@@ -660,9 +879,13 @@ def layout_building(b, walls, style, ctx, em):
             continue
         shapely.prepare(inner)
         gl = lambda u: float(np.interp(u, us, g))
+        mz = meas[fi]
 
-        def fits(uc, w, zb, h, ground_gap=0.15):
+        def fits(uc, w, zb, h, ground_gap=0.15, measured=False):
             ua, ub = uc - w / 2, uc + w / 2
+            # v3.0.40: where the street photos see the wall, only the openings they show
+            if mz is not None and not measured and mz.seen(ua, ub, zb, zb + h) >= SEEN_SHARE:
+                return False
             # openings at the foot of the wall (doors, garages) reach the ground: the wall may end there
             lift = 0.25 if ground_gap < 0 else 0.0
             if not inner.contains(shapely.box(ua, zb + lift, ub, zb + h)):
@@ -759,6 +982,8 @@ def layout_building(b, walls, style, ctx, em):
                     if ctx.blocked(b["uuid"], xs, ys, np.full(3, fb + 0.5)).any():
                         continue
                     if fb - BAL_SLAB < max(gl(ua), gl(ub)) + 2.2:          # well above the ground
+                        continue
+                    if mz is not None and mz.seen(ua, ub, fb - BAL_SLAB, fb + BAL_RAIL) >= SEEN_SHARE:
                         continue
                     em.balcony(o, a, n, ua, ub, fb, depth, "railing_" + style["bal_rail"],
                                np.clip(np.asarray(style["tone"]) * 1.04, 0, 1))
@@ -866,6 +1091,9 @@ def layout_building(b, walls, style, ctx, em):
             zb = z_a + 0.6
             if fits(uc, m["w"], zb, m["h"]):
                 em.opening("vent", o, a, n, uc, zb)
+        # v3.0.40: the openings the street photos show on this facade
+        if mz is not None:
+            count += place_measured(mz, style, rng, o, a, n, fits, gl, fb0, h_f, em)
         # plinth along the foot of the wall (every PLINTH_STEP m: the ground varies slowly)
         if style["plinth"]:
             up = np.r_[np.arange(us[0], us[-1], PLINTH_STEP), us[-1]]

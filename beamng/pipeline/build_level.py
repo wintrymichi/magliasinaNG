@@ -66,7 +66,7 @@ def stage_terrain(scene, ctx):
     if "wall_feet" in ctx:
         import walls
         posts.append(lambda H, xs, ys: walls.adjust_terrain_roadside(
-            ctx.get("rwall_samples", np.zeros((0, 6))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
+            ctx.get("rwall_samples", np.zeros((0, 10))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
     if "lake_grid" in ctx:
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"], ctx.get("water_cover")))
@@ -713,6 +713,17 @@ def stage_buildings(scene, ctx):
         scene.add("MissionGroup/buildings", bng.tsstatic(shape, origin, collision=True, decal=False,
                                                           annotation="BUILDINGS", **buildings_mesh.NIGHT))
     print("building tiles", len(tiles), "triangles", sum(t[2] for t in tiles))
+    # v3.0.40: the Miglieglia - Monte Lema cable car and the radar and mast on the summit (landmarks.py), on the
+    # terrain as stage_terrain built it
+    import landmarks
+    import forest_fill
+    from config import wgs_to_local
+    ground = forest_fill.terrain_sampler()
+    near = wgs_to_local(*landmarks.LEMA_BOTTOM)
+    for shape, origin, ntri, coll in landmarks.cableway(LEVEL_DIR, LEVEL_NAME, ground, near) + \
+            landmarks.summit(LEVEL_DIR, LEVEL_NAME, ground):
+        scene.add("MissionGroup/landmarks", bng.tsstatic(shape, origin, collision=coll, decal=False,
+                                                        **({"annotation": "BUILDINGS"} if coll else {})))
 
 
 def stage_vegetation(scene, ctx):
@@ -832,29 +843,27 @@ def write_info(ctx):
     n_trees = int(round(ctx.get("n_forest", 0) / 1000.0))
     n_villages = sum(1 for s in spawns if s[0] not in ("spawn_magliaso", "spawn_mid", "spawn_pura"))
     info = {
-        "title": "Malcantone - Magliaso, Pura e dintorni",
-        "description": ("Ricostruzione in scala 1:1 di circa %d km2 del Malcantone (Ticino, CH) tra Ponte Tresa, "
-                        "Caslano, Magliaso, Agno, Bioggio, Manno, Gravesano, Arosio, Cademario, Novaggio e Sessa: "
-                        "ogni strada e "
-                        "sentiero guidabile, %d ponti, %d edifici con facciate, balconi e vetrine, guardrail su tutta "
-                        "la rete, circa %d 000 alberi, traffico IA. La Strada "
-                        "Cantonale Magliaso - Pura e' ricostruita da 366 panoramiche Street View (ottobre 2022); "
-                        "ci sono anche la cantonale Magliaso - Agno - Bioggio - Manno - Gravesano, il passo sopra "
-                        "Gravesano fino ad Arosio, la strada Arosio - Mugena - Breno - Miglieglia - Novaggio, la "
-                        "cantonale Ponte Tresa - Caslano e Via Torrazza. Dati ufficiali "
-                        "swisstopo (swissALTI3D, SWISSIMAGE, swissSURFACE3D, swissBUILDINGS3D, swissTLM3D) e della "
-                        "misurazione ufficiale del Cantone Ticino. Fonti: (c) swisstopo; Ufficio del catasto e dei "
-                        "riordini fondiari, Cantone Ticino; Registro federale degli edifici (UST); (c) OpenStreetMap "
-                        "contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
+        "title": "Malcantone - Magliaso, Pura and around",
+        "description": ("The Malcantone (Ticino, Switzerland) at 1:1 scale: about %d km2 between Lake Lugano, "
+                        "Ponte Tresa, Agno, Arosio and Novaggio. Every real road and trail is drivable, with %d "
+                        "bridges, %d buildings, about %d 000 trees and AI traffic. Built from open data. "
+                        "Sources: (c) swisstopo; Canton Ticino cadastral survey; Federal Register of Buildings; "
+                        "(c) OpenStreetMap contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus."
                         % (round(km2), n_bridges, n_buildings, n_trees)),
         "previews": [f"{LEVEL_NAME}_preview.jpg"],
         "size": [TER_SIZE, TER_SIZE],
         "authors": "michi (pipeline: Claude)",
-        "biome": "Prealpi ticinesi, bosco di castagni, Lago di Lugano, valle del Vedeggio",
-        "roads": "Strade cantonali, strade comunali, strade forestali, sentieri e mulattiere",
-        "suitablefor": "Guida su strada di montagna, fuoristrada su sentieri",
-        "features": "Scala reale 1:1, terreno LiDAR, 12 x 12 km, %d paesi" % n_villages,
+        "biome": "Ticino pre-Alps, chestnut woods, Lake Lugano",
+        "roads": "Cantonal and village roads, forest roads, trails",
+        "suitablefor": "Mountain road driving, off-road on trails",
+        "features": "Real 1:1 scale, LiDAR terrain, 12 x 12 km, %d villages" % n_villages,
         "isAuxiliary": False, "supportsTraffic": True, "supportsTimeOfDay": True,
+        # v3.0.40: Swiss rules for the AI and the traffic (keep right, no turning on red)
+        "roadRules": {"rightHandDrive": False, "turnOnRed": False},
+        # the traffic's vehicles: "region" picks the European ones (trafficUtils.getBaseGroupParams, 0.40, with
+        # smart selections on); a country the game does not list (it knows usa/germany/italy/france/japan) weighs
+        # no country over the others
+        "country": "Switzerland", "region": "europe",
         "defaultSpawnPointName": spawns[0][0] if spawns else None,
         "spawnPoints": [{"objectname": s[0], "translationId": s[0]} for s in spawns],
     }
@@ -872,12 +881,16 @@ def write_info(ctx):
     ver = os.path.join(WORK, "validation_full", "VERIFICA.md")
     if os.path.exists(ver):
         shutil.copy(ver, level_path("VERIFICA.md"))
-    # preview from the orthophoto (the terrain block; ortho05.tif in builds before v2.0)
-    import rasterio
-    op = os.path.join(WORK, "ortho.tif")
-    with rasterio.open(op if os.path.exists(op) else os.path.join(WORK, "ortho05.tif")) as s:
-        a = s.read(out_shape=(3, 1024, 1024)).transpose(1, 2, 0)
-    Image.fromarray(a).save(level_path(f"{LEVEL_NAME}_preview.jpg"), quality=88)
+    # preview: the in-game shot at the top of the repository README (v3.0.40); the orthophoto if it is missing
+    shot = os.path.join(here, "..", "verifica", "screenshots", "v3.0", "overview-novaggio-miglieglia.jpg")
+    if os.path.exists(shot):
+        shutil.copy(shot, level_path(f"{LEVEL_NAME}_preview.jpg"))
+    else:
+        import rasterio
+        op = os.path.join(WORK, "ortho.tif")
+        with rasterio.open(op if os.path.exists(op) else os.path.join(WORK, "ortho05.tif")) as s:
+            a = s.read(out_shape=(3, 1024, 1024)).transpose(1, 2, 0)
+        Image.fromarray(a).save(level_path(f"{LEVEL_NAME}_preview.jpg"), quality=88)
     json.dump({"header": {"name": "DecalData File", "comments": "", "version": 2}, "instances": {}},
               open(level_path("main.decals.json"), "w"))
 
@@ -900,6 +913,7 @@ FINISH = [
     ("wall_fill", "walls", "wall_fill_step", {"report": True}),
     ("wall_doubles", "walls", "double_faces_step", {"report": True}),    # no wall face drawn twice
     ("wall_feet", "walls", "wall_feet_step", {"report": True}),          # v3.0: no wall foot over the ground
+    ("wall_gaps", "walls", "wall_gaps_step", {"report": True}),          # v3.0.40: no groove between two walls
     ("understory", "understory", "understory_step", {"report": True}),
     ("lamps", "lamps", "lamps_step", {"report": True}),           # then what stands on it
     ("roadside", "poles", "roadside_step", {"report": True}),
@@ -916,6 +930,10 @@ FINISH = [
     ("bus_shelters", "bus_shelters", "bus_shelters_step", {"report": True}),   # v3.0 review: shelters at the bus stops
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
+    ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: rivers, streams, the lake
+    ("races", "races", "races_step", {"report": True}),          # v3.0.40: time trials over the AI roads
+    ("same_textures", "same_textures", "same_textures_step", {"report": True}),   # v3.0.40: one file per texture
+    ("game_paths", "game_paths", "game_paths_step", {"report": True}),   # v3.0.40: the game's files where 0.40 keeps them
 ]
 
 

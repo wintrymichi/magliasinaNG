@@ -32,7 +32,7 @@ from scipy.spatial import cKDTree
 from config import WORK, NO_PHOTO
 from geo import Grid
 import bng
-import argparse, json, os, re, struct, sys, tempfile, time, zipfile
+import argparse, collections, json, os, re, struct, sys, tempfile, time, zipfile
 import groundcover
 import optimize_level
 from config import LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
@@ -738,6 +738,27 @@ def carve_terrain(feet, xs, ys, H):
     return Hf.reshape(H.shape)
 
 
+END_SPILL = 0.3        # m past the end of a roadside wall the terrain is still lowered/raised for it
+
+
+def roadside_shut(face, back, zb, zt, s, away, T, thick):
+    """The faces that close a roadside wall run behind its face and cap: the back (out, away from the road) and the
+    two ends, (n*3, 3) triangles facing out and their texture coordinates (u along the back, across the ends; v the
+    height)."""
+    Kb4, Kt4 = np.column_stack([back, zb, s]), np.column_stack([back, zt, s])
+    quads = [(np.stack([Kb4[:-1], Kt4[:-1], Kt4[1:], Kb4[:-1], Kt4[1:], Kb4[1:]], 1).reshape(-1, 3, 4),
+              away[:-1].repeat(2, 0))]
+    for k, out in ((0, -1.0), (len(face) - 1, 1.0)):
+        F_b, F_t, K_b, K_t = [*face[k], zb[k], 0.0], [*face[k], zt[k], 0.0], [*back[k], zb[k], thick], [*back[k], zt[k], thick]
+        quads.append((np.array([F_b, F_t, K_t, F_b, K_t, K_b]).reshape(2, 3, 4), np.tile(out * T[k], (2, 1))))
+    shut = []
+    for q, want in quads:
+        n = np.cross(q[:, 1, :3] - q[:, 0, :3], q[:, 2, :3] - q[:, 0, :3])[:, :2]
+        shut.append(q[:, ::-1] if (n * want).sum(1).mean() < 0 else q)
+    shut = np.concatenate(shut).reshape(-1, 4)
+    return shut[:, :3], shut[:, [3, 2]]
+
+
 def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick=1.75, photo=True):
     """Retaining walls detected along the route (roadside_walls.json): vertical face from
     0.3 m below road level to the measured top, capped (1.75 m, more than a terrain step) over the
@@ -800,8 +821,14 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
         if np.mean(np.cross(t3[:, 1] - t3[:, 0], t3[:, 2] - t3[:, 0])[:, 2]) < 0:
             cap = t3[:, ::-1].reshape(-1, 3)
         mb.add(material + "_top", cap, uvs=cap[:, :2] / WALL_TILE.get(material + "_top", 1.6), normals=bng.flat_normals_soup(cap))
+        # v3.0.40: the wall closed: up to v3.0 it was the face and the cap only, and where a run ends the cap stood
+        # over a void (the terrain under it is lowered to the road) open at the end and at the back: from the road
+        # one saw under the cap into the bank, "a wall with a hole" (20 runs, 485 m of open edges in v3.0)
+        shut, uv = roadside_shut(face, back, zb, zt, s, away, T, thick)
+        mb.add(material, shut, uvs=uv / WALL_TILE.get(material, 1.6), normals=bng.flat_normals_soup(shut))
         for k in range(len(P)):
-            samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], zb[k] + 0.3, zt[k]])
+            samples.append([face[k, 0], face[k, 1], away[k, 0], away[k, 1], zb[k] + 0.3, zt[k], T[k, 0], T[k, 1],
+                            -np.inf if k else -END_SPILL, np.inf if k < len(P) - 1 else END_SPILL])
     if photo:
         mats = []
         for i, page in enumerate(atlas.pages):
@@ -830,6 +857,12 @@ def adjust_terrain_roadside(samples, xs, ys, H, behind=3.4, front=1.6, hidden=1.
     Hf = H.ravel()
     S = samples[j]
     off = ((pts - S[:, :2]) * S[:, 2:4]).sum(1)              # + behind the face, - in front
+    if S.shape[1] > 6:
+        # v3.0.40: not past the ends of the wall (END_SPILL m at most): up to v3.0 the ground was lowered and raised
+        # in a strip up to 3.9 m long beyond them too, a pit in the bank where the wall stops
+        a = ((pts - S[:, :2]) * S[:, 6:8]).sum(1)
+        keep = (a >= S[:, 8]) & (a <= S[:, 9])
+        flat, pts, S, off = flat[keep], pts[keep], S[keep], off[keep]
     # vertices up to `hidden` m behind the face stay at road level (under the 1.75 m wide cap),
     # further back they rise to the crest: the terrain step is always hidden by the wall
     fr = (off < hidden) & (off > -front)
@@ -1228,15 +1261,41 @@ def double_faces_step(root, report=None):
 FOOT_DEPTH = 0.30        # m: the foot of a wall goes at least this far under the terrain around it
 FOOT_GAP = 0.05          # m: a vertex this much lower than the highest one at its place is a foot
 FOOT_MAX = 2.5           # m: a foot further over the terrain stands on something else (a bridge, a deck): kept
+FOOT_ROAD = 1.0          # m: a road surface this near a foot (across) is the ground the wall stands on
 
 
-def _ter_min(Q, z0, maxh, x, y):
-    """Lowest of the four terrain vertices around (x, y): under it for every split of the square."""
+def _ter_min(Q, z0, maxh, x, y, f=np.minimum):
+    """Lowest of the four terrain vertices around (x, y): under it for every split of the square (f=np.maximum:
+    the highest)."""
     n = Q.shape[0]
     c = np.clip(np.floor((x - TER_X0) / TER_SQUARE).astype(np.int64), 0, n - 2)
     r = np.clip(np.floor((y - TER_Y0) / TER_SQUARE).astype(np.int64), 0, n - 2)
-    q = np.minimum(np.minimum(Q[r, c], Q[r, c + 1]), np.minimum(Q[r + 1, c], Q[r + 1, c + 1]))
+    q = f(f(Q[r, c], Q[r, c + 1]), f(Q[r + 1, c], Q[r + 1, c + 1]))
     return z0 + q.astype(np.float64) / 65535.0 * maxh
+
+
+def _road_ground(zi, lv):
+    """KD-tree of the vertices of the road surfaces (their flat triangles: not the skirts) and their heights."""
+    pts = []
+    f = f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"
+    if f not in zi.NameToInfo:
+        return None, None
+    for o in read_items(zi, f):
+        sn = o.get("shapeName", "").lstrip("/")
+        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo or not sn.endswith(".dae"):
+            continue
+        text = zi.read(sn).decode("utf-8")
+        if "<triangles" not in text:
+            continue
+        V, N, UV, C, parts, node = optimize_level.parse(text)
+        W = V + np.asarray(o.get("position", [0, 0, 0]), np.float64)
+        for mat, idx in parts:
+            t, n, st = _steep(W, idx)
+            pts.append(t[~st].reshape(-1, 3))
+    if not pts:
+        return None, None
+    P = np.unique(np.round(np.concatenate(pts), 3), axis=0)
+    return cKDTree(P[:, :2]), P[:, 2]
 
 
 def _set_arr(text, aid, values, fmt):
@@ -1253,7 +1312,14 @@ def wall_feet_step(root, report=None):
     wall, you see through it"). Here every foot vertex of the wall meshes (a vertex lower than the one over it at the
     same place: the bottom corners of the side faces) goes to FOOT_DEPTH m under the lowest terrain vertex around it
     where it is not already that deep (nor over FOOT_MAX m above it: a wall on a bridge), its texture coordinate along the height moved with it (the stones keep their
-    size). Only the vertex heights and texture coordinates of the wall shapes change."""
+    size). Only the vertex heights and texture coordinates of the wall shapes change.
+    v3.0.40: beside a road the ground is the road surface, which can stand metres over the terrain carved under it (an
+    embankment, a road on a slope): the feet there were left in the air as "a wall on a bridge" (over FOOT_MAX above the
+    terrain) and the walls showed a slot of up to 60 cm over the asphalt, the inside of the wall seen through it. A foot
+    within FOOT_ROAD m of a road surface goes FOOT_DEPTH m under the lowest of it there too, however high that stands over
+    the terrain. With the two v3.0.40 rules below (a wall on something else measured from the highest terrain vertex, never
+    a corner of a wall top) the open wall feet over the ground (check_level.wall_holes) went from 275 m to 7 m on the
+    v3.0 level."""
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -1265,7 +1331,8 @@ def wall_feet_step(root, report=None):
     Q = np.frombuffer(data[5:5 + 2 * n * n], "<u2").reshape(n, n)
     items = [json.loads(l) for l in zi.read(f"{lv}/main/MissionGroup/walls/items.level.json").decode("utf-8").splitlines()
              if l.strip()]
-    new, res = {}, {"shapes": 0, "feet_lowered": 0, "lowered_m_p50": 0.0, "lowered_m_max": 0.0}
+    rtree, rz = _road_ground(zi, lv)
+    new, res = {}, {"shapes": 0, "feet_lowered": 0, "feet_on_road": 0, "lowered_m_p50": 0.0, "lowered_m_max": 0.0}
     drops = []
     for o in items:
         sn = o.get("shapeName", "").lstrip("/")
@@ -1281,8 +1348,36 @@ def wall_feet_step(root, report=None):
         top = np.full(g.max() + 1, -np.inf)
         np.maximum.at(top, g, W[:, 2])
         foot = W[:, 2] < top[g] - FOOT_GAP
+        # v3.0.40: never a corner of a wall top (a *_top material). Where two wall pieces of different heights meet, or
+        # the two faces of a thin wall touch, the lower top stands under a higher one at the same place: v3.0 took it
+        # for a foot and pulled it down to the ground (5,831 top corners, notches down to the ground in the walls)
+        crest = np.zeros(len(W), bool)
+        for mat, idx in parts:
+            if mat.endswith("_top"):
+                crest[idx[:, 0]] = True
+        kz = np.round(W * 1000).astype(np.int64)
+        _, gz = np.unique(kz, axis=0, return_inverse=True)
+        gz = gz.ravel()
+        on_crest = np.zeros(gz.max() + 1, bool)
+        on_crest[gz[crest]] = True
+        foot &= ~on_crest[gz]
         aim = _ter_min(Q, z0, maxh, W[:, 0], W[:, 1]) - FOOT_DEPTH
-        low = foot & (W[:, 2] > aim) & (W[:, 2] - aim < FOOT_MAX + FOOT_DEPTH)
+        # v3.0.40: on something else only when over the highest terrain vertex around by FOOT_MAX: measured from the
+        # lowest, the feet on steep slopes and beside a ditch were taken for walls on a bridge and left in the air
+        low = foot & (W[:, 2] > aim) & (W[:, 2] < _ter_min(Q, z0, maxh, W[:, 0], W[:, 1], np.maximum) + FOOT_MAX)
+        if rtree is not None and foot.any():
+            fi = np.flatnonzero(foot)
+            road = np.full(len(fi), np.inf)
+            for j, ii in enumerate(rtree.query_ball_point(W[fi, :2], r=FOOT_ROAD)):
+                if ii:
+                    road[j] = rz[ii].min()
+            # a road surface under the wall that is no deck over it (a wall foot under the road stays)
+            on = np.isfinite(road) & (W[fi, 2] > road - FOOT_DEPTH) & (W[fi, 2] < road + FOOT_MAX)
+            fi, road = fi[on], road[on]
+            # under the road surface, and under the terrain where that is near enough for the rule above
+            aim[fi] = np.where(low[fi], np.minimum(aim[fi], road - FOOT_DEPTH), road - FOOT_DEPTH)
+            low[fi] = True
+            res["feet_on_road"] += int(len(fi))
         if not low.any():
             continue
         dz = np.where(low, aim - W[:, 2], 0.0)
@@ -1326,6 +1421,268 @@ def wall_feet_step(root, report=None):
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
     res["seconds"] = round(time.time() - t0)
     print("wall feet:", res, flush=True)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(res, open(report, "w"), indent=1)
+    return res
+
+
+# ------------------------------------------------------------------ v3.0.40: no groove between two walls
+# A finishing step of build_level.py (FINISH, after wall_feet), on the built level; alone:
+# python build_level.py --finish wall_gaps
+GAP_MAX = 0.25           # m: a gap between the tops of the walls narrower than this gets a lid
+GAP_MIN_AREA = 0.002     # m2: the smaller ones are left (joints of the triangles)
+GAP_MIN_WIDTH = 0.002    # m: and the thinner ones (twice the area over the outline: slivers between two tops)
+GAP_RISE = 3.0           # m: a gap whose sides differ more in height is between two walls at two levels: left
+GAP_CELL = 100.0         # m: the cells the tops are joined in
+
+
+def _plane_z(t, x, y):
+    """Height at (x, y) on the plane of the triangle t (3, 3), within its heights."""
+    n = np.cross(t[1] - t[0], t[2] - t[0])
+    if abs(n[2]) < 1e-9:
+        return float(t[:, 2].max())
+    z = t[0, 2] - (n[0] * (x - t[0, 0]) + n[1] * (y - t[0, 1])) / n[2]
+    return float(np.clip(z, t[:, 2].min(), t[:, 2].max()))
+
+
+def _xy_width(t):
+    """How thin the triangle t (three (x, y) corners) is: twice its area over its longest edge; and where that edge
+    starts."""
+    p = np.asarray(t, np.float64)
+    e = np.linalg.norm(p - np.roll(p, -1, 0), axis=1)
+    d1, d2 = p[1] - p[0], p[2] - p[0]
+    return abs(d1[0] * d2[1] - d1[1] * d2[0]) / max(e.max(), 1e-12), int(np.argmax(e))
+
+
+def _no_slivers(tris, eps=0.01):
+    """The triangles tris (three (x, y) corners each) of a lid without slivers. Where the outline of a gap has a corner
+    of almost 180 degrees the triangulation can join it with the two corners beside it in one triangle a few mm thin,
+    and that triangle stands up as a fin (open edges in the check) where the top beside the gap bends at that corner.
+    The triangle across the long edge of such a sliver gives it its far corner and takes the middle one (an edge flip,
+    valid as the four corners make a convex outline), when that makes the thinner of the two triangles thicker: then
+    every triangle reaches across the gap and the lid follows the heights of both sides. Returns the triangles and how
+    many were flipped; the slivers left (the zero-width spikes and strips of an outline) cover nothing."""
+    tris = [list(t) for t in tris]
+    flips = 0
+    for _ in range(4 * len(tris)):
+        for ti, t in enumerate(tris):
+            w, i = _xy_width(t)
+            if w >= eps:
+                continue
+            a, c, b = t[i], t[(i + 1) % 3], t[(i + 2) % 3]           # long edge a-c, middle corner b
+            tj = next((j for j, s in enumerate(tris) if j != ti and a in s and c in s), None)
+            if tj is None:
+                continue
+            d = next(v for v in tris[tj] if v != a and v != c)
+            new = [[a, b, d], [b, c, d]]
+            if min(_xy_width(s)[0] for s in new) > min(w, _xy_width(tris[tj])[0]):
+                tris[ti], tris[tj] = new
+                flips += 1
+                break
+        else:
+            break
+    return tris, flips
+
+
+def wall_gaps_step(root, report=None):
+    """v3.0.40: no groove between two walls. The survey draws many walls as two lines (their two faces) and where
+    paired_lines does not join them the level has two walls 0.30 m thick side by side a few cm apart; other walls
+    have notches where the survey has a pillar (no wall): 1,100 gaps narrower than GAP_MAX m between the tops of the
+    walls, 8.6 km of dark grooves in v3.0 and in the first v3.0.40 build, seen from the road as cracks and holes in
+    the walls. Every such gap (the closing of the union of the wall tops by GAP_MAX m, less the tops) gets a lid: its
+    outline triangulated (without slivers, _no_slivers) at the height of the top beside every corner (the lower one
+    where two tops meet), and where the gap opens at the end of the walls a face from the edge of the lid down under
+    the ground. Only triangles are added to the wall shapes, in the materials of the tops and sides beside them."""
+    t0 = time.time()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
+               if o.get("class") == "TerrainBlock")
+    z0, maxh = float(blk["position"][2]), float(blk["maxHeight"])
+    data = zi.read(f"{lv}/theTerrain.ter")
+    n = struct.unpack("<I", data[1:5])[0]
+    Q = np.frombuffer(data[5:5 + 2 * n * n], "<u2").reshape(n, n)
+    rtree, rz = _road_ground(zi, lv)
+    shapes = []
+    tops, top_of, sides, side_of = [], [], [], []
+    for o in read_items(zi, f"{lv}/main/MissionGroup/walls/items.level.json"):
+        sn = o.get("shapeName", "").lstrip("/")
+        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo or not sn.endswith(".dae") or "backfill" in sn:
+            continue
+        text = zi.read(sn).decode("utf-8")
+        if "<triangles" not in text:
+            continue
+        V, N, UV, C, parts, node = optimize_level.parse(text)
+        pos = np.asarray(o.get("position", [0, 0, 0]), np.float64)
+        si = len(shapes)
+        shapes.append(dict(name=sn, V=V, N=N, UV=UV, C=C, parts=parts, node=node, pos=pos))
+        for mat, idx in parts:
+            t = (V + pos)[idx[:, 0]].reshape(-1, 3, 3)
+            if mat.endswith("_top"):
+                d1, d2 = t[:, 1, :2] - t[:, 0, :2], t[:, 2, :2] - t[:, 0, :2]
+                ok = np.abs(d1[:, 0] * d2[:, 1] - d1[:, 1] * d2[:, 0]) > 1e-6
+                tops.append(t[ok])
+                top_of += [(si, mat)] * int(ok.sum())
+            elif not re.search(r"photo", mat):
+                col = C[idx[0::3, 3]] if C is not None and idx.shape[1] > 3 else np.ones((len(t), 4))
+                sides.append(t.mean(1))
+                side_of += [(si, mat, tuple(c)) for c in col]
+    res = {"gaps": 0, "lids": 0, "lid_m2": 0.0, "lid_m": 0.0, "end_faces": 0, "left_two_levels": 0, "flips": 0,
+           "slivers_left": 0, "shapes_rewritten": 0}
+    if not tops:
+        print("wall gaps: no wall tops", flush=True)
+        return res
+    T = np.concatenate(tops)
+    polys = shapely.polygons(np.concatenate([T[:, :, :2], T[:, :1, :2]], 1))
+    tree = shapely.STRtree(polys)
+    S = np.concatenate(sides) if sides else np.zeros((0, 3))
+    stree = cKDTree(S[:, :2]) if len(S) else None
+    add = {}                                         # shape -> {material: ([triangles (k, 3, 3) world], [colors])}
+
+    def put(si, mat, tri, col=(1.0, 1.0, 1.0, 1.0)):
+        a = add.setdefault(si, {}).setdefault(mat, ([], []))
+        a[0].append(tri)
+        a[1].append(np.tile(col, (len(tri) * 3, 1)))
+
+    def top_z(x, y):
+        """The height of the wall tops at (x, y): the lowest of those within 1 cm, else the nearest; and its
+        triangle."""
+        p = shapely.Point(x, y)
+        ii = tree.query(p, predicate="dwithin", distance=GAP_MAX)
+        if not len(ii):
+            return None, None
+        d = shapely.distance(polys[ii], p)
+        on = ii[d < 0.01]
+        if len(on):
+            z = [_plane_z(T[k], x, y) for k in on]
+            j = int(np.argmin(z))
+            return z[j], int(on[j])
+        k = int(ii[np.argmin(d)])
+        return _plane_z(T[k], x, y), k
+
+    def ground(x, y):
+        z = float(_ter_min(Q, z0, maxh, np.array([x]), np.array([y]))[0]) - FOOT_DEPTH
+        if rtree is not None:
+            ii = rtree.query_ball_point([x, y], r=FOOT_ROAD)
+            if ii:
+                z = min(z, float(rz[ii].min()) - FOOT_DEPTH)
+        return z
+
+    cen = T[:, :, :2].mean(1)
+    rises = []
+    for kx, ky in np.unique(np.floor(cen / GAP_CELL).astype(np.int64), axis=0):
+        box = shapely.box(kx * GAP_CELL, ky * GAP_CELL, (kx + 1) * GAP_CELL, (ky + 1) * GAP_CELL)
+        ii = tree.query(box.buffer(2 * GAP_MAX))
+        U = shapely.union_all(polys[ii], grid_size=0.0005)
+        G = U.buffer(GAP_MAX / 2, join_style="mitre").buffer(-GAP_MAX / 2, join_style="mitre").difference(U)
+        for g in polygons(G):
+            if (g.area < GAP_MIN_AREA or 2 * g.area / g.length < GAP_MIN_WIDTH
+                    or not box.contains(g.representative_point())):
+                continue
+            res["gaps"] += 1
+            z, k = {}, {}
+            for ring in [g.exterior] + list(g.interiors):
+                for x, y in np.asarray(ring.coords)[:-1]:
+                    z[(x, y)], k[(x, y)] = top_z(x, y)
+            if any(v is None for v in z.values()):
+                continue
+            # the shape and material of the top nearest the middle of the gap take the lid
+            c = g.representative_point()
+            kc = top_z(c.x, c.y)[1]
+            si, tmat = top_of[kc]
+            cdt, flips = _no_slivers([[tuple(p) for p in np.asarray(t.exterior.coords)[:3]]
+                                      for t in polygons(shapely.constrained_delaunay_triangles(g))])
+            res["flips"] += flips
+            keep = []
+            for q in cdt:
+                if any(p not in z for p in q):
+                    continue
+                if _xy_width(q)[0] < GAP_MIN_WIDTH:          # a sliver left: a fin standing up, it covers nothing
+                    res["slivers_left"] += 1
+                    continue
+                keep.append(q)
+            if not keep:
+                continue
+            lid = np.array([np.column_stack([np.array(q), [z[p] for p in q]]) for q in keep])
+            down = np.cross(lid[:, 1] - lid[:, 0], lid[:, 2] - lid[:, 0])[:, 2] < 0
+            lid[down] = lid[down][:, ::-1]
+            # across the gap (in one triangle of the lid: along the gap the walls may climb with the road)
+            rise = float(np.ptp(lid[:, :, 2], axis=1).max())
+            rises.append(rise)
+            if rise > GAP_RISE:
+                res["left_two_levels"] += 1
+                continue
+            put(si, tmat, lid)
+            res["lids"] += 1
+            res["lid_m2"] += g.area
+            res["lid_m"] += g.length / 2
+            # where the gap opens (an edge of the lid away from every top): a face from the lid down under the ground.
+            # The edges of the lid, not of the gap's outline: a sliver left out of the lid opens one of its edges.
+            ecount = collections.Counter(frozenset(e) for q in keep for e in zip(q, q[1:] + q[:1]))
+            for q in keep:
+                for i in range(3):
+                    a, b, o = (np.array(q[(i + k) % 3]) for k in range(3))
+                    m = (a + b) / 2
+                    if ecount[frozenset((q[i], q[(i + 1) % 3]))] > 1 or np.linalg.norm(b - a) < 0.005 or len(
+                            tree.query(shapely.Point(m), predicate="dwithin", distance=0.005)):
+                        continue
+                    za, zb = z[q[i]], z[q[(i + 1) % 3]]
+                    ga, gb = ground(*a), ground(*b)
+                    F = np.array([[*a, za], [*a, ga], [*b, gb], [*a, za], [*b, gb], [*b, zb]]).reshape(2, 3, 3)
+                    out = np.array([b[1] - a[1], a[0] - b[0]])
+                    if out @ (o - a) > 0:                            # away from the lid
+                        out = -out
+                    nf = np.cross(F[0, 1] - F[0, 0], F[0, 2] - F[0, 0])[:2]
+                    if nf @ out < 0:
+                        F = F[:, ::-1]
+                    smat, col = tmat[:-4], (1.0, 1.0, 1.0, 1.0)
+                    if stree is not None:
+                        d, j = stree.query(m, distance_upper_bound=1.0)
+                        if np.isfinite(d):
+                            smat, col = side_of[j][1], side_of[j][2]
+                    put(si, smat, F, col)
+                    res["end_faces"] += 1
+    new_dae = {}
+    tmp = tempfile.mkdtemp()
+    for si, mats in add.items():
+        s = shapes[si]
+        mb = bng.MeshBuilder()
+        for mat, idx in s["parts"]:
+            col = s["C"][idx[:, 3]] if s["C"] is not None and idx.shape[1] > 3 else None
+            mb.add(mat, s["V"][idx[:, 0]], uvs=s["UV"][idx[:, 2]], normals=s["N"][idx[:, 1]], colors=col)
+        for mat, (tris, cols) in mats.items():
+            W = np.concatenate(tris).reshape(-1, 3)
+            tile = WALL_TILE.get(mat, 1.6)
+            if mat.endswith("_top"):
+                uv = W[:, :2] / tile                             # as the tops: along the ground, seamless with them
+            else:
+                # the faces: along their bottom edge and up
+                Wt = W.reshape(-1, 3, 3)
+                u = np.linalg.norm(Wt[:, :, :2] - Wt[:, :1, :2], axis=2).ravel()
+                uv = np.column_stack([u, W[:, 2]]) / tile
+            mb.add(mat, W - s["pos"], uvs=uv, normals=bng.flat_normals_soup(W), colors=np.concatenate(cols))
+        base, detail = re.match(r"(.*)_a(\d+)$", s["node"]).groups()
+        path = os.path.join(tmp, "s.dae")
+        mb.write_dae(path, name=base, origin=(0, 0, 0), detail=int(detail))
+        new_dae[s["name"]] = open(path, "rb").read()
+        os.remove(path)
+    os.rmdir(tmp)
+    with zi.writer() as zo:
+        now = time.localtime()[:6]
+        for i in zi.infolist():
+            if i.filename in new_dae:
+                ni = zipfile.ZipInfo(i.filename, now)          # a new date: the game converts the shape again
+                ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
+                zo.writestr(ni, new_dae[i.filename])
+            else:
+                zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+    res["shapes_rewritten"] = len(new_dae)
+    res["lid_m2"], res["lid_m"] = round(res["lid_m2"], 1), round(res["lid_m"])
+    if rises:
+        res["rise_m_p50_p90_p99"] = [round(float(v), 2) for v in np.quantile(rises, [0.5, 0.9, 0.99])]
+    res["seconds"] = round(time.time() - t0)
+    print("wall gaps:", res, flush=True)
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)

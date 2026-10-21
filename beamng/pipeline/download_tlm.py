@@ -7,6 +7,7 @@ while they stream (no local copy of the package):
                          tunnel (KUNSTBAUTE), level (STUFE), 3D line (the z of a bridge is its deck)
   TLM_EISENBAHN          railways (the Lugano-Ponte Tresa line crosses the area)
   TLM_FLIESSGEWAESSER    streams (the gaps that bridges cross)
+  TLM_UEBRIGE_BAHN       cable cars and lifts (v3.0.40: the Miglieglia - Monte Lema cable car, landmarks.py)
 Output: data/tlm/<layer>.json: {"fields": [...], "features": [{"props": {...}, "parts": [[[E, N, Z], ...]]}]}
 (LV95 / LN02).
 """
@@ -20,7 +21,8 @@ URL = ("https://data.geo.admin.ch/ch.swisstopo.swisstlm3d/swisstlm3d_2026-02/"
        "swisstlm3d_2026-02_2056_5728.shp.zip")
 LAYERS = {"TLM_STRASSE": "TLM_STRASSEN\\swissTLM3D_TLM_STRASSE",
           "TLM_EISENBAHN": "TLM_OEV\\swissTLM3D_TLM_EISENBAHN",
-          "TLM_FLIESSGEWAESSER": "TLM_GEWAESSER\\swissTLM3D_TLM_FLIESSGEWAESSER"}
+          "TLM_FLIESSGEWAESSER": "TLM_GEWAESSER\\swissTLM3D_TLM_FLIESSGEWAESSER",
+          "TLM_UEBRIGE_BAHN": "TLM_OEV\\swissTLM3D_TLM_UEBRIGE_BAHN"}
 MARGIN = 300.0
 
 
@@ -149,6 +151,9 @@ def main():
         dest = os.path.join(out_dir, layer + ".json")
         if os.path.exists(dest):
             print(layer, "exists", flush=True)
+            continue
+        if stem + ".shp" not in names:
+            print(layer, "not in the package:", [n for n in names if "BAHN" in n.upper()], flush=True)
             continue
         t = time.time()
         with z.open(names[stem + ".shp"]) as f:

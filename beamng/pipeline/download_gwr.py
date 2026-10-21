@@ -11,6 +11,8 @@ kept.
     python download_gwr.py --pin    -> downloads the register again and rewrites the pinned extract
                                        beamng/dati/gwr_area.json.gz, so a release does not change with
                                        the register and does not depend on its server
+    python download_gwr.py --add    -> v3.0.40: adds to the pinned extract only the buildings it does not have yet
+                                       (the area grown by paesi_interi.py), the others stay as they were pinned
 Source: BFS/UST, Registro federale degli edifici e delle abitazioni (open data, the source must be
 cited).
 """
@@ -71,12 +73,19 @@ def read(zpath):
     return out
 
 
-def main(pin=False):
-    if pin or not os.path.exists(PINNED):
+def main(pin=False, add=False):
+    if pin or add or not os.path.exists(PINNED):
         rows = read(fetch())
+        date = time.strftime("%Y-%m-%d")
+        if add and os.path.exists(PINNED):
+            old = json.load(gzip.open(PINNED, "rt", encoding="utf-8"))
+            have = {r.get("egid") for r in old["buildings"]}
+            new = [r for r in rows if r.get("egid") not in have]
+            print("GWR: %d buildings added to the extract of %s" % (len(new), old.get("date")))
+            rows, date = old["buildings"] + new, ("%s (+%s)" % (old.get("date"), date)) if new else old.get("date")
         with gzip.open(PINNED, "wt", encoding="utf-8") as f:
             json.dump({"source": "BFS/UST, Registro federale degli edifici e delle abitazioni (GWR), dati pubblici",
-                       "date": time.strftime("%Y-%m-%d"), "buildings": rows}, f, separators=(",", ":"))
+                       "date": date, "buildings": rows}, f, separators=(",", ":"))
     d = json.load(gzip.open(PINNED, "rt", encoding="utf-8"))
     json.dump(d, open(OUT, "w"))
     b = d["buildings"]
@@ -86,4 +95,4 @@ def main(pin=False):
 
 
 if __name__ == "__main__":
-    main(pin="--pin" in sys.argv)
+    main(pin="--pin" in sys.argv, add="--add" in sys.argv)

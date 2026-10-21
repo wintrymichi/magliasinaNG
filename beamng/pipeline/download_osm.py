@@ -12,6 +12,9 @@ Re-runnable: existing files are kept. The release is built with the extract kept
 (dati/osm_area.json.gz, dati/osm_communes.json.gz, dati/osm_pois.json.gz), so that it does not change with OSM or depend on
 the Overpass servers; --pin copies the downloaded files there.
     python download_osm.py [--pin]
+    python download_osm.py --add  (v3.0.40) adds to the extracts kept in the repository only the elements over the whole
+                                  villages of area.villages() (+ MARGIN) that they do not have yet, from the Geofabrik
+                                  extract of Switzerland (needs osmium-tool and pyosmium); the rest stays as pinned
 (c) OpenStreetMap contributors, ODbL 1.0: the extracts in dati/ are under the ODbL.
 """
 import gzip, json, os, shutil, sys, time
@@ -20,7 +23,7 @@ from config import DATA, local_to_lv95, lv95_to_wgs
 import area
 
 URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
-        "https://maps.mail.ru/osm/tools/overpass/api/interpreter"]
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.private.coffee/api/interpreter"]
 MARGIN = 300.0
 OUT = os.path.join(DATA, "osm", "osm_area.json")
 COMMUNES = os.path.join(DATA, "osm", "communes.json")
@@ -66,15 +69,15 @@ out body geom qt;
 """
 
 
-def bbox():
-    x0, y0, x1, y1 = area.bounds(MARGIN)
+def bbox(bounds=None):
+    x0, y0, x1, y1 = bounds or area.bounds(MARGIN)
     ll = [lv95_to_wgs(*local_to_lv95(x, y)) for x in (x0, x1) for y in (y0, y1)]
     return "%.6f,%.6f,%.6f,%.6f" % (min(p[0] for p in ll), min(p[1] for p in ll), max(p[0] for p in ll),
                                     max(p[1] for p in ll))
 
 
-def overpass(q):
-    for attempt in range(6):
+def overpass(q, attempts=6):
+    for attempt in range(attempts):
         url = URLS[attempt % len(URLS)]
         try:
             ua = {"User-Agent": "magliasinaNG BeamNG map pipeline (github.com/wintrymichi/magliasinaNG)"}
@@ -113,5 +116,91 @@ def main():
             print("kept in the repository:", pinned)
 
 
+PBF = "https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"
+# the filters of QUERY and QUERY_POIS: key -> None (any value) or a regex of values
+WAY_TAGS = {"highway": None, "railway": None, "barrier": None, "waterway": None,
+            "man_made": "bridge|embankment|pier", "amenity": "parking|bench", "public_transport": None}
+NODE_TAGS = {"highway": None, "railway": None, "traffic_sign": None, "public_transport": None, "barrier": None,
+             "amenity": "bench|waste_basket|post_box|telephone|drinking_water|fountain|parking_entrance|recycling|"
+                        "charging_station|fuel",
+             "man_made": "street_cabinet|mast|flagpole|cross|water_tap",
+             "historic": "wayside_shrine|wayside_cross|memorial", "leisure": "picnic_table",
+             "tourism": "information|viewpoint"}
+POI_TAGS = {"shop": None, "craft": None, "office": None,
+            "amenity": QUERY_POIS.split('amenity"~"')[1].split('"')[0],
+            "tourism": "hotel|guest_house|hostel|motel|apartment"}
+
+
+def _match(tags, want):
+    import re
+    return any(k in tags and (v is None or re.search(v, tags[k])) for k, v in want.items())
+
+
+def pbf_elements(pbf, box):
+    """Elements of the Geofabrik extract inside the WGS84 box (s, w, n, e) that QUERY and QUERY_POIS would return,
+    in the Overpass JSON form ("out body geom" ways, "out center tags" POIs); relations are left out."""
+    import subprocess, tempfile
+    import osmium
+    s_, w_, n_, e_ = box
+    cut = os.path.join(tempfile.mkdtemp(), "cut.osm.pbf")
+    subprocess.run(["osmium", "extract", "-b", "%f,%f,%f,%f" % (w_, s_, e_, n_), "-s", "complete_ways",
+                    "--overwrite", "-o", cut, pbf], check=True)
+    inside = lambda la, lo: s_ <= la <= n_ and w_ <= lo <= e_
+    area_el, pois = [], []
+    for o in osmium.FileProcessor(cut).with_locations():
+        tags = {t.k: t.v for t in o.tags}
+        if not tags:
+            continue
+        if o.is_node():
+            if not o.location.valid() or not inside(o.location.lat, o.location.lon):
+                continue
+            d = {"type": "node", "id": o.id, "lat": o.location.lat, "lon": o.location.lon, "tags": tags}
+            if _match(tags, NODE_TAGS):
+                area_el.append(d)
+            if _match(tags, POI_TAGS):
+                pois.append(d)
+        elif o.is_way():
+            geom = [{"lat": n.location.lat, "lon": n.location.lon} for n in o.nodes if n.location.valid()]
+            if not geom or not any(inside(g["lat"], g["lon"]) for g in geom):
+                continue
+            if _match(tags, WAY_TAGS):
+                area_el.append({"type": "way", "id": o.id, "nodes": [n.ref for n in o.nodes], "geometry": geom,
+                                "tags": tags})
+            if _match(tags, POI_TAGS):
+                pois.append({"type": "way", "id": o.id, "tags": tags,
+                             "center": {"lat": sum(g["lat"] for g in geom) / len(geom),
+                                        "lon": sum(g["lon"] for g in geom) / len(geom)}})
+    return area_el, pois
+
+
+def add():
+    """v3.0.40: the elements over each whole village (area.villages() + MARGIN) missing from the pinned extracts, read
+    from the Geofabrik extract of Switzerland (the Overpass servers answered 502/504 to every query, even 1 km
+    boxes)."""
+    import shapely
+    import download_swisstopo as ds
+    pbf = ds.fetch(PBF, os.path.join(DATA, "osm", "switzerland-latest.osm.pbf"))[0]
+    pinned = [PINNED[OUT], PINNED[POIS]]
+    ds_ = [json.load(gzip.open(f, "rt", encoding="utf-8")) for f in pinned]
+    have = [{(e["type"], e["id"]) for e in d["elements"]} for d in ds_]
+    for key, _, g in area.villages():
+        x0, y0, x1, y1 = g.buffer(MARGIN).bounds
+        b = bbox((x0, y0, x1, y1))
+        box = tuple(float(v) for v in b.split(","))
+        for d, h, new, what in zip(ds_, have, pbf_elements(pbf, box), ("area", "pois")):
+            new = [e for e in new if (e["type"], e["id"]) not in h]
+            h |= {(e["type"], e["id"]) for e in new}
+            d["elements"] += new
+            d.setdefault("added_bbox", []).append(b)
+            print(key, what, "+%d elements over" % len(new), b, flush=True)
+    for f, d in zip(pinned, ds_):
+        d.setdefault("added_source", "Geofabrik switzerland-latest.osm.pbf, %s" % time.strftime("%Y-%m-%d"))
+        with gzip.open(f, "wt", encoding="utf-8", compresslevel=9) as fh:
+            json.dump(d, fh)
+
+
 if __name__ == "__main__":
-    main()
+    if "--add" in sys.argv[1:]:
+        add()
+    else:
+        main()

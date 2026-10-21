@@ -1,0 +1,12 @@
+{
+ "area_km2_before": 55.97,
+ "area_km2_after": 58.55,
+ "caslano": {
+  "village_km2": 2.96,
+  "added_km2": 2.27
+ },
+ "arosio": {
+  "village_km2": 0.78,
+  "added_km2": 0.31
+ }
+}

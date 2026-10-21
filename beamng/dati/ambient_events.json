@@ -1,0 +1,51 @@
+{
+ "_about": "Ambient events of BeamNG.drive 0.40.0.0 (build 287428), read on 2026-10-20 from an installed game (not with --scan: in 0.40 the strings bank stores the paths as a prefix trie, so the plain scan finds none). Source: art/sound/fmod/desktop/main_preload.strings.bank in content/art_sound.zip (the only strings bank; desktop_headphones has the same list), the Ambient subtree rebuilt from the trie in order, and the SFXEmitter tracks of all 1278 levels/*.level.json (only the 6 West Coast ones are Ambient). Seen verbatim: the West Coast events and Water>River (also the editor's default river event); the others are rebuilt from the trie. No Environment events, and no church bell, bird, cricket or insect events in 0.40 (the editor names Ambient>Ambiences>Forest_Static and >Roomtone, which are not in this strings bank).",
+ "game": "0.40.0.0.287428",
+ "read_from": {
+  "levels": 1278,
+  "banks": 2
+ },
+ "events_total": null,
+ "events": [
+  "event:>Ambient>2D>Garage_Mode",
+  "event:>Ambient>2D>WC_City",
+  "event:>Ambient>2D>WC_Warehouse",
+  "event:>Ambient>3D Shared>Alarm_Robbery_01",
+  "event:>Ambient>3D Shared>Alarm_Robbery_02",
+  "event:>Ambient>3D Shared>Alarm_Robbery_03",
+  "event:>Ambient>Maps>West Coast>Power Plant_2",
+  "event:>Ambient>Maps>West Coast>Pump Jack_Engine",
+  "event:>Ambient>Maps>West Coast>Pump Jack_Squeak",
+  "event:>Ambient>Maps>West Coast>Refinery_Tower_Engines",
+  "event:>Ambient>Maps>West Coast>Refinery_Tower_Large",
+  "event:>Ambient>Maps>West Coast>Refinery_Tower_Small",
+  "event:>Ambient>Roomtones>Roomtone_ConiferousDeciduous_01",
+  "event:>Ambient>Roomtones>Roomtone_ConiferousDeciduous_02",
+  "event:>Ambient>Roomtones>Roomtone_Desert_01",
+  "event:>Ambient>Roomtones>Roomtone_Desert_02",
+  "event:>Ambient>Roomtones>Roomtone_Mediterranean_01",
+  "event:>Ambient>Roomtones>Roomtone_Mediterranean_02",
+  "event:>Ambient>Roomtones>Roomtone_Tropical",
+  "event:>Ambient>Roomtones>Roomtone_Underwater",
+  "event:>Ambient>Water>River",
+  "event:>Ambient>Water>River_Copy",
+  "event:>Ambient>Water>Waterfall",
+  "event:>Ambient>Water>Waves",
+  "event:>Ambient>Wind>Wind_ConiferousDeciduous_01",
+  "event:>Ambient>Wind>Wind_ConiferousDeciduous_02",
+  "event:>Ambient>Wind>Wind_Desert_01",
+  "event:>Ambient>Wind>Wind_Desert_02",
+  "event:>Ambient>Wind>Wind_Mediterranean_01",
+  "event:>Ambient>Wind>Wind_Mediterranean_02",
+  "event:>Ambient>Wind>Wind_Tropical"
+ ],
+ "picked": {
+  "river": "event:>Ambient>Water>River",
+  "stream": null,
+  "lake": "event:>Ambient>Water>Waves",
+  "bells": null,
+  "birds": null,
+  "crickets": null
+ },
+ "use": {}
+}
