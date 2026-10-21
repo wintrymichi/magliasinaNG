@@ -16,6 +16,8 @@
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
 
+![Novaggio, Miglieglia and the Alto Malcantone in v3.0, in the game](beamng/verifica/screenshots/v3.0/overview-novaggio-miglieglia.jpg)
+
 </div>
 
 The Malcantone is the hilly corner of Ticino west of Lugano, between Lake Lugano and the Italian border. This mod turns about 58.6 km² of it into a drivable BeamNG.drive map: every real road and trail, every building, the woods and the lake, all at their real position and height.
@@ -127,12 +129,11 @@ v3.0.40 adapts the map to BeamNG.drive 0.40 and includes the fixes and additions
 
 | | |
 |---|---|
-| ![Cantonal road above the Magliaso junction, with stone walls textured again on 0.40](beamng/verifica/screenshots/v3.0.40/road-magliaso-stone-walls.jpg)<br>*Cantonal road above the Magliaso junction, with stone walls textured again on 0.40* | ![Stone wall and tyre tracks in the shade on the road to Pura](beamng/verifica/screenshots/v3.0.40/road-pura-wall-wear.jpg)<br>*Stone wall and tyre tracks in the shade on the road to Pura* |
-| ![Tyre tracks and shaded patches between Novaggio and Miglieglia](beamng/verifica/screenshots/v3.0.40/road-novaggio-miglieglia-wear.jpg)<br>*Novaggio–Miglieglia: tyre tracks and shaded patches* | ![Cantonal road between Magliaso and Pura](beamng/verifica/screenshots/v3.0.40/road-cantonale-pura.jpg)<br>*Cantonal road between Magliaso and Pura* |
-| ![Astano–Banco along a high stone wall](beamng/verifica/screenshots/v3.0.40/road-astano-banco-wall.jpg)<br>*Astano–Banco along a high stone wall* | ![Roadside wall on the cantonal road to Pura, closed at the back and ends](beamng/verifica/screenshots/v3.0.40/wall-cantonale-pura.jpg)<br>*Roadside wall on the cantonal road to Pura, closed at the back and ends (issue #76)* |
-| ![Caslano, west side of Monte Caslano](beamng/verifica/screenshots/v3.0.40/road-caslano.jpg)<br>*Caslano, west side of Monte Caslano* | ![Arosio village, complete since v3.0.40](beamng/verifica/screenshots/v3.0.40/road-arosio.jpg)<br>*Arosio village, complete since v3.0.40* |
-| ![Main road through Novaggio](beamng/verifica/screenshots/v3.0.40/road-novaggio.jpg)<br>*Main road through Novaggio* | ![Magliaso towards the cantonal-road junction](beamng/verifica/screenshots/v3.0.40/road-magliaso.jpg)<br>*Magliaso towards the cantonal-road junction* |
-
+| ![Stone wall and tyre tracks in the shade on the road to Pura](beamng/verifica/screenshots/v3.0.40/road-pura-wall-wear.jpg)<br>*Stone wall and tyre tracks in the shade on the road to Pura* | ![Tyre tracks and shaded patches between Novaggio and Miglieglia](beamng/verifica/screenshots/v3.0.40/road-novaggio-miglieglia-wear.jpg)<br>*Novaggio–Miglieglia: tyre tracks and shaded patches* |
+| ![Cantonal road between Magliaso and Pura](beamng/verifica/screenshots/v3.0.40/road-cantonale-pura.jpg)<br>*Cantonal road between Magliaso and Pura* | ![Astano–Banco along a high stone wall](beamng/verifica/screenshots/v3.0.40/road-astano-banco-wall.jpg)<br>*Astano–Banco along a high stone wall* |
+| ![Roadside wall on the cantonal road to Pura, closed at the back and ends](beamng/verifica/screenshots/v3.0.40/wall-cantonale-pura.jpg)<br>*Roadside wall on the cantonal road to Pura, closed at the back and ends (issue #76)* | ![Caslano, west side of Monte Caslano](beamng/verifica/screenshots/v3.0.40/road-caslano.jpg)<br>*Caslano, west side of Monte Caslano* |
+| ![Arosio village, complete since v3.0.40](beamng/verifica/screenshots/v3.0.40/road-arosio.jpg)<br>*Arosio village, complete since v3.0.40* | ![Main road through Novaggio](beamng/verifica/screenshots/v3.0.40/road-novaggio.jpg)<br>*Main road through Novaggio* |
+| ![Magliaso towards the cantonal-road junction](beamng/verifica/screenshots/v3.0.40/road-magliaso.jpg)<br>*Magliaso towards the cantonal-road junction* | |
 #### Time trials
 
 *The screenshots show the car positioned on each route. The races were not driven as part of this test.*
