@@ -257,7 +257,10 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   a zip made from the level folder alone loses them (package.py adds them).
 - The game's mission format was guessed at first (no game files in the cloud, beamng.com blocked): copy the keys of
   a vanilla 0.40 mission instead (Italy `timeTrial/002-Asphalt`, loose files in `<install>/gameplay/missions/`).
-- Start positions turn the vehicle's -Y onto the road, not +Y (the first guess faced the cars backwards).
+- Start positions: the game reads the quaternion as the inverse rotation of +Y onto the road, angle = 90 deg minus
+  the bearing. v3.0.40 shipped bearing + 90 deg (turning -Y the usual way), checked only against Italy 002-Asphalt,
+  whose start faces due east where both readings agree: in the game the car started across the road at Magliaso.
+  Check an orientation convention on a vanilla example that faces north or south, not east or west.
 - Plain shortest paths over the AI roads cut through village lanes: weight by drivability**4, and follow the
   measured cantonal road by name, including its split pieces `<name>_<n>` / `<name>_g<n>` (traffic thread).
 - The cantonal AI road starts with a hook inside the Magliaso junction, and a start position on the start line

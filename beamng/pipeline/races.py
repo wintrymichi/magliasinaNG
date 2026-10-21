@@ -177,10 +177,12 @@ def direction(L, i, reach=6):
 
 
 def yaw_quat(d):
-    """[x, y, z, w]: the rotation about the vertical that turns -Y (where a vehicle faces) to the 2D direction d, as
-    the start positions of the vanilla time trials have it (Italy 002-Asphalt: the forward start position turns -Y
-    98 degrees, onto its first checkpoint)."""
-    a = math.atan2(d[1], d[0]) + math.pi / 2
+    """[x, y, z, w]: the rotation of a start position facing the 2D direction d. The game reads its quaternions the
+    other way round from the usual convention (it turns +Y by the inverse rotation), so the angle is 90 degrees minus
+    the bearing of d. v3.0.40 used +90 plus the bearing (turning -Y the usual way): it matched Italy's 002-Asphalt,
+    whose start faces almost due east where both readings agree, but in the game the car started across or against
+    the road at Magliaso and the Penudria (2026-10-21)."""
+    a = math.pi / 2 - math.atan2(d[1], d[0])
     return [0.0, 0.0, round(math.sin(a / 2), 6), round(math.cos(a / 2), 6)]
 
 
