@@ -22,6 +22,9 @@ CLASSES = ["none", "edificio", "altro_rivestimento_duro", "giardino", "campo_pra
            "pascolo_boscato_fitto", "pascolo_boscato_aperto", "roccia", "ghiacciaio_nevaio",
            "binario", "pista_aerea", "altro"]
 CODE = {c: i for i, c in enumerate(CLASSES)}
+CHANNEL_SHARE = 0.3     # v3.1: the share of a hard surface's outline along a stream for it to be its bank
+CHANNEL_SLOPE = 0.15    # and the median slope of its ground (the yards and quays by the water are flat)
+CHANNEL_GAP = 0.5       # m between the two outlines that still counts as along
 
 
 def code(cls):
@@ -61,10 +64,48 @@ def smooth_curves(av):
           % (len(geoms), len(av["SOSF"]["muro"]), len(av["SOLI"]["muro"])), flush=True)
 
 
+def channel_linings(av, dtm):
+    """v3.1: the 'altro_rivestimento_duro' of the survey that lines a stream (CHANNEL_SHARE of its outline along a
+    'corso_acqua', its ground steeper than CHANNEL_SLOPE in the median: the stone banks of the Magliasina, an
+    abutment's face) are stones and gravel ('pietraia_sabbia'), not a yard: up to v3.0.40 they were grey asphalt
+    meshes sloping down into the river bed under the bridges and along it, without trees. The yards and quays by a
+    river are flat. Returns how many."""
+    hard = av["LCSF"].get("altro_rivestimento_duro", [])
+    water = [g for g, _ in av["LCSF"].get("corso_acqua", [])]
+    if not hard or not water:
+        return 0
+    wtree = shapely.STRtree(water)
+    keep, moved = [], []
+    for g, p in hard:
+        near = wtree.query(g.buffer(CHANNEL_GAP))
+        share = 0.0
+        if len(near):
+            wb = shapely.union_all([water[i] for i in near]).buffer(CHANNEL_GAP)
+            share = g.boundary.intersection(wb).length / max(g.boundary.length, 1e-9)
+        if share >= CHANNEL_SHARE:
+            win, _, _ = dtm.window(*g.bounds, pad=2)
+            a = np.asarray(win.a, np.float64)
+            if a.shape[0] > 2 and a.shape[1] > 2:
+                gy, gx = np.gradient(a, win.res)
+                hh, ww = a.shape
+                X, Y = np.meshgrid(win.x_min + (np.arange(ww) + 0.5) * win.res, win.y_max - (np.arange(hh) + 0.5) * win.res)
+                m = shapely.contains_xy(g, X, Y)
+                if m.sum() >= 4 and np.median(np.hypot(gx, gy)[m]) >= CHANNEL_SLOPE:
+                    moved.append((g, p))
+                    continue
+        keep.append((g, p))
+    av["LCSF"]["altro_rivestimento_duro"] = keep
+    av["LCSF"].setdefault("pietraia_sabbia", []).extend(moved)
+    print("stream banks of the survey as stones, not paved: %d (%.2f ha)" % (len(moved), sum(g.area for g, _ in moved) / 1e4),
+          flush=True)
+    return len(moved)
+
+
 def main():
     av = load_av()
-    pickle.dump(av, open(os.path.join(WORK, "av_local.pkl"), "wb"))
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    channel_linings(av, dtm)
+    pickle.dump(av, open(os.path.join(WORK, "av_local.pkl"), "wb"))
     h, w = dtm.a.shape
     tr = Affine(dtm.res, 0, dtm.x_min, 0, -dtm.res, dtm.y_max)
     shapes = []
