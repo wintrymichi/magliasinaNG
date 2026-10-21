@@ -16,8 +16,6 @@
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
 
-![Novaggio, Miglieglia and the Alto Malcantone in v3.0, in the game](beamng/verifica/screenshots/v3.0/overview-novaggio-miglieglia.jpg)
-
 </div>
 
 The Malcantone is the hilly corner of Ticino west of Lugano, between Lake Lugano and the Italian border. This mod turns about 58.6 km² of it into a drivable BeamNG.drive map: every real road and trail, every building, the woods and the lake, all at their real position and height.
@@ -103,53 +101,54 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ### New in v3.0.40: the map on BeamNG.drive 0.40
 
-> v3.0.40 is v3.0 made for BeamNG.drive 0.40, with the fixes and additions below (everything since v3.0; the full list in [`CHANGELOG.md`](CHANGELOG.md)). **Tested in the game** on BeamNG.drive 0.40.1 (Windows, Direct3D 12, RTX 4070, 2560 × 1440): it loads in about 230 s, uses 6.7 GB of RAM and 5.8 GB of video memory at its peak and runs at 62–134 FPS at 13 fixed places; no missing textures, no squares among the far trees. The AI traffic stalls (see [Known limitations](#known-limitations)). The screenshots below are from that test, the whole test in [`beamng/verifica/v3.0.40/ingame_test_report.md`](beamng/verifica/v3.0.40/ingame_test_report.md).
+v3.0.40 adapts the map to BeamNG.drive 0.40 and includes the fixes and additions since v3.0. The full list is in [`CHANGELOG.md`](CHANGELOG.md).
 
-**What changed**
+**In-game test:** BeamNG.drive 0.40.1 on Windows, Direct3D 12, RTX 4070, at 2560 × 1440. The map loads in about 230 seconds, uses 6.7 GB of RAM and 5.8 GB of video memory at peak, and runs at 62–134 FPS at 13 fixed locations. The test found no missing textures and no squares among the distant trees. AI traffic still stalls; see [Known limitations](#known-limitations). The complete test report is in [`beamng/verifica/v3.0.40/ingame_test_report.md`](beamng/verifica/v3.0.40/ingame_test_report.md).
 
-- **Made for BeamNG.drive 0.40.** 0.40 moved 73 of the game's files the map uses (mostly the textures of Italy) to new folders, and three of them left nothing at the old place: the stone walls and some plastic parts showed missing textures. The map points at the new places. 192 textures that were identical copies (the outlines of the bus stop signs, the direction signs of one shape) are now one file each, so the game converts and keeps fewer of them at every start.
-- **Road wear without light patches or holes.** The tyre tracks, patches and cracked stretches take the shadows of cars, trees and walls (they stayed very light under them), go on without breaks through junctions, lay-bys and bridges (tyre tracks 270 → 325 km), and the bare road no longer shows through them (from 1–5 % of their area to 0.06 %).
-- **Traffic by the Swiss rules.** The AI roads are welded at the junctions (235 of 242 km in one network) and have no jumps in width; Swiss speed limits from 20 to 80 km/h, a lane each way on two-way roads from 4.5 m, the AI stops at the STOP signs and gives way at the give-way lines; European cars in the traffic. In the game the traffic still stalls around the player's car (see [Known limitations](#known-limitations)). Where a footpath area meets a road, the road keeps its height to the edge of the carriageway (no more steps of 1–2.5 m in the lane, e.g. on Via Cantonale).
-- **Caslano and Arosio whole.** The whole municipality of Caslano on land, with the golf course, the lakeside to the Torrazza and the whole Monte Caslano, and the whole village of Arosio: the map grows from 56.0 to 58.6 km² (issue #16).
-- **Churches and bell towers you recognise** (issue #11): bell chambers with their bells under a cornice, clock faces lit at night on the tall towers, crosses, portals, rose windows, arched windows, granite plinths and stone quoins, also on round towers (Novaggio), towers with a lantern (Agno) and towers inside a village block (Bedigliora); stone churches where the photos show bare stone (Novaggio, Santo Stefano in Miglieglia, San Michele in Arosio, Mugena).
-- **The Monte Lema cable car** from Miglieglia, with its ropes, lattice pylons and blue and green cabins, and the white radar dome and mast on the summit.
-- **Four time trials** as missions of the game, with checkpoints and its leaderboard: the hillclimbs Magliaso – Pura (3.7 km, +238 m) and the Penudria Gravesano – Arosio (4.1 km, +491 m), the hairpins Astano – Banco (3.0 km) and the village stage Novaggio – Miglieglia – Breno (5.6 km), each also the other way round. Up to v3.0 the map was free roam only.
-- **The sound of water.** The game's own water sounds near the roads: the rivers (Magliasina, Tresa, Vedeggio), the streams where a road crosses them and the waves of the lake shore, 174 places. BeamNG.drive 0.40 has no church bells, birds or crickets to add.
-- **Walls without holes** (issue #76): the roadside walls of the cantonal road are closed at their ends and at the back (one saw under their top into the bank where they stop), their feet reach under the asphalt and the steep ground, and the tops of wall pieces of different heights are no longer pulled down where they meet.
-- **Fewer steps on the roads**: the big step after the hairpin below Astano towards Banco, the steps on narrow roads and junctions at Vezio and Arosio, the bridge heads; no more trees standing in the road at Vezio.
-- **Direction signs at every junction with a main road**, pointing to the villages each road reaches first, before the junction and on the side they point to.
-- **Hedges and fountains from open street photos** (around Pura, Miglieglia and Novaggio for now): hedges where the photos see a hedge and none where they see a wall or a fence, and the village fountains of OpenStreetMap as granite basins with their pillar and spout.
-- **In English in the game's level list**, shorter, with the aerial shot over Novaggio as the preview.
+#### What changed
 
-**On the roads**
+- **Compatibility with BeamNG.drive 0.40.** The game moved 73 files used by the map, mostly textures from Italy, into new folders. The map now points to the new paths, fixing missing textures on stone walls and some plastic parts. Another 192 duplicate textures have been consolidated, reducing the files the game needs to convert and cache.
+- **Road wear without bright patches or gaps.** Tyre tracks, patches and cracked stretches now receive shadows from cars, trees and walls and continue through junctions, lay-bys and bridges (the track coverage grew from 270 to 325 km). Bare road showing through the wear was reduced from 1–5% of its area to 0.06%.
+- **Traffic follows Swiss rules.** The AI roads are connected at junctions (235 of 242 km in one network) and have no abrupt width changes. Speed limits range from 20 to 80 km/h; two-way roads at least 4.5 m wide get one lane each way; traffic responds to STOP and give-way signs, with European cars. Traffic can still stall around the player's car. Where a footpath meets a road, the road now remains level to the edge of the carriageway.
+- **Caslano and Arosio are complete.** The map includes Caslano's golf course, lakeside up to Torrazza and all of Monte Caslano, as well as the whole village of Arosio. The area grows from 56.0 to 58.6 km² ([issue #16](https://github.com/wintrymichi/magliasinaNG/issues/16)).
+- **Churches and bell towers.** Added recognisable bell chambers, bells, illuminated clock faces, crosses, portals, rose windows, arched windows, granite plinths and stone quoins. Details include Novaggio's round towers, Agno's lantern tower and towers embedded in Bedigliora's village blocks. Bare-stone churches are represented as stone where the photos show it ([issue #11](https://github.com/wintrymichi/magliasinaNG/issues/11)).
+- **The Monte Lema cable car.** The route from Miglieglia has ropes, lattice pylons and blue and green cabins; the summit has its white radar dome and mast.
+- **Four time trials.** Missions with checkpoints and the game's leaderboard: Magliaso–Pura (3.7 km, +238 m), Gravesano–Arosio over the Penudria (4.1 km, +491 m), Astano–Banco (3.0 km) and Novaggio–Miglieglia–Breno (5.6 km). Every route can also be driven in reverse. Up to v3.0 the map was free roam only.
+- **Water sounds.** The game's water audio is placed near rivers (Magliasina, Tresa and Vedeggio), streams crossing roads and the lakeshore, at 174 locations. BeamNG.drive 0.40 does not provide church bells, birds or crickets.
+- **Walls without holes** ([issue #76](https://github.com/wintrymichi/magliasinaNG/issues/76)). Cantonal-road walls are closed at their ends and backs; their feet reach beneath the asphalt and steep ground, and adjoining pieces of different heights no longer pull their tops down.
+- **Smoother roads.** Fixed the large step after the hairpin below Astano towards Banco, steps on narrow roads and junctions in Vezio and Arosio, and bridge approaches. Trees no longer stand in the road at Vezio.
+- **Direction signs at main-road junctions.** Signs point to the villages reached first, positioned before the junction on the side they indicate.
+- **Hedges and fountains from open street photos.** Mapillary, Panoramax and KartaView images help distinguish hedges from walls and fences and locate village fountains; only positions and derived votes are kept, not the images.
+- **A clearer level-list entry.** The in-game name is shorter, in English, and uses the aerial view over Novaggio as its preview.
 
-*Behind an ETK 800 in the right-hand lane (the test's driver's-seat camera did not take: the game kept its chase camera).*
+#### On the roads
 
-| | |
-|---|---|
-| ![The cantonal road above the Magliaso junction: the buttressed stone walls, textured again on 0.40](beamng/verifica/screenshots/v3.0.40/road-magliaso-stone-walls.jpg)<br>*The cantonal road above the Magliaso junction: the buttressed stone walls, textured again on 0.40* | ![Up the cantonal road to Pura: a stone wall and the tyre tracks in its shade](beamng/verifica/screenshots/v3.0.40/road-pura-wall-wear.jpg)<br>*Up the cantonal road to Pura: a stone wall and the tyre tracks in its shade* |
-| ![Novaggio – Miglieglia: tyre tracks and patches in the shade of the trees](beamng/verifica/screenshots/v3.0.40/road-novaggio-miglieglia-wear.jpg)<br>*Novaggio – Miglieglia: tyre tracks and patches in the shade of the trees* | ![The cantonal road between Magliaso and Pura](beamng/verifica/screenshots/v3.0.40/road-cantonale-pura.jpg)<br>*The cantonal road between Magliaso and Pura* |
-| ![Astano – Banco, along a high stone wall](beamng/verifica/screenshots/v3.0.40/road-astano-banco-wall.jpg)<br>*Astano – Banco, along a high stone wall* | ![A roadside wall of the cantonal road to Pura, closed at the back and at its ends (issue #76)](beamng/verifica/screenshots/v3.0.40/wall-cantonale-pura.jpg)<br>*A roadside wall of the cantonal road to Pura, closed at the back and at its ends (issue #76)* |
-| ![Caslano, on the west side of Monte Caslano](beamng/verifica/screenshots/v3.0.40/road-caslano.jpg)<br>*Caslano, on the west side of Monte Caslano* | ![Arosio, in the village (whole since v3.0.40)](beamng/verifica/screenshots/v3.0.40/road-arosio.jpg)<br>*Arosio, in the village (whole since v3.0.40)* |
-| ![Novaggio, the main road through the village](beamng/verifica/screenshots/v3.0.40/road-novaggio.jpg)<br>*Novaggio, the main road through the village* | ![Magliaso, towards the junction of the cantonal road](beamng/verifica/screenshots/v3.0.40/road-magliaso.jpg)<br>*Magliaso, towards the junction of the cantonal road* |
-
-**Time trials**
-
-*The car stands on the route of each race; the races were not driven in the test.*
+*Screenshots show an ETK 800 from the chase camera in the right-hand lane. The test's driver's-seat camera did not activate.*
 
 | | |
 |---|---|
-| ![The start of the hillclimb Magliaso – Pura, at the Magliaso roundabout](beamng/verifica/screenshots/v3.0.40/race-magliaso-pura-start.jpg)<br>*The start of the hillclimb Magliaso – Pura, at the Magliaso roundabout* | ![On the Penudria, Gravesano – Arosio](beamng/verifica/screenshots/v3.0.40/race-penudria.jpg)<br>*On the Penudria, Gravesano – Arosio* |
-| ![In the hairpins Astano – Banco](beamng/verifica/screenshots/v3.0.40/race-astano-banco.jpg)<br>*In the hairpins Astano – Banco* | ![The village stage Novaggio – Miglieglia – Breno](beamng/verifica/screenshots/v3.0.40/race-novaggio-breno.jpg)<br>*The village stage Novaggio – Miglieglia – Breno* |
+| ![Cantonal road above the Magliaso junction, with stone walls textured again on 0.40](beamng/verifica/screenshots/v3.0.40/road-magliaso-stone-walls.jpg)<br>*Cantonal road above the Magliaso junction, with stone walls textured again on 0.40* | ![Stone wall and tyre tracks in the shade on the road to Pura](beamng/verifica/screenshots/v3.0.40/road-pura-wall-wear.jpg)<br>*Stone wall and tyre tracks in the shade on the road to Pura* |
+| ![Tyre tracks and shaded patches between Novaggio and Miglieglia](beamng/verifica/screenshots/v3.0.40/road-novaggio-miglieglia-wear.jpg)<br>*Novaggio–Miglieglia: tyre tracks and shaded patches* | ![Cantonal road between Magliaso and Pura](beamng/verifica/screenshots/v3.0.40/road-cantonale-pura.jpg)<br>*Cantonal road between Magliaso and Pura* |
+| ![Astano–Banco along a high stone wall](beamng/verifica/screenshots/v3.0.40/road-astano-banco-wall.jpg)<br>*Astano–Banco along a high stone wall* | ![Roadside wall on the cantonal road to Pura, closed at the back and ends](beamng/verifica/screenshots/v3.0.40/wall-cantonale-pura.jpg)<br>*Roadside wall on the cantonal road to Pura, closed at the back and ends (issue #76)* |
+| ![Caslano, west side of Monte Caslano](beamng/verifica/screenshots/v3.0.40/road-caslano.jpg)<br>*Caslano, west side of Monte Caslano* | ![Arosio village, complete since v3.0.40](beamng/verifica/screenshots/v3.0.40/road-arosio.jpg)<br>*Arosio village, complete since v3.0.40* |
+| ![Main road through Novaggio](beamng/verifica/screenshots/v3.0.40/road-novaggio.jpg)<br>*Main road through Novaggio* | ![Magliaso towards the cantonal-road junction](beamng/verifica/screenshots/v3.0.40/road-magliaso.jpg)<br>*Magliaso towards the cantonal-road junction* |
 
-**Churches, the cable car and the view from above**
+#### Time trials
+
+*The screenshots show the car positioned on each route. The races were not driven as part of this test.*
 
 | | |
 |---|---|
-| ![The church of Agno and its bell tower, from the road](beamng/verifica/screenshots/v3.0.40/church-agno.jpg)<br>*The church of Agno and its bell tower, from the road* | ![Miglieglia from above, with a lattice pylon of the Monte Lema cable car](beamng/verifica/screenshots/v3.0.40/lema-cable-car-miglieglia.jpg)<br>*Miglieglia from above, with a lattice pylon of the Monte Lema cable car* |
-| ![The slopes above Novaggio on 0.40: far trees, no squares](beamng/verifica/screenshots/v3.0.40/overview-far-trees-040.jpg)<br>*The slopes above Novaggio on 0.40: far trees, no squares* | ![Monte Caslano, whole since v3.0.40, and the lake](beamng/verifica/screenshots/v3.0.40/overview-monte-caslano.jpg)<br>*Monte Caslano, whole since v3.0.40, and the lake* |
-| ![Arosio from above, the whole village](beamng/verifica/screenshots/v3.0.40/overview-arosio.jpg)<br>*Arosio from above, the whole village* |   |
+| ![Start of the Magliaso–Pura hillclimb at the Magliaso roundabout](beamng/verifica/screenshots/v3.0.40/race-magliaso-pura-start.jpg)<br>*Start of the Magliaso–Pura hillclimb at the roundabout* | ![The Penudria, Gravesano–Arosio](beamng/verifica/screenshots/v3.0.40/race-penudria.jpg)<br>*The Penudria, Gravesano–Arosio* |
+| ![Hairpins on the Astano–Banco route](beamng/verifica/screenshots/v3.0.40/race-astano-banco.jpg)<br>*Hairpins on the Astano–Banco route* | ![Village stage Novaggio–Miglieglia–Breno](beamng/verifica/screenshots/v3.0.40/race-novaggio-breno.jpg)<br>*Village stage Novaggio–Miglieglia–Breno* |
 
+#### Churches, cable car and views from above
+
+| | |
+|---|---|
+| ![Church of Agno and its bell tower, viewed from the road](beamng/verifica/screenshots/v3.0.40/church-agno.jpg)<br>*Church of Agno and its bell tower, viewed from the road* | ![Miglieglia from above, with a Monte Lema cable-car pylon](beamng/verifica/screenshots/v3.0.40/lema-cable-car-miglieglia.jpg)<br>*Miglieglia from above, with a Monte Lema cable-car pylon* |
+| ![Slopes above Novaggio on BeamNG 0.40, with no squares among distant trees](beamng/verifica/screenshots/v3.0.40/overview-far-trees-040.jpg)<br>*Slopes above Novaggio: no squares among distant trees* | ![Monte Caslano and the lake, with the whole area present since v3.0.40](beamng/verifica/screenshots/v3.0.40/overview-monte-caslano.jpg)<br>*Monte Caslano and the lake* |
+| ![Complete village of Arosio viewed from above](beamng/verifica/screenshots/v3.0.40/overview-arosio.jpg)<br>*Arosio viewed from above* |
 ### Coming in v3.1
 
 > v3.1 is the next version, in the works now. The pictures below are **3D renders of the test level, not in-game screenshots**: the v3.0.40 level on the left, the v3.1 fix on the right. Nothing of this is in a release yet.
