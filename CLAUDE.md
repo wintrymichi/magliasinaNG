@@ -80,6 +80,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   25 within 150 m matches the signs.
 - Roundabout give-way points found on the OSM ways landed on the ring: move them onto the entry road's
   incoming lane (snap_ring_signals), or the game binds them to the ring.
+- The traffic test script said to install it flat as magliaso_traffic.lua; the game looks for
+  magliaso/traffic.lua, so the first in-game run had no extension. be:getLastFrameDeltaTime does not exist in 0.40.1.
+- Traffic test 2026-10-20 (0.40.1): all 12 traffic cars ended up stopped around the player's car, which stood in
+  the lane of the cantonal road at the default spawn. The AI queues behind a standing car and the game respawns
+  only far, unseen cars. Test traffic with the player driving or parked off the carriageway.
 - A workflow edited by a script got a mis-indented step and failed at once on GitHub (no jobs): check every
   edited workflow with `python3 -c "import yaml; yaml.safe_load(open(f))"` before pushing.
 

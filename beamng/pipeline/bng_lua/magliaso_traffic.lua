@@ -1,5 +1,5 @@
 -- Traffic and AI test of the magliaso_pura level (v3.0.40): what the game made of the AI roads, and how its traffic drives.
--- Copy to <user>/lua/ge/extensions/magliaso_traffic.lua and start the game with
+-- Copy to <user>/lua/ge/extensions/magliaso/traffic.lua (the underscore of the name is a folder) and start with
 --   BeamNG.drive.x64 -level magliaso_pura -onLevelLoad_ext magliaso_traffic
 -- Options (optional): <user>/magliaso_traffic/options.json
 --   {"traffic": 12, "parked": 30, "duration": 900, "every": 2, "quit": false}
