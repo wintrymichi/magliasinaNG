@@ -100,6 +100,32 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Render cameras placed along an OSM line ended inside houses; put them over the carriageway mesh, at the
   height of the mesh, and aim at the object's real position, not the planned one (it moves when it is placed).
 
+## Bridges and survey data (v3.1, Magliasina bridge at the Magliaso roundabout)
+
+- The cloud container cannot reach data.geo.admin.ch, geodienste.ch or Overpass (proxy 403), and cannot download
+  Actions artifacts; it can download release assets. `ponte_ref.yml` fetches a swisstopo/survey window on GitHub and
+  commits it; `ponte_test.yml` builds the level to a DRAFT release (not public) whose zip the session can download.
+  The raw window (rif/, 6 MB of swisstopo data) is not kept in git: run ponte_ref.yml on a scratch branch to get it
+  again, and delete the draft release when the test is read.
+- A force-push that rebuilds a branch counts every file as changed: it started ponte_ref.yml and ponte_test.yml
+  (path triggers on their stamps) and the first would have committed the raw data again. Cancel them at once
+  (`gh api -X POST .../actions/runs/<id>/cancel`) or give such workflows only `workflow_dispatch`.
+- A bridge drawn as a strip along the swissTLM3D line is only as wide as one carriageway: the Magliasina bridge is
+  one 25 m deck carrying two roads, and the strip left the river showing through it for three versions. The
+  survey (SOSF ponte_passerella) has the true outline, swissSURFACE3D the deck top (LiDAR class 17).
+- Two swissTLM3D pieces of the SAME line (split at a node on the bridge) were paired as "twin decks" by
+  twin_pairs (collinear, 0 m apart): the twin test does not tell a split line from two carriageways.
+- swissALTI3D slopes down 1-3 m out from a bridge end (the bridge is removed and the abutment smeared): read the
+  ground 1-3 m out (the highest) before calling an edge a drop or a join, or parapets stand across the road.
+- The survey marks channelised stream banks as 'altro_rivestimento_duro' (hard surface): meshed as asphalt they
+  were grey ramps into the river. landcover.channel_linings turns steep ones along a 'corso_acqua' into stones.
+- A big grid is stored by Grid.save as `<name>.npy` + `.json` and the `.npz` is removed: checking
+  `os.path.exists("dsm05.npz")` found nothing and the first test build fit no LiDAR plane (line heights only).
+  Check both names, load with Grid.load("<name>.npz"), and grep the build log for what the step really used.
+- Compare a test build with the last nightly by the road mesh it covers (roads/road_*.dae on a 4 m grid), not only
+  by check_level counts: network_holes rose 418 -> 1417 and the cells showed two causes, the intended banks and
+  network.LakeCut removing the paved yards on the Tresa valley floor (at lake level, 2026-10-21).
+
 ## Meshes
 
 - Floating roofs (v3.1): 620 roofs of swissBUILDINGS3D have no walls at all (canopies, covered parkings, boat houses,

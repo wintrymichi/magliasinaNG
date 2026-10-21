@@ -130,6 +130,8 @@ class Network:
         # them is left beside a deck without a line to take its height from) and the corridor stay out
         import bridges
         decks, decks_av, node_decks, deck_hw = [], [], {}, []
+        # v3.1: the decks on the survey's outline (bridges.survey_decks) as they are, the survey's roads up to them
+        survey = {i: foot for foot, ids in bridges.survey_decks(segs, self.x, self.y, self.w) for i in ids}
         for s in segs:
             if not s["bridge"]:
                 continue
@@ -139,6 +141,10 @@ class Network:
             for nd in s["nodes"]:
                 node_decks.setdefault(nd, []).append(len(decks))
             deck_hw.append(hw)
+            if s["id"] in survey:
+                decks.append(survey[s["id"]])
+                decks_av.append(survey[s["id"]])
+                continue
             decks.append(L.buffer(hw, cap_style="flat"))
             decks_av.append(L.buffer(hw + 1.0, cap_style="flat"))
         ex = [exclude] if exclude is not None else []
