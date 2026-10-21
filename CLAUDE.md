@@ -64,6 +64,27 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
   long step ends.
 
+- Replays keep the time of day they were recorded at; core_environment.setTimeOfDay during playback works only with the
+  replay paused. For sunset or night shots record the replay at that hour (tod 0.245 golden sunset, 0.27 dusk, 0.29
+  lamps on with an orange sky, 0.5 full night, 0.85 morning) ("Video cinematico con pianoforte", 2026-10-21).
+- PowerShell again: script parameters $B/$T collided with variables $b/$t (names ignore case) and the first scripts sent
+  the wrong Lua to the game.
+- On DESKTOP-OUPOLOA downloading code from raw.githubusercontent.com is blocked: test files (e.g. mngluci.lua) have to
+  reach the PC through the thread's folder tools or the coordinator.
+- Wikimedia downloads from that PC: Invoke-WebRequest gets 429; curl.exe with a descriptive User-Agent works.
+- ETK 800 cockpit camera placed by hand: offset from the reference node forward -0.3, left 0.4, up 0.92 m (forward 0
+  ends outside the windscreen).
+- SendUserFile takes files under 20 MB.
+
+## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
+
+Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), level coordinates:
+- a street lamp on the edge of the carriageway at Pura, about (288, -892): hit twice;
+- the inner guard rail of the hairpin about (-206, -220) on the Magliaso-Pura road;
+- a post on a traffic island in Magliaso village, about (1111, -963);
+- on the route spawn_magliaso -> spawn_pura, between nodes 10 and 14, a junction where the AI road drops 4 m from the
+  lower road to the upper one: the car ends against a wall.
+
 ## Terrain fixes
 
 - Terrain heights are written in several places, in this order: the road carve override (`terrain_override`,
