@@ -244,6 +244,14 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   SpotLight aimed down (rotationMatrix [1,0,0, 0,0,-1, 0,1,0]; s_lamp_post_street_single_01 1500 lm, range 30,
   inner/outer 100/140; highway 7500 lm from 12 m), brightness = lumen/5000, nightLight "1", isEnabled false.
   Read Italy's values from `content/levels/italy.zip` on the PC before guessing a light's numbers.
+- Calibrating lights live in the game without a build: a GE extension in the user folder
+  (`lua/ge/extensions/<name>.lua`), michi pastes one console line, it swaps the lights, takes one screenshot per variant
+  (`require("screenshot").createScreenshotTracked`) into `screenshots/` and writes a report; read them through the
+  approved user folder. In 0.40 `getObjectsByClass("PointLight")` returned nothing and `getField("nightLight")` did not
+  match: list lights with `scenetree.findSubClassObjects("LightBase")` as core_environment does (two wasted rounds).
+  A file-polling "run any Lua" hook in the game was refused by the permission check: keep the test fixed.
+- In a night view from above, the big white cone was the player car's headlights, not a lamp: turn them off first.
+- Spot lumen barely changed the picture (3000 vs 6000 alike); range and cone width did.
 - fuel_stations.LIGHT (the canopy lights) is defined but never placed: the v3.0.40 zip has no light but the lamps'.
 
 ## Traffic and AI
