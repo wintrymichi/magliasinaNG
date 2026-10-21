@@ -7,8 +7,6 @@ name: ponte magliaso reference data
 
 on:
   workflow_dispatch:
-  push:
-    paths: [beamng/verifica/ponte_magliaso/rif_stamp.txt]
 
 permissions:
   contents: write

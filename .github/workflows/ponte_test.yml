@@ -6,8 +6,6 @@ name: ponte magliaso test build
 
 on:
   workflow_dispatch:
-  push:
-    paths: [beamng/verifica/ponte_magliaso/test_stamp.txt]
 
 concurrency:
   group: ponte-test-${{ github.ref }}
