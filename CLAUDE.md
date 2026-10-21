@@ -33,6 +33,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   `kwin_wayland --virtual --xwayland --width 2560 --height 1440 --socket wl-mng --exit-with-session <script>` with
   `SDL_VIDEODRIVER=x11` (the plain launch hung at startup with the screen off). Measure before/after in the same setup.
 - An extension name `magliaso_v31` loads `lua/ge/extensions/magliaso/v31.lua` (the underscore is a folder).
+  The v3.0.40 traffic runner still installed `magliaso_traffic.lua` flat and the game never ran it (2026-10-21): check
+  every new runner script against this line.
 - `gz()` (getSurfaceHeightBelow) hits roofs: give cameras near buildings absolute heights.
 - The game's sites (`city.sites.json`, `facilities.sites.json`) need an `oldId` on every spot and zone, or the level
   stops loading with a Lua error.
@@ -53,6 +55,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   ("Irreversible Local Destruction"), so the v3.0 comparison run (swap the zips) was dropped (2026-10-21). Plan a test
   that needs another version as a second install or ask michi to swap the zip himself; and the game had auto-updated
   overnight (0.40 -> 0.40.1): read the version in the log before comparing with an earlier test.
+- After stop_rc_session the thread's folder tools (device_list_dir, device_stage_files) never came back (2026-10-21,
+  only get_device_info and the computer tools were offered, also to a fresh subagent): the test results were stuck on
+  the PC. Copy what you need off the PC while you still have a route; the fallback was an RC session packing one zip
+  (PowerShell + .NET) on the Desktop for michi to drag into the thread. PowerShell variable names ignore case: `$w`
+  and `$W` are one variable (the first packing attempt wrote nowhere).
 - A Remote Control session started from a thread reports only to that thread (@parent): forward its notes to the
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
   long step ends.
