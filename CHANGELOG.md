@@ -10,6 +10,7 @@ Already in the code after the v3.0.40 zip (nightly #2), in the next build:
 - **No road under the lake at the Caslano slipway** (`network.LakeCut`): the surveyed carriageway polygon of the slipway went on into the lake (30 road faces under the water in v3.0.40); the surveyed paved polygons and road strips now stop at the shore, cut only where the ground as low as the lake touches the surveyed lake (the floor of the Tresa valley below Ponte Tresa is as low, and a first version cut away its yards and roads).
 - **Arosio's north edge in the OpenStreetMap extracts** (`download_osm.py --add`, from the Geofabrik extract): the roads and places of the strip of Arosio the extract did not cover.
 - **The far trees' imposters come from the build** (`far_trees.prebaked`): v3.0.40 got them by a patch of its zip; `check_level` counts far models without them (`far_models_without_imposters`).
+- **Street lamps that light the road at night** (`props.lamp_light`, `lamps.lamps_step`): every lamp had a PointLight of 14 m radius under its head, 8.4 m up: it lit a small pool under the lamp and left the 30 m between two lamps dark. Now a SpotLight aimed down, as the game's Italy level lights its road lamps (range 32 m, cone 145°, 3000 lm, warm 3845 K, still without shadows and on only at night); the lights already in the zip the step reads are rebuilt the same way.
 
 ## v3.0.40 (20 October 2026)
 
