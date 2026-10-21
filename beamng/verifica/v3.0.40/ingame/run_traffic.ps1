@@ -9,7 +9,7 @@ $here = $PSScriptRoot
 if (Get-Process "BeamNG.drive.x64" -ErrorAction SilentlyContinue) { throw "BeamNG is running: close it first" }
 $out = Join-Path $User "magliaso_v3040_out\traffic"
 New-Item -ItemType Directory -Force $out | Out-Null
-$extFile = Join-Path $User "lua\ge\extensions\magliaso_traffic.lua"
+$extFile = Join-Path $User "lua\ge\extensions\magliaso\traffic.lua"     # the extension magliaso_traffic (_ = folder)
 New-Item -ItemType Directory -Force (Split-Path $extFile) | Out-Null
 Copy-Item (Join-Path $here "magliaso_traffic.lua") $extFile -Force
 $work = Join-Path $User "magliaso_traffic"

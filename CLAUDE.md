@@ -33,6 +33,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   `kwin_wayland --virtual --xwayland --width 2560 --height 1440 --socket wl-mng --exit-with-session <script>` with
   `SDL_VIDEODRIVER=x11` (the plain launch hung at startup with the screen off). Measure before/after in the same setup.
 - An extension name `magliaso_v31` loads `lua/ge/extensions/magliaso/v31.lua` (the underscore is a folder).
+  The v3.0.40 traffic runner still installed `magliaso_traffic.lua` flat and the game never ran it (2026-10-21): check
+  every new runner script against this line.
 - `gz()` (getSurfaceHeightBelow) hits roofs: give cameras near buildings absolute heights.
 - The game's sites (`city.sites.json`, `facilities.sites.json`) need an `oldId` on every spot and zone, or the level
   stops loading with a Lua error.
