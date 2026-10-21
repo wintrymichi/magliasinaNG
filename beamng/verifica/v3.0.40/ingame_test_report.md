@@ -56,10 +56,19 @@ frames counted over 5 s after a warm-up pass over every place and 3 s to settle:
 ## Screenshots
 
 28 views of what is new in v3.0.40 and one of the traffic, all taken with the game's own screenshot
-(`createScreenshot2`), each after 20 s for the textures to load: from the driver's seat of an ETK 800 in the right-hand
-lane, behind the car at the starts and checkpoints of the time trials, the churches and the cable car from the roads
+(`createScreenshot2`), each after 20 s for the textures to load: an ETK 800 in the right-hand lane (planned from the
+driver's seat; `core_camera.setByName(0, "driver")` did not take and the game kept its chase camera, so these are views
+from behind the car), the car on the routes of the time trials, the churches and the cable car from the roads
 around them (every one found a road point with a clear view), and from above. No white or grey squares among the far
-trees (`overview-far-trees-040`). The pictures are in [`../screenshots/v3.0.40/`](../screenshots/v3.0.40/).
+trees (`overview-far-trees-040`).
+
+19 of them are in [`../screenshots/v3.0.40/`](../screenshots/v3.0.40/) and in the README, the views behind the car
+renamed from `cockpit-*` to `road-*`. Left out: Bedigliora at night and at dusk (black: time of day 0.5 and 0.4 are real
+night there), the churches of Miglieglia and Novaggio and the fountain (the road point found had a wall or an alley in
+front), the cable car from the road (no cable car in view), the summit of Monte Lema (meadows off the roads in front),
+two road views like others kept, and the second Astano – Banco view (car at about (-3680, 2134) looking east): the top
+of the high wall on the hill side has V-shaped notches down into the wall, with the slope showing through them. That is a
+defect of the level still to look at (the wall checks of the build count no notches there).
 
 ## Traffic
 
@@ -76,7 +85,11 @@ links, with the signals running and 10,912 parking spots. Then:
   9,683: they ran into each other), and the game moved only 2 of them elsewhere.
 
 So the traffic stalls whatever the place: it gathers around the player's car standing still, queues or crashes into
-itself there and never clears. TRAFFIC_CAUSE
+itself there and never clears.
+
+The pattern is the same in both runs: the cars stop where the player's car is, not at the signals. At the default spawn, six of the cars stand in one line about 9.5 m apart behind the player's car, from 9 to 57 m back on the cantonal road coming down to the Magliaso roundabout (`strada_cantonale3…7`), heading for it, undamaged: the player's car stands in their lane 15 m before the give way into the roundabout (`give_way 226`), and they wait behind it to the end. Beyond it one car (damage 9,683) ran into another 1 m from that give way, and one more stands 4 m in front of the player's car on the link into the cantonal road. 130 m away two cars stand at another give way (`give_way 218`), one of them crashed (6,118). One car near the STOP of the Magliaso junction (`stop 151`) was damaged in its first second (3,771) and holds one behind it. The game respawned only 2 of the 12 (`respawns` 1), and both came back into the same queue. In the first run, on the open cantonal road, all 12 stopped 13–133 m from the ETK, 150–330 m from the nearest signal. One car first appeared outside the terrain (y = −10,270 m, z = 0.2) and the game moved it back.
+
+So the traffic is set up right (network, signals, parking), and what stops it is the player's car standing on the carriageway, which the AI does not drive past, the crashes at give-way points, and the respawn that leaves the stuck cars where they are while they are near the player. The level's default spawn on the carriageway makes it happen at every start. Not tested: the traffic with the player driving. The data (`traffic.json`, `state.json`, `signals.json`) went to the traffic thread; issue #83.
 
 ## Errors and warnings in the log
 
