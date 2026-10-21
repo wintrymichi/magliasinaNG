@@ -238,6 +238,12 @@ def stage_roads(scene, ctx):
             gi = gi.difference(fresh)
         items.append((gi, mat, cell, uvt, pid))
 
+    # v3.1: the decks on the survey's outline (bridges.survey_decks) take the place of the surfaces under them
+    sfoot = [f for f, _ in bridges.survey_decks()]
+    if sfoot:
+        su = shapely.union_all(sfoot)
+        items = [(gi.difference(su) if gi.intersects(su) else gi, *rest) for gi, *rest in items]
+
     def key_fn(pid):
         return lambda x, y: S.surfaces_at_polygon(x, y, pid)
 

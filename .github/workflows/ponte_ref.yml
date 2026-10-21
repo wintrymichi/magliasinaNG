@@ -1,0 +1,35 @@
+# Reference data of the Via Cantonale bridges over the Magliasina at the Magliaso roundabout (v3.1, thread "Ponte di
+# Magliaso dai satelliti"): swisstopo open data of a 240 m window around them (SWISSIMAGE 10 cm orthophoto,
+# swissSURFACE3D LiDAR points, swissALTI3D and swissSURFACE3D rasters, swissTLM3D roads and streams), cut out and
+# committed to the branch that ran it in beamng/verifica/ponte_magliaso/rif/. The cloud sessions cannot reach
+# data.geo.admin.ch, GitHub can. Runs when beamng/verifica/ponte_magliaso/rif_stamp.txt changes.
+name: ponte magliaso reference data
+
+on:
+  workflow_dispatch:
+  push:
+    paths: [beamng/verifica/ponte_magliaso/rif_stamp.txt]
+
+permissions:
+  contents: write
+
+jobs:
+  ref:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependencies
+        run: pip install numpy scipy shapely rasterio pyproj pillow requests laspy[lazrs] pyogrio
+      - name: Download and cut
+        run: python beamng/verifica/ponte_magliaso/rif_fetch.py "$RUNNER_TEMP/dl" beamng/verifica/ponte_magliaso/rif
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add beamng/verifica/ponte_magliaso/rif
+          git commit -m "Magliasina bridges: swisstopo reference window (ponte_ref.yml)" || exit 0
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 5; done
