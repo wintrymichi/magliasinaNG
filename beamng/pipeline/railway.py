@@ -47,6 +47,7 @@ STEP = 1.0                    # m between the stations of a track
 XY_SMOOTH = 3.0               # m, smoothing of the line sideways (swissTLM3D vertices)
 LEVEL_DZ = 0.6                # m, a road mesh this close to the bed is a level crossing
 RAISE = 2.5                   # m, the line may stand this far over the terrain of the level (on an embankment)
+LIFT = 0.3                    # m, the bed sits at most this far over the middle of the ground across it (v3.1)
 COVER = 1.0                   # m, a line this far under the terrain across its whole bed runs under a deck: left out
 CARVE_W = 0.3                 # m of the terrain lowered beyond the ballast (carve_terrain)
 CARVE_MAX = 4.0               # m, deepest the terrain is lowered under a track
@@ -128,7 +129,10 @@ def carve_terrain(H, xs, ys, keep=None):
         low = minimum_filter1d(low, 13)                                                          # +- 3 m
         deck = maximum_filter1d((np.isfinite(low) & (low > COVER)).astype(np.uint8), 13) > 0   # +- 3 m
         target = z + np.maximum(d - half, 0.0) * CUT_SLOPE
-        cut = (h > target) & (h - target <= CARVE_MAX) & ~deck[j[inb]]
+        # v3.1: within one terrain step of the bed every vertex is lowered, however high: a lone vertex of the ground
+        # on top of a wall beside the line (raised with the pavement up there) stood 4.1 m over the cutting, more than
+        # CARVE_MAX, was kept, and build() lifted the track 2.5 m onto it (Caslano - Ponte Tresa, at -361, -2326)
+        cut = (h > target) & ((h - target <= CARVE_MAX) | (d <= half + sq)) & ~deck[j[inb]]
         if keep is not None:
             # v3.0: the ground of a road (a pavement) standing KEEP_DROP m or more over the cutting is lowered too,
             # under the edge of its mesh, whose skirt reaches down to the cutting (bed_fn): kept, it stood at the
@@ -285,8 +289,14 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
             # the bed: on top of the terrain across its whole width, smoothed along the line
             offs = np.linspace(-half + 0.2, half - 0.2, 7)
             Z = np.stack([terrain_top(P[:, 0] + N[:, 0] * o, P[:, 1] + N[:, 1] * o) for o in offs], 1)
-            top_t = Z.max(1)
+            # v3.1: the bed stands on the ground across it, not on a tooth or the foot of a wall or bank at its edge
+            # (no higher than LIFT over the middle of the samples): one terrain vertex 4 m high at the edge of the
+            # bed lifted the track 2.5 m in a few metres, up a ramp of sleepers and into the wall beside the line
+            top_t = np.minimum(Z.max(1), np.median(Z, 1) + LIFT)
             covered = gaussian_filter1d((P3[:, 2] < Z.min(1) - COVER).astype(float), 2.0, mode="nearest") > 0.2
+            # v3.1: the ground over a covered piece (the deck over the tracks of the Ponte Tresa station) is not
+            # smoothed into the bed beside it: the four tracks climbed a metre up to the face of the deck
+            top_t = np.where(covered, np.minimum(top_t, P3[:, 2]), top_t)
             bed = gaussian_filter1d(top_t + np.clip(P3[:, 2] - top_t, 0.0, RAISE), SMOOTH / STEP / 2, mode="nearest")
             bed = np.maximum(bed, top_t - 0.02)
             stats["covered_m"] += float(covered.sum() * STEP)
