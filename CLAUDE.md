@@ -101,6 +101,16 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - Do not tell the side of a wall from a vertex's own height: the DTM smears walls into slopes. Read the
   ground a few metres out on both sides (walls.wall_side), and read beyond any vertex that may itself be raised.
 - Anything that raises ground near the railway must respect its bed (railway.bed_fn, network_mesh rail caps).
+- railway.carve_terrain kept every vertex more than CARVE_MAX (4 m) over the cutting, also one beside the bed: a lone
+  vertex of the ground on top of the wall north of the line between Caslano and Ponte Tresa (-361,-2326) stood 4.1 m
+  over it, and railway.build, which took the HIGHEST terrain sample across the bed, lifted the track 2.5 m onto it in a
+  few metres: rails up a ramp of sleeper steps into the wall (seen in the piano video, v3.0.40; also 5 teeth at Agno
+  near 2090,0). Now the carve lowers any vertex within one terrain step of the bed, and the bed sits at most LIFT
+  (0.3 m) over the median of the samples. The same max sample made the 4 tracks at Ponte Tresa station climb 1 m to
+  the face of the deck over them: the covered stations no longer feed the bed's smoothing. Checked in the cloud with
+  TLM_EISENBAHN printed into a workflow log (swisstopo blocked here) and railway.build run on the released level
+  (rebuilt "before" matched the released sleepers to the cm). render3d.Level takes the level name from the folder
+  name: a copy of the level in a folder named otherwise draws none of its meshes.
 - A height band is not the lake: network.LakeCut cut every dtm05 cell between lake level -2 m and +0.15 m out of the
   surveyed paved polygons, and the floor of the Tresa valley below Ponte Tresa (268.6-270.5 m, lake 270.48) lost its
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
