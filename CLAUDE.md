@@ -269,10 +269,14 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - The trees' crown radius from the model's bounding box (asset_bounds) is wider than the leaves (median 7.3 m): with
   it no forest floor was ever in a gap (0.03 %). The gap test uses the distance to the nearest trunk instead.
 - A GroundCover places shapes upright on the ground, not along the slope: a 10 m fallen tree on a 30 deg slope hangs
-  5 m in the air. Long models get a low maxSlope (tree_beech_dead_b 9 deg, _a 14 deg).
-- GroundCover density: maxElements are spread over the square of twice the radius, and each picks a type by
-  probability among ALL its types, then is dropped where the type's layer, elevation or slope do not fit
-  (groundcover.density). Adding types for another layer thins the ones already there.
+  5 m in the air. The first limits (9 and 14 deg) still lifted an end 0.7-0.8 m (supervisor review): 4 deg for
+  tree_beech_dead_b, 6 deg for _a.
+- A GroundCover takes at most 8 Types (Torque3D MAX_COVERTYPES; every GroundCover of the game's levels has at most 8).
+  The first version had 16, 34 and 18 in one object each: if the cap holds only the first 8 (all shade rows) would
+  have stayed and the light zone would have had nothing (supervisor review, 2026-10-22). Now one GroundCover per
+  layer, at most 8 Types each, which also stops one layer's types thinning another's (groundcover.density).
+- GroundCover plants have no collision: stumps and 1.5 m stones near a road are drive-through ghosts. Keep them in the
+  shade; in the light only small stones, and every model's reach checked against its box (check_light_reach).
 - A finishing step can only be tried on a released level after undoing what the step itself added: the released
   .ter already has the verge twins and understory_step refuses it. Map the Verge layers back and drop their names
   from the .ter tail, terrain.json and terrain materials (done for the v3.1 test, 85 s for the step).
