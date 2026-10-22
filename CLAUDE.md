@@ -122,6 +122,13 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   of the point and by rendering once with the skin items emptied. steep_skin.foot now runs the skin into the road
   (under its surface, ROAD_DIVE), and the faces over ROCK_DEG are rock (v3.1). The skin is round: only 5 % of it is
   steeper than 55 degrees, so a rock threshold taken from the real cuts (60-80) leaves almost no rock.
+- Clamping the skin lattice under the road surface was not enough (review of 92bf0fd): the rock relief moves points
+  along their normal, sideways onto the road, and clip() cuts new points in along the edges. 3,553 points stood over a
+  road (645 by more than 3 cm, worst 0.60 m). Clamp the FINAL points of every material after the clips (tile_mesh),
+  only up to ROAD_LIFT_MAX over the road ("near" surface: never pull the skin down to a road in a gallery below), and
+  keep the relief small within 2 m of a road (RELIEF_NEAR). The report counts the points before the clamp.
+- road_obstacles (check_level) cannot run on a released folder in the cloud: it needs network.load() data in WORK. The
+  steep_skin report's skin_points_over_road stands in for it for the skin.
 - render3d draws every forest tree as a big cone or crown: views of slopes in woods show only trees. Render from a copy of
   the level without its `forest` folder (cp -al, then rm the folder: the hard links keep the original).
 - A 3x3 median "tooth" scan near the roads found 28,000 vertices, mostly in villages (yards, sidewalks): not a way to find
