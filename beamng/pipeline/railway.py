@@ -41,6 +41,9 @@ SLEEPER_STEP = 0.62
 SLEEPER_W, SLEEPER_H = 0.26, 0.16
 RAIL_W, RAIL_H = 0.07, 0.15
 BALLAST_EXTRA = 0.35          # m of ballast beyond the sleepers on each side
+CRIB = 0.04                   # v3.1: m of the sleepers over the ballast between them (the ballast up to their tops):
+                              # sleepers standing 16 cm out of a flat bed threw the rails' shadow in steps, sleeper
+                              # top, ballast, sleeper top, and the track showed as a brown zigzag (michi, 2026-10-22)
 BALLAST_SLOPE = 0.9           # m out, down to the terrain
 SMOOTH = 6.0                  # m, smoothing of the bed along the line
 STEP = 1.0                    # m between the stations of a track
@@ -320,7 +323,7 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
                 Rc0, Rc1 = P[i] - N[i] * half, P[i + 1] - N[i + 1] * half
                 Lo0, Lo1 = P[i] + N[i] * out[i], P[i + 1] + N[i + 1] * out[i + 1]
                 Ro0, Ro1 = P[i] - N[i] * out[i], P[i + 1] - N[i + 1] * out[i + 1]
-                z0, z1 = base[i], base[i + 1]
+                z0, z1 = base[i] + SLEEPER_H - CRIB, base[i + 1] + SLEEPER_H - CRIB
                 l0, l1 = min(gL[i], z0) - 0.2, min(gL[i + 1], z1) - 0.2
                 r0, r1 = min(gR[i], z0) - 0.2, min(gR[i + 1], z1) - 0.2
                 q += [np.r_[Rc0, z0], np.r_[Lc0, z0], np.r_[Lc1, z1], np.r_[Rc0, z0], np.r_[Lc1, z1], np.r_[Rc1, z1]]
