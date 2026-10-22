@@ -141,6 +141,10 @@ if __name__ == "__main__":
 #   vertices of the terrain squares they touch, and one square around them, go to the verge twins
 #   ForestFloorVerge and ForestFloor2Verge (new terrain materials, the same textures, without the
 #   undergrowth), as the meadows along the roads since v2.4 (terrain.VERGE).
+# v3.1: a wild wood (groundcover.UNDERSTORY_COVERS): ferns, shrubs and brambles, dead wood and stones, sparse in
+#   the shade and thick in the light: the forest floor within EDGE_M of the edge of the wood or in a gap of the
+#   canopy (no trunk within GAP_M) goes to the light twins ForestFloorLight and ForestFloor2Light (the same textures);
+#   the materials of the new models the level lacks go to art/shapes/groundcover/understory.materials.json.
 # The heights of the terrain are not changed; the changed files get the date of the build step. Everything
 # else is copied as it is.
 #
@@ -149,8 +153,16 @@ if __name__ == "__main__":
 
 FLOOR = (62, 66, 42)        # sRGB base colour of the forest floor layers (v2.7: the measured 102, 98, 67)
 TWIN = {m: m + "Verge" for m in groundcover.FOREST_LAYERS}
+LIGHT = groundcover.FOREST_LIGHT
+EDGE_M = 10.0               # v3.1: forest floor this near the edge of the wood (a meadow, road, yard, wall) is in its light
+SPECK_M2 = 400.0            # an opening in the wood smaller than this is no edge
+GAP_M = 9.0                 # forest floor with no trunk this near is a gap of the canopy (the measured trees stand a median
+                            # 5.4 m from a floor vertex; beyond 9 m: about one floor vertex in ten, v3.0.40)
+GAP_WOOD_M = 30.0           # ... when a trunk stands within this (no measured trees at all: not a gap, unknown wood)
+NOT_CANOPY = ("bush", "hedge", "guardrail", "palm", "cypress")   # forest items that cast no canopy over the floor
 SOLID = ("roads/surfaces", "walls", "buildings", "railway")    # nothing grows through these
 STEP = 0.5                  # m between the samples of a face
+UNDER_MATS = "{lv}/art/shapes/groundcover/understory.materials.json"
 
 
 def read_items(zi, name):
@@ -194,6 +206,46 @@ def face_cells(zi, lv, n):
     return cells
 
 
+def trunks(zi, lv):
+    """(k, 2) x, y of the level's trees (its forest items, not the shrubs, hedges or guard rails)."""
+    out = []
+    for f in zi.namelist():
+        if not (f.startswith(f"{lv}/forest/") and f.endswith(".forest4.json")):
+            continue
+        if any(w in os.path.basename(f).lower() for w in NOT_CANOPY):
+            continue
+        out += [o["pos"][:2] for o in read_items(zi, f)]
+    return np.array(out, np.float64).reshape(-1, 2)
+
+
+def light_vertices(lay, names, trees, n):
+    """(n, n) bool, v3.1: the forest floor vertices (FOREST_LAYERS) in the light: within EDGE_M of the edge of the
+    wood (any vertex of another layer: a meadow, a road, a yard, the verge twins) or in a gap of the canopy (no
+    trunk within GAP_M, one within GAP_WOOD_M). Distances on the terrain grid (cv2, L2)."""
+    import cv2
+    forest = np.isin(lay, [names.index(m) for m in groundcover.FOREST_LAYERS])
+    # specks of another layer inside the wood (a few squares of meadow from the land cover) are no edge
+    _, comp, stats, _ = cv2.connectedComponentsWithStats((~forest).view(np.uint8), connectivity=8)
+    speck = stats[:, cv2.CC_STAT_AREA] * TER_SQUARE ** 2 < SPECK_M2
+    speck[0] = False                                                       # label 0: the wood itself
+    inner = forest | speck[comp]
+    del comp
+    d = cv2.distanceTransform(inner.view(np.uint8), cv2.DIST_L2, 5)       # to the nearest vertex not of the wood
+    del inner
+    light = forest & (d * TER_SQUARE <= EDGE_M)
+    del d
+    c = np.round((trees[:, 0] - TER_X0) / TER_SQUARE).astype(np.int64)
+    r = np.round((trees[:, 1] - TER_Y0) / TER_SQUARE).astype(np.int64)
+    ok = (r >= 0) & (r < n) & (c >= 0) & (c < n)
+    free = np.full((n, n), 255, np.uint8)
+    free[r[ok], c[ok]] = 0
+    d = cv2.distanceTransform(free, cv2.DIST_L2, 5) * TER_SQUARE           # to the nearest trunk
+    del free
+    gap = forest & (d > GAP_M) & (d <= GAP_WOOD_M)
+    del d
+    return light | gap, {"edge": int(light.sum()), "gap": int((gap & ~light).sum())}
+
+
 def darker(png, rgb_from, rgb_to):
     """The base texture with every pixel scaled channel by channel from rgb_from to rgb_to (its noise kept)."""
     a = np.asarray(Image.open(io.BytesIO(png)).convert("RGB"), np.float32)
@@ -226,6 +278,15 @@ def understory_step(root, report=None):
         moved[f"{m} -> {t}"] = int(sel.sum())
     forest = int(np.isin(lay, [names.index(m) for m in TWIN]).sum())
     print("forest floor vertices: %d, near roads, paths, walls, buildings, railway: %s" % (forest, moved), flush=True)
+    # ---- v3.1: the forest floor in the light (the edge of the wood, the gaps of the canopy) -> the light twins
+    lit, why = light_vertices(new_lay, names2, trunks(zi, lv), n)
+    for m, t in LIGHT.items():
+        names2.append(t)
+        sel = lit & (new_lay == names2.index(m))
+        new_lay[sel] = names2.index(t)
+        moved[f"{m} -> {t}"] = int(sel.sum())
+    del lit
+    print("forest floor in the light: %s, %s" % (why, {k: v for k, v in moved.items() if "Light" in k}), flush=True)
     tail = struct.pack("<I", len(names2)) + b"".join(struct.pack("<B", len(s.encode())) + s.encode() for s in names2)
     new_ter = data[:5 + 2 * n * n] + new_lay.tobytes() + tail
     assert new_ter[:5 + 2 * n * n] == data[:5 + 2 * n * n]                 # heights as they were
@@ -237,8 +298,9 @@ def understory_step(root, report=None):
     base_of = {}
     for key, m in list(mats.items()):
         if m.get("class") == "TerrainMaterial" and m.get("internalName") in TWIN:
-            tw = dict(m, internalName=TWIN[m["internalName"]], persistentId=bng.pid())
-            mats[f"{tw['internalName']}-{tw['persistentId']}"] = tw
+            for twin in (TWIN, LIGHT):
+                tw = dict(m, internalName=twin[m["internalName"]], persistentId=bng.pid())
+                mats[f"{tw['internalName']}-{tw['persistentId']}"] = tw
             base_of[m["internalName"]] = m["baseColorBaseTex"]
     new[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
     tj_name = f"{lv}/theTerrain.terrain.json"
@@ -252,12 +314,24 @@ def understory_step(root, report=None):
         measured[m] = np.median(a.reshape(-1, 3), 0).round().astype(int).tolist()
         new[f] = darker(zi.read(f), measured[m], FLOOR)
     veg_name = f"{lv}/main/MissionGroup/level_objects/vegetation/items.level.json"
-    veg = [o for o in read_items(zi, veg_name) if o.get("name") not in (groundcover.UNDERSTORY[0], groundcover.MEADOW[0])]
+    ours = {c[0] for c in groundcover.UNDERSTORY_COVERS} | {groundcover.MEADOW[0]}
+    veg = [o for o in read_items(zi, veg_name) if o.get("name") not in ours]
     parent = next((o["__parent"] for o in veg if o.get("class") == "GroundCover"), "vegetation")
-    for u in (groundcover.understory_object(), groundcover.meadow_object()):     # v3.0: and the meadow shrubs
+    for u in groundcover.understory_objects() + [groundcover.meadow_object()]:     # v3.0: and the meadow shrubs
         u["__parent"] = parent
         veg.append(u)
     new[veg_name] = write_items(veg)
+    # v3.1: the materials of the undergrowth models the level does not define yet (ferns, dead wood, stones...)
+    have = set()
+    for f in zi.namelist():
+        if f.startswith(f"{lv}/") and f.endswith("materials.json") and f != UNDER_MATS.format(lv=lv):
+            try:
+                d = json.loads(zi.read(f))
+            except ValueError:
+                continue
+            have |= {v.get("name", k) for k, v in d.items() if isinstance(v, dict)} | set(d)
+    um = groundcover.understory_materials(have)
+    new[UNDER_MATS.format(lv=lv)] = json.dumps(um, indent=1).encode("utf-8")
 
     with zi.writer() as zo:
         now = time.localtime()[:6]
@@ -270,12 +344,18 @@ def understory_step(root, report=None):
                 zo.writestr(i, open(pw.LEVEL_README, "rb").read(), compress_type=i.compress_type)
             else:
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+        for f in sorted(set(new) - set(zi.NameToInfo)):                    # v3.1: the undergrowth materials
+            zo.writestr(f, new[f], compress_type=zipfile.ZIP_DEFLATED)
     print("written in %.0f s" % (time.time() - t0), flush=True)
     if report:
         res = {"forest_floor_vertices": forest, "to_verge": moved,
                "floor_colour_before": measured, "floor_colour_after": list(FLOOR),
-               "understory": {"radius_m": groundcover.UNDERSTORY[1], "max_elements": groundcover.UNDERSTORY[4],
-                              "shapes": [s[0] for s in groundcover.UNDERSTORY_SHAPES]},
+               "light": why, "understory_materials": sorted(um),
+               "understory": {c[0]: {"radius_m": c[1], "max_elements": c[4],
+                                     "per_m2": {f"{lay}@{z}m": round(groundcover.density(c, lay, z), 4)
+                                                for lay in ("ForestFloor", "ForestFloorLight") for z in (500, 1200)},
+                                     "shapes": sorted({r[1] for r in c[6]})}
+                              for c in groundcover.UNDERSTORY_COVERS},
                "terrain_heights_unchanged": True}
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)
