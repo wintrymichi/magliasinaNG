@@ -115,6 +115,17 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - Do not tell the side of a wall from a vertex's own height: the DTM smears walls into slopes. Read the
   ground a few metres out on both sides (walls.wall_side), and read beyond any vertex that may itself be raised.
 - Anything that raises ground near the railway must respect its bed (railway.bed_fn, network_mesh rail caps).
+- The "stretched" cut slopes beside the roads (michi, 2026-10-22, "burroni") were NOT the steep skin: the skin stopped one
+  terrain square short of the road (solid = road footprint dilated by 1), and the cut face right beside the road (5-7 m
+  in ONE 1.5 m square) stayed bare terrain, its colour projected from above in vertical streaks. In render3d the bare
+  terrain and the skin both look like smooth grey sheets: check what a surface is by listing the meshes within a few m
+  of the point and by rendering once with the skin items emptied. steep_skin.foot now runs the skin into the road
+  (under its surface, ROAD_DIVE), and the faces over ROCK_DEG are rock (v3.1). The skin is round: only 5 % of it is
+  steeper than 55 degrees, so a rock threshold taken from the real cuts (60-80) leaves almost no rock.
+- render3d draws every forest tree as a big cone or crown: views of slopes in woods show only trees. Render from a copy of
+  the level without its `forest` folder (cp -al, then rm the folder: the hard links keep the original).
+- A 3x3 median "tooth" scan near the roads found 28,000 vertices, mostly in villages (yards, sidewalks): not a way to find
+  a place from a screenshot. Find it from the video it came from (frames, then the road and the railway beside it).
 - railway.carve_terrain kept every vertex more than CARVE_MAX (4 m) over the cutting, also one beside the bed: a lone
   vertex of the ground on top of the wall north of the line between Caslano and Ponte Tresa (-361,-2326) stood 4.1 m
   over it, and railway.build, which took the HIGHEST terrain sample across the bed, lifted the track 2.5 m onto it in a
@@ -131,6 +142,9 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   Cut only the low patches that touch the surveyed lake (MU specchio_acqua), and check a lake cut by the area it removes.
 
 ## Checking a finish step in the cloud container
+
+- Rerunning a finish step on the released folder for a preview: copy it with `cp -al` (bng.LevelWriter replaces
+  files with os.replace, so the hard-linked original stays as it was). steep_skin on the whole map takes 10-12 min.
 
 - Actions artifacts and run log zips are blocked by the proxy; `get_job_logs` with return_content works, and a
   long log is saved to a file to grep. The nightly also attaches its reports to the pre-release (nightly_reports.zip).
@@ -172,6 +186,11 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   network.LakeCut removing the paved yards on the Tresa valley floor (at lake level, 2026-10-21).
 
 ## Meshes
+
+- The FLP track showed as a brown zigzag in michi's video beside the cantonale (2026-10-22): the geometry is straight
+  (no rail triangle wider than 30 cm in the v3.0.40 zip, rails straight in plan); the sleepers stood 16 cm out of a flat
+  bed and low sun threw the rails' shadow in steps. railway.CRIB brings the ballast up to 4 cm under the sleeper tops.
+  Not seen in the game yet (PC unavailable that night).
 
 - Roofs were a sheet with no thickness and plain folds at the ridges; tegole/metal textures of 2 m with thin, low-contrast
   lines read as one grey surface from 30 m (michi 2026-10-22, lake-shore house in the cinematic video). v3.1: finish step
