@@ -173,6 +173,19 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 
 ## Meshes
 
+- Floating roofs left in the v3.1 test build (2026-10-22): the 5 check_level counted were all swissBUILDINGS3D
+  `Flugdach` records (station canopies at Magliaso and Caslano, the fuel station forecourt, Sessa): the survey gives
+  them "walls" that are only the 10 cm edges of the slab, so `len(walls) > 0` made buildings_mesh treat them as houses
+  and canopy() never gave them posts. Do not tell a roof without walls by an empty wall list: look at how far its walls
+  reach under the eaves. The check could not see the other kind at all: a house's own roof reaching metres out over a
+  porch or lean-to with nothing under it (the house's walls touch the roof outline). Finish step roof_posts finds both
+  on the built level (roof plan minus what tall faces hold) and adds posts. A detector that tests only the outline of
+  a roof flags every normal eave (0.6-1.5 m): measure the overhang from the walls, not from the outline. Facade
+  plaster between windows is made of faces under 0.8 m high: a "tall faces hold the roof" test with 0.8 m missed such
+  walls and stood a post along a facade (TALL 0.35 m, above the 0.27 m fascias of roof_details).
+  The first runs also doubled the posts of buildings_mesh's canopies (a wide canopy left free strips between its own
+  posts): roof_posts now skips every roof that has a post already, told by the post vertex colour (post_color).
+
 - Roofs were a sheet with no thickness and plain folds at the ridges; tegole/metal textures of 2 m with thin, low-contrast
   lines read as one grey surface from 30 m (michi 2026-10-22, lake-shore house in the cinematic video). v3.1: finish step
   `roof_details` (rim with tile heads and fascia, ridge caps; after house_details/house_extras, which read the bare
