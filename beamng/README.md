@@ -483,19 +483,24 @@ mantle along the edge of the wood (meadows, roads, yards) and the gaps of the ca
   smaller than 400 m2 not counted) or with no tree trunk within `GAP_M` = 9 m (and one within 30 m). On v3.0.40: 9.7
   million edge and 3.2 million gap vertices of 39.8 million forest floor vertices (12.9 million moved to the light
   twins), 85 s for the whole step;
-- writes three GroundCovers (`groundcover.UNDERSTORY_COVERS`, each type on its layers and between the elevations
-  of its belt, `CHESTNUT_TOP` = 950 m):
+- writes the undergrowth as GroundCovers (`groundcover.UNDERSTORY_COVERS`): three covers, each one GroundCover per
+  forest floor layer (shade rows on ForestFloor and ForestFloor2, light rows on their twins), at most 8 Types each
+  (Torque3D's `MAX_COVERTYPES`; the game's levels never have more), every type between the elevations of its belt
+  (`CHESTNUT_TOP` = 950 m):
 
-| GroundCover | Radius (fade from) | Models (vanilla, all with their imposters) | Plants per m2, shade / light |
-|---|---|---|---|
-| `understory_ferns` | 45 m (30) | ECA `lush_ferns_01_a/_b`, `_02_a/_b` | 0.10 / 0.32 (0.024 in the shade of the beech wood) |
-| `understory` | 60 m (40) | hazel (`tree_beech_bush_d` at 0.35-0.6), holly (Italy `holm_oak_bush`, below 950 m), young beech, oak, birch (`tree_beech_bush_a/b/c`, `tree_oak_bush_a/c`, `tree_aspen_bush_a/b`), brambles (Italy `scraggly_bush` at 0.35-0.5, `generibush_small`), `fluffy_bush` | 0.029 / 0.093 |
-| `understory_deadwood` | 80 m (55) | fallen beech (`tree_beech_dead_b`, 10 m, on slopes up to 9 deg), trunks (`tree_beech_dead_a`, 14 deg), dead branches (`fir_dead_branches`), stumps (`tree_douglasfir_chopped`), stones (`eca_rock_small_2/_3`) | 0.009 / 0.003 |
+| GroundCover | Radius (fade from) | Models (vanilla, all with their imposters) | Plants per m2 at 500 m, shade / light | maxElements per layer, shade / light |
+|---|---|---|---|---|
+| `understory_ferns_<layer>` | 45 m (30) | ECA `lush_ferns_01_a/_b`, `_02_a/_b` | 0.10 / 0.32 (0.025 in the shade of the beech wood) | 380 / 790 |
+| `understory_<layer>` | 60 m (40) | hazel (`tree_beech_bush_d`), holly (Italy `holm_oak_bush`, below 950 m), young beech, oak, birch (`tree_beech_bush_a/b/c`, `tree_oak_bush_a`, `tree_aspen_bush_a/b`), brambles (Italy `scraggly_bush` at 0.35-0.48, `generibush_small`), `fluffy_bush` | 0.030 / 0.090 | 370 / 880 |
+| `understory_deadwood_<layer>` | 80 m (55) | shade: fallen beech (`tree_beech_dead_b`, 10 m, slopes up to 4 deg), trunks (`tree_beech_dead_a`, 6 deg), dead branches (`fir_dead_branches`), stumps (`tree_douglasfir_chopped`), stones (`eca_rock_small_2/_3` up to 1.5 m); light: small stones only | 0.008 / 0.003 | 140 / 50 |
 
-  In the light nothing reaches more than about 1.5 m from its foot (the light begins at the verge twins, about 1.5-3
-  m from a road): the big clumps and the fallen trees only in the shade. The density is `groundcover.density`:
-  maxElements over the square of the radius, each a type drawn by probability among all the types and kept only on
-  its layer, elevation and slope, a clump of plants;
+  Nothing has collision. In the light (from the verge twins, 1.5 m or more from a road mesh) no stumps, stones at
+  most scale 1, and no model reaches more than `LIGHT_REACH` = 1.3 m from its foot at its largest scale
+  (`groundcover.check_light_reach`, from the boxes in `dati/asset_bounds.json`; the step stops otherwise): the big
+  clumps, the big stones and the fallen trees only in the shade. A GroundCover stands its shapes upright, so the long
+  trunks only on nearly flat ground. The density is `groundcover.density`: maxElements over the square of the radius,
+  each a type drawn by probability among the cover's types and kept only within its elevation and slope, a clump of
+  plants; the step's report gives it with the most plants one GroundCover can hold (`max_plants`);
 - adds the material definitions the models need and the level lacks (`art/shapes/groundcover/understory.materials.json`
   from `dati/understory_materials.json`, taken once from the game: the ferns' `forest_vegetation` is not defined in
   East Coast USA, it is driver_training's).
