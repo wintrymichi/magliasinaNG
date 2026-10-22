@@ -1,0 +1,30 @@
+# Copies the zip of a draft test build (ponte-test) to the pre-release "nightly", so michi's PC can download it
+# without logging in (the cloud session cannot upload release assets). Started by hand only.
+name: nightly from test build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  copy:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Copy
+        run: |
+          set -e
+          mkdir z && cd z
+          gh release download ponte-test --pattern magliaso_pura_ponte_test.zip --pattern ponte_test_reports.zip
+          mv magliaso_pura_ponte_test.zip magliaso_pura_v3.1_test.zip
+          mv ponte_test_reports.zip nightly_reports.zip
+          ls -l
+          gh release upload nightly magliaso_pura_v3.1_test.zip nightly_reports.zip --clobber
+          gh release delete-asset nightly magliaso_pura_v3.0.40_nightly.zip --yes || true
+          gh release edit nightly --prerelease --title "Nightly builds: v3.1 test (2026-10-22)" --notes "**Test build of v3.1: UNTESTED in the game. Not the release.** Built 2026-10-22 from 0599eb3 of claude/tetti-fluttuanti-8q4m1p (Magliasina bridge, floating roofs, roof details, street lamps, race starts, wall tops, railway bed).
+
+          For BeamNG.drive 0.40. Disable any other magliaso_pura zip in the mods folder first (same level)."
