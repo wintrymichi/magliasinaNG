@@ -259,6 +259,24 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   (walls_m3_*) have their position at a corner of a 384 m chunk: a scratch script that read the shapes within
   200 m of a point missed the walls there.
 
+## Undergrowth (understory.understory_step, groundcover.UNDERSTORY_COVERS)
+
+- ECA's `lush_ferns_*` (art/shapes/groundcover) use the material `forest_vegetation`, which East Coast USA itself
+  does not define (Cliff and driver_training do): a material lookup in the model's own level found nothing. The
+  definitions of the undergrowth models are in dati/understory_materials.json (taken from the game, 2026-10-22).
+- An edge band measured from "any other layer" made the whole wood outside the area a light-green speckle: the land
+  cover leaves specks of meadow inside the forest. Openings under 400 m2 are no edge (SPECK_M2).
+- The trees' crown radius from the model's bounding box (asset_bounds) is wider than the leaves (median 7.3 m): with
+  it no forest floor was ever in a gap (0.03 %). The gap test uses the distance to the nearest trunk instead.
+- A GroundCover places shapes upright on the ground, not along the slope: a 10 m fallen tree on a 30 deg slope hangs
+  5 m in the air. Long models get a low maxSlope (tree_beech_dead_b 9 deg, _a 14 deg).
+- GroundCover density: maxElements are spread over the square of twice the radius, and each picks a type by
+  probability among ALL its types, then is dropped where the type's layer, elevation or slope do not fit
+  (groundcover.density). Adding types for another layer thins the ones already there.
+- A finishing step can only be tried on a released level after undoing what the step itself added: the released
+  .ter already has the verge twins and understory_step refuses it. Map the Verge layers back and drop their names
+  from the .ter tail, terrain.json and terrain materials (done for the v3.1 test, 85 s for the step).
+
 ## Data from the cloud sessions
 
 - swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
