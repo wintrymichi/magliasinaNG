@@ -102,95 +102,138 @@ _ER = "/levels/east_coast_usa/art/shapes/rocks/"
 _IT = "/levels/italy/art/shapes/trees/trees_italy/"
 _LO, _HI = (-1000.0, CHESTNUT_TOP), (CHESTNUT_TOP, 5000.0)
 _ALL = (-1000.0, 5000.0)
-# (layers, model, probability, scale min, max, clump min, max, clump radius, max slope, elevation range)
+# A GroundCover takes at most 8 Types (Torque3D's MAX_COVERTYPES; every GroundCover of the game's levels has at most
+# 8): each cover below is one GroundCover per layer (the two forest floor layers in the shade, their two light
+# twins), each with its own maxElements, so that no type is lost and no layer thins another's plants.
+# Rows: (model, probability, scale min, max, clump min, max, clump radius, max slope, elevation range).
 # Sizes at scale 1 (dati/asset_bounds.json): ferns 0.9-1.3 m; beech_bush_a 1.0 m, _b 3.2 m, _d 6.3 m (a many-stemmed
-# clump: hazel at 0.4-0.6); oak_bush_a 1.25 m, _c 3.0 m; aspen_bush_a/_b 2.0-2.3 m; holm_oak_bush 5.2 m;
+# clump: hazel at 0.3-0.6); oak_bush_a 1.25 m, _c 3.0 m; aspen_bush_a/_b 2.0-2.3 m; holm_oak_bush 5.2 m;
 # scraggly_bush 2.9 m and 5 m wide (brambles at 0.35-0.5); generibush_small 1.4 m; fluffy_bush 2.4 m;
 # beech_dead_a a trunk 5.4 m long, _b a fallen beech 10 m long, fir_dead_branches a heap 0.9 m high and 4.7 m wide,
 # douglasfir_chopped a stump 0.55 m; eca_rock_small_2/_3 0.4-0.7 m stones, half in the ground.
-# In the light (the edge, along the roads) nothing reaches more than about 1.5 m from its foot; the big clumps and
-# the fallen trees only in the shade, which begins EDGE_M (understory.py) from the edge.
-UNDERSTORY_FERNS = ("understory_ferns", 45.0, 30.0, 8, 2200, 22, [
-    (SHADE, _EG + "lush_ferns_01_a.dae", 0.55, 0.9, 1.4, 2, 4, 1.5, 35, _LO),
-    (SHADE, _EG + "lush_ferns_01_b.dae", 0.35, 0.7, 1.0, 1, 3, 1.5, 35, _LO),
-    (SHADE, _EG + "lush_ferns_02_a.dae", 0.12, 0.7, 1.1, 1, 3, 1.0, 40, _ALL),
-    (SHADE, _EG + "lush_ferns_02_b.dae", 0.20, 0.7, 1.0, 1, 3, 1.0, 40, _HI),
-    (LIGHT, _EG + "lush_ferns_01_a.dae", 1.00, 0.9, 1.4, 3, 6, 2.0, 40, _ALL),
-    (LIGHT, _EG + "lush_ferns_01_b.dae", 0.70, 0.7, 1.0, 2, 4, 2.0, 40, _ALL),
-    (LIGHT, _EG + "lush_ferns_02_a.dae", 0.40, 0.7, 1.1, 2, 4, 1.5, 40, _ALL),
-    (LIGHT, _EG + "lush_ferns_02_b.dae", 0.30, 0.7, 1.0, 1, 3, 1.5, 40, _ALL),
-])
-UNDERSTORY = ("understory", 60.0, 40.0, 8, 2600, 21, [
-    (SHADE, _EB + "tree_beech_bush_d.dae", 0.30, 0.40, 0.60, 1, 1, 1.0, 35, _ALL),     # hazel clumps
-    (SHADE, _IT + "holm_oak_bush.dae", 0.22, 0.35, 0.55, 1, 1, 1.0, 35, _LO),          # holly
-    (SHADE, _EB + "tree_beech_bush_a.dae", 0.30, 0.9, 1.6, 1, 3, 2.0, 40, _ALL),       # young beech
-    (SHADE, _EB + "tree_beech_bush_b.dae", 0.18, 0.5, 0.9, 1, 2, 2.0, 40, _HI),
-    (SHADE, _EO + "tree_oak_bush_a.dae", 0.20, 0.9, 1.5, 1, 2, 2.0, 40, _LO),
-    (SHADE, _IT + "fluffy_bush.dae", 0.12, 0.30, 0.50, 1, 1, 1.0, 35, _LO),
-    (SHADE, _IT + "scraggly_bush.dae", 0.08, 0.35, 0.45, 1, 1, 1.0, 35, _LO),          # brambles
-    (LIGHT, _IT + "scraggly_bush.dae", 0.90, 0.35, 0.50, 1, 2, 2.5, 40, (-1000.0, 1100.0)),
-    (LIGHT, _IT + "generibush_small.dae", 0.60, 0.50, 0.85, 1, 2, 2.0, 40, _ALL),
-    (LIGHT, _EB + "tree_beech_bush_d.dae", 0.30, 0.35, 0.42, 1, 1, 1.0, 35, _ALL),     # hazel, kept narrow
-    (LIGHT, _EB + "tree_beech_bush_a.dae", 0.40, 0.9, 1.6, 1, 3, 2.0, 40, _ALL),
-    (LIGHT, _EB + "tree_beech_bush_c.dae", 0.25, 0.40, 0.55, 1, 1, 1.0, 40, _ALL),
-    (LIGHT, _EO + "tree_oak_bush_a.dae", 0.30, 0.9, 1.5, 1, 2, 2.0, 40, _ALL),
-    (LIGHT, _EO + "tree_oak_bush_c.dae", 0.20, 0.5, 0.7, 1, 1, 1.0, 40, _LO),
-    (LIGHT, _EA + "tree_aspen_bush_a.dae", 0.25, 0.6, 1.1, 1, 2, 2.0, 40, _ALL),      # birch
-    (LIGHT, _EA + "tree_aspen_bush_b.dae", 0.20, 0.6, 1.0, 1, 2, 2.0, 40, _ALL),
-    (LIGHT, _IT + "fluffy_bush.dae", 0.20, 0.30, 0.50, 1, 1, 1.0, 35, _ALL),
-])
-UNDERSTORY_DEADWOOD = ("understory_deadwood", 80.0, 55.0, 6, 400, 23, [
-    (SHADE, _EB + "tree_beech_dead_b.dae", 0.10, 0.75, 1.0, 1, 1, 1.0, 9, _ALL),       # a fallen beech, 10 m
-    (SHADE, _EB + "tree_beech_dead_a.dae", 0.25, 0.8, 1.2, 1, 1, 1.0, 14, _ALL),       # a trunk, 5 m
-    (SHADE, _EF + "fir_dead_branches.dae", 0.25, 0.6, 1.0, 1, 1, 1.0, 22, _ALL),
-    (SHADE, _EF + "tree_douglasfir_chopped.dae", 0.35, 1.0, 1.8, 1, 3, 2.5, 35, _LO),  # coppice stumps
-    (SHADE, _ER + "eca_rock_small_2.dae", 0.30, 0.8, 2.2, 1, 3, 2.0, 50, _ALL),
-    (SHADE, _ER + "eca_rock_small_3.dae", 0.30, 0.8, 2.2, 1, 2, 2.0, 50, _ALL),
-    (LIGHT, _EF + "tree_douglasfir_chopped.dae", 0.20, 1.0, 1.6, 1, 2, 2.0, 35, _ALL),
-    (LIGHT, _ER + "eca_rock_small_2.dae", 0.15, 0.8, 1.6, 1, 2, 2.0, 50, _ALL),
-    (LIGHT, _ER + "eca_rock_small_3.dae", 0.15, 0.8, 1.6, 1, 2, 2.0, 50, _ALL),
-])
+# A GroundCover stands its shapes upright, not along the slope: the trunks only where the ground is nearly flat.
+# Nothing has collision: in the light (from the verge twins, 1.5 m or more from a road mesh) no stumps, only small
+# stones, and nothing reaching more than LIGHT_REACH from its foot (checked against the models' boxes); the big
+# clumps, big stones and the fallen trees only in the shade, which begins EDGE_M (understory.py) from the edge.
+LIGHT_REACH = 1.3           # m
+# name, radius (m), dissolve radius, grid size, seed, {"shade"/"light": (maxElements per layer, rows)}
+UNDERSTORY_FERNS = ("understory_ferns", 45.0, 30.0, 8, 22, {
+    "shade": (380, [
+        (_EG + "lush_ferns_01_a.dae", 0.55, 0.9, 1.4, 2, 4, 1.5, 35, _LO),
+        (_EG + "lush_ferns_01_b.dae", 0.35, 0.7, 1.0, 1, 3, 1.5, 35, _LO),
+        (_EG + "lush_ferns_02_a.dae", 0.12, 0.7, 1.1, 1, 3, 1.0, 40, _ALL),
+        (_EG + "lush_ferns_02_b.dae", 0.20, 0.7, 1.0, 1, 3, 1.0, 40, _HI)]),
+    "light": (790, [
+        (_EG + "lush_ferns_01_a.dae", 1.00, 0.8, 1.05, 3, 5, 1.0, 40, _ALL),
+        (_EG + "lush_ferns_01_b.dae", 0.70, 0.6, 0.72, 2, 4, 1.0, 40, _ALL),
+        (_EG + "lush_ferns_02_a.dae", 0.40, 0.7, 1.1, 2, 4, 1.0, 40, _ALL),
+        (_EG + "lush_ferns_02_b.dae", 0.30, 0.6, 0.82, 1, 3, 1.0, 40, _ALL)]),
+})
+UNDERSTORY = ("understory", 60.0, 40.0, 8, 21, {
+    "shade": (370, [
+        (_EB + "tree_beech_bush_d.dae", 0.30, 0.40, 0.60, 1, 1, 1.0, 35, _ALL),     # hazel clumps
+        (_IT + "holm_oak_bush.dae", 0.22, 0.35, 0.55, 1, 1, 1.0, 35, _LO),          # holly
+        (_EB + "tree_beech_bush_a.dae", 0.30, 0.9, 1.6, 1, 3, 2.0, 40, _ALL),       # young beech
+        (_EB + "tree_beech_bush_b.dae", 0.18, 0.5, 0.9, 1, 2, 2.0, 40, _HI),
+        (_EO + "tree_oak_bush_a.dae", 0.20, 0.9, 1.5, 1, 2, 2.0, 40, _LO),
+        (_IT + "fluffy_bush.dae", 0.12, 0.30, 0.50, 1, 1, 1.0, 35, _LO),
+        (_IT + "scraggly_bush.dae", 0.08, 0.35, 0.45, 1, 1, 1.0, 35, _LO)]),        # brambles
+    "light": (880, [
+        (_IT + "scraggly_bush.dae", 0.90, 0.35, 0.48, 1, 2, 1.0, 40, (-1000.0, 1100.0)),
+        (_IT + "generibush_small.dae", 0.60, 0.50, 0.72, 1, 2, 1.0, 40, _ALL),
+        (_EB + "tree_beech_bush_d.dae", 0.30, 0.30, 0.37, 1, 1, 1.0, 35, _ALL),     # hazel, kept narrow
+        (_EB + "tree_beech_bush_a.dae", 0.40, 0.9, 1.6, 1, 3, 1.0, 40, _ALL),
+        (_EB + "tree_beech_bush_c.dae", 0.25, 0.40, 0.55, 1, 1, 1.0, 40, _ALL),
+        (_EO + "tree_oak_bush_a.dae", 0.30, 0.9, 1.5, 1, 2, 1.0, 40, _ALL),
+        (_EA + "tree_aspen_bush_a.dae", 0.25, 0.6, 1.1, 1, 2, 1.0, 40, _ALL),      # birch
+        (_EA + "tree_aspen_bush_b.dae", 0.20, 0.6, 1.0, 1, 2, 1.0, 40, _ALL)]),
+})
+UNDERSTORY_DEADWOOD = ("understory_deadwood", 80.0, 55.0, 6, 23, {
+    "shade": (140, [
+        (_EB + "tree_beech_dead_b.dae", 0.10, 0.75, 1.0, 1, 1, 1.0, 4, _ALL),        # a fallen beech, 10 m
+        (_EB + "tree_beech_dead_a.dae", 0.25, 0.8, 1.2, 1, 1, 1.0, 6, _ALL),         # a trunk, 5 m
+        (_EF + "fir_dead_branches.dae", 0.25, 0.6, 1.0, 1, 1, 1.0, 22, _ALL),
+        (_EF + "tree_douglasfir_chopped.dae", 0.35, 1.0, 1.8, 1, 3, 2.5, 35, _LO),   # coppice stumps
+        (_ER + "eca_rock_small_2.dae", 0.30, 0.8, 2.2, 1, 3, 2.0, 50, _ALL),
+        (_ER + "eca_rock_small_3.dae", 0.30, 0.8, 2.2, 1, 2, 2.0, 50, _ALL)]),
+    "light": (50, [
+        (_ER + "eca_rock_small_2.dae", 0.50, 0.6, 1.0, 1, 2, 1.0, 50, _ALL),
+        (_ER + "eca_rock_small_3.dae", 0.50, 0.6, 1.0, 1, 2, 1.0, 50, _ALL)]),
+})
 UNDERSTORY_COVERS = (UNDERSTORY_FERNS, UNDERSTORY, UNDERSTORY_DEADWOOD)
+UNDERSTORY_LAYERS = {"shade": SHADE, "light": LIGHT}
 UNDERSTORY_MATS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati",
                                "understory_materials.json")
+BOUNDS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "asset_bounds.json")
 
 
-def _cover_types(rows):
-    """GroundCover Types of rows (layers, model, p, scale min, max, clump min, max, clump radius, slope, (zmin, zmax))."""
-    types = []
-    for layers, shape, p, smin, smax, cmin, cmax, crad, slope, (zmin, zmax) in rows:
-        for layer in layers:
-            t = _t(layer, [0, 0, 1, 1], p, smin, smax, cmin, cmax, crad, 0.0)
-            t.update(shapeFilename=shape, maxSlope=slope, minElevation=zmin, maxElevation=zmax)
-            types.append(t)
-    return types
-
-
-def density(cover, layer, z=500.0, slope=0.0):
-    """Plants per m2 the GroundCover `cover` puts on `layer` at height z and slope: it draws maxElements over the
-    square of its radius, each a type picked by probability among all its types, then dropped where the type's
-    layer, elevation or slope does not fit; a kept one is a clump of min-max plants (their mean)."""
-    _, radius, _, _, max_el, _, rows = cover
-    tot = sum(r[2] * len(r[0]) for r in rows)
-    ok = sum(r[2] * (r[5] + r[6]) / 2 for r in rows if layer in r[0] and r[9][0] <= z < r[9][1] and slope <= r[8])
+def density(cover, zone, z=500.0, slope=0.0):
+    """Plants per m2 the GroundCover of `cover` puts on a layer of `zone` ("shade", "light") at height z and slope:
+    it draws maxElements over the square of its radius, each a type picked by probability among its types (all of
+    this layer), then dropped where the type's elevation or slope does not fit; a kept one is a clump of min-max
+    plants (their mean)."""
+    _, radius, _, _, _, zones = cover
+    max_el, rows = zones[zone]
+    tot = sum(r[1] for r in rows)
+    ok = sum(r[1] * (r[4] + r[5]) / 2 for r in rows if r[8][0] <= z < r[8][1] and slope <= r[7])
     return max_el / (2 * radius) ** 2 * ok / tot
 
 
+def max_plants(cover, zone):
+    """At most this many plants of one of its GroundCovers around the camera (maxElements x the mean clump)."""
+    max_el, rows = cover[5][zone]
+    tot = sum(r[1] for r in rows)
+    return round(max_el * sum(r[1] * (r[4] + r[5]) / 2 for r in rows) / tot)
+
+
+def check_light_reach(bounds_file=BOUNDS):
+    """Every model in the light reaches at most LIGHT_REACH from its foot at its largest scale (the box's farthest
+    side from the origin; the yaw is random)."""
+    b = json.load(open(bounds_file))
+    bad = []
+    for name, _, _, _, _, zones in UNDERSTORY_COVERS:
+        for shape, _, _, smax, *_ in zones["light"][1]:
+            lo, hi = b[shape]
+            reach = smax * max(abs(lo[0]), abs(lo[1]), hi[0], hi[1])
+            if reach > LIGHT_REACH:
+                bad.append((name, os.path.basename(shape), round(reach, 2)))
+    if bad:
+        raise SystemExit("understory: models too wide for the light along the roads: %s" % bad)
+
+
 def understory_objects():
-    """The GroundCovers of the undergrowth (UNDERSTORY_COVERS on the forest floor layers and their light twins)."""
+    """The GroundCovers of the undergrowth: for each of UNDERSTORY_COVERS one per forest floor layer (the shade rows
+    on FOREST_LAYERS, the light rows on their light twins), at most 8 Types each."""
+    check_light_reach()
     out = []
-    for name, radius, dissolve, grid, max_el, seed, rows in UNDERSTORY_COVERS:
-        o = {"name": name, "class": "GroundCover", "persistentId": bng.pid(), "position": [0, 0, 0],
-             "material": "mp_gc_grass_short", "radius": radius, "dissolveRadius": dissolve, "gridSize": grid,
-             "zOffset": 0, "seed": seed, "maxElements": max_el, "maxBillboardTiltAngle": 40, "shapeCullRadius": radius,
-             "shapesCastShadows": False, "Types": _cover_types(rows)}
-        o.update(WIND)
-        out.append(o)
+    for name, radius, dissolve, grid, seed, zones in UNDERSTORY_COVERS:
+        for zone, layers in UNDERSTORY_LAYERS.items():
+            max_el, rows = zones[zone]
+            assert len(rows) <= 8, (name, zone)
+            for k, layer in enumerate(layers):
+                types = []
+                for shape, p, smin, smax, cmin, cmax, crad, slope, (zmin, zmax) in rows:
+                    t = _t(layer, [0, 0, 1, 1], p, smin, smax, cmin, cmax, crad, 0.0)
+                    t.update(shapeFilename=shape, maxSlope=slope, minElevation=zmin, maxElevation=zmax)
+                    types.append(t)
+                o = {"name": f"{name}_{layer}", "class": "GroundCover", "persistentId": bng.pid(),
+                     "position": [0, 0, 0], "material": "mp_gc_grass_short", "radius": radius,
+                     "dissolveRadius": dissolve, "gridSize": grid, "zOffset": 0, "seed": seed + 7 * k,
+                     "maxElements": max_el, "maxBillboardTiltAngle": 40, "shapeCullRadius": radius,
+                     "shapesCastShadows": False, "Types": types}
+                o.update(WIND)
+                out.append(o)
     return out
 
 
+def understory_names():
+    """The names of the GroundCovers the undergrowth writes (and of the single one up to v3.0.40)."""
+    return {"understory"} | {f"{c[0]}_{layer}" for c in UNDERSTORY_COVERS
+                             for layers in UNDERSTORY_LAYERS.values() for layer in layers}
+
+
 def understory_shapes():
-    return sorted({r[1] for c in UNDERSTORY_COVERS for r in c[6]})
+    return sorted({r[0] for c in UNDERSTORY_COVERS for _, rows in c[5].values() for r in rows})
 
 
 def understory_materials(have=()):
