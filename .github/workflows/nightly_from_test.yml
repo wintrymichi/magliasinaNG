@@ -4,6 +4,9 @@ name: nightly from test build
 
 on:
   workflow_dispatch:
+  push:
+    branches: [claude/tetti-fluttuanti-8q4m1p]
+    paths: [beamng/nightly/from_test_stamp.txt]
 
 permissions:
   contents: write
