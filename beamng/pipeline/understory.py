@@ -314,7 +314,7 @@ def understory_step(root, report=None):
         measured[m] = np.median(a.reshape(-1, 3), 0).round().astype(int).tolist()
         new[f] = darker(zi.read(f), measured[m], FLOOR)
     veg_name = f"{lv}/main/MissionGroup/level_objects/vegetation/items.level.json"
-    ours = {c[0] for c in groundcover.UNDERSTORY_COVERS} | {groundcover.MEADOW[0]}
+    ours = groundcover.understory_names() | {groundcover.MEADOW[0]}
     veg = [o for o in read_items(zi, veg_name) if o.get("name") not in ours]
     parent = next((o["__parent"] for o in veg if o.get("class") == "GroundCover"), "vegetation")
     for u in groundcover.understory_objects() + [groundcover.meadow_object()]:     # v3.0: and the meadow shrubs
@@ -351,11 +351,12 @@ def understory_step(root, report=None):
         res = {"forest_floor_vertices": forest, "to_verge": moved,
                "floor_colour_before": measured, "floor_colour_after": list(FLOOR),
                "light": why, "understory_materials": sorted(um),
-               "understory": {c[0]: {"radius_m": c[1], "max_elements": c[4],
-                                     "per_m2": {f"{lay}@{z}m": round(groundcover.density(c, lay, z), 4)
-                                                for lay in ("ForestFloor", "ForestFloorLight") for z in (500, 1200)},
-                                     "shapes": sorted({r[1] for r in c[6]})}
-                              for c in groundcover.UNDERSTORY_COVERS},
+               "understory": {f"{c[0]}_{zone}": {
+                   "radius_m": c[1], "max_elements_per_layer": c[5][zone][0], "layers": list(layers),
+                   "max_plants_per_layer": groundcover.max_plants(c, zone),
+                   "per_m2": {f"{z}m": round(groundcover.density(c, zone, z), 4) for z in (500, 1200)},
+                   "shapes": [r[0] for r in c[5][zone][1]]}
+                   for c in groundcover.UNDERSTORY_COVERS for zone, layers in groundcover.UNDERSTORY_LAYERS.items()},
                "terrain_heights_unchanged": True}
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)
