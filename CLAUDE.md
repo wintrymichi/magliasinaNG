@@ -272,6 +272,15 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   had a +0.15 m bias and nothing to move: a one-sided shift smells of a measurement bias, so they are kept in
   verifica/street/roofs_measured.json and not applied (dati/street_roofs.json empty) until sheets of them are checked.
 
+- Wall tops as a saw (2-3 m teeth, 1-2 m V notches; Magliaso-Pura hairpin at 645,-1005 in michi's video, 2026-10-22):
+  walls.wall_geometry looked the photo caps (dati/wall_caps.json, measured every 0.5 m on the outlines of their day)
+  up by the exact cm key of each vertex. The outlines are now segmented every 1 m and redrawn, so only one vertex
+  in two to six matched, and the top jumped between the cap and the LiDAR crest from one vertex to the next. There
+  the survey draws one wall as 2-4 lines 0.2-0.5 m apart and the caps disagree (kerb on the road line, 2.5 m on the
+  lines behind, bank 4 m higher): taking the nearest cap only moved the teeth. walls.caps_at takes the highest cap
+  within the wall's thickness. Never look up per-vertex data by rounded coordinates when the vertices can change.
+  Found by a column check on the released zip (top of each xy column vs its mesh neighbours, ±0.6 m).
+
 ## Races (time trials, races.py)
 
 - Mission files go in `gameplay/missions/<level>/timeTrial/<id>/` beside `levels/`, not inside the level folder:
