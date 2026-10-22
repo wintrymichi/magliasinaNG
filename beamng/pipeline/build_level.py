@@ -930,8 +930,8 @@ FINISH = [
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
     ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
     ("roof_details", "roof_details", "roof_details_step", {"report": True}),   # v3.1: roof rims, ridge caps
-    ("roof_posts", "roof_posts", "roof_posts_step", {"report": True}),   # v3.1: posts under the roofs nothing holds
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, totems
+    ("roof_posts", "roof_posts", "roof_posts_step", {"report": True}),   # v3.1: posts under the roofs nothing holds
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
     ("shopfronts", "shopfronts", "shopfronts_step", {"report": True}),      # v3.0: parody shop signs, awnings, props
     ("parking", "parking", "parking_step", {"report": True}),        # v3.0 review: parking spots for the game's parked cars

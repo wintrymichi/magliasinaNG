@@ -20,7 +20,12 @@ railway (KEEP_RAIL m round its faces), and off the sidewalks, yards and parking 
 carriageway and the railway leave no post, the posts move off them (at most SNAP m), under the roof. The posts stand
 POST_SINK m in the ground and end under the roof's underside (the rims of roof_details are outside them); they are
 part of the building shapes, so cars collide with them.
-A finishing step of build_level.py (FINISH, after roof_details); only triangles are added to the building shapes:
+No posts under a piece its own building walls on three sides or more (WALLED of its outline along what holds it: an
+atrium, a glazed courtyard, a wide span of a hall), nor within KEEP_FUEL m of the meshes of the petrol stations (their
+pump islands and lanes). A finishing step of build_level.py (FINISH, after roof_details and fuel_stations, which takes
+the survey's canopy of a petrol station for one with no wall under it and builds its own; before parking, street_life
+and shopfronts, which keep their spots and props off the building meshes, so off these posts too); only triangles are
+added to the building shapes:
     python build_level.py --finish roof_posts
 """
 import json, os, re, tempfile, time, zipfile
@@ -52,6 +57,8 @@ KEEP_RAIL = 1.5          # m round the faces of the railway (rails, sleepers, ba
 SNAP = 2.0               # m a post may move off the carriageway
 HARD = re.compile(r"^mp_(road_(?!wall)|path_|bridge_(?!parapet))")       # carriageways: never a post
 SOFT = re.compile(r"^mp_(sidewalk|hard_|parking)")    # sidewalks, yards, parking: a post only where none stands else
+WALLED = 0.7            # share of a piece's outline along the walls that hold the roof: an inner court, no posts
+KEEP_FUEL = 1.5          # m round the meshes of the petrol stations (props/fuel)
 NEAR_ROAD = 2.0          # m: the posts this close to a carriageway are counted in the report
 
 
@@ -149,10 +156,20 @@ class Level:
         self.soft = road_mesh.TriSurface(np.concatenate([t for m, t in road.items() if SOFT.match(m)] or none))
         rail = faces(zi, lv, ["railway"])
         self.rail = road_mesh.TriSurface(np.concatenate(list(rail.values()) or none))
+        fuel = []
+        f = f"{lv}/main/MissionGroup/props/fuel/items.level.json"
+        for o in (read_items(zi, f) if f in zi.NameToInfo else []):
+            sn = o.get("shapeName", "").lstrip("/")
+            if o.get("class") == "TSStatic" and sn in zi.NameToInfo and sn.endswith(".dae"):
+                V = optimize_level.parse(zi.read(sn).decode("utf-8"))[0]
+                fuel.append(shapely.MultiPoint(V[:, :2] + np.asarray(o.get("position", [0, 0, 0]), float)[:2])
+                            .convex_hull.buffer(KEEP_FUEL))
+        self.fuel = shapely.union_all(fuel) if fuel else None
         self.roof = road_mesh.TriSurface(self.R) if len(self.R) else None
         lines = shapely.linestrings(self.H[:, :, :2]) if len(self.H) else []
         self.htree = shapely.STRtree(lines) if len(self.H) else None
         self.hlines = lines
+        self.walled = 0
         self.hlen = shapely.length(lines) if len(self.H) else np.zeros(0)
 
     def ground(self, x, y):
@@ -168,6 +185,8 @@ class Level:
     def on_hard(self, P):
         """(n,) True where a post at P (n, 2) would stand on a carriageway or near the railway."""
         hit = self.on(self.hard, P)
+        if self.fuel is not None:
+            hit |= shapely.contains_xy(self.fuel, P[:, 0], P[:, 1])
         for a in np.arange(8) * np.pi / 4:
             for d in (0.0, KEEP_RAIL / 2, KEEP_RAIL):
                 hit |= ~np.isnan(self.rail.height(P[:, 0] + d * np.cos(a), P[:, 1] + d * np.sin(a)))
@@ -200,6 +219,9 @@ def unheld(L, roofs):
         edge = c.exterior.buffer(EDGE)
         for p in _polys(free):
             if p.area < FREE_MIN or not p.intersects(edge):
+                continue
+            if near and p.exterior.intersection(hold.buffer(0.05)).length > WALLED * p.exterior.length:
+                L.walled += 1           # an inner court of the building
                 continue
             depth = FREE_WALL
             if near:
@@ -322,6 +344,7 @@ def roof_posts_step(root, report=None):
             else:
                 zo.writestr(i, zi.read(i), compress_type=i.compress_type)
     res["shapes_rewritten"] = len(new_dae)
+    res["inner_courts_skipped"] = L.walled
     res["unheld_m2"] = round(res["unheld_m2"])
     res["seconds"] = round(time.time() - t0)
     print("roof posts:", {k: v for k, v in res.items() if k != "places"}, flush=True)
