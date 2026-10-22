@@ -128,6 +128,14 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 
 ## Meshes
 
+- Roofs were a sheet with no thickness and plain folds at the ridges; tegole/metal textures of 2 m with thin, low-contrast
+  lines read as one grey surface from 30 m (michi 2026-10-22, lake-shore house in the cinematic video). v3.1: finish step
+  `roof_details` (rim with tile heads and fascia, ridge caps; after house_details/house_extras, which read the bare
+  roofs) and new 4 m textures for coppi, tegole and metal. Costs: +931k triangles on 2.61M of the buildings (+36 %).
+  A first draft of the tile colours divided the blue by the "redder" factor: blue tiles. Changing ROOF_TILE changes
+  the roof UVs only in a full build: to preview new textures on a released level, scale the roof UVs too, or the
+  tiles come out at half or double size. The many plain grey roofs of houses are `metal` (facades.roof_kind: grey
+  orthophoto, slope < 25 degrees), not tegole: check which kind a roof is before changing a texture for it.
 - Floating roofs (v3.1): 620 roofs of swissBUILDINGS3D have no walls at all (canopies, covered parkings, boat houses,
   platform roofs; OBJEKTART says "Gebaeude Einzelhaus", only 5 are "Flugdach"), so a kind filter finds none of
   them. 3490 more records are roofs alone too, but their house's walls are a separate record under them: tell them
