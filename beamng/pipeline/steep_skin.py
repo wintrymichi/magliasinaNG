@@ -98,6 +98,28 @@ SOLID = ("roads", "walls", "buildings", "railway")
 HARD = ("walls", "buildings", "railway")   # v3.1: the skin never on these; it goes on down to a road (FOOT)
 FOOT = 2                      # v3.1: terrain squares the skin goes on from a steep bank into the road beside it
 ROAD_DIVE = 0.06              # m: ... there under the road surface (hidden by it), never over it
+ROAD_LIFT_MAX = 1.0           # m: skin points up to this over a road surface go under it (more: a road below)
+ROAD_CLAMP = 1.5              # m: within this of a road the skin no higher than the terrain (EPS): the smoothed
+                              # lattice lifted the low side of a 5-7 m step into a lip at the road edge (issue #15)
+RELIEF_NEAR = 0.12            # m, the most relief within RELIEF_ROAD m (horizontal) of a road: a rib 55 cm out of a
+RELIEF_ROAD = 2.0             # vertical cut at the road edge would overhang the lane at mirror height
+RELIEF_RAMP = 1.5             # m beyond RELIEF_ROAD in which the relief grows to RELIEF
+# v3.1: plants on the skin (michi's reference: shrubs, ivy-like bushes in the gullies of the rock) as forest items at
+# the skin's surface (a groundcover on the terrain would stand on the ground lowered under the skin); vanilla bushes
+# that ship their imposters (no bake in the session: white squares), no collision
+PLANTS = {   # type: (shape, half width at scale 1 m, scales)
+    "skin_fluffy_bush": ("/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae", 1.665, (0.30, 0.65)),
+    "skin_generibush": ("/levels/italy/art/shapes/trees/trees_italy/generibush.dae", 2.30, (0.25, 0.55)),
+}
+PLANT_P_EARTH = 0.030         # per lattice point (0.56 m2): earth banks gentler than PLANT_DEG
+PLANT_P_LEDGE = 0.050         # rock ledges (gentler than MOSS_DEG)
+PLANT_P_GULLY = 0.025         # in the gullies of the rock (hanging bushes)
+PLANT_DEG = 50.0
+PLANT_FOOT = 1.0              # m: none lower than this over the foot of the cut within PLANT_ROAD m of a road
+PLANT_ROAD = 2.0
+PLANT_CLEAR = 0.3             # m between a plant's crown (half width x scale) and the road surface
+PLANT_SINK = 0.08             # m into the skin
+PLANT_MAX = 90000             # cap over the map
 
 
 # ------------------------------------------------------------------------------------------------ texture
@@ -205,7 +227,7 @@ def vnoise3(P, scale, seed=0):
     return out
 
 
-def rock(keys, P, N, z, wv):
+def rock(keys, P, N, z, wv, droad=None):
     """v3.1: rock on the steep faces. (P moved out along N by the relief, N of the moved faces, rock weight 0..1,
     colour (k, 3)) of the lattice points; z their heights (the foot of the cut from them), wv the cut values."""
     deg = np.degrees(np.arccos(np.clip(N[:, 2], -1, 1)))
@@ -222,6 +244,9 @@ def rock(keys, P, N, z, wv):
     knobs = vnoise3(P, (ROCK_KNOB,) * 3, 3)
     d = RELIEF * np.clip(0.75 * ribs + 0.45 * knobs - 0.15, 0, 1)
     d *= np.clip((rw - 0.3) / 0.5, 0, 1) * np.clip((hab - TOE_CLEAR) / TOE_RAMP, 0, 1)
+    if droad is not None:                               # little relief beside a road: nothing over the lane
+        near = RELIEF_NEAR + (RELIEF - RELIEF_NEAR) * np.clip((droad - RELIEF_ROAD) / RELIEF_RAMP, 0, 1)
+        d = np.minimum(d, near)
     if wv is not None:
         d *= np.clip((wv - EDGE_ISO) / EDGE_FADE - 0.5, 0, 1)
     Pm = P + N * d[:, None]
@@ -230,7 +255,7 @@ def rock(keys, P, N, z, wv):
     rc = np.array(ROCK_TONE) * (0.88 + 0.24 * big)[:, None]
     moss = np.clip((MOSS_DEG - deg) / 6.0, 0, 1) * np.clip((vnoise3(P, (3.0,) * 3, 5) - 0.45) * 3, 0, 1)
     rc = rc * (1 - moss[:, None]) + np.array(MOSS) * moss[:, None]
-    return Pm, rw, rc, hab
+    return Pm, rw, rc, hab, deg, ribs
 
 
 def face_normals(P, T, N0):
@@ -409,9 +434,10 @@ def clip(P, N, col, T, f):
     return np.array(P), np.array(N), np.array(col), np.concatenate(out)
 
 
-def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=()):
+def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=(), droad=None, RS=None):
     """Triangles of the skin squares into mb, one add per projection axis; lods: [(k, lift, MeshBuilder)] the
-    far detail levels (coarse_mesh), filled from the same lattice."""
+    far detail levels (coarse_mesh), filled from the same lattice. (triangle count, info): v3.1 the lattice points
+    for the plants and the check of the skin over the road surfaces (RS)."""
     span = int(keys[:, 1].max()) + 2
     lut = {int(k): i for i, k in enumerate(keys[:, 0] * span + keys[:, 1])}
     P = np.column_stack([x0 + keys[:, 1] * sq / 2, y0 + keys[:, 0] * sq / 2, z])
@@ -434,7 +460,7 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=()):
         tris += [(ctr, p[i], p[(i + 1) % 8]) for i in range(8)]
     T = np.array(tris, np.int64)
     # v3.1: rock on the steep faces (moved out by its relief), the earth less green, scree at the foot
-    Pm, rw, rc, hab = rock(keys, P, N, z, wv)
+    Pm, rw, rc, hab, deg, ribs = rock(keys, P, N, z, wv, droad)
     earth = (1 - EARTH_MIX) * np.asarray(colour) + EARTH_MIX * np.array(EARTH)
     scree = np.clip(1 - hab / TOE_SCREE, 0, 1)[:, None] * 0.6
     earth = earth * (1 - scree) + np.array(SCREE) * scree
@@ -449,10 +475,45 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=()):
         P, N, col, T = clip(P, N, col, T, wv - EDGE_ISO)
     # rock and earth cut apart along the line where the rock weight is 1/2 (not along the triangles: teeth)
     n_tri = len(T)
+    info = {"P": Pm, "rw": rw, "deg": deg, "hab": hab, "ribs": ribs, "over_road": 0, "over_road_max": -9.0}
     for mat, sgn, tile in ((MAT, -1.0, TILE_M), (MAT_ROCK, 1.0, ROCK_TILE_M)):
         Pk, Nk, ck, Tk = clip(P, N, col, T, sgn * (col[:, 4] - 0.5) + 1e-6)
+        if RS is not None and len(Tk):
+            # v3.1: no point of the skin over a road surface (its foot is under it, ROAD_DIVE). The lattice is
+            # clamped before the relief: a point moved by it, or cut in by clip(), can still stand on the road
+            used = np.unique(Tk)
+            hr = RS.height(Pk[used, 0], Pk[used, 1], "near", Pk[used, 2])
+            dz = Pk[used, 2] - hr
+            ok = np.isfinite(dz)
+            if ok.any():
+                info["over_road"] += int((dz[ok] > 0.0).sum())
+                info["over_road_max"] = max(info["over_road_max"], float(dz[ok].max()))
+                low = ok & (dz > -ROAD_DIVE) & (dz < ROAD_LIFT_MAX)    # not a road far under it (tunnel, gallery)
+                Pk[used[low], 2] = hr[low] - ROAD_DIVE
         add_projected(mb, mat, Pk, Nk, ck[:, :4], Tk, tile)
-    return n_tri
+    return n_tri, info
+
+
+def plants(info, wv, hr, droad, rng):
+    """v3.1: forest items on the skin: [(type, x, y, z, yaw, scale)] of the lattice points (info of tile_mesh)."""
+    P, rw, deg, hab, ribs = info["P"], info["rw"], info["deg"], info["hab"], info["ribs"]
+    inside = (wv > EDGE_ISO + 0.5 * EDGE_FADE) & ~np.isfinite(hr)
+    inside &= ~((droad < PLANT_ROAD) & (hab < PLANT_FOOT))
+    earth = (rw < 0.5) & (deg < PLANT_DEG)
+    ledge = (rw >= 0.5) & (deg < MOSS_DEG)
+    gully = (rw >= 0.5) & ~ledge & (ribs < 0.35)
+    p = np.where(earth, PLANT_P_EARTH, 0.0) + np.where(ledge, PLANT_P_LEDGE, 0.0) + np.where(gully, PLANT_P_GULLY, 0.0)
+    pick = inside & (rng.random(len(P)) < p)
+    out = []
+    names = list(PLANTS)
+    for i in np.flatnonzero(pick):
+        t = names[0] if (earth[i] and rng.random() < 0.6) else names[1]
+        _, hw, (s0, s1) = PLANTS[t]
+        sc = float(rng.uniform(s0, s1))
+        if droad[i] < hw * sc + PLANT_CLEAR:                # its crown would reach over the road
+            continue
+        out.append((t, float(P[i, 0]), float(P[i, 1]), float(P[i, 2]) - PLANT_SINK, float(rng.uniform(0, 2 * np.pi)), sc))
+    return out
 
 
 def add_projected(mb, mat, P, N, col, T, tile_m=TILE_M):
@@ -555,6 +616,7 @@ def steep_skin_step(root, report=None):
     colours = BaseColours(zi, lv, names, n)
     q_new = q.copy()
     files, objs = {}, []
+    trees = []
     rep = {"tiles": 0, "squares": 0, "triangles": 0, "steep_vertices": 0, "changed_vertices": 0,
            "changed_max_m": 0.0}
     m = int(np.ceil(REACH / sq)) + DILATE + 4
@@ -590,6 +652,13 @@ def steep_skin_step(root, report=None):
             # v3.1: under a road surface the skin is under it (its foot): hidden by the road, never over it
             hr = RS.height(X0 + (b0 + C) * sq, Y0 + (a0 + R) * sq, "low")
             z = np.where(np.isfinite(hr), np.minimum(z, hr - ROAD_DIVE), z)
+            # v3.1: m from the nearest road vertex (less half a square: about the edge of its surface); beside a road
+            # the skin no higher than the terrain (EPS): no lip at the road edge
+            dv = ndi.distance_transform_edt(~road[a0:a1, b0:b1]) * sq
+            droad = np.maximum(ndi.map_coordinates(dv, [R, C], order=1) - sq / 2, 0.0)
+            clamp = (droad <= ROAD_CLAMP) & ~np.isfinite(hr)
+            rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > fl + 1e-6)).sum())
+            z = np.where(clamp, np.minimum(z, fl), z)
             gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
             cg = colours(lay[a0:a1, b0:b1].ravel(), (gr + a0).ravel(), (gc + b0).ravel()).reshape(a1 - a0, b1 - b0, 3)
             col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
@@ -597,7 +666,11 @@ def steep_skin_step(root, report=None):
             mb = bng.MeshBuilder()
             far = [(1, LOD_LIFT[1], bng.MeshBuilder()), (2, LOD_LIFT[2], bng.MeshBuilder())]
             ox, oy = X0 + b0 * sq, Y0 + a0 * sq
-            ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far)
+            ntri, info = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far, droad, RS)
+            rep["skin_points_over_road"] = rep.get("skin_points_over_road", 0) + info["over_road"]
+            rep["skin_over_road_max_m"] = round(max(rep.get("skin_over_road_max_m", -9.0), info["over_road_max"]), 3)
+            if ntri:
+                trees += plants(info, wv, hr, droad, np.random.default_rng(tr * 100003 + tc))
             if not ntri:                                    # nothing left inside the cut: the terrain as it was
                 continue
             sub = q_new[a0:a1, b0:b1][cr, ccs]
@@ -611,6 +684,8 @@ def steep_skin_step(root, report=None):
                 lods = [(px[i + 1], mbk) for i, (_, _, mbk) in enumerate(far) if not mbk.empty()]
                 mb.write_dae(f, name=f"skin_{tr}_{tc}", origin=origin, detail=px[0], weld=False, lods=lods)
                 rep["triangles_far"] = rep.get("triangles_far", 0) + sum(m.triangle_count() for _, m in lods)
+                for k, (_, mk) in enumerate(lods):
+                    rep[f"triangles_lod{k + 1}"] = rep.get(f"triangles_lod{k + 1}", 0) + mk.triangle_count()
                 rel = f"{D}/skin_{tr:04d}_{tc:04d}.dae"
                 files[f"{lv}/{rel}"] = open(f, "rb").read()
             ob = bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=True, decal=False)
@@ -623,6 +698,23 @@ def steep_skin_step(root, report=None):
             rep["changed_vertices"] += int(lo.sum())
             dz = np.abs(Hn - H)[cr, ccs]
             rep["changed_max_m"] = max(rep["changed_max_m"], float(dz.max()) if dz.size else 0.0)
+    # v3.1: the plants, capped, as forest items of their own types (a new run replaces them)
+    if len(trees) > PLANT_MAX:
+        keep = np.random.default_rng(7).choice(len(trees), PLANT_MAX, replace=False)
+        trees = [trees[i] for i in sorted(keep)]
+    rep["plants"] = {t: sum(1 for p in trees if p[0] == t) for t in PLANTS}
+    if trees:
+        for t in PLANTS:
+            files[f"{lv}/forest/{t}.forest4.json"] = "".join(
+                json.dumps({"ctxid": 1, "pos": [round(x, 3), round(y, 3), round(z, 3)],
+                            "rotationMatrix": bng.rot_local_x_to(yaw), "scale": round(sc, 4), "type": t},
+                           separators=(",", ":")) + "\n" for (tt, x, y, z, yaw, sc) in trees if tt == t).encode("utf-8")
+        mdn = f"{lv}/art/forest/managedItemData.json"
+        managed = json.loads(zi.read(mdn)) if mdn in zi.NameToInfo else {}
+        for t, (shape, _, _) in PLANTS.items():
+            managed[t] = {"name": t, "internalName": t, "class": "TSForestItemData", "persistentId": bng.pid(),
+                          "radius": 0.5, "shapeFile": shape}
+        files[mdn] = json.dumps(managed, indent=1).encode("utf-8")
     print("steep skin: %s" % rep, flush=True)
     if objs:
         col_img, nrm_img = bank_texture()

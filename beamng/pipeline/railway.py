@@ -21,7 +21,7 @@ One mesh per 512 m tile in MissionGroup/railway, with collision.
 import json, os
 import numpy as np
 import shapely
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import distance_transform_edt, gaussian_filter1d
 import bng
 from config import DATA, LEVEL_NAME, lv95_to_local
 import area
@@ -44,6 +44,8 @@ BALLAST_EXTRA = 0.35          # m of ballast beyond the sleepers on each side
 CRIB = 0.04                   # v3.1: m of the sleepers over the ballast between them (the ballast up to their tops):
                               # sleepers standing 16 cm out of a flat bed threw the rails' shadow in steps, sleeper
                               # top, ballast, sleeper top, and the track showed as a brown zigzag (michi, 2026-10-22)
+CRIB_RAMP = 3.0               # m: the ballast down to the sleepers' feet towards a level crossing or a covered piece
+                              # (no 12 cm lip beside the road there)
 BALLAST_SLOPE = 0.9           # m out, down to the terrain
 SMOOTH = 6.0                  # m, smoothing of the bed along the line
 STEP = 1.0                    # m between the stations of a track
@@ -315,6 +317,10 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
             out = half + np.clip(EMBANK * (base - top_t), BALLAST_SLOPE, EMBANK_MAX)
             gL = terrain_top(P[:, 0] + N[:, 0] * out, P[:, 1] + N[:, 1] * out)
             gR = terrain_top(P[:, 0] - N[:, 0] * out, P[:, 1] - N[:, 1] * out)
+            blocked = crossing | covered
+            gap = np.full(len(P), np.inf) if not blocked.any() else \
+                distance_transform_edt(~blocked) * STEP
+            crib = (SLEEPER_H - CRIB) * np.clip(gap / CRIB_RAMP, 0.0, 1.0)
             q = []
             for i in range(len(P) - 1):
                 if crossing[i] or crossing[i + 1] or covered[i] or covered[i + 1]:
@@ -323,7 +329,7 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
                 Rc0, Rc1 = P[i] - N[i] * half, P[i + 1] - N[i + 1] * half
                 Lo0, Lo1 = P[i] + N[i] * out[i], P[i + 1] + N[i + 1] * out[i + 1]
                 Ro0, Ro1 = P[i] - N[i] * out[i], P[i + 1] - N[i + 1] * out[i + 1]
-                z0, z1 = base[i] + SLEEPER_H - CRIB, base[i + 1] + SLEEPER_H - CRIB
+                z0, z1 = base[i] + crib[i], base[i + 1] + crib[i + 1]
                 l0, l1 = min(gL[i], z0) - 0.2, min(gL[i + 1], z1) - 0.2
                 r0, r1 = min(gR[i], z0) - 0.2, min(gR[i + 1], z1) - 0.2
                 q += [np.r_[Rc0, z0], np.r_[Lc0, z0], np.r_[Lc1, z1], np.r_[Rc0, z0], np.r_[Lc1, z1], np.r_[Rc1, z1]]
