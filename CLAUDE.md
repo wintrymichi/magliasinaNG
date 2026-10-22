@@ -185,6 +185,9 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   walls and stood a post along a facade (TALL 0.35 m, above the 0.27 m fascias of roof_details).
   The first runs also doubled the posts of buildings_mesh's canopies (a wide canopy left free strips between its own
   posts): roof_posts now skips every roof that has a post already, told by the post vertex colour (post_color).
+  roof_posts was first put right after roof_details, before fuel_stations: its posts would have counted as walls under
+  the survey canopy fuel_stations replaces. Anything new that stands on the ground goes before parking/street_life
+  (they keep off the building meshes) and after the steps that cut or replace building pieces.
 
 - Roofs were a sheet with no thickness and plain folds at the ridges; tegole/metal textures of 2 m with thin, low-contrast
   lines read as one grey surface from 30 m (michi 2026-10-22, lake-shore house in the cinematic video). v3.1: finish step
