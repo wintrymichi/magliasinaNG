@@ -21,6 +21,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - `pgrep -f`/`pkill -f` with a pattern in your own command line stops your own shell: use "[r]un_build" style patterns.
 - Push work often. An earlier session lost the fuel stations module because it was never pushed.
 
+- The cloud container cannot upload release assets (uploads.github.com answered 415 through the gateway) and cannot
+  dispatch a workflow that is not on the default branch (404): give a new workflow a push trigger on a stamp file of
+  the branch (nightly_from_test.yml copies the draft test build to the nightly pre-release on GitHub's side).
+- A force-push of a branch restarts every workflow whose push paths the branch touches: two rebases of the roofs
+  branch reran roofs_pack.yml (it committed nothing new). Check `actions/runs?branch=` after a force-push.
 - `gh release download` fails in the cloud (GraphQL blocked): download release assets through the REST API
   (`gh api .../releases/tags/<tag>`, then the asset URL with `Accept: application/octet-stream`).
 - pip can hang with no output in the cloud: run it with `timeout` and `--progress-bar off`, kill and retry.
@@ -75,6 +80,15 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - ETK 800 cockpit camera placed by hand: offset from the reference node forward -0.3, left 0.4, up 0.92 m (forward 0
   ends outside the windscreen).
 - SendUserFile takes files under 20 MB.
+- Drone video ("Video drone del Malcantone", 2026-10-22): the virtual display \\.\DISPLAY5 was detached at start (michi
+  re-attached it). Mid-session the main monitor went off and DISPLAY5 became the only screen, at 0,0: gdigrab with a fixed
+  offset of 2560 failed ("capture area outside window area") and then captured the Claude app instead of the game.
+  Compute the offset at runtime and set BeamNG topmost.
+- After core_environment.setTimeOfDay, scenetree.sunsky.elevation read in the same chunk is still the old value (it
+  updates on the next frame). tod 0.77 is already night-dark; the morning golden hour is at 0.80.
+- The PC's permission check (auto mode) blocked an RC session's curl download of a release zip because the order came
+  from the thread, not from michi (2026-10-22): ask michi to write the download in his own words in the thread first.
+  DESKTOP-OUPOLOA has no gh, so a DRAFT release asset cannot reach it: put test zips on the public pre-release nightly.
 
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 
