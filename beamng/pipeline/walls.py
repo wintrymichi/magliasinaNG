@@ -335,6 +335,28 @@ def above_way(w, ctx):
     return shapely.union_all(cut) if cut else None
 
 
+CAP_R = 0.75     # m: a wall vertex takes the photo caps (wall_caps.json) measured at least this near
+
+
+def caps_at(ctx, P, r):
+    """The photo cap of each wall vertex P: the highest of the caps measured within r of it (r: the thickness of
+    the wall), inf where none.
+    wall_caps.py measured the caps on the outlines of its day, every 0.5 m; the outlines have since been
+    segmented every 1 m (STEP_FINE) and redrawn (paired_lines, the decks, the drive-free cuts). Up to v3.0.40 a
+    vertex took a cap only where its coordinates matched a key to the cm, about one vertex in two to six along a
+    capped wall, and the top went up and down from one vertex to the next: a saw of 2-3 m teeth on the retaining
+    wall of the Magliaso-Pura hairpin (645, -1005; michi's video, 2026-10-22), 1-2 m V notches elsewhere.
+    The highest, not the lowest: there the survey drew the wall as two or more lines 0.2-0.5 m apart and the
+    panoramas measured each: the line on the edge of the road as a kerb (no wall in front of it), the lines
+    behind it 2.5 m high (the wall, with the bank 4 m higher behind it). Where one face only is measured (a wall
+    under the edge of a road, its valley face unseen) its cap holds for both faces, as before."""
+    if "caps_tree" not in ctx:
+        K = np.array([[float(a) for a in k.split(",")] for k in ctx["caps"]]).reshape(-1, 2)
+        ctx["caps_tree"] = (cKDTree(K), np.array(list(ctx["caps"].values()), np.float64))
+    tree, Z = ctx["caps_tree"]
+    return np.array([Z[ii].max() if ii else np.inf for ii in tree.query_ball_point(P, r=r)])
+
+
 def wall_geometry(ctx=None):
     """Yield every cadastral wall polygon with its per-vertex base/top heights (see module doc)."""
     ctx = ctx or _context()
@@ -421,13 +443,8 @@ def wall_geometry(ctx=None):
             ztop = np.minimum(ztop, zlo + 12.0)
             # no parapet where the panoramas see none above the road (wall_caps.py)
             if ctx.get("caps"):
-                cap = np.array([ctx["caps"].get("%.2f,%.2f" % (v[0], v[1]), np.inf) for v in allv])
-                ztop = np.minimum(ztop, cap)
-                # one top across the thickness: a cap measured on one face holds for the other
-                capped = np.isfinite(cap)
-                if capped.any():
-                    across = np.array([np.min(np.where(capped[ii], ztop[ii], np.inf)) for ii in nb])
-                    ztop = np.minimum(ztop, across)
+                # one top across the thickness: the caps measured on either face hold for both (caps_at)
+                ztop = np.minimum(ztop, caps_at(ctx, allv, max(CAP_R, thick)))
             zbot = zlo - 0.4
             # next to a paved surface the wall meets the (idealised) road surface
             S = ctx.get("surface")
