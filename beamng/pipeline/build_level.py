@@ -929,6 +929,7 @@ FINISH = [
     ("lake", "water", "lake_step", {"report": True}),
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
     ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
+    ("roof_details", "roof_details", "roof_details_step", {"report": True}),   # v3.1: roof rims, ridge caps
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, totems
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
     ("shopfronts", "shopfronts", "shopfronts_step", {"report": True}),      # v3.0: parody shop signs, awnings, props

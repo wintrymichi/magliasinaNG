@@ -776,63 +776,121 @@ def plinth(dst, w=1024, h=256):
     save(os.path.join(dst, "t_bld_plinth_ao.data.png"), ao_map(hgt, 4, 0.08))
 
 
-def roof_coppi(dst, n=1024, tile_m=2.0):
+def _weathering(n, tile_m, rng):
+    """Shared weathering of the tiled roofs (v3.1), tileable over the whole texture: (tone (n, n), lichen (n, n),
+    moss (n, n)). Rain streaks running down the slope (along the rows of the image), damp blotches of half a metre to
+    two metres, yellow-grey lichen spots of a few cm."""
+    px = n / tile_m
+    streak = aniso_noise(n, n, 0.9 * px, 0.035 * px, rng)
+    blot = noise(n, n, 0.45 * px, rng) + 0.6 * noise(n, n, 0.12 * px, rng)
+    tone = 1.0 - 0.07 * np.clip(streak, 0, None) + 0.045 * blot
+    lichen = np.clip(noise(n, n, 0.012 * px, rng) - 1.55, 0, 1) * np.clip(noise(n, n, 0.35 * px, rng) + 0.6, 0, 1)
+    moss = np.clip(noise(n, n, 0.3 * px, rng) - 0.9, 0, 1)
+    return tone, np.clip(lichen * 2.2, 0, 1), moss
+
+
+def _replaced(h, hi, lo):
+    """Colour factor (n, n, 3) of the tiles replaced over the years: redder (newer clay) over `hi`, browner and
+    darker under `lo` (the first v3.1 draft divided the blue by the factor and drew blue tiles)."""
+    out = np.ones(h.shape + (3,), np.float32)
+    out[h > hi] = (1.10, 0.97, 0.88)
+    out[h < lo] = (0.88, 0.84, 0.78)
+    return out
+
+
+def _cell_hash(i, j, salt):
+    h = np.sin(i * 12.9898 + j * 78.233 + salt * 37.719) * 43758.5453
+    return h - np.floor(h)
+
+
+def roof_coppi(dst, n=2048, tile_m=4.0):
     """Canal tiles ("coppi"): rows of caps (convex) and channels (concave) running down the slope,
     each course overlapping the next one; the image's up is down the slope (roof_uvs), so the lower
-    edge of every tile is towards the top of the image."""
+    edge of every tile is towards the top of the image. v3.1: over 4 m (the 2 m of v2.2 repeated as a grid
+    seen from the road), every tile its own tone and a few replaced or blackened ones, the columns not quite
+    straight, the lips' shadow on the tile below, dirt in the channels, rain streaks, lichen on the caps."""
     rng = np.random.default_rng(SEED + 4)
     px = n / tile_m
     X, Y = np.meshgrid(np.arange(n) / px, np.arange(n) / px)
-    period = tile_m / 5                                # a channel and a cap: 0.4 m
-    ph = (X / period) % 1.0
-    col_i = np.floor(X / period * 2).astype(int)       # half columns: caps and channels
-    cap = (np.floor(X / period * 2).astype(int) % 2) == 0
+    period = 0.4                                       # a channel and a cap
+    cols_n = int(round(tile_m / period * 2))
+    wob = 0.012 * aniso_noise(n, n, 0.8 * px, 0.4 * px, rng)          # the columns wander a little
+    Xw = (X + wob) % tile_m
+    ph = (Xw / period) % 1.0
+    col_i = np.floor(Xw / period * 2).astype(int) % cols_n
+    cap = (col_i % 2) == 0
     prof = 0.5 * np.cos(2 * np.pi * ph)                # +0.5 on the caps, -0.5 in the channels
-    course = tile_m / 5                                # 0.4 m exposed length
-    off = np.where(cap, 0.0, 0.5 * course) + (col_i % 5) * 0.013
-    f = ((Y + off) / course) % 1.0                     # 0 at the upper end of the exposed tile
-    ci = np.floor((Y + off) / course).astype(int)
-    step = np.where(f > 0.93, (1 - f) / 0.07 * 0.1, 0.1 * f)
-    hgt = prof * 0.9 + step * 0.8
-    hsh = np.sin(col_i * 12.9898 + ci * 78.233) * 43758.5453
-    hsh = hsh - np.floor(hsh)
-    tone = 0.82 + 0.20 * (hsh - 0.5)
-    old = ((hsh * 7.31) % 1.0) > 0.88                  # a few darker, weathered tiles
+    course = 0.4                                       # exposed length
+    jit = _cell_hash(col_i, 0, 1) * 0.05
+    off = np.where(cap, 0.0, 0.5 * course) + jit
+    f = ((Y + off) / course) % 1.0                     # 0 at the lower end (the lip) of the exposed tile
+    ci = np.floor((Y + off) / course).astype(int) % int(round(tile_m / course))
+    h1 = _cell_hash(col_i, ci, 2)
+    h2 = _cell_hash(col_i, ci, 3)
+    tone = 0.82 + 0.20 * (h1 - 0.5)
+    hue = _replaced(h2, 0.93, 0.05)                    # replaced tiles: redder or browner
+    old = (h2 > 0.88) & (h2 <= 0.93)                   # weathered dark tiles
+    # the tile rises from its upper end to its lip, then steps down onto the next one
+    step = np.where(f < 0.06, f / 0.06, 1.0 - f) * 0.25
+    hgt = prof * 0.9 + step
     grain = noise(n, n, 1.2, rng)
-    blot = noise(n, n, 60, rng)
-    # caps catch the light on their crest and on the side towards the sun, channels are in shade
-    shade = 0.62 + 0.42 * (prof + 0.5) + 0.16 * np.sin(2 * np.pi * ph)
-    v = tone * (1 - 0.22 * old) * shade * (1 + 0.05 * grain + 0.03 * blot)
-    lip = f > 0.95
-    v = np.where(lip, v * 0.55, v)
-    col = np.stack([v * 1.03, v * 0.97, v * 0.93], -1)
+    wt, lichen, moss = _weathering(n, tile_m, rng)
+    shade = 0.58 + 0.46 * (prof + 0.5) + 0.16 * np.sin(2 * np.pi * ph)
+    v = tone * (1 - 0.35 * old) * shade * (1 + 0.05 * grain) * wt
+    shadow = (f > 0.88)                                # the lip of the tile above (down the image) shades this one
+    v = np.where(shadow, v * (0.50 + 0.35 * (1 - (f - 0.88) / 0.12) ** 2), v)
+    v = np.where(f < 0.025, v * 1.08, v)               # the rounded lip catches the light
+    dirt = np.clip(-prof * 2, 0, 1) * np.clip(aniso_noise(n, n, 0.4 * px, 0.02 * px, rng), 0, None) * 0.25
+    v = v * (1 - dirt)
+    col = np.stack([v * 1.03, v * 0.97, v * 0.93], -1) * hue
+    lich = lichen * (prof > -0.1)
+    col = col * (1 - 0.55 * lich[..., None]) + np.array([0.78, 0.76, 0.58]) * 0.55 * lich[..., None]
+    mz = (moss * (prof < -0.2) + 0.6 * moss * shadow)[..., None] * 0.5
+    col = col * (1 - mz) + np.array([0.30, 0.33, 0.20]) * mz
     save(os.path.join(dst, "t_roof_coppi_b.color.png"), to8(col))
-    save(os.path.join(dst, "t_roof_coppi_nm.normal.png"), normal_map(hgt * 14 + 0.3 * grain, 1.0))
-    save(os.path.join(dst, "t_roof_coppi_r.data.png"), to8(0.72 + 0.06 * blot))
-    save(os.path.join(dst, "t_roof_coppi_ao.data.png"), ao_map(hgt * 14, 12, 0.05))       # v2.4: the channels
+    save(os.path.join(dst, "t_roof_coppi_nm.normal.png"), normal_map(hgt * 16 + 0.3 * grain, 1.0))
+    save(os.path.join(dst, "t_roof_coppi_r.data.png"), to8(0.70 + 0.08 * (1 - wt) + 0.1 * lich))
+    save(os.path.join(dst, "t_roof_coppi_ao.data.png"), ao_map(hgt * 16, 14, 0.05))       # v2.4: the channels
 
 
-def roof_tegole(dst, n=1024, tile_m=2.0):
-    """Flat interlocking clay tiles (from the 1950s): rectangular tiles with a raised rib and two
-    small grooves, in straight rows."""
+def roof_tegole(dst, n=2048, tile_m=4.0):
+    """Flat interlocking tiles (from the 1950s): rectangular tiles with two raised ribs and a groove, in
+    straight rows. v3.1: over 4 m, the heads of the tiles drawn with their thickness and the shadow they cast on
+    the course below (the thin lines of v2.2 vanished from a few tens of metres and the roofs read as one grey
+    sheet), every tile its own tone, a few replaced ones, rain streaks, lichen and moss in the overlaps."""
     rng = np.random.default_rng(SEED + 5)
     px = n / tile_m
     X, Y = np.meshgrid(np.arange(n) / px, np.arange(n) / px)
-    tw, th = tile_m / 8, tile_m / 5
-    u, v = (X / tw) % 1.0, (Y / th) % 1.0
-    ti = np.floor(X / tw).astype(int) * 13 + np.floor(Y / th).astype(int) * 7
-    tone = 0.84 + 0.10 * (((ti * 0.61803) % 1.0) - 0.5)
-    rib = 0.8 * np.exp(-((u - 0.30) / 0.10) ** 2) + 0.8 * np.exp(-((u - 0.72) / 0.10) ** 2) - \
-        0.5 * np.exp(-((u - 0.51) / 0.05) ** 2) - 0.6 * np.exp(-((u - 0.03) / 0.03) ** 2)
-    hgt = rib + np.where(v > 0.92, (1 - v) / 0.08, v) * 0.6
+    tw, th = tile_m / 16, tile_m / 10                  # 0.25 x 0.40 m exposed
+    ti, tj = np.floor(X / tw).astype(int) % 16, np.floor(Y / th).astype(int) % 10
+    u = (X / tw) % 1.0
+    f = (Y / th) % 1.0                                 # 0 at the head (the lower edge) of the tile
+    h1 = _cell_hash(ti, tj, 4)
+    h2 = _cell_hash(ti, tj, 5)
+    tone = 0.85 + 0.14 * (h1 - 0.5)
+    hue = _replaced(h2, 0.95, 0.04)
+    old = (h2 > 0.90) & (h2 <= 0.95)
+    rib = 0.8 * np.exp(-((u - 0.30) / 0.09) ** 2) + 0.8 * np.exp(-((u - 0.72) / 0.09) ** 2) - \
+        0.5 * np.exp(-((u - 0.51) / 0.05) ** 2) - 0.9 * np.exp(-((u - 0.02) / 0.025) ** 2)
+    head = np.where(f < 0.07, f / 0.07, 1.0 - 0.3 * f)
+    hgt = rib * 0.6 + head * 1.2
     grain = noise(n, n, 1.3, rng)
-    shade = np.clip(lit(hgt * 5, 0.3), 0.6, 1.3) * np.where(v > 0.93, 0.62, 1.0)
-    val = tone * shade * (1 + 0.04 * grain)
-    col = np.stack([val * 1.03, val * 0.97, val * 0.93], -1)
+    wt, lichen, moss = _weathering(n, tile_m, rng)
+    shade = np.clip(lit(hgt * 4, 0.35), 0.65, 1.3)
+    val = tone * (1 - 0.3 * old) * shade * (1 + 0.05 * grain) * wt
+    shadow = f > 0.82                                  # under the head of the tile above
+    val = np.where(shadow, val * (0.42 + 0.45 * (1 - (f - 0.82) / 0.18) ** 2), val)
+    val = np.where(f < 0.03, val * 1.10, val)          # the head's edge in the light
+    joint = np.exp(-((u - 0.02) / 0.02) ** 2)
+    val = val * (1 - 0.35 * joint)
+    col = np.stack([val * 1.03, val * 0.97, val * 0.93], -1) * hue
+    col = col * (1 - 0.5 * lichen[..., None]) + np.array([0.76, 0.74, 0.58]) * 0.5 * lichen[..., None]
+    mz = (moss * (shadow | (joint > 0.3)))[..., None] * 0.45
+    col = col * (1 - mz) + np.array([0.28, 0.31, 0.19]) * mz
     save(os.path.join(dst, "t_roof_tegole_b.color.png"), to8(col))
-    save(os.path.join(dst, "t_roof_tegole_nm.normal.png"), normal_map(hgt * 10 + 0.3 * grain, 1.0))
-    save(os.path.join(dst, "t_roof_tegole_r.data.png"), to8(0.7 + 0.03 * grain))
-    save(os.path.join(dst, "t_roof_tegole_ao.data.png"), ao_map(hgt * 10, 8, 0.06))
+    save(os.path.join(dst, "t_roof_tegole_nm.normal.png"), normal_map(hgt * 12 + 0.3 * grain, 1.0))
+    save(os.path.join(dst, "t_roof_tegole_r.data.png"), to8(0.68 + 0.06 * (1 - wt) + 0.1 * lichen))
+    save(os.path.join(dst, "t_roof_tegole_ao.data.png"), ao_map(hgt * 12, 10, 0.07))
 
 
 def roof_piode(dst, n=1024, tile_m=3.0):
@@ -891,19 +949,39 @@ def roof_flat(dst, n=1024):
     save(os.path.join(dst, "t_roof_flat_r.data.png"), to8(0.93 + 0.03 * blot))
 
 
-def roof_metal(dst, n=1024, tile_m=2.0):
-    """Metal sheet (standing seams down the slope every 0.5 m) of sheds and farm buildings."""
+def roof_metal(dst, n=2048, tile_m=4.0):
+    """Metal sheet (standing seams down the slope every 0.5 m) of sheds, farm buildings and many newer houses.
+    v3.1: over 4 m, every sheet its own shade (the sheets of v2.2 were one even grey and a roof read as a flat
+    sheet from the road), the seams standing up with a lit and a shaded side, the cross joints of the sheets,
+    rain streaks, chalky blotches and a few spots of rust."""
     rng = np.random.default_rng(SEED + 8)
     px = n / tile_m
     X, Y = np.meshgrid(np.arange(n) / px, np.arange(n) / px)
-    u = (X / 0.5) % 1.0
-    seam = np.exp(-((u - 0.5) / 0.018) ** 2)
-    streak = aniso_noise(n, n, 60, 2, rng)
-    v = 0.80 * (1 + 0.03 * streak) * (1 - 0.25 * seam) + 0.1 * np.exp(-((u - 0.47) / 0.01) ** 2)
+    pitch = 0.5
+    u = (X / pitch) % 1.0
+    si = np.floor(X / pitch).astype(int) % int(round(tile_m / pitch))
+    sheet_l = 2.0 + 2.0 * (si % 2)                     # sheets 2 or 4 m long, their cross joints staggered
+    sj = np.floor((Y + 0.7 * si) / sheet_l).astype(int)
+    fy = ((Y + 0.7 * si) / sheet_l) % 1.0
+    h1 = _cell_hash(si, sj, 6)
+    uc = (u + 0.5) % 1.0                               # 0.5 on the seams, the edges of the sheets
+    seam = np.exp(-((uc - 0.5) / 0.012) ** 2)
+    side = np.clip((uc - 0.5) / 0.03, -1, 1) * np.exp(-((uc - 0.5) / 0.03) ** 2)
+    pan = 0.15 * np.sin(np.pi * u) ** 2                # the pan between two seams bellies a little
+    streak = aniso_noise(n, n, 0.8 * px, 0.02 * px, rng)
+    blot = noise(n, n, 0.4 * px, rng)
+    v = (0.78 + 0.10 * (h1 - 0.5)) * (1 + 0.05 * streak + 0.035 * blot)
+    v = v * (1 + 0.25 * side) * (1 - 0.10 * seam) + 0.08 * np.exp(-((uc - 0.48) / 0.008) ** 2)
+    v = np.where(np.minimum(fy, 1 - fy) * sheet_l < 0.012, v * 0.7, v)
+    chalk = np.clip(noise(n, n, 0.15 * px, rng) - 1.2, 0, 1)
+    rust = np.clip(noise(n, n, 0.02 * px, rng) - 2.3, 0, 1) * (noise(n, n, 0.5 * px, rng) > 0.8)
     col = np.stack([v, v * 1.0, v * 1.01], -1)
+    col = col * (1 - 0.3 * chalk[..., None]) + np.array([0.86, 0.86, 0.84]) * 0.3 * chalk[..., None]
+    col = col * (1 - 0.7 * rust[..., None]) + np.array([0.45, 0.25, 0.14]) * 0.7 * rust[..., None]
+    hgt = seam * 8 + pan * 3 + 0.2 * noise(n, n, 1.0, rng)
     save(os.path.join(dst, "t_roof_metal_b.color.png"), to8(col))
-    save(os.path.join(dst, "t_roof_metal_nm.normal.png"), normal_map(seam * 8, 1.0))
-    save(os.path.join(dst, "t_roof_metal_r.data.png"), to8(0.45 + 0.05 * streak))
+    save(os.path.join(dst, "t_roof_metal_nm.normal.png"), normal_map(hgt, 1.0))
+    save(os.path.join(dst, "t_roof_metal_r.data.png"), to8(0.42 + 0.06 * streak / 3 + 0.3 * chalk + 0.4 * rust))
     save(os.path.join(dst, "t_roof_metal_ao.data.png"), ao_map(seam * 8, 6, 0.05))
 
 
@@ -950,7 +1028,7 @@ def walls(dst):
 
 
 # roof textures: name -> tile size m (roof_uvs)
-ROOF_TILE = {"coppi": 2.0, "tegole": 2.0, "piode": 3.0, "flat": 4.0, "metal": 2.0}
+ROOF_TILE = {"coppi": 4.0, "tegole": 4.0, "piode": 3.0, "flat": 4.0, "metal": 4.0}
 
 
 def build(dst):
