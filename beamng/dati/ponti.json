@@ -135,8 +135,9 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Bridge over the Tresa at Ponte Tresa (border): deck at the swissTLM3D height (272.8 m), 2.3 m above the water; on the Italian side it ends on the Copernicus terrain.",
-   "checked": true
+   "note": "Bridge over the Tresa at Ponte Tresa (border): deck at the swissTLM3D height (272.8 m), 2.3 m above the water; on the Italian side it ends on the Copernicus terrain. v3.1: width 11 m by hand (two lanes and two sidewalks): the survey polygon of the Swiss half (19.7 x 18.6 m) takes in the bridgehead and gave 18 m.",
+   "checked": true,
+   "width": 11.0
   },
   {
    "tlm": "{A6995468-1DA6-4B88-95A8-203F982B7DE6}",
@@ -687,8 +688,9 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Via Lugano in Ponte Tresa: deck at the swissTLM3D height above the water (previously it followed the water because the DTM is flat over the river).",
-   "checked": true
+   "note": "Via Lugano in Ponte Tresa: deck at the swissTLM3D height above the water (previously it followed the water because the DTM is flat over the river). v3.1: width 11 m by hand (two lanes and two sidewalks): the survey polygon of the Swiss half (19.7 x 18.6 m) takes in the bridgehead and gave 18 m.",
+   "checked": true,
+   "width": 11.0
   },
   {
    "tlm": "{9FFF3597-A9E2-4EC5-80F4-49D8B7B0FFE4}",
