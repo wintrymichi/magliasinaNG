@@ -401,6 +401,24 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - Overpass answered 502/504 from GitHub runners to every query on 2026-10-20, even 1 km boxes, for hours: read OSM
   from the Geofabrik extract with osmium instead (download_osm.py --add).
 
+## Asphalt age from the photos (road_age.py, asphalt_survey.py, v3.1)
+
+- In the 2024 SWISSIMAGE the shadows of trees are 0.15-0.4 of the asphalt and new asphalt is about 0.6 of old: shadow
+  masks relative to a road's own median failed on roads that lie wholly in the wood (the median was the shadow). Mask
+  against the asphalt of the 1 km photo tile and grow the mask by 2 cells: the half shadow reads as new asphalt.
+- The first patch search found 1,178 "patches", nearly all shadow fringes, dark cars beside light ones and road
+  edges: keep only dark rectangles with sunlit road all round them (ring test, no light car next to it): 36 left.
+- The two halves of a road segmented apart rarely agreed where a stretch is new, and drew a joint along the axis
+  almost everywhere: a half next to a new one that is unmeasured or nearly as dark is new too (Survey._halves).
+- TriSurface.height(..., "near") needs a zhint for every point: a point without a height of its own goes through
+  "high" first (road_wear.top_height), or it fails with IndexError.
+- road_wear.outer_edges counts the edge against a pavement as a joint (the pavement is in Sall): kerbed edges never
+  reached the drains; they are found on their own (outer_edges(..., Sk=...)).
+- Mapillary's map features over the bbox of the AI roads: 89 drains, only about 20 near the map's roads (the bbox
+  takes in Italy and the hills): the drains come mostly from the low points of kerbed edges.
+- Do not point a new material at a game texture the level never used (Italy's t_thin_damaged_edge): game_paths
+  does not know where 0.40 keeps it, and a missing texture is a hole in the road. The crumbled edge is drawn here.
+
 ## Street photo reference (street_*.py)
 
 - Google Street View terms forbid bulk download and derived data: michi asked twice, it was declined. Use Mapillary,

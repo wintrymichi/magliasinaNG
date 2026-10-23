@@ -34,6 +34,10 @@ most ROW_STEP m apart across a band, every triangle lifted where the crown or a 
 left out; in every mesh the layers from the lowest up, the order the game draws them in. One mesh per TILE m tile in MissionGroup/roads/markings, without
 collision; the textures in art/shapes/roads. Everything else is copied as it is.
 
+v3.1: and what the photos say about the asphalt (road_age.py): older and newer stretches with sealed joints, patches,
+crumbled edges, manholes and gullies, the joints with yards and setts (layers mp_wear_age_*, _patch, _frayed, _joint,
+_seam, _drain_*), the cracks and light blotches off the new asphalt.
+
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish road_wear
 """
 import json, os, re, shutil, tempfile, time, zipfile
@@ -43,6 +47,7 @@ from scipy.ndimage import median_filter, uniform_filter1d
 from scipy.spatial import cKDTree
 import bng
 import optimize_level
+import road_age
 from config import LEVEL_NAME
 from bld_textures import aniso_noise, to8
 from markings_net import read_items, shape_tris, up_faces
@@ -100,6 +105,8 @@ SHAPE = re.compile(r"art/shapes/roads/road_wear_[-+]\d+_[-+]\d+\.dae$")
 # material: (lift m over the road, m of road per repeat of the texture for a band 1 m wide)
 LAYER = {"mp_wear_variation": (0.006, 112.0 / 6.0), "mp_wear_cracks": (0.008, 16.0 / 4.0),
          "mp_wear_track": (0.010, 4.0), "mp_wear_edge": (0.012, None)}
+LAYER.update({m: (road_age.LIFT[m], road_age.PER_M.get(m)) for m in road_age.LIFT})   # v3.1: road_age.py
+KERB = ("mp_sidewalk", "mp_island")        # beyond an edge: a kerb holds the asphalt (no crumbled edge there)
 CRACK_LEN = (15.0, 45.0)     # m, length of a cracked stretch
 CRACK_EVERY = 160.0          # m of road per cracked stretch, on average
 CRACK_W = 4.0                # m, width of a cracked stretch (Italy's), narrower on narrow roads
@@ -136,10 +143,11 @@ def materials():
 
 
 # ------------------------------------------------------------------ the edges of the asphalt
-def outer_edges(A, Sa, Sall, Sp):
+def outer_edges(A, Sa, Sall, Sp, flush_too=False, Sk=None):
     """Boundary edges (k, 2, 3) of the asphalt top faces A that are the edge of the paved surface, each
     turned so that the asphalt lies on its left. Sa: the asphalt, Sall: all carriageway faces, Sp: the other
-    paved faces (TriSurface)."""
+    paved faces (TriSurface). flush_too: also the edges where paved ground goes on at the asphalt's height (v3.1:
+    the joint of the carriageway with a yard, a drive, setts)."""
     V = A.reshape(-1, 3)
     key = np.round(V[:, :2] * 200).astype(np.int64)                  # 5 mm: the corners of two faces are one
     _, vid = np.unique(key[:, 0] * 4_000_003 + key[:, 1], return_inverse=True)
@@ -169,6 +177,11 @@ def outer_edges(A, Sa, Sall, Sp):
     zp = Sp.height(q[:, 0], q[:, 1], "near", zhint=m[:, 2])
     flush = np.isfinite(zp) & (np.abs(zp - m[:, 2]) < FLUSH_DZ)
     keep = ~joint & ~flush & (L > 1e-3)
+    if flush_too:
+        f = ~joint & flush & (L > 1e-3)
+        zk = Sk.height(q[:, 0], q[:, 1], "near", zhint=m[:, 2])         # a kerb: a pavement, an island beyond
+        k = np.isfinite(zk) & (np.abs(zk - m[:, 2]) < 0.4) & (L > 1e-3)
+        return np.stack([a3[keep], b3[keep]], 1), np.stack([a3[f], b3[f]], 1), np.stack([a3[k], b3[k]], 1)
     return np.stack([a3[keep], b3[keep]], 1)
 
 
@@ -274,6 +287,211 @@ def edge_bands(A, Sa, Sall, Sp, stats):
     if not tris:
         return np.zeros((0, 3, 3)), np.zeros((0, 3, 2))
     return np.concatenate(tris), np.concatenate(uvs)
+
+
+def edge_strip(P, Nl, w, mask, lift, v_tile, Sa, min_n=3):
+    """Triangles and uvs of a band of widths w (n,) inward (Nl) from the edge points P (n, 3) where mask: u 0 at
+    the edge, 1 inside, v along over v_tile m (as edge_bands)."""
+    tris, uvs = [], []
+    inner = P[:, :2] + Nl * (w + 0.02)[:, None]
+    outer = P[:, :2] + Nl * 0.02
+    zi = Sa.height(inner[:, 0], inner[:, 1], "near", zhint=P[:, 2])
+    zo = Sa.height(outer[:, 0], outer[:, 1], "near", zhint=P[:, 2])
+    ok = mask & np.isfinite(zi) & np.isfinite(zo) & (np.abs(zi - P[:, 2]) < 0.3) & (np.abs(zo - P[:, 2]) < 0.3)
+    s = np.r_[0, np.cumsum(np.hypot(*np.diff(P[:, :2], axis=0).T))]
+    v = s / v_tile
+    Ri = np.column_stack([inner, zi + lift])
+    Ro = np.column_stack([outer, zo + lift])
+    length = 0.0
+    e = np.flatnonzero(np.diff(np.r_[0, ok.astype(int), 0]))
+    for a, b in zip(e[::2], e[1::2]):
+        if b - a < min_n:
+            continue
+        o, i_, vv = Ro[a:b], Ri[a:b], v[a:b]
+        n1 = b - a - 1
+        t = np.stack([o[:-1], o[1:], i_[1:], o[:-1], i_[1:], i_[:-1]], 1).reshape(-1, 3, 3)
+        uv = np.stack([np.c_[np.zeros(n1), vv[:-1]], np.c_[np.zeros(n1), vv[1:]], np.c_[np.ones(n1), vv[1:]],
+                       np.c_[np.zeros(n1), vv[:-1]], np.c_[np.ones(n1), vv[1:]], np.c_[np.ones(n1), vv[:-1]]],
+                      1).reshape(-1, 3, 2)
+        down = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])[:, 2] < 0
+        t[down] = t[down][:, ::-1]
+        uv[down] = uv[down][:, ::-1]
+        t, k = clear_of(t, Sa, lift)
+        tris.append(t[k])
+        uvs.append(uv[k])
+        length += float(s[b - 1] - s[a])
+    if not tris:
+        return np.zeros((0, 3, 3)), np.zeros((0, 3, 2)), 0.0
+    return np.concatenate(tris), np.concatenate(uvs), length
+
+
+def edge_extras(A, Sa, Sall, Sp, Sk, survey, stats):
+    """v3.1 (road_age.py), along the edges of the asphalt: a crumbled edge where the asphalt is old and no kerb
+    holds it, a gully at every low point of a kerbed edge, a sealed joint where the carriageway meets a yard, a
+    drive or setts at its height. Returns ({material: [(triangles, uvs)]}, gullies [(xy, tangent)], the edge
+    points (m, 2) with their inward normals (m, 2) and kerb flags (m,): where Mapillary's gullies are snapped)."""
+    out, gullies, pts, nrm, kerbs = {}, [], [], [], []
+    E, F, K = outer_edges(A, Sa, Sall, Sp, flush_too=True, Sk=Sk)
+    sag_n = int(10 / EDGE_STEP)
+    for C in chains(E):
+        if float(np.hypot(*np.diff(C[:, :2], axis=0).T).sum()) < EDGE_MIN:
+            continue
+        P = resample(C, EDGE_STEP)
+        if len(P) < 5:
+            continue
+        P[:, :2] = uniform_filter1d(P[:, :2], 3, axis=0, mode="nearest")
+        T = np.gradient(P[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        Nl = np.column_stack([-T[:, 1], T[:, 0]])
+        q = P[:, :2] - Nl * 0.35
+        zk = Sk.height(q[:, 0], q[:, 1], "near", zhint=P[:, 2])
+        kerb = np.isfinite(zk) & (np.abs(zk - P[:, 2]) < 0.4)
+        kerb = median_filter(kerb.astype(np.uint8), 5, mode="nearest").astype(bool)
+        pts.append(P[:, :2])
+        nrm.append(Nl)
+        kerbs.append(kerb)
+        # the edge is on the right of the road as seen along the chain (the asphalt on its left)
+        age = survey.query(P[:, :2] + Nl * 1.5, T, bound=4.0)[1] if survey is not None else np.zeros(len(P), np.int8)
+        fray = ~kerb & (age == road_age.OLD)
+        if fray.sum() >= 8:
+            lift, per_m = LAYER["mp_wear_frayed"]
+            t, uv, length = edge_strip(P, Nl, np.full(len(P), 0.45), fray, lift, per_m * 0.45, Sa, 8)
+            if len(t):
+                out.setdefault("mp_wear_frayed", []).append((t, uv))
+                stats["frayed_m"] = stats.get("frayed_m", 0.0) + length
+    # low points of a kerbed edge: the water of the road runs there
+    for C in chains(K):
+        P = resample(C, EDGE_STEP)
+        if len(P) <= 2 * sag_n:
+            continue
+        T = np.gradient(P[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        Nl = np.column_stack([-T[:, 1], T[:, 0]])
+        pts.append(P[:, :2])
+        nrm.append(Nl)
+        kerbs.append(np.ones(len(P), bool))
+        z = uniform_filter1d(P[:, 2], 5, mode="nearest")
+        for i in range(sag_n, len(P) - sag_n):
+            if z[i] > z[i - sag_n:i + sag_n + 1].min():
+                continue
+            if z[i - sag_n] - z[i] >= road_age.DRAIN_SAG and z[i + sag_n] - z[i] >= road_age.DRAIN_SAG:
+                gullies.append((P[i, :2] + Nl[i] * (0.06 + road_age.GRATE / 2), T[i]))
+    for C in chains(F):
+        if float(np.hypot(*np.diff(C[:, :2], axis=0).T).sum()) < 1.5:
+            continue
+        P = resample(C, 0.5)
+        if len(P) < 3:
+            continue
+        T = np.gradient(P[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        Nl = np.column_stack([-T[:, 1], T[:, 0]])
+        lift, per_m = LAYER["mp_wear_seam"]
+        t, uv, length = edge_strip(P, Nl, np.full(len(P), road_age.SEAM_W), np.ones(len(P), bool), lift,
+                                   per_m * road_age.SEAM_W, Sa)
+        if len(t):
+            out.setdefault("mp_wear_seam", []).append((t, uv))
+            stats["transition_m"] = stats.get("transition_m", 0.0) + length
+    cat = lambda xs, d: np.concatenate(xs) if xs else np.zeros((0,) + d)
+    return out, gullies, (cat(pts, (2,)), cat(nrm, (2,)), cat(kerbs, ()).astype(bool))
+
+
+def top_height(S, Q):
+    """Heights (n,) of the faces S at the points Q (n, 2): the face nearest to the top one at the first point (the
+    photos see the top surface; a deck over a road is not mixed with the road under it)."""
+    z0 = S.height(Q[:1, 0], Q[:1, 1], "high")
+    return S.height(Q[:, 0], Q[:, 1], "near", zhint=np.full(len(Q), z0[0])) if np.isfinite(z0[0]) else \
+        np.full(len(Q), np.nan)
+
+
+def patches(survey, Sa, stats):
+    """[(material, triangles, uvs)] of the patches of the photos (road_age.Survey.patches): a rectangle of patch
+    asphalt with a sealed seam round it, where it lies whole on the asphalt."""
+    out = []
+    lift, per_m = LAYER["mp_wear_patch"]
+    jl, jper = LAYER["mp_wear_joint"]
+    for p in survey.patches if survey is not None else []:
+        c, t, L, W = p["xy"], p["t"], p["along"], p["across"]
+        n = np.array([-t[1], t[0]])
+        corners = np.array([c + t * a * L / 2 + n * b * W / 2 for a in (-1, 1) for b in (-1, 1)] + [c])
+        z = top_height(Sa, corners)
+        if not np.isfinite(z).all() or np.ptp(z) > 0.4:
+            continue
+        k = max(int(np.ceil(L / 0.5)), 2)
+        f = np.linspace(-L / 2, L / 2, k + 1)
+        C = c[None, :] + t[None, :] * f[:, None]
+        Nl = np.repeat(n[None, :], len(C), 0)
+        zc = Sa.height(C[:, 0], C[:, 1], "near", zhint=np.full(len(C), z[-1]))
+        zc = np.where(np.isfinite(zc), zc, z[-1])
+        tr, uv, _ = strip(C, np.full(len(C), W), zc, Nl, Sa, np.ones(len(C), bool), lift, per_m * W, f - f[0], 2)
+        if not len(tr):
+            continue
+        out.append(("mp_wear_patch", tr, uv))
+        # the seam: both long sides, both ends
+        for sg in (-1, 1):
+            Cs = C + n[None, :] * sg * W / 2
+            zs = Sa.height(Cs[:, 0], Cs[:, 1], "near", zhint=zc)
+            tr, uv, _ = strip(Cs, np.full(len(C), road_age.JOINT_W), np.where(np.isfinite(zs), zs, zc), Nl, Sa,
+                              np.ones(len(C), bool), jl, jper * road_age.JOINT_W, f - f[0], 2)
+            if len(tr):
+                out.append(("mp_wear_joint", tr, uv))
+            out.extend(joint_line(c + t * sg * L / 2, t, n, 0.0, W + road_age.JOINT_W, z[-1], Sa, {}))
+        stats["patches"] = stats.get("patches", 0) + 1
+    return out
+
+
+def drains(Sa, gullies, edge_pts, stats):
+    """[(material, triangles, uvs)] of the manholes and gullies: Mapillary's (snapped onto the asphalt, a gully to
+    the nearest edge within road_age.SNAP m, a kerbed one first) and the gullies at the low points of the edges."""
+    P, N, K = edge_pts
+    tree = cKDTree(P) if len(P) else None
+    items = []                                                        # (material, xy, tangent, size)
+    for d in road_age.mapillary_drains():
+        c = np.array([d["x"], d["y"]], float)
+        if d["v"] == "catch-basin":
+            if tree is None:
+                continue
+            near = tree.query_ball_point(c, road_age.SNAP)
+            if not near:
+                continue
+            near = np.asarray(near)
+            kn = near[K[near]] if K[near].any() else near
+            j = kn[np.argmin(np.hypot(*(P[kn] - c).T))]
+            t = np.array([N[j, 1], -N[j, 0]])
+            items.append(("mp_wear_drain_grate", P[j] + N[j] * (0.06 + road_age.GRATE / 2), t, road_age.GRATE, "mly"))
+        else:
+            # onto the asphalt, at least 0.6 m in from its edge: the nearest such point within SNAP m
+            g = np.arange(-road_age.SNAP, road_age.SNAP + 0.01, 0.5)
+            Q = (c[None, :] + np.stack(np.meshgrid(g, g), -1).reshape(-1, 2))
+            Q = Q[np.hypot(*(Q - c).T) <= road_age.SNAP]
+            Q = Q[np.argsort(np.hypot(*(Q - c).T))]
+            ring = np.array([[np.cos(a), np.sin(a)] for a in np.linspace(0, 2 * np.pi, 8, endpoint=False)]) * 0.6
+            for q in Q:
+                R = np.vstack([q, q + ring])
+                z = top_height(Sa, R)
+                if np.isfinite(z).all() and np.ptp(z) < 0.15:
+                    items.append(("mp_wear_drain_cover", q, np.array([1.0, 0.0]), road_age.COVER, "mly"))
+                    break
+    for c, t in gullies:
+        items.append(("mp_wear_drain_grate", c, t, road_age.GRATE, "sag"))
+    out, placed = [], []
+    for mat, c, t, size, src in items:
+        if placed and np.min(np.hypot(*(np.asarray(placed) - c).T)) < road_age.DRAIN_GAP:
+            continue
+        n = np.array([-t[1], t[0]])
+        corners = np.array([c - t * size / 2 - n * size / 2, c + t * size / 2 - n * size / 2,
+                            c + t * size / 2 + n * size / 2, c - t * size / 2 + n * size / 2])
+        z = top_height(Sa, corners)
+        if not np.isfinite(z).all() or np.ptp(z) > 0.15:
+            continue
+        tr, uv = road_age.quad(c, t, size, size, z + LAYER[mat][0])
+        tr, keep = clear_of(tr, Sa, LAYER[mat][0])
+        if not keep.all():
+            continue
+        out.append((mat, tr, uv))
+        placed.append(c)
+        key = "drains_" + src + "_" + mat.rsplit("_", 1)[1]
+        stats[key] = stats.get(key, 0) + 1
+    return out
 
 
 # ------------------------------------------------------------------ the bands along the AI roads
@@ -628,7 +846,7 @@ def strip(C, width, zc, Nl, Sa, keep, lift, v_tile, s, min_piece=None):
     return np.concatenate(tris), np.concatenate(uvs), length
 
 
-def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
+def lane_bands(road, k, Sa, cw, junc, rb, rng, stats, survey=None):
     """[(material, triangles, uvs)] of the tracks, patches and cracks of the AI road k (as joined)."""
     import shapely
     nodes, lanes, spans, crack_shift = road_bands(road, rng)
@@ -700,9 +918,39 @@ def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
                               min_piece)
         if len(t):
             out.append((mat, t, uv))
-            stats[mat[8:] + "_m"] += length
-    # patches over the carriageway, 0.4 m in from both edges
-    lay("mp_wear_variation", mid, np.maximum(Ws - 0.8, 1.6), keep & np.isfinite(Ws))
+            stats[mat[8:] + "_m"] = stats.get(mat[8:] + "_m", 0.0) + length
+    # v3.1: the age of the asphalt in the photos (road_age.py), per half of the road
+    al, ar = survey.query(Pd, T) if survey is not None else np.zeros((2, len(Pd)), np.int8)
+    new = (al == road_age.NEW) | (ar == road_age.NEW)
+    old = (al == road_age.OLD) & (ar == road_age.OLD)
+    same = al == ar
+    full = np.maximum(Ws - 0.3, 1.0)
+    lo, lw_ = (mid + dl_s - 0.15) / 2, dl_s - 0.15 - mid
+    ro, rw_ = (mid - dr_s + 0.15) / 2, mid + dr_s - 0.15
+    for mat, a in (("mp_wear_age_new", road_age.NEW), ("mp_wear_age_old", road_age.OLD)):
+        lay(mat, mid, full, keep & same & (al == a))
+        lay(mat, lo, lw_, keep & ~same & (al == a) & (lw_ > 0.8))
+        lay(mat, ro, rw_, keep & ~same & (ar == a) & (rw_ > 0.8))
+    # sealed joints: across the road (or its half) where new asphalt ends on the asphalt, along the axis where only
+    # one half is new
+    jw = np.full(len(sd), road_age.JOINT_W)
+    lay("mp_wear_joint", mid, jw, keep & ~same & new)
+    measured = ok | filled
+    for side, (o, w) in ((al, (lo, lw_)), (ar, (ro, rw_))):
+        nw = keep & (side == road_age.NEW)
+        for i in np.flatnonzero(nw[:-1] != nw[1:]):
+            if not (measured[i] and measured[i + 1]):
+                continue
+            both = same[i] and same[i + 1]
+            if both and side is ar:
+                continue                                              # one joint across the whole road
+            oc, wc = (mid[i], full[i]) if both else (o[i], w[i])
+            if not np.isfinite(oc) or not np.isfinite(wc) or wc < 0.8:
+                continue
+            c = 0.5 * (Pd[i] + Pd[i + 1])
+            out.extend(joint_line(c, T[i], Nl[i], oc, wc, zc[i], Sa, stats))
+    # patches over the carriageway, 0.4 m in from both edges (not on new asphalt)
+    lay("mp_wear_variation", mid, np.maximum(Ws - 0.8, 1.6), keep & np.isfinite(Ws) & ~new)
     # tyre tracks: a pair in the middle of every lane (one pair in the middle of a narrow road)
     n = lanes if lanes > 0 and Wm >= NARROW else (1 if Wm < NARROW else 2)
     lw = Ws / n
@@ -714,9 +962,35 @@ def lane_bands(road, k, Sa, cw, junc, rb, rng, stats):
     inside = np.zeros(len(sd), bool)
     for a, b in spans:
         inside |= (sd >= a) & (sd <= b)
+    # v3.1: none on new asphalt, OLD_CRACKS times as many on old (their own draws: the rest of the map as it was)
+    if old.any():
+        r2, s0 = np.random.default_rng(1000 + k), 0.0
+        s0 = r2.exponential(CRACK_EVERY / (road_age.OLD_CRACKS - 1))
+        while s0 < sd[-1]:
+            s1 = s0 + r2.uniform(*CRACK_LEN)
+            inside |= (sd >= s0) & (sd <= s1) & old
+            s0 = s1 + r2.exponential(CRACK_EVERY / (road_age.OLD_CRACKS - 1))
     cw_ = np.minimum(CRACK_W, Ws - 1.2)
-    lay("mp_wear_cracks", mid + crack_shift * np.maximum(Ws - cw_ - 0.6, 0) / 2, cw_, keep & inside & (cw_ > 1.5))
+    lay("mp_wear_cracks", mid + crack_shift * np.maximum(Ws - cw_ - 0.6, 0) / 2, cw_,
+        keep & inside & (cw_ > 1.5) & ~new)
     return out
+
+
+def joint_line(c, t, n, off, width, z, Sa, stats):
+    """[(mp_wear_joint, triangles, uvs)] of a sealed joint across a road: centre c of the axis, its tangent t and
+    left normal n, the joint from off - width / 2 to off + width / 2 left of the axis."""
+    k = max(int(np.ceil(width / 0.25)), 2)
+    f = np.linspace(-width / 2, width / 2, k + 1) + off
+    C = c[None, :] + n[None, :] * f[:, None]
+    zq = Sa.height(C[:, 0], C[:, 1], "near", zhint=np.full(len(C), z))
+    zq = np.where(np.isfinite(zq) & (np.abs(zq - z) < 0.4), zq, z)
+    Nl = np.repeat(-t[None, :], len(C), 0)                            # the strip runs along n: its left is -t
+    lift, per_m = LAYER["mp_wear_joint"]
+    s = f - f[0]
+    tr, uv, length = strip(C, np.full(len(C), road_age.JOINT_W), zq, Nl, Sa, np.ones(len(C), bool), lift,
+                           per_m * road_age.JOINT_W, s, 2)
+    stats["joints"] = stats.get("joints", 0) + 1
+    return [("mp_wear_joint", tr, uv)] if len(tr) else []
 
 
 def road_wear_step(root, report=None):
@@ -745,6 +1019,18 @@ def road_wear_step(root, report=None):
         add("mp_wear_edge", t, uv)
     print("road wear: edges %.1f km (%.0f s)" % (stats["edge_m"] / 1000, time.time() - t0), flush=True)
     roads = read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json")
+    # v3.1: what the photos say about the asphalt (road_age.py)
+    survey = road_age.Survey(roads)
+    survey = survey if survey.ok else None
+    kerb = [up_faces(t) for m, t in surf.items() if m in KERB]
+    Sk = TriSurface(np.concatenate(kerb) if kerb else np.zeros((0, 3, 3)))
+    extra, gullies, edge_pts = edge_extras(A, Sa, Sall, Sp, Sk, survey, stats)
+    for mat, parts in extra.items():
+        for t, uv in parts:
+            add(mat, t, uv)
+    for mat, t, uv in patches(survey, Sa, stats) + drains(Sa, gullies, edge_pts, stats):
+        add(mat, t, uv)
+    print("road wear: age, joints, patches, drains (%.0f s)" % (time.time() - t0), flush=True)
     rb = roundabouts()
     joined, links = Carriageways(roads).continuations(roads, ring_roads(roads, rb))
     runs = [r for r, _ in joined_roads(roads, links)]
@@ -755,7 +1041,7 @@ def road_wear_step(root, report=None):
     for k, road in enumerate(runs):
         if len(road.get("nodes", [])) < 2:
             continue
-        bl = lane_bands(road, k, Sa, cw, junc, rb, rng, stats)
+        bl = lane_bands(road, k, Sa, cw, junc, rb, rng, stats, survey)
         if bl:
             stats["roads"] += 1
         for mat, t, uv in bl:
@@ -784,11 +1070,12 @@ def road_wear_step(root, report=None):
             new_files[f"{lv}/{rel}"] = (out or text).encode("utf-8")
             objs.append(bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=False, decal=False))
         textures(tmp)
-        for name in ("t_wear_edge_b.color.png", "t_wear_edge_o.data.png"):
+        for name in ["t_wear_edge_b.color.png", "t_wear_edge_o.data.png"] + road_age.textures(tmp):
             new_files[f"{lv}/art/shapes/roads/{name}"] = open(os.path.join(tmp, name), "rb").read()
         mats_name = f"{lv}/art/shapes/roads/main.materials.json"
         mats = json.loads(zi.read(mats_name))
-        for m in materials():
+        import italy_mats
+        for m in materials() + road_age.materials(italy_mats.OVERLAY):
             mats[m["name"]] = m
         new_files[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
         mk_items = f"{lv}/main/MissionGroup/roads/markings/items.level.json"
@@ -807,7 +1094,7 @@ def road_wear_step(root, report=None):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     stats.update(meshes=len(builders), seconds=round(time.time() - t0))
-    for kind in ("track", "edge", "variation", "cracks", "bridged"):
+    for kind in [k[:-2] for k in stats if k.endswith("_m")]:
         stats[kind + "_km"] = round(stats.pop(kind + "_m") / 1000, 1)
     print("road wear:", stats, flush=True)
     if report:

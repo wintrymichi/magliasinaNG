@@ -44,7 +44,7 @@ GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/sidewalks"
           "level_objects/Water", "level_objects/vegetation/vineyards", "level_objects/terrain_skin")
 # the translucent overlays of a road from the bottom up (road_wear.LAYER): drawn in this order, each a little
 # further towards the camera (polygon offset)
-OVERLAYS = ("variation", "cracks", "track", "edge")
+OVERLAYS = ("age_", "patch", "variation", "cracks", "track", "frayed", "edge", "joint", "seam", "drain")   # v3.1: road_age
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [
