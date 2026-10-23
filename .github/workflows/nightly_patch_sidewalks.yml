@@ -1,6 +1,7 @@
 # Patch the v3.1 test zip of the pre-release "nightly" without building it again (2026-10-23): the pavements raised
 # on their kerbs, lowered at the entrances and the crossings, what stands on them lifted (sidewalks.py, FINISH step
-# "sidewalks" of the build since it was added). Started by hand; with upload false it only runs the step and checks it.
+# "sidewalks" of the build since it was added). Started by hand, or by a change of beamng/nightly/patch_sidewalks_stamp.txt:
+# the zip is replaced only when that file's first word is "upload" (or the input upload is true), else only tested.
 name: nightly patch (v3.1 sidewalks)
 
 on:
@@ -9,6 +10,9 @@ on:
       upload:
         description: "replace the zip on the nightly pre-release (true) or only test the patch (false)"
         default: "false"
+  push:
+    branches: [claude/project-thread-bpnv3b, claude/tetti-fluttuanti-8q4m1p]
+    paths: [beamng/nightly/patch_sidewalks_stamp.txt]
 
 concurrency:
   group: nightly-build-${{ github.ref }}
@@ -90,8 +94,10 @@ jobs:
           ls -l "$RUNNER_TEMP/z"; md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
 
       - name: Upload it again
-        if: ${{ github.event.inputs.upload == 'true' }}
         run: |
+          if [ "${{ github.event.inputs.upload }}" != "true" ] && [ "$(awk 'NR==1{print $1}' beamng/nightly/patch_sidewalks_stamp.txt)" != "upload" ]; then
+            echo "test only: the nightly zip is not replaced"; exit 0
+          fi
           gh release upload nightly "$RUNNER_TEMP/z/$ZIP_NAME.zip" --clobber
           gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
           {
