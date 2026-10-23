@@ -1,0 +1,110 @@
+{
+ "magliaso": {
+  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "2881698562098984",
+    "dist_m": 17.0,
+    "bearing": 288,
+    "pano": false,
+    "captured_at": 1572162998999,
+    "creator": "kaitu",
+    "compass": 293.40590708651
+   },
+   {
+    "id": "471172057333560",
+    "dist_m": 21.4,
+    "bearing": 289,
+    "pano": false,
+    "captured_at": 1572162998360,
+    "creator": "kaitu",
+    "compass": 287.75753412834
+   },
+   {
+    "id": "1052480108908428",
+    "dist_m": 9.1,
+    "bearing": 278,
+    "pano": false,
+    "captured_at": 1572163000030,
+    "creator": "kaitu",
+    "compass": 303.12932983921
+   }
+  ]
+ },
+ "ponte_tresa": {
+  "ortho": "swissimage-dop10_2024_2710-1091_0.1_2056.tif",
+  "photos": []
+ },
+ "agno": {
+  "ortho": "swissimage-dop10_2024_2713-1095_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "376578970406386",
+    "dist_m": 23.7,
+    "bearing": 37,
+    "pano": false,
+    "captured_at": 1572190315777,
+    "creator": "kaitu",
+    "compass": 49.065813754963
+   },
+   {
+    "id": "324700289054149",
+    "dist_m": 17.3,
+    "bearing": 32,
+    "pano": false,
+    "captured_at": 1572190316409,
+    "creator": "kaitu",
+    "compass": 50.729464649398
+   },
+   {
+    "id": "865991894009474",
+    "dist_m": 21.4,
+    "bearing": 220,
+    "pano": false,
+    "captured_at": 1572162590395,
+    "creator": "kaitu",
+    "compass": 236.09776819126
+   }
+  ]
+ },
+ "caslano": {
+  "ortho": "swissimage-dop10_2024_2712-1092_0.1_2056.tif",
+  "photos": []
+ },
+ "novaggio": {
+  "ortho": "swissimage-dop10_2024_2709-1096_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "1128229927589151",
+    "dist_m": 5.2,
+    "bearing": 216,
+    "pano": true,
+    "captured_at": 1558778811000,
+    "creator": "kaitu",
+    "compass": 225.26896950385
+   },
+   {
+    "id": "836204840638387",
+    "dist_m": 5.8,
+    "bearing": 214,
+    "pano": true,
+    "captured_at": 1558778815694,
+    "creator": "kaitu",
+    "compass": 29.494956531581
+   },
+   {
+    "id": "486872372739827",
+    "dist_m": 9.0,
+    "bearing": 216,
+    "pano": true,
+    "captured_at": 1558778807158,
+    "creator": "kaitu",
+    "compass": 213.30266494418
+   }
+  ]
+ },
+ "bioggio": {
+  "ortho": "swissimage-dop10_2024_2713-1096_0.1_2056.tif",
+  "photos": []
+ }
+}
