@@ -21,6 +21,7 @@ In-game screenshots, FPS, memory and load times will follow. The pictures below 
 - **Forest floor as a mosaic:** ragged wood edges, thickets on sunny slopes, bare leaf litter under the beeches, rock outcrops, ferns and stones on the wooded banks.
 - **Bus stops:** yellow zigzags, BUS letters and yellow lines as on the orthophoto, and crossings the rules had missed.
 - **Traffic islands:** the keep-right poles have the black and yellow sleeve of the Swiss island posts.
+- **Bus shelters** placed again: none on the carriageway any more (6 stood on it), squared to the road beside their stop.
 
 ## Known issues
 - Via Golf underpass: the two footways beside the road under the tracks lie about 2 m above the road (a raised strip under the deck), and the deck is 2.9 m over the road at its north edge. The stone wing walls are out of the asphalt.
