@@ -9,7 +9,9 @@ which side to pass. Here, on the built level:
   Italy's concrete kerb stone all round it, down to KERB_DOWN m under the road; with collision (a car hits the kerb);
 - on the nose of every island at least NOSE_MIN m long that an approaching driver faces (the carriageway goes on
   beyond the end of the island, along its long axis), the signal 2.33 (pass the obstacle on the right, signs_ch.py)
-  on a grey pole, facing that traffic, and a short white beacon post with a yellow reflector beside it.
+  on a grey pole, facing that traffic; the pole's foot in the black and yellow sleeve of the Swiss island posts
+  (BOLLARD_H m, BANDS bands, black at the bottom and the top), as the street photos of the area show them (v3.1:
+  up to then a separate short white beacon with a yellow reflector stood beside the pole, which no island here has).
 Meshes in MissionGroup/roads/islands, one shape per TILE m tile; the rest of the level is copied as it is.
 
 A finishing step of build_level.py (FINISH), after the road paint and wear (which keep off the islands' faces) and
@@ -34,6 +36,10 @@ SIGN_D = 0.6             # m, the disk of 2.33
 SIGN_C = 1.45            # m, its middle over the island
 NOSE_IN = 0.6            # m from the nose to the pole
 ISLAND_MAT = "mp_island"
+BOLLARD_W = 0.14         # m, the sleeve round the pole's foot
+BOLLARD_H = 1.05         # m over the island
+BANDS = 7                # black, yellow, ..., black
+BOLLARD_TEX = "t_island_bollard_b.color.png"
 SHAPE = re.compile(r"art/shapes/roads/islands_[-+]\d+_[-+]\d+\.dae$")
 L = f"/levels/{LEVEL_NAME}"
 TEX_DIR = f"levels/{LEVEL_NAME}/art/shapes/roads"
@@ -44,8 +50,7 @@ def materials():
     return [it.material("mp_island_top", "italy_cobblestone", ground_type="COBBLESTONE"),
             it.material("mp_island_kerb", "italy_curb_concrete", ground_type="CONCRETE"),
             bng.material("mp_island_pole", base_color=[0.62, 0.63, 0.64, 1], roughness=0.45, metallic=0.6),
-            bng.material("mp_island_beacon", base_color=[0.93, 0.93, 0.91, 1], roughness=0.5),
-            bng.material("mp_island_reflector", base_color=[0.95, 0.75, 0.05, 1], roughness=0.3),
+            bng.material("mp_island_bollard", f"{L}/art/shapes/roads/{BOLLARD_TEX}", roughness=0.45, ground_type="PLASTIC"),
             bng.material("mp_island_233", f"{L}/art/shapes/roads/t_island_233_b.color.png", roughness=0.35,
                          alpha_test=100, ground_type="METAL",
                          detail={"opacityMap": f"{L}/art/shapes/roads/t_island_233_o.data.png"}),
@@ -65,6 +70,32 @@ def box(c, w, d, z0, z1, ax):
         out += [np.r_[p0, z1], np.r_[p0, z0], np.r_[p1, z0], np.r_[p0, z1], np.r_[p1, z0], np.r_[p1, z1]]
     out += [np.r_[q[0], z1], np.r_[q[1], z1], np.r_[q[2], z1], np.r_[q[0], z1], np.r_[q[2], z1], np.r_[q[3], z1]]
     return np.array(out).reshape(-1, 3, 3)
+
+
+def bollard(p, d, zt):
+    """(triangles, uvs) of the black and yellow sleeve round a pole at p (its faces along d) from the island's top zt:
+    u round the sleeve, v up it (one texture height = the sleeve)."""
+    T = box(p, BOLLARD_W, BOLLARD_W, zt, zt + BOLLARD_H, d)
+    V = T.reshape(-1, 3)
+    ax = np.asarray(d, float) / max(np.hypot(*d), 1e-9)
+    ang = np.arctan2(V[:, 1] - p[1], V[:, 0] - p[0])
+    u = (ang - math.atan2(ax[1], ax[0])) / (2 * math.pi) % 1.0
+    v = (V[:, 2] - zt) / BOLLARD_H
+    return T, np.column_stack([u, v])
+
+
+def bollard_png():
+    """The sleeve's texture: BANDS bands up a 1 x 8 strip, black at the bottom and the top."""
+    from PIL import Image
+    import io
+    h = 64 * BANDS
+    img = Image.new("RGB", (16, h))
+    for k in range(BANDS):
+        col = (18, 18, 18) if k % 2 == 0 else (238, 190, 22)
+        img.paste(col, (0, h - (k + 1) * 64, 16, h - k * 64))
+    b = io.BytesIO()
+    img.save(b, "PNG")
+    return b.getvalue()
 
 
 def disk(c, nrm, zc, r, n=20):
@@ -217,9 +248,8 @@ def islands_step(root, report=None):
                 front, uv, back_ = disk(p + d * 0.04, d, zt + SIGN_C, SIGN_D / 2)
                 add("mp_island_233", front, uv.reshape(-1, 2))
                 add("mp_island_233_back", back_)
-                bc = p + d * 0.18 + np.array([-d[1], d[0]]) * 0.0
-                add("mp_island_beacon", box(bc, 0.16, 0.16, zt, zt + 0.95, d))
-                add("mp_island_reflector", box(bc + d * 0.081, 0.12, 0.004, zt + 0.70, zt + 0.88, d))
+                bt, buv = bollard(p, d, zt)
+                add("mp_island_bollard", bt, buv)
                 rep["signs"] += 1
     rep["island_m2"] = round(rep["island_m2"])
     files = {}
@@ -238,6 +268,7 @@ def islands_step(root, report=None):
         col, op = signs_net.rgba_files(pl.img)
         files[f"{TEX_DIR}/t_island_233_b.color.png"] = col
         files[f"{TEX_DIR}/t_island_233_o.data.png"] = op
+    files[f"{TEX_DIR}/{BOLLARD_TEX}"] = bollard_png()
     mats_name = f"{lv}/art/shapes/roads/main.materials.json"
     mats = json.loads(zi.read(mats_name))
     for m in materials():
