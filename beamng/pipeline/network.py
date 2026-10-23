@@ -7,6 +7,11 @@ another, stay apart). Segments are sampled into stations every STEP m.
 Station width: the surveyed carriageway (MU 'strada_sentiero' polygons) measured with rays from the
 line where it runs inside one (the line is moved to the middle of it when it is off by less than
 MAX_SHIFT), otherwise the nominal width of the swissTLM3D class.
+v3.1: on a bridge the survey draws the bridge (SOSF ponte_passerella), not the carriageway: a bridge line had the
+nominal width of its class (4.5 m for a 4m Strasse) between approaches measured at 6-9 m, and the deck was narrower
+than the road on most bridges. A bridge station outside the carriageways is measured in the bridge polygons, less
+BRIDGE_RIM m on each side (the parapets); a bridge with neither is as wide as the narrower of the roads at its ends
+(widen_bridges). A bridge built on the survey's outline (ponti.json "deck": "survey") keeps its widths.
 v3.0.40: a dead end that runs down into the lake (a slipway: the whole Caslano shore came into the area) stops where
 the ground (dtm05) reaches the lake level + WET m, so no road is drawn under the water.
 Output: work/network.npz (stations and segments) and work/network.json (summary).
@@ -35,6 +40,8 @@ CLASSES = {
 }
 WET = 0.15              # m over the lake level: a dead end stops where the ground comes down to this
 LOW = 2.0               # m under the lake level: lower ground is dry land (the Tresa below Ponte Tresa), not lake
+BRIDGE_RIM = 0.3       # m of a survey bridge polygon on each side outside the carriageway (the parapet)
+APPROACH = (2.0, 12.0)  # m from a bridge's end: the stations of the road there that give its width (widen_bridges)
 SKIP = {"Tunnel", "Unterfuehrung", "Unterfuehrung mit Treppe", "Galerie"}
 BRIDGE = {"Bruecke", "Bruecke mit Treppe", "Steg", "Bruecke mit Galerie"}
 
@@ -118,6 +125,71 @@ def av_carriageway():
     av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
     polys = [g for g, _ in av["LCSF"].get("strada_sentiero", [])]
     return polys
+
+
+def av_bridges():
+    """The surveyed bridges (SOSF ponte_passerella, the outline of the structure), v3.1."""
+    av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+    return [g for g, _ in av.get("SOSF", {}).get("ponte_passerella", []) if g.area > 1.0]
+
+
+def survey_deck_ids():
+    """swissTLM3D ids of the bridges built on the survey's outline (dati/ponti.json "deck": "survey")."""
+    f = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "ponti.json")
+    if not os.path.exists(f):
+        return set()
+    return {b["tlm"] for b in json.load(open(f, encoding="utf-8"))["ponti"] if b.get("deck") == "survey"}
+
+
+def widen_bridges(segs, sx, sy, sw, sgood, keep=()):
+    """v3.1: a road bridge measured on less than half of its stations (no carriageway, no bridge polygon of the
+    survey) as wide as the narrower of the roads at its two ends (one end if only one is measured): the median of
+    their measured stations APPROACH m from the end. A bridge in pieces (lines that meet on it, none of them
+    measured) is one: the roads at the ends of the chain, one width for all its pieces. Never narrower than it was.
+    sw: widths per segment, changed in place; sgood: their measured masks. Returns the pieces widened."""
+    at = {}
+    for s in segs:
+        for nd in s["nodes"]:
+            at.setdefault(nd, []).append(s["id"])
+    loose = {s["id"] for s in segs if s["bridge"] and s["kind"] == "road" and s["tlm"] not in keep
+             and sgood[s["id"]].mean() < 0.5}
+    out, seen = 0, set()
+    for k0 in sorted(loose):
+        if k0 in seen:
+            continue
+        chain, todo = {k0}, [k0]                        # the pieces of one bridge
+        while todo:
+            k = todo.pop()
+            for nd in segs[k]["nodes"]:
+                for j in at.get(nd, []):
+                    if j in loose and j not in chain:
+                        chain.add(j)
+                        todo.append(j)
+        seen |= chain
+        ends = []
+        for k in chain:
+            for nd, e in zip(segs[k]["nodes"], (0, -1)):
+                if any(j in chain for j in at.get(nd, []) if j != k):
+                    continue                            # a node inside the chain
+                p = np.array([sx[k][e], sy[k][e]])
+                ws = []
+                for j in at.get(nd, []):
+                    if j == k or segs[j]["kind"] != "road":
+                        continue
+                    d = np.hypot(sx[j] - p[0], sy[j] - p[1])
+                    m = (d >= APPROACH[0]) & (d <= APPROACH[1]) & sgood[j]
+                    if m.any():
+                        ws.append(float(np.median(sw[j][m])))
+                if ws:
+                    ends.append(max(ws))
+        if not ends:
+            continue
+        w = min(ends)
+        for k in chain:
+            if w > float(np.median(sw[k])) + 0.05:
+                sw[k] = np.maximum(sw[k], w)
+                out += 1
+    return out
 
 
 def measure_width(P, N, polys, nominal):
@@ -247,8 +319,10 @@ def build():
     ends, node_pos = nodes_of(lines)
     lines, ends = dry_ends(lines, ends, node_pos)
     polys = av_carriageway()
+    bpolys = av_bridges()
+    survey = survey_deck_ids()
     segs = []
-    sx, sy, sz, sseg, sidx, snode, sw, sss = [], [], [], [], [], [], [], []
+    sx, sy, sz, sseg, sidx, snode, sw, sss, sgood = [], [], [], [], [], [], [], [], []
     count = 0
     for k, ((props, L), (na, nb)) in enumerate(zip(lines, ends)):
         cls = props["OBJEKTART"]
@@ -261,7 +335,13 @@ def build():
         T = np.gradient(Q[:, :2], axis=0)
         T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
         N = np.column_stack([-T[:, 1], T[:, 0]])
+        structure = props.get("KUNSTBAUTE") or "Keine"
         width, off = measure_width(Q[:, :2], N, polys, nominal) if kind == "road" else (np.full(len(Q), np.nan),) * 2
+        on_bridge = kind == "road" and structure in BRIDGE and props.get("UUID") not in survey
+        if on_bridge and bpolys and np.isnan(width).any():  # v3.1: the bridge polygons where there is no carriageway
+            wb, ob = measure_width(Q[:, :2], N, bpolys, nominal)
+            fill = np.isnan(width) & np.isfinite(wb) & (wb - 2 * BRIDGE_RIM > 0.5 * nominal)
+            width[fill], off[fill] = wb[fill] - 2 * BRIDGE_RIM, ob[fill]
         # smooth the measurements along the line; ends stay on the nodes
         good = ~np.isnan(width)
         if good.sum() >= 3:
@@ -271,10 +351,11 @@ def build():
             of = median_filter(of, 7, mode="nearest")
             of[:3], of[-3:] = 0.0, 0.0
             Q[:, :2] += N * of[:, None]
-            width = np.where(good, wf, nominal)
+            # v3.1: a bridge is one width along its stations (the nominal one where unmeasured narrowed the deck), never
+            # under the nominal one (a bridge polygon narrower than its line's class made decks of 2.9 m)
+            width = np.maximum(wf, nominal) if on_bridge else np.where(good, wf, nominal)
         else:
             width = np.full(len(Q), nominal)
-        structure = props.get("KUNSTBAUTE") or "Keine"
         segs.append({"id": len(segs), "tlm": props.get("UUID"), "class": cls, "kind": kind, "lc": lc,
                      "surface": "hard" if props.get("BELAGSART") == "Hart" else "natural",
                      "structure": structure, "bridge": structure in BRIDGE, "stairs": "Treppe" in structure,
@@ -293,7 +374,9 @@ def build():
         sseg.append(np.full(len(Q), len(segs) - 1)); sidx.append(np.arange(len(Q)))
         nd = np.full(len(Q), -1)
         nd[0], nd[-1] = na, nb
-        snode.append(nd); sw.append(width)
+        snode.append(nd); sw.append(width); sgood.append(good if good.sum() >= 3 else np.zeros(len(Q), bool))
+    wide = widen_bridges(segs, sx, sy, sw, sgood, keep=survey)
+    print("bridges as wide as their approaches: %d" % wide, flush=True)
     st = {k: np.concatenate(v) for k, v in (("x", sx), ("y", sy), ("z_tlm", sz), ("seg", sseg), ("idx", sidx),
                                               ("node", snode), ("width", sw), ("s", sss))}
     deg = np.bincount(np.array([s_["nodes"] for s_ in segs]).ravel(), minlength=len(node_pos))
