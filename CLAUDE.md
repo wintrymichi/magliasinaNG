@@ -277,6 +277,12 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   them (windows, leaves), crossings need 3 parallel bars, and paint must lie on the asphalt faces of roads/surfaces
   (whitelist the materials: the up faces of mp_road_wall are wall tops). Paint "off the road" far east (x > 4000) is
   outside the level's network: OSM covers more than the map.
+- islands.py (v3.0) put a short white beacon with a yellow reflector beside every keep-right pole: no island of the
+  area has one, the photos show the pole's foot in a black and yellow sleeve (155 poles). Check a street object's look
+  against a photo of the area before modelling it from a norm or from memory.
+- Game views at a Mapillary photo's pose: the pose is off by metres and the nearest AI road can be a side road or a
+  yard, so a camera at "AI node z + 1.45 m" stood on a parking lot higher than the road and saw nothing of a roundabout.
+  Snap to the road the photo looks along and take the height of the asphalt faces under it.
 - render3d skipped every merged shape whose position (the corner of its 384 m chunk) was over 300 m from a small view:
   whole blocks of Agno came out without buildings and looked like a level bug. The margin is now 560 m.
 - luoghi_ref read only one orthophoto tile: crops near a 1 km tile edge came out half white. It now mosaics every tile
