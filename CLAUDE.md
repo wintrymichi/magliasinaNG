@@ -416,6 +416,11 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - A steep bank (Bank layer, >40 deg) is not an opening of the wood: counted as one, the cut slopes made every road in
   the wood look like a meadow edge (wide light bands). Thresholding one smooth noise field gives round blobs with
   smooth outlines: add a finer octave (forest_mosaic._field).
+- The terrain skin is not in understory.SOLID, so the undergrowth (and at first the mosaic's woodland grass and outcrop
+  stones of 2 m) stood on the forest layers under the skin of the road shoulders, through it beside the asphalt; the
+  integrator saw it in a render of this thread (2026-10-23). The skin is ground of its own: no forest layer under it or
+  within two squares (forest_mosaic: the verge twins there), outcrops ROCK_CLEAR_M and bank stones BANK_CLEAR squares
+  from it and every solid. Check every new GroundCover against the road AND the skin footprint in a render.
 - `/usr/bin/time` is not installed in the cloud container (a background run died at once): use resource.getrusage.
 
 ## Data from the cloud sessions
