@@ -106,7 +106,7 @@ SHAPE = re.compile(r"art/shapes/roads/road_wear_[-+]\d+_[-+]\d+\.dae$")
 LAYER = {"mp_wear_variation": (0.006, 112.0 / 6.0), "mp_wear_cracks": (0.008, 16.0 / 4.0),
          "mp_wear_track": (0.010, 4.0), "mp_wear_edge": (0.012, None)}
 LAYER.update({m: (road_age.LIFT[m], road_age.PER_M.get(m)) for m in road_age.LIFT})   # v3.1: road_age.py
-KERB = ("mp_sidewalk", "mp_island")        # beyond an edge: a kerb holds the asphalt (no crumbled edge there)
+KERB = ("mp_sidewalk", "mp_island")      # (mp_sidewalk_kerb, the stone faces of sidewalks.py, are not tops)        # beyond an edge: a kerb holds the asphalt (no crumbled edge there)
 CRACK_LEN = (15.0, 45.0)     # m, length of a cracked stretch
 CRACK_EVERY = 160.0          # m of road per cracked stretch, on average
 CRACK_W = 4.0                # m, width of a cracked stretch (Italy's), narrower on narrow roads
@@ -998,6 +998,12 @@ def road_wear_step(root, report=None):
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     surf = shape_tris(zi, lv, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
+    # v3.1: the pavements raised on their kerbs (sidewalks.py, a finishing step after this one, or the nightly patch
+    # of the zip before it) are in roads/sidewalks: their tops are the kerbs here too, in either order
+    sw = f"{lv}/main/MissionGroup/roads/sidewalks/items.level.json"
+    if sw in zi.NameToInfo:
+        for m, t in shape_tris(zi, lv, read_items(zi, sw)).items():
+            surf[m] = np.concatenate([surf[m], t]) if m in surf else t
     import markings_net
     A = np.concatenate([up_faces(t) for m, t in surf.items() if m in ASPHALT])
     Sa = TriSurface(A)

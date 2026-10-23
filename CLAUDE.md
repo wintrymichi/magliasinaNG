@@ -416,6 +416,10 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   reached the drains; they are found on their own (outer_edges(..., Sk=...)).
 - Mapillary's map features over the bbox of the AI roads: 89 drains, only about 20 near the map's roads (the bbox
   takes in Italy and the hills): the drains come mostly from the low points of kerbed edges.
+- The sidewalks patch moved the pavement tops from roads/surfaces to roads/sidewalks while the road_age patch was
+  queued behind it: road_wear would have seen no kerb on the patched zip (crumbled edges along every pavement). A
+  step that reads another step's meshes must read them where either order of the finish steps (build or nightly
+  patch) leaves them; cancel a queued nightly patch when the zip changes under it (run 39975412003, cancelled).
 - Do not point a new material at a game texture the level never used (Italy's t_thin_damaged_edge): game_paths
   does not know where 0.40 keeps it, and a missing texture is a hole in the road. The crumbled edge is drawn here.
 

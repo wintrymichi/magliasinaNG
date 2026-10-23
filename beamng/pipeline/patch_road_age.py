@@ -28,7 +28,8 @@ def patch(src):
             for f in fs:
                 now.add(os.path.relpath(os.path.join(dp, f), work).replace(os.sep, "/"))
         changed = {n for n in now if n not in before or os.path.getmtime(os.path.join(work, n)) != before[n]}
-        gone = set(before) - now
+        gone = {n for n in set(before) - now if road_wear.SHAPE.search(n)}   # only the wear's own meshes go
+        assert gone == set(before) - now, "road_wear removed other files: %s" % sorted(set(before) - now - gone)[:5]
         fd, tmp = tempfile.mkstemp(suffix=".zip", dir=os.path.dirname(os.path.abspath(src)))
         os.close(fd)
         with zipfile.ZipFile(src) as zi, zipfile.ZipFile(tmp, "w") as zo:
