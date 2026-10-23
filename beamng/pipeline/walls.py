@@ -37,6 +37,7 @@ import groundcover
 import optimize_level
 from config import LEVEL_NAME, TER_X0, TER_Y0, TER_SQUARE
 from terrain import VERGE
+import network
 
 CHUNK = 128.0
 R_SEARCH = 1.2
@@ -278,6 +279,7 @@ FREE_BAND = {"road": 0.25, "path": 0.35}  # of the width of a line: the band aro
 FREE_MIN = {"road": 1.0, "path": 0.5}    # m, the least half width of that band (a car is 1.8-2 m wide)
 FREE_OVER = 0.3                          # m, a wall is cut where it stands this much above the way
 FREE_MARGIN = 0.15                       # m added to the band: no wall face left on its very edge
+UNDER_FREE = 0.3                         # m beyond the half width of a kept underpass (network.underpasses): its band
 
 
 def drive_free(net, corridor=None):
@@ -305,6 +307,10 @@ def drive_free(net, corridor=None):
         a, n = s["first"], s["n"]
         line = shapely.LineString(np.column_stack([net.x[a:a + n], net.y[a:a + n]]))
         hw = max(FREE_BAND[s["kind"]] * float(np.median(net.w[a:a + n])), FREE_MIN[s["kind"]]) + FREE_MARGIN
+        if s.get("structure") == network.UNDER:
+            # v3.1: the whole width of a kept underpass (Via Golf under the FLP): the survey's wing walls at its mouths
+            # stood 0.4-0.9 m into the asphalt in the 3.1 test build, the survey has no road polygon there to cut them
+            hw = max(hw, 0.5 * float(np.median(net.w[a:a + n])) + UNDER_FREE)
         out.append((line.buffer(hw), stations([s["id"]])))          # round ends: no wedge where lines meet
     if corridor is not None and not corridor.is_empty:
         shapely.prepare(corridor)
