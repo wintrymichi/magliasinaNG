@@ -38,7 +38,7 @@ HAZE = (350.0, 10000.0)                 # m, linear fog from, to
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
-GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
+GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/sidewalks", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
           "landmarks",                    # v3.0.40: the cable car of Monte Lema, the summit (landmarks.py)
           # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
           "level_objects/Water", "level_objects/vegetation/vineyards", "level_objects/terrain_skin")
@@ -50,7 +50,7 @@ OVERLAYS = ("variation", "cracks", "track", "edge")
 MAT_COLORS = [
     ("mp_fill_", (-1.0, -1.0, -1.0)),       # the ground restored behind the walls: the orthophoto, as the terrain
     ("asphalt_fresh", (0.23, 0.23, 0.24)), ("mp_road_asphalt", (0.36, 0.36, 0.37)),
-    ("hard_asphalt", (0.40, 0.40, 0.40)), ("sidewalk", (0.56, 0.56, 0.55)), ("island", (0.62, 0.62, 0.58)),
+    ("hard_asphalt", (0.40, 0.40, 0.40)), ("sidewalk_kerb", (0.72, 0.71, 0.68)), ("sidewalk", (0.56, 0.56, 0.55)), ("island", (0.62, 0.62, 0.58)),
     ("road_wall", (0.56, 0.51, 0.45)), ("gravel", (0.64, 0.59, 0.49)), ("_dirt", (0.55, 0.45, 0.33)),
     ("_sett", (0.55, 0.55, 0.53)), ("_cobble", (0.56, 0.54, 0.50)),
     ("path_paved", (0.46, 0.46, 0.45)), ("parapet", (0.74, 0.73, 0.70)), ("paint_yellow", (0.93, 0.78, 0.2)),
