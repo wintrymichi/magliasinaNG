@@ -170,6 +170,11 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   3.8 / 5.1 m) between approaches measured at 6-9 m: about 20 of the 64 road bridges of the v3.1 test build were a
   bottleneck (2026-10-23). A deck width equal to the nominal one is the sign. Now measured in the bridge polygon, or
   as wide as the narrower approach (network.widen_bridges, one width for a bridge in pieces).
+- A survey bridge polygon is not always the deck: at Ponte Tresa the Swiss half is one 19.7 x 18.6 m polygon with the
+  bridgehead, and the border bridge came out 18.7 m wide (a second piece, in Italy with no survey, took it over the
+  chain). Its approach was no check either (the customs square measured 15 m). Polygon widths are now capped at the
+  narrower approach + 2 m (network.cap_bridge_polygons) and Ponte Tresa has "width": 11 in ponti.json (supervisor's
+  review, 2026-10-23). List every widened deck with old/new and approach width before handing a width change over.
 - A survey deck (bridges.survey_height) was eased at its edges to the bare DTM, not to the road that joins it: the
   road surfaces (corridor, network_surface) are smoothed and differ from the DTM, steps of 0.3-0.45 m at the Magliaso
   bridge corners. Join a deck to the road mesh beside it (build_level passes the road tops as `surface`).

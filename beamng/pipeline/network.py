@@ -11,7 +11,8 @@ v3.1: on a bridge the survey draws the bridge (SOSF ponte_passerella), not the c
 nominal width of its class (4.5 m for a 4m Strasse) between approaches measured at 6-9 m, and the deck was narrower
 than the road on most bridges. A bridge station outside the carriageways is measured in the bridge polygons, less
 BRIDGE_RIM m on each side (the parapets); a bridge with neither is as wide as the narrower of the roads at its ends
-(widen_bridges). A bridge built on the survey's outline (ponti.json "deck": "survey") keeps its widths.
+(widen_bridges), and one measured in a bridge polygon no wider than its narrower approach + POLY_OVER m. A bridge
+built on the survey's outline (ponti.json "deck": "survey") keeps its widths; ponti.json "width" sets one by hand.
 v3.0.40 patch: an underpass under a railway (KUNSTBAUTE Unterfuehrung, under no road) is kept, and the track and the
 paths over it become bridges there (over_underpass): skipped, Via Golf (Caslano - Magliaso) ran down into its cutting on
 both sides of the FLP and ended against the embankment of the tracks.
@@ -45,6 +46,7 @@ WET = 0.15              # m over the lake level: a dead end stops where the grou
 LOW = 2.0               # m under the lake level: lower ground is dry land (the Tresa below Ponte Tresa), not lake
 BRIDGE_RIM = 0.3       # m of a survey bridge polygon on each side outside the carriageway (the parapet)
 APPROACH = (2.0, 12.0)  # m from a bridge's end: the stations of the road there that give its width (widen_bridges)
+POLY_OVER = 2.0         # m a bridge measured in a survey bridge polygon may be wider than its narrower approach
 SKIP = {"Tunnel", "Unterfuehrung", "Unterfuehrung mit Treppe", "Galerie"}
 BRIDGE = {"Bruecke", "Bruecke mit Treppe", "Steg", "Bruecke mit Galerie"}
 UNDER = "Unterfuehrung"     # kept where it passes under a railway and under no road (underpasses())
@@ -233,12 +235,52 @@ def av_bridges():
     return [g for g, _ in av.get("SOSF", {}).get("ponte_passerella", []) if g.area > 1.0]
 
 
-def survey_deck_ids():
-    """swissTLM3D ids of the bridges built on the survey's outline (dati/ponti.json "deck": "survey")."""
+def bridge_overrides():
+    """The corrections of dati/ponti.json by swissTLM3D id: "deck": "survey" (built on the survey's outline, its
+    widths kept) and, v3.1, "width" (m, the carriageway on a bridge, set by hand)."""
     f = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "ponti.json")
     if not os.path.exists(f):
-        return set()
-    return {b["tlm"] for b in json.load(open(f, encoding="utf-8"))["ponti"] if b.get("deck") == "survey"}
+        return {}
+    return {b["tlm"]: b for b in json.load(open(f, encoding="utf-8"))["ponti"]}
+
+
+def _approach(segs, at, sx, sy, sw, sgood, k, nd, e, bridges=True):
+    """Width of the road at node nd (end e of segment k): the widest of the other roads there, each the median of
+    its measured stations APPROACH m from the node; None if none is measured."""
+    p = np.array([sx[k][e], sy[k][e]])
+    ws = []
+    for j in at.get(nd, []):
+        if j == k or segs[j]["kind"] != "road" or (segs[j]["bridge"] and not bridges):
+            continue
+        d = np.hypot(sx[j] - p[0], sy[j] - p[1])
+        m = (d >= APPROACH[0]) & (d <= APPROACH[1]) & sgood[j]
+        if m.any():
+            ws.append(float(np.median(sw[j][m])))
+    return max(ws) if ws else None
+
+
+def cap_bridge_polygons(segs, sx, sy, sw, spoly):
+    """v3.1: a bridge measured in a survey bridge polygon (spoly: on half its stations or more) no wider than the
+    narrower measured road at its ends + POLY_OVER m (sidewalks): a polygon can take in a bridgehead or a square
+    beside the bridge. Returns the bridges narrowed."""
+    at = {}
+    for s in segs:
+        for nd in s["nodes"]:
+            at.setdefault(nd, []).append(s["id"])
+    good = [np.ones(len(w), bool) for w in sw]
+    out = 0
+    for s in segs:
+        k = s["id"]
+        if not spoly[k]:
+            continue
+        ends = [w for nd, e in zip(s["nodes"], (0, -1))
+                if (w := _approach(segs, at, sx, sy, sw, good, k, nd, e, bridges=False)) is not None]
+        if ends:
+            cap = max(min(ends) + POLY_OVER, CLASSES[s["class"]][0])
+            if float(np.median(sw[k])) > cap + 0.05:
+                sw[k] = np.minimum(sw[k], cap)
+                out += 1
+    return out
 
 
 def widen_bridges(segs, sx, sy, sw, sgood, keep=()):
@@ -271,17 +313,9 @@ def widen_bridges(segs, sx, sy, sw, sgood, keep=()):
             for nd, e in zip(segs[k]["nodes"], (0, -1)):
                 if any(j in chain for j in at.get(nd, []) if j != k):
                     continue                            # a node inside the chain
-                p = np.array([sx[k][e], sy[k][e]])
-                ws = []
-                for j in at.get(nd, []):
-                    if j == k or segs[j]["kind"] != "road":
-                        continue
-                    d = np.hypot(sx[j] - p[0], sy[j] - p[1])
-                    m = (d >= APPROACH[0]) & (d <= APPROACH[1]) & sgood[j]
-                    if m.any():
-                        ws.append(float(np.median(sw[j][m])))
-                if ws:
-                    ends.append(max(ws))
+                w = _approach(segs, at, sx, sy, sw, sgood, k, nd, e)
+                if w is not None:
+                    ends.append(w)
         if not ends:
             continue
         w = min(ends)
@@ -420,7 +454,9 @@ def build():
     lines, ends = dry_ends(lines, ends, node_pos)
     polys = av_carriageway()
     bpolys = av_bridges()
-    survey = survey_deck_ids()
+    over = bridge_overrides()
+    survey = {t for t, b in over.items() if b.get("deck") == "survey"}
+    spoly = []
     segs = []
     sx, sy, sz, sseg, sidx, snode, sw, sss, sgood = [], [], [], [], [], [], [], [], []
     count = 0
@@ -442,6 +478,8 @@ def build():
             wb, ob = measure_width(Q[:, :2], N, bpolys, nominal)
             fill = np.isnan(width) & np.isfinite(wb) & (wb - 2 * BRIDGE_RIM > 0.5 * nominal)
             width[fill], off[fill] = wb[fill] - 2 * BRIDGE_RIM, ob[fill]
+        else:
+            fill = np.zeros(len(Q), bool)
         # smooth the measurements along the line; ends stay on the nodes
         good = ~np.isnan(width)
         if good.sum() >= 3:
@@ -475,8 +513,17 @@ def build():
         nd = np.full(len(Q), -1)
         nd[0], nd[-1] = na, nb
         snode.append(nd); sw.append(width); sgood.append(good if good.sum() >= 3 else np.zeros(len(Q), bool))
+        spoly.append(bool(fill.mean() >= 0.5) and good.sum() >= 3)
+    capped = cap_bridge_polygons(segs, sx, sy, sw, spoly)
     wide = widen_bridges(segs, sx, sy, sw, sgood, keep=survey)
-    print("bridges as wide as their approaches: %d" % wide, flush=True)
+    hand = 0
+    for s_ in segs:                                     # v3.1: widths set by hand (ponti.json "width")
+        w = over.get(s_["tlm"], {}).get("width") if s_["bridge"] else None
+        if w:
+            sw[s_["id"]] = np.full(len(sw[s_["id"]]), float(w))
+            hand += 1
+    print("bridges as wide as their approaches: %d, narrowed to their approaches + %.0f m: %d, set by hand: %d"
+          % (wide, POLY_OVER, capped, hand), flush=True)
     st = {k: np.concatenate(v) for k, v in (("x", sx), ("y", sy), ("z_tlm", sz), ("seg", sseg), ("idx", sidx),
                                               ("node", snode), ("width", sw), ("s", sss))}
     deg = np.bincount(np.array([s_["nodes"] for s_ in segs]).ravel(), minlength=len(node_pos))
