@@ -1,0 +1,68 @@
+# Buildings closer to the real ones (v3.1): reference pack of edifici_pack.py (open street photos and the 10 cm
+# orthophoto of the ~20 buildings most seen from the main roads, verifica/edifici/sites.json). The cloud session
+# cannot reach Mapillary, Panoramax or swisstopo. The photos are CC BY-SA: the pack goes to a branch of its own,
+# <branch>-foto, never merged (deleted with mode=delete when the work is done).
+# stamp: 1
+name: buildings reference pack
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "pack | delete"
+        default: pack
+  push:
+    branches: [claude/project-thread-zknmb9]
+    paths: [.github/workflows/edifici_pack.yml]
+
+concurrency:
+  group: edifici-pack-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAPILLARY_TOKEN: ${{ secrets.MAPILLARY_TOKEN }}
+      PYTHONUNBUFFERED: "1"
+      FOTO: ${{ github.ref_name }}-foto
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        if: ${{ inputs.mode != 'delete' }}
+        run: pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow requests
+
+      - name: Pack
+        if: ${{ inputs.mode != 'delete' }}
+        working-directory: beamng/pipeline
+        run: python edifici_pack.py ../verifica/edifici/sites.json "$RUNNER_TEMP/pack"
+
+      - name: Commit the pack to its own branch
+        if: ${{ inputs.mode != 'delete' }}
+        run: |
+          cd "$RUNNER_TEMP/pack"
+          git init -q -b "$FOTO"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf 'Reference photos (Mapillary, Panoramax: CC BY-SA 4.0, authors in credits.json) and SWISSIMAGE (swisstopo).\nWorking material of the buildings thread, never merged.\n' > README.md
+          git add -A
+          git commit -q -m "buildings reference pack (photos CC BY-SA 4.0, see credits.json)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/$FOTO"
+
+      - name: Delete the pack branch
+        if: ${{ inputs.mode == 'delete' }}
+        run: git push origin --delete "$FOTO" || true
