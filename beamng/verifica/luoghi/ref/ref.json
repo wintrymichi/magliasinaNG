@@ -106,5 +106,119 @@
  "bioggio": {
   "ortho": "swissimage-dop10_2024_2713-1096_0.1_2056.tif",
   "photos": []
+ },
+ "rot_magliaso_ovest": {
+  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "2929849064002047",
+    "dist_m": 31.4,
+    "bearing": 148,
+    "pano": false,
+    "captured_at": 1616259708160,
+    "creator": "alexanderar",
+    "compass": 145.39834666092
+   },
+   {
+    "id": "192461552696130",
+    "dist_m": 24.7,
+    "bearing": 146,
+    "pano": false,
+    "captured_at": 1616259709160,
+    "creator": "alexanderar",
+    "compass": 158.10751778393
+   },
+   {
+    "id": "295035592103389",
+    "dist_m": 32.0,
+    "bearing": 146,
+    "pano": false,
+    "captured_at": 1572190105387,
+    "creator": "kaitu",
+    "compass": 145.18466336905
+   }
+  ]
+ },
+ "rot_magliaso_est": {
+  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "894680824411709",
+    "dist_m": 16.4,
+    "bearing": 78,
+    "pano": false,
+    "captured_at": 1616259747303,
+    "creator": "alexanderar",
+    "compass": 88.216408604668
+   },
+   {
+    "id": "305295371238042",
+    "dist_m": 18.8,
+    "bearing": 77,
+    "pano": false,
+    "captured_at": 1572190148434,
+    "creator": "kaitu",
+    "compass": 86.338658561745
+   },
+   {
+    "id": "1135453290214140",
+    "dist_m": 12.4,
+    "bearing": 69,
+    "pano": false,
+    "captured_at": 1572190149462,
+    "creator": "kaitu",
+    "compass": 94.683855458301
+   }
+  ]
+ },
+ "rot_bioggio": {
+  "ortho": "swissimage-dop10_2024_2713-1096_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "473871067255791",
+    "dist_m": 25.3,
+    "bearing": 24,
+    "pano": false,
+    "captured_at": 1616260074261,
+    "creator": "alexanderar",
+    "compass": 34.305148094528
+   },
+   {
+    "id": "1136346770218083",
+    "dist_m": 30.0,
+    "bearing": 26,
+    "pano": false,
+    "captured_at": 1616260073246,
+    "creator": "alexanderar",
+    "compass": 33.911419579211
+   },
+   {
+    "id": "253988016412406",
+    "dist_m": 20.8,
+    "bearing": 21,
+    "pano": false,
+    "captured_at": 1616260075120,
+    "creator": "alexanderar",
+    "compass": 39.741009048898
+   }
+  ]
+ },
+ "rot_bioggio_2": {
+  "ortho": "swissimage-dop10_2024_2714-1097_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "247386903838043",
+    "dist_m": 23.8,
+    "bearing": 79,
+    "pano": false,
+    "captured_at": 1616260127147,
+    "creator": "alexanderar",
+    "compass": 82.635565155644
+   }
+  ]
+ },
+ "rot_manno": {
+  "ortho": "swissimage-dop10_2024_2715-1099_0.1_2056.tif",
+  "photos": []
  }
 }
