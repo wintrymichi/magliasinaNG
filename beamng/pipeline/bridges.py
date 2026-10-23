@@ -541,7 +541,7 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None, surface=None
                         "length_m": round(s["length"], 1), "width_m": round(2 * hw, 1),
                         "z_ends": [round(float(z[0]), 2), round(float(z[-1]), 2)],
                         "max_height_m": round(float(clear.max() + SLAB), 1), "auto_type": typ,
-                        "override": {k: v for k, v in o.items() if k in ("z0", "z1", "profile", "type", "skip", "deck")}})
+                        "override": {k: v for k, v in o.items() if k in ("z0", "z1", "profile", "type", "skip", "deck", "width")}})
     for i, j in twins:                                 # v3.0: the deck between two twin decks
         med = median_geometry(todo[i], todo[j])
         if med is None:
@@ -681,10 +681,11 @@ def save_records(records, reviewed=None):
         o = old.get(r["tlm"], {})
         e = dict(r)
         e.pop("override", None)
-        for k in ("z0", "z1", "profile", "type", "skip", "deck", "note", "checked"):
+        for k in ("z0", "z1", "profile", "type", "skip", "deck", "width", "note", "checked"):
             if k in o:
                 e[k] = o[k]
         out.append(e)
     json.dump({"note": "Bridges of the v2.0 network (bridges.py). Manual corrections: z0/z1 (deck height at "
-                       "the ends, m), profile 'straight', type 'open'|'culvert', skip true, deck 'survey'; note, checked.",
+                       "the ends, m), profile 'straight', type 'open'|'culvert', skip true, deck 'survey', width (m, the "
+                       "carriageway, v3.1); note, checked.",
                "ponti": out}, open(PONTI, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
