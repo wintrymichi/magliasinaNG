@@ -64,6 +64,9 @@ SURVEY_JOIN = 0.5      # m: an edge with the ground within this of the deck 1-3 
 SURVEY_FADE = 6.0      # m: how far into the deck the joins pull its height
 SURVEY_CELL = 1.0      # m, the triangles of the top
 SURVEY_HULL = 1.12     # the hull of a deck's outline if it is at most this much larger
+SURVEY_ROAD = 0.5      # m: a road surface this close to the deck just outside its edge is a road joining the deck (one
+                       # further off is a path under or beside it: the edge there is no join, also with the ground)
+SURVEY_ROAD_OUT = (0.25, 0.5, 1.0)   # m outside the edge where the joining road surface is read (the first found)
 _survey = {}
 
 
@@ -139,11 +142,13 @@ def survey_decks(segs=None, x=None, y=None, w=None):
     return out
 
 
-def survey_height(foot, ground, P_line, z_line, dsm=None):
+def survey_height(foot, ground, P_line, z_line, dsm=None, surface=None):
     """Height (x, y) -> z of the top of a survey deck: the plane of the surface model (swissSURFACE3D, the deck's
     LiDAR returns) over the outline SURVEY_IN m inside it, fitted without the cells off it (vehicles, a lamp post);
-    the heights of the lines on it where there is no such plane. Where a road joins the deck (the ground 1-3 m out
-    within SURVEY_JOIN m of it) the height goes to the ground's over SURVEY_FADE m. Returns (fn, info)."""
+    the heights of the lines on it where there is no such plane. Where a road joins the deck the height goes to the
+    road's over SURVEY_FADE m: v3.1, the road surface just outside the edge (surface(x, y, z near): the meshes of the
+    corridor and of the network, NaN where there is none) within SURVEY_ROAD m of the deck; elsewhere the ground 1-3 m
+    out within SURVEY_JOIN m of it. Returns (fn, info)."""
     from scipy.spatial import cKDTree
     info = {}
     base = None
@@ -195,8 +200,26 @@ def survey_height(foot, ground, P_line, z_line, dsm=None):
     Nout = np.column_stack([T[:, 1], -T[:, 0]])          # exterior counter-clockwise: right of the way is out
     # the ground 1 to 3 m out, the highest (the terrain model slopes down for a metre or two at a bridge's end)
     g = np.max([np.asarray(ground((E + Nout * k)[:, 0], (E + Nout * k)[:, 1]), np.float64) for k in (1.0, 2.0, 3.0)], 0)
-    d = g - base(E[:, 0], E[:, 1])
+    zb = base(E[:, 0], E[:, 1])
+    d = g - zb
     join = np.abs(d) <= SURVEY_JOIN
+    # v3.1: where a road surface (the corridor's, the network's) meets the edge, the deck goes to its height there:
+    # pulled to the bare ground the deck stood up to 0.45 m over or under the road that joins it (a step at the
+    # Magliaso bridge over the Magliasina, at its corners)
+    on_road = np.zeros(len(E), bool)
+    if surface is not None:
+        zr = np.full(len(E), np.nan)
+        other = np.zeros(len(E), bool)
+        for k in SURVEY_ROAD_OUT:
+            Q = E + Nout * k
+            h = np.asarray(surface(Q[:, 0], Q[:, 1], zb), np.float64)
+            new = ~np.isfinite(zr) & np.isfinite(h) & (np.abs(h - zb) <= SURVEY_ROAD)
+            zr[new] = h[new]
+            other |= np.isfinite(h)
+        on_road = np.isfinite(zr)
+        d = np.where(on_road, zr - zb, d)
+        join = on_road | (join & ~other)                # a road surface off the deck's height: a drop, no join
+        info["road_joins_m"] = int(on_road.sum())
     info["joins_m"] = int(join.sum())
     info["join_step_max"] = round(float(np.abs(d[join]).max()), 2) if join.any() else 0.0
     Ej, dj = E[join], d[join]
@@ -209,7 +232,8 @@ def survey_height(foot, ground, P_line, z_line, dsm=None):
         q = np.column_stack([np.ravel(x), np.ravel(y)])
         dd, k = tj.query(q, k=min(8, len(Ej)))
         dd, k = dd.reshape(len(q), -1), k.reshape(len(q), -1)
-        wt = 1.0 / np.maximum(dd, 0.5) ** 2
+        # v3.1: the edge itself on the joins' heights (a floor of 0.5 m left it at a mean of the joins 1-2 m around)
+        wt = 1.0 / np.maximum(dd, 0.05) ** 2
         corr = (dj[k] * wt).sum(1) / (wt.sum(1) + 1.0 / SURVEY_FADE ** 2)
         return z + corr.reshape(np.shape(z))
     fn.edge = (E, Nout, join)
@@ -400,10 +424,11 @@ def ends_to_ground(P, N, z, s, degree, ground, max_ext=60.0):
     return P, N, z, notes
 
 
-def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
+def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None, surface=None):
     """Deck meshes of every bridge (on_mesh(x, y, material, uv tile, soup, kind)), the ground
     under them lowered where it rises above the slab (on_carve_min(rows, cols, z)), the record of
-    every bridge in ponti.json. `exclude`: polygon of the cantonale corridor (its bridges stay)."""
+    every bridge in ponti.json. `exclude`: polygon of the cantonale corridor (its bridges stay).
+    `surface(x, y, z)`: the height of the road meshes already built nearest to z (NaN: none), v3.1."""
     import shapely
     from rasterio import features
     from rasterio.transform import Affine
@@ -535,7 +560,7 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
             continue
         P_l = np.vstack([b["P"] for b in mine])
         z_l = np.concatenate([b["z"] for b in mine])
-        zf, info = survey_height(foot, ground, P_l, z_l)
+        zf, info = survey_height(foot, ground, P_l, z_l, surface=surface)
         kind = "road" if any(b["s"]["kind"] == "road" for b in mine) else "path"
         top, sides, par = survey_geometry(foot, zf, ground, kind)
         mat_top = next((b["mat_top"] for b in mine if b["s"]["kind"] == kind), mine[0]["mat_top"])

@@ -365,7 +365,20 @@ def stage_roads(scene, ctx):
 
     def on_cap(r, c, z):
         cap[r, c] = np.minimum(cap[r, c], z)
-    recs = bridges.build(net, lambda x, y: dtm.sample(x, y), on_deck, on_cap, xs, ys, exclude=corridor)
+    # v3.1: the road meshes around the survey decks, for the height of the roads that join them
+    deck_surface = None
+    sfeet = [f for f, _ in bridges.survey_decks()]
+    if sfeet:
+        near = shapely.union_all(sfeet).buffer(3.0)
+        shapely.prepare(near)
+        cand = [t[shapely.contains_xy(near, t[:, :, 0].mean(1), t[:, :, 1].mean(1))]
+                for t in tops + [t for v in chunk_tops.values() for t in v] if len(t)]
+        cand = [t for t in cand if len(t)]
+        if cand:
+            rs = road_mesh.TriSurface(np.concatenate(cand))
+            deck_surface = lambda x, y, z: rs.height(x, y, mode="near", zhint=z)
+    recs = bridges.build(net, lambda x, y: dtm.sample(x, y), on_deck, on_cap, xs, ys, exclude=corridor,
+                         surface=deck_surface)
     bridges.save_records(recs)
     print("chunk seams stitched:", stitch_chunks(builders), flush=True)
     ntri = 0

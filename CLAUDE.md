@@ -157,6 +157,22 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
   Cut only the low patches that touch the surveyed lake (MU specchio_acqua), and check a lake cut by the area it removes.
 
+## Bridges
+
+- On a bridge the survey draws the bridge (SOSF ponte_passerella), not the carriageway (LCSF strada_sentiero), so
+  network.measure_width found nothing there and the deck took the nominal width of the class (3.2 / 4.5 m, decks of
+  3.8 / 5.1 m) between approaches measured at 6-9 m: about 20 of the 64 road bridges of the v3.1 test build were a
+  bottleneck (2026-10-23). A deck width equal to the nominal one is the sign. Now measured in the bridge polygon, or
+  as wide as the narrower approach (network.widen_bridges, one width for a bridge in pieces).
+- A survey deck (bridges.survey_height) was eased at its edges to the bare DTM, not to the road that joins it: the
+  road surfaces (corridor, network_surface) are smoothed and differ from the DTM, steps of 0.3-0.45 m at the Magliaso
+  bridge corners. Join a deck to the road mesh beside it (build_level passes the road tops as `surface`).
+- The bridge thread tested in the cloud without a full build: a temporary workflow ran the downloads, network.py and
+  `build_level.py roads` alone (about 35 min, the roads stage 21 min) and put the road meshes on the draft release;
+  swapped into the extracted test build (roads/surfaces items + DAEs) they gave before/after renders and measures.
+  First try of the road join took any road surface within 1 m: a path beside the bank pulled a deck corner 0.8 m
+  down; within 0.5 m, and a surface further off is a drop (no join to the ground there either).
+
 ## Checking a finish step in the cloud container
 
 - Rerunning a finish step on the released folder for a preview: copy it with `cp -al` (bng.LevelWriter replaces
