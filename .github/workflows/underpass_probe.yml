@@ -1,0 +1,46 @@
+# The roads and railways of swissTLM3D (TLM_STRASSE, TLM_EISENBAHN) for the check of the underpasses in the cloud
+# container, which cannot reach data.geo.admin.ch: downloaded here and printed into the log (gzip + base64), read with
+# get_job_logs. Nothing is committed. Thread "Sottopassaggio di Caslano" (v3.0.40 patch). probe stamp: 1
+name: underpass probe (TLM)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-2518uf]
+    paths: [.github/workflows/underpass_probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependencies
+        run: pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 requests==2.33.1
+      - name: TLM_STRASSE and TLM_EISENBAHN
+        working-directory: beamng/pipeline
+        run: |
+          python -c "
+          import download_tlm as d
+          d.LAYERS = {k: v for k, v in d.LAYERS.items() if k in ('TLM_STRASSE', 'TLM_EISENBAHN')}
+          d.main()"
+          for L in TLM_EISENBAHN TLM_STRASSE; do
+          python -c "
+          import base64, gzip, os, sys
+          from config import DATA
+          L = sys.argv[1]
+          b = base64.b64encode(gzip.compress(open(os.path.join(DATA, 'tlm', L + '.json'), 'rb').read(), 9)).decode()
+          print(L + '_BEGIN')
+          for i in range(0, len(b), 4000):
+              print('L' + b[i:i + 4000])
+          print(L + '_END')" $L
+          done
