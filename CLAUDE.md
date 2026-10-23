@@ -80,6 +80,12 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - Do not tell the side of a wall from a vertex's own height: the DTM smears walls into slopes. Read the
   ground a few metres out on both sides (walls.wall_side), and read beyond any vertex that may itself be raised.
 - Anything that raises ground near the railway must respect its bed (railway.bed_fn, network_mesh rail caps).
+- network.SKIP left out every swissTLM3D underpass (KUNSTBAUTE Unterfuehrung) with the tunnels: Via Golf (Caslano -
+  Magliaso, 874,-1306) ran down into its cutting on both sides of the FLP and ended against 4-5 m of railway embankment
+  (v3.0.40, 2026-10-23). The rails there are not a TLM Bruecke: the road line carries the structure. An underpass is
+  kept only under a railway and under no road (network.underpasses; Caslano station's footway runs under the Via
+  Cantonale too), and the lines over it become bridges there (over_underpass). In the TLM a Treppe (stairs) is not
+  an underpass: filter on the exact KUNSTBAUTE value (a probe filtering "not Keine/Bruecke" listed 200 stairs).
 - A height band is not the lake: network.LakeCut cut every dtm05 cell between lake level -2 m and +0.15 m out of the
   surveyed paved polygons, and the floor of the Tresa valley below Ponte Tresa (268.6-270.5 m, lake 270.48) lost its
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
