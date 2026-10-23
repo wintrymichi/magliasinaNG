@@ -4,7 +4,7 @@ What changed in each version of the map, newest first. The release notes that go
 
 ## v3.1 (23 October 2026)
 
-For BeamNG.drive 0.40. The zip is the nightly test build of the integration branch (built from `21ff47b`, run 39915080591) with eight patches applied to the zip in place on 23 October 2026: the Via Golf wing walls out of the asphalt, pavements on kerbs, 19 buildings closer to the real ones, the asphalt age from the orthophoto, roundabouts and parking spots off the kerbs, the forest floor mosaic, the bus stop paint and the island posts. Published before the in-game test. The fix of the Via Golf footways (`7a9530c`) is in the code but not in this zip.
+For BeamNG.drive 0.40. The zip is the nightly test build of the integration branch (built from `21ff47b`, run 39915080591) with nine patches applied to the zip in place on 23 October 2026: the Via Golf wing walls out of the asphalt, pavements on kerbs, 19 buildings closer to the real ones, the asphalt age from the orthophoto, roundabouts and parking spots off the kerbs, the forest floor mosaic, the bus stop paint, the island posts and the bus shelters off the carriageway. Published before the in-game test. The fix of the Via Golf footways (`7a9530c`) is in the code but not in this zip.
 
 Also in v3.1: the Magliaso bridge from the survey, bridges as wide as the road, no floating roofs (469 -> 0) and posts under porches, detailed roofs, rock cut slopes with bushes, wilder undergrowth, ballast up to the sleepers and no rails into the wall at Caslano, walls without saw-tooth tops, time trial starts facing the route. Details below and in the README.
 
