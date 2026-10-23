@@ -163,7 +163,10 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   "binario" obstacles of check_level, also in the v3.0.40.1 test build), and the survey's wing walls stood 0.4-0.9 m
   into the asphalt at the four corners (the drive-free band is a quarter of the width, and the survey has no road
   polygon in an underpass). network_surface.under_walkways puts the footways on the road + 15 cm, walls.drive_free
-  frees the whole width + 0.3 m of an underpass. Not built yet (fixed after the v3.1 nightly).
+  frees the whole width + 0.3 m of an underpass. Not built yet (fixed after the v3.1 nightly) The wing walls of the nightly zip were
+  patched in place (patch_underpass_walls.py, nightly_patch_v31.yml): only the numbers of the DAE's g-pa array
+  change, so the solid stays closed and nothing else of the file moves (rewriting the 1.5 GB zip takes about 6 min).
+  Pushing the walls out also showed the raised footway under the deck from the road (not patched: it needs the build).
 - A height band is not the lake: network.LakeCut cut every dtm05 cell between lake level -2 m and +0.15 m out of the
   surveyed paved polygons, and the floor of the Tresa valley below Ponte Tresa (268.6-270.5 m, lake 270.48) lost its
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).

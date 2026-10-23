@@ -16,7 +16,7 @@ The pictures are 3D renders made in the cloud (before | after), not in-game scre
 - **Time trials:** the cars start facing the right way.
 
 ## Known issues of this build
-- Via Golf underpass: at the four corners of the opening, the ends of the stone wing walls stand up to 0.9 m inside the asphalt edge, and the deck is 2.9 m over the road at its north edge. Both will be fixed for the official v3.1.
+- Via Golf underpass: the two footways beside the road under the tracks lie about 2 m above the road (a raised strip under the deck), and the deck is 2.9 m over the road at its north edge. The footways are fixed for the official v3.1. (The stone wing walls that stood up to 0.9 m into the asphalt at the four corners were moved out of the road by the patch of 2026-10-23.)
 - Magliaso bridges: a step of up to 0.4 m at the south-east corner of the main deck and 6-8 cm at the upstream bridge, both outside the lanes.
 - The level is 7.9 GB unpacked (+1.3 GB, mostly the cut slopes). Expect a lower frame rate in the woods.
 
