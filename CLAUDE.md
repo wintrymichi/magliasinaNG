@@ -375,6 +375,8 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   to the branch (strade_extra.yml, paesi_interi.yml), and test the code locally with stand-in inputs first.
 - Growing the area (area.py) changes what the pinned extracts in beamng/dati must cover: re-pinning them pulls newer
   data for the whole map. Add only what is new (download_gwr.py --add) and check the OSM extract's bbox.
+  It also leaves the README/website map (web/map.svg) stale: v3.0.40 grew to 58.6 km2 and the map still showed
+  56 km2 without Caslano until v3.1 (michi noticed). Rerun `python web/tools/make_map.py` (needs shapely, pyproj).
 - `osm_area.json.gz` is Overpass `out geom`: a way's points are in its own `geometry`, the `node` elements are only
   tagged nodes, and the `bbox` is the nodes' bbox. Looking ways up through node elements found none near a Caslano
   slipway and the integrator wrongly reported Caslano missing from the extract (2026-10-20).
