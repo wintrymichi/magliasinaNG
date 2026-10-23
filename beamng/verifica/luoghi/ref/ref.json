@@ -1,6 +1,8 @@
 {
  "magliaso": {
-  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2711-1093_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "2881698562098984",
@@ -32,11 +34,16 @@
   ]
  },
  "ponte_tresa": {
-  "ortho": "swissimage-dop10_2024_2710-1091_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2710-1091_0.1_2056.tif"
+  ],
   "photos": []
  },
  "agno": {
-  "ortho": "swissimage-dop10_2024_2713-1095_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2713-1094_0.1_2056.tif",
+   "swissimage-dop10_2024_2713-1095_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "376578970406386",
@@ -68,11 +75,15 @@
   ]
  },
  "caslano": {
-  "ortho": "swissimage-dop10_2024_2712-1092_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2712-1092_0.1_2056.tif"
+  ],
   "photos": []
  },
  "novaggio": {
-  "ortho": "swissimage-dop10_2024_2709-1096_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2709-1096_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "1128229927589151",
@@ -104,11 +115,15 @@
   ]
  },
  "bioggio": {
-  "ortho": "swissimage-dop10_2024_2713-1096_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2713-1096_0.1_2056.tif"
+  ],
   "photos": []
  },
  "rot_magliaso_ovest": {
-  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2711-1093_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "2929849064002047",
@@ -140,7 +155,9 @@
   ]
  },
  "rot_magliaso_est": {
-  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2711-1093_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "894680824411709",
@@ -172,7 +189,9 @@
   ]
  },
  "rot_bioggio": {
-  "ortho": "swissimage-dop10_2024_2713-1096_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2713-1096_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "473871067255791",
@@ -204,7 +223,9 @@
   ]
  },
  "rot_bioggio_2": {
-  "ortho": "swissimage-dop10_2024_2714-1097_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2714-1097_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "247386903838043",
@@ -218,27 +239,41 @@
   ]
  },
  "rot_manno": {
-  "ortho": "swissimage-dop10_2024_2715-1099_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2714-1099_0.1_2056.tif",
+   "swissimage-dop10_2024_2715-1099_0.1_2056.tif"
+  ],
   "photos": []
  },
  "bus_purasca_paese": {
-  "ortho": "swissimage-dop10_2024_2709-1092_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2709-1092_0.1_2056.tif"
+  ],
   "photos": []
  },
  "bus_neggio_bivio": {
-  "ortho": "swissimage-dop10_2024_2712-1093_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2712-1093_0.1_2056.tif"
+  ],
   "photos": []
  },
  "bus_cassina_posta": {
-  "ortho": "swissimage-dop10_2024_2712-1094_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2712-1094_0.1_2056.tif"
+  ],
   "photos": []
  },
  "bus_agno_chiesa": {
-  "ortho": "swissimage-dop10_2024_2713-1095_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2712-1095_0.1_2056.tif",
+   "swissimage-dop10_2024_2713-1095_0.1_2056.tif"
+  ],
   "photos": []
  },
  "bus_curio_paese": {
-  "ortho": "swissimage-dop10_2024_2710-1095_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2710-1095_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "279512423855302",
@@ -270,11 +305,16 @@
   ]
  },
  "bus_bioggio_paese": {
-  "ortho": "swissimage-dop10_2024_2713-1097_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2713-1096_0.1_2056.tif",
+   "swissimage-dop10_2024_2713-1097_0.1_2056.tif"
+  ],
   "photos": []
  },
  "bus_pura_ronchetti": {
-  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2711-1093_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "296175215328639",
@@ -306,7 +346,10 @@
   ]
  },
  "bus_magliaso_stazione": {
-  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "ortho": [
+   "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+   "swissimage-dop10_2024_2712-1093_0.1_2056.tif"
+  ],
   "photos": [
    {
     "id": "791379951499654",
