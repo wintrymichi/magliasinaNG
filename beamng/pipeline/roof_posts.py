@@ -16,7 +16,8 @@ short ones (posts: buildings_mesh puts them POST_STEP m apart). What is left at 
 least FREE_MIN m2 touching its outline, more than POST_MIN m over the ground) gets posts like the canopies: at the
 corners of the overhanging part of the roof, POST_INSET m in, and every POST_STEP m along it, none within POST_ATTACH m
 of a wall or a post (the house carries that side; no post doubled) nor on the carriageway of a road or path or on the
-railway (KEEP_RAIL m round its faces), and off the sidewalks, yards and parking unless that leaves none. Where the
+railway (KEEP_RAIL m round its faces) nor on the line of a road or path (an AI road with its width and LANE_CLEAR,
+OpenStreetMap highways WAY_CLEAR m round: a path under a porch has no mesh of its own), and off the sidewalks, yards and parking unless that leaves none. Where the
 carriageway and the railway leave no post, the posts move off them (at most SNAP m), under the roof. The posts stand
 POST_SINK m in the ground and end under the roof's underside (the rims of roof_details are outside them); they are
 part of the building shapes, so cars collide with them.
@@ -58,6 +59,8 @@ SNAP = 2.0               # m a post may move off the carriageway
 HARD = re.compile(r"^mp_(road_(?!wall)|path_|bridge_(?!parapet))")       # carriageways: never a post
 SOFT = re.compile(r"^mp_(sidewalk|hard_|parking)")    # sidewalks, yards, parking: a post only where none stands else
 WALLED = 0.7            # share of a piece's outline along the walls that hold the roof: an inner court, no posts
+LANE_CLEAR = 0.3         # m beyond the half width of an AI road (the line check_level drives, not only its mesh)
+WAY_CLEAR = 1.0          # m round an OpenStreetMap highway way (paths under porches have no mesh of their own)
 KEEP_FUEL = 1.5          # m round the meshes of the petrol stations (props/fuel)
 NEAR_ROAD = 2.0          # m: the posts this close to a carriageway are counted in the report
 
@@ -165,6 +168,23 @@ class Level:
                 fuel.append(shapely.MultiPoint(V[:, :2] + np.asarray(o.get("position", [0, 0, 0]), float)[:2])
                             .convex_hull.buffer(KEEP_FUEL))
         self.fuel = shapely.union_all(fuel) if fuel else None
+        # the lines the cars and walkers follow: the AI roads with their width, the OSM highways; where a path or
+        # a road runs under a porch or a roof over a yard the carriageway mesh is not there (v3.1 test build v2:
+        # 3 posts stood across a road and two paths of check_level's stations)
+        lanes = []
+        f = f"{lv}/main/MissionGroup/AIRoads/items.level.json"
+        for o in (read_items(zi, f) if f in zi.NameToInfo else []):
+            N = np.asarray(o.get("nodes", []), float)
+            if o.get("class") != "DecalRoad" or len(N) < 2 or N.shape[1] < 4:
+                continue
+            lanes += [shapely.LineString([a[:2], b[:2]]).buffer(max(a[3], b[3]) / 2 + LANE_CLEAR)
+                      for a, b in zip(N[:-1], N[1:])]
+        import osm
+        if osm.available():
+            lanes += [w["line"].buffer(WAY_CLEAR) for w in osm.load()[0] if w["tags"].get("highway")]
+        self.lanes = shapely.union_all(lanes) if lanes else None
+        if self.lanes is not None:
+            shapely.prepare(self.lanes)
         self.roof = road_mesh.TriSurface(self.R) if len(self.R) else None
         lines = shapely.linestrings(self.H[:, :, :2]) if len(self.H) else []
         self.htree = shapely.STRtree(lines) if len(self.H) else None
@@ -187,6 +207,8 @@ class Level:
         hit = self.on(self.hard, P)
         if self.fuel is not None:
             hit |= shapely.contains_xy(self.fuel, P[:, 0], P[:, 1])
+        if self.lanes is not None:
+            hit |= shapely.intersects_xy(self.lanes, P[:, 0], P[:, 1])
         for a in np.arange(8) * np.pi / 4:
             for d in (0.0, KEEP_RAIL / 2, KEEP_RAIL):
                 hit |= ~np.isnan(self.rail.height(P[:, 0] + d * np.cos(a), P[:, 1] + d * np.sin(a)))
