@@ -1,0 +1,67 @@
+# Patch the v3.1 test zip of the pre-release "nightly" without building it again (2026-10-23, "asfalto meno uniforme"):
+# the wear of the roads laid again with what the photos say about the asphalt (patch_road_age.py, road_age.py; the
+# build has it in its finish step road_wear). Started by a change of beamng/nightly/patch_road_age_stamp.txt.
+name: nightly patch (v3.1 asphalt age)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-encc19, claude/tetti-fluttuanti-8q4m1p]
+    paths: [beamng/nightly/patch_road_age_stamp.txt]
+
+concurrency:
+  group: nightly-build-refs/heads/claude/tetti-fluttuanti-8q4m1p    # one patch of the nightly zip at a time
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      PYTHONUNBUFFERED: "1"
+      ZIP_NAME: magliaso_pura_v3.1_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow opencv-python-headless
+
+      - name: Download the nightly zip
+        run: |
+          mkdir -p "$RUNNER_TEMP/z"
+          gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
+          ls -l "$RUNNER_TEMP/z"
+
+      - name: Lay the wear of the roads again
+        working-directory: beamng/pipeline
+        run: |
+          python -W ignore patch_road_age.py "$RUNNER_TEMP/z/$ZIP_NAME.zip" | tee "$RUNNER_TEMP/patch.log"
+          grep -q "road age patch:" "$RUNNER_TEMP/patch.log"
+          grep -q "'age_new_km'" "$RUNNER_TEMP/patch.log"
+          python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+
+      - name: Upload it again
+        run: |
+          gh release upload nightly "$RUNNER_TEMP/z/$ZIP_NAME.zip" --clobber
+          gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
+          {
+            echo
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** less uniform asphalt, read from the 2024 orthophoto and Mapillary: newer and older stretches with sealed joints, patches, crumbled edges on old asphalt, manholes and gullies, the joints with yards and setts (\`$ZIP_NAME.zip\` replaced)."
+          } >> "$RUNNER_TEMP/notes.md"
+          gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"
