@@ -19,6 +19,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - `optimize_level` used os.cpu_count() - 2 processes (14) and the OOM killer took the build and the Claude session on
   the 14 GB PC (2026-10-17): now OPT_WORKERS (default 4). Keep PATCH_WORKERS=2 and nothing else heavy meanwhile.
 - `pgrep -f`/`pkill -f` with a pattern in your own command line stops your own shell: use "[r]un_build" style patterns.
+  The bracket trick only helps if the plain name is nowhere else in the same command: `pkill -f "[s]core.py"; python3
+  score.py` and `pkill -f "[c]ompare.py /home"; ... compare.py /home/...` killed the shell (exit 144) twice in the
+  buildings thread (2026-10-23). Kill by PID (`ps aux | grep "[n]ame"` first, then `kill <pid>` in a separate call).
+  `ps aux | grep "[c]ompare.py" | xargs kill` is no better: it lists the shell whose command line holds the name
+  further on (a third kill). `pgrep -af "^python3 compare"` anchors on the process's own command.
 - Push work often. An earlier session lost the fuel stations module because it was never pushed.
 
 - The cloud container cannot upload release assets (uploads.github.com answered 415 through the gateway) and cannot
@@ -427,6 +432,22 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   lines behind, bank 4 m higher): taking the nearest cap only moved the teeth. walls.caps_at takes the highest cap
   within the wall's thickness. Never look up per-vertex data by rounded coordinates when the vertices can change.
   Found by a column check on the released zip (top of each xy column vs its mesh neighbours, ±0.6 m).
+
+## Buildings closer to the real ones (edifici_veri.py, v3.1)
+
+- The built shapes shift their uvs by whole tiles (bng.write_dae: `T - floor(T.mean)` when the mean is over 2): the
+  openings' uvs are not in 0..1, and looking them up in the atlas found no module at all (6,352 of 6,352 triangles).
+  Take the fraction, and give the whole-tile shift back when writing new uvs.
+- Cameras placed by rule in front of a facade (in front of its middle, 20 m out, eye height) ended inside other houses,
+  roofs and walls in half the views. Put the game camera at the photo's own position and heading (the credits of the
+  pack): the views compare with the photos (what michi asked) and are on the road.
+- The houses a photo shows are often not the site's own: the yellow corner house of Agno (e03) and the red house of Pura
+  (e18) were the next block, and the first round toned the wrong houses (the one in the site red instead of white).
+  Check each site's photo against its render before and after (look up the blocks near the camera), then fix the spec.
+- `bng.LevelFiles` takes a level folder, not a zip: a patch of the released zip unpacks it, runs the step and puts
+  back only the files newer than a marker (`zip -@`), which copies the other entries as they are.
+- Wall tones are vertex colours = tone / mean(plaster texture), the same as buildings_mesh: light pinks come out
+  greyish mauve in the renders; give pinks a little more saturation than the photo's sunlit wall.
 
 ## Races (time trials, races.py)
 

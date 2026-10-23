@@ -1,0 +1,82 @@
+# Patch the v3.1 test zip of the pre-release "nightly" with the buildings made closer to the real ones (edifici_veri.py,
+# dati/edifici_veri.json) without building it again (michi 2026-10-23: "Tutto nella 3.1 nightly. Appena puoi patcha").
+# The step is a finishing step of build_level.py: a full build has it, this workflow only serves the zip built before.
+# Started by a change of beamng/nightly/edifici_veri_stamp.txt.
+name: nightly patch (v3.1 edifici veri)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-zknmb9]
+    paths: [beamng/nightly/edifici_veri_stamp.txt]
+
+concurrency:
+  group: nightly-zip
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      ZIP_NAME: magliaso_pura_v3.1_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow opencv-python-headless
+          ls /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+
+      - name: Download and unpack the nightly zip
+        run: |
+          mkdir -p "$RUNNER_TEMP/z" "$RUNNER_TEMP/lvl"
+          gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
+          ls -l "$RUNNER_TEMP/z"
+          cd "$RUNNER_TEMP/lvl" && unzip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          if [ -f levels/magliaso_pura/main/MissionGroup/buildings/veri/items.level.json ]; then
+            echo "the zip has the buildings/veri group already"; exit 1
+          fi
+          touch "$RUNNER_TEMP/marker"; sleep 2
+
+      - name: The buildings closer to the real ones
+        working-directory: beamng/pipeline
+        run: |
+          python -c "import sys, edifici_veri as ev; ev.edifici_veri_step(sys.argv[1], report=sys.argv[2])" \
+            "$RUNNER_TEMP/lvl" "$RUNNER_TEMP/edifici_veri.json" | tee "$RUNNER_TEMP/patch.log"
+          grep -q "unmatched \[\]" "$RUNNER_TEMP/patch.log"
+
+      - name: Update the changed files in the zip
+        run: |
+          cd "$RUNNER_TEMP/lvl"
+          find levels gameplay -type f -newer "$RUNNER_TEMP/marker" | sort > "$RUNNER_TEMP/changed.txt"
+          wc -l "$RUNNER_TEMP/changed.txt"; head -50 "$RUNNER_TEMP/changed.txt"
+          zip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@ < "$RUNNER_TEMP/changed.txt"
+          python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"; ls -l "$RUNNER_TEMP/z"
+
+      - name: Upload it again
+        run: |
+          gh release upload nightly "$RUNNER_TEMP/z/$ZIP_NAME.zip" --clobber
+          gh release view nightly --json body --jq .body > "$RUNNER_TEMP/notes.md"
+          {
+            echo
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** 19 buildings seen from the main roads made closer to the real ones (plaster colours house by house, shutters, shop windows, plain shop lettering, solar panels and aerials as on the orthophoto; \`edifici_veri\`, \`$ZIP_NAME.zip\` replaced)."
+          } >> "$RUNNER_TEMP/notes.md"
+          gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"

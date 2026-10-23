@@ -941,6 +941,7 @@ FINISH = [
     ("direction_signs", "direction_signs", "direction_signs_step", {"report": True}),   # v3.0: at the roundabouts
     ("lake", "water", "lake_step", {"report": True}),
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+    ("edifici_veri", "edifici_veri", "edifici_veri_step", {"report": True}),   # v3.1: 19 buildings as the photos show them
     ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
     ("roof_details", "roof_details", "roof_details_step", {"report": True}),   # v3.1: roof rims, ridge caps
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, totems
