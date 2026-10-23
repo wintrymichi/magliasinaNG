@@ -173,10 +173,10 @@ def write_items(objs):
     return ("\n".join(json.dumps(o, separators=(",", ":")) for o in objs) + "\n").encode("utf-8")
 
 
-def face_cells(zi, lv, n):
-    """(n - 1, n - 1) bool: the terrain squares under a face of the SOLID groups (every face sampled every STEP m)."""
+def face_cells(zi, lv, n, groups=SOLID):
+    """(n - 1, n - 1) bool: the terrain squares under a face of the groups (SOLID; every face sampled every STEP m)."""
     cells = np.zeros((n - 1, n - 1), bool)
-    for g in SOLID:
+    for g in groups:
         f = f"{lv}/main/MissionGroup/{g}/items.level.json"
         if f not in zi.NameToInfo:
             continue
