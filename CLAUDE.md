@@ -270,6 +270,23 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - Mapillary photos and orthophoto crops for a few points: luoghi_ref.yml commits them to beamng/verifica/luoghi/ref on
   the thread branch (a check only: never merge that folder; the photos are CC BY-SA).
 
+## Bus stop paint (stop_paint.py, v3.1)
+
+- The road paint is laid by rules (markings_rules.py, v3.0), not traced: anything the rules do not know is missing
+  everywhere. Bus stop paint (yellow zigzags, BUS) was on 17 of 265 Swiss stops. stop_paint.py lays it from the
+  orthophoto. The v2 trace had them only in pieces: network_markings' 2x2 opening breaks lines 1-2 cells wide, and
+  faded yellow (saturation 26-50 in a 10 cm cell) fails its S>45 test. Measure thin paint against the ground round it
+  (median of R+G-2B over 3 m) and join pieces before classifying. A join wider than 3 cells merged the bars of every
+  crossing into one blob (156 -> 61 crossings).
+- A yellow car, a flower bed and the yellow van of a bus yard read like letters or bars: drop marks with dark cells round
+  them (windows, leaves), crossings need 3 parallel bars, and paint must lie on the asphalt faces of roads/surfaces
+  (whitelist the materials: the up faces of mp_road_wall are wall tops). Paint "off the road" far east (x > 4000) is
+  outside the level's network: OSM covers more than the map.
+- render3d skipped every merged shape whose position (the corner of its 384 m chunk) was over 300 m from a small view:
+  whole blocks of Agno came out without buildings and looked like a level bug. The margin is now 560 m.
+- luoghi_ref read only one orthophoto tile: crops near a 1 km tile edge came out half white. It now mosaics every tile
+  the crop touches.
+
 ## Meshes
 
 - The FLP track showed as a brown zigzag in michi's video beside the cantonale (2026-10-22): the geometry is straight
