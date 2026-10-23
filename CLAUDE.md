@@ -188,6 +188,10 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   roof_posts was first put right after roof_details, before fuel_stations: its posts would have counted as walls under
   the survey canopy fuel_stations replaces. Anything new that stands on the ground goes before parking/street_life
   (they keep off the building meshes) and after the steps that cut or replace building pieces.
+  Keeping posts off the carriageway MESH was not enough: build test v2 had 3 new 'edificio' obstacles (road 43 -> 44,
+  paths 172 -> 174), posts under porches and yard roofs where a road or path runs with no mesh of its own (check_level
+  drives the swissTLM3D line with its width). roof_posts now also keeps off the AI roads with their width and the OSM
+  highways (1 m round): anything placed on the ground must test the lines, not only the meshes.
 
 - Roofs were a sheet with no thickness and plain folds at the ridges; tegole/metal textures of 2 m with thin, low-contrast
   lines read as one grey surface from 30 m (michi 2026-10-22, lake-shore house in the cinematic video). v3.1: finish step
