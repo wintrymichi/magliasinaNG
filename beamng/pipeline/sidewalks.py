@@ -13,12 +13,13 @@ built level:
   the entrances of the survey) not closed by a wall or a fence and of a pedestrian crossing (its yellow bars in the road paint, ZEBRA_* as
   markings_clean.zebra draws them), rising to KERB_H over RAMP m;
 - flush (no kerb) where an AI road runs over the pavement (a side street across a continuous pavement, an AI line
-  over a lay-by the survey draws as pavement), back up over AI_RAMP m;
+  over a lay-by the survey draws as pavement) and under the parking spots of the parked cars, back up over AI_RAMP m;
 - every open edge of the raised top gets a face down to under the surface beside it: Italy's concrete kerb stone
   against a carriageway (KERB_DOWN m under the asphalt) and against a yard, the same stone down to the old edge
   (the skirt carries on under it) towards gardens, walls and paths;
 - the objects that stood on a pavement (street lights, signs, poles, bins, benches, shelters, the trees and
-  shrubs of the forest files) move up with it.
+  shrubs of the forest files) move up with it, and so does every piece of the prop shapes merged per tile
+  (delineators, direction signs, OSM furniture) whose feet stood on it.
 Meshes in MissionGroup/roads/sidewalks, one shape per TILE m tile, with collision; the rest is copied as it is.
 
 A finishing step of build_level.py (FINISH), after the steps that place what stands on the pavements (it lifts it);
@@ -52,6 +53,8 @@ SIDEWALK = "mp_sidewalk"
 AI_STEP = 0.5            # m between the points of an AI road
 AI_CLEAR = -1.25         # m beyond its half width (inside it): the pavement there stays flush with the road; the
                          # AI roads are as wide as the carriageway, so their edge is the kerb itself
+PIECE_MAX = 8.0          # m, longest merged prop piece moved up with a pavement
+PARK_CLEAR = 0.3         # m round a parking spot: the pavement stays flush
 AI_RAMP = 0.75           # m from there back up to the kerb's height
 SHAPE = re.compile(r"art/shapes/roads/sidewalks_[-+]\d+_[-+]\d+\.dae$")
 L = f"/levels/{LEVEL_NAME}"
@@ -148,6 +151,25 @@ def crossings(zi, lv):
     for i in range(len(bars)):
         groups.setdefault(find(i), []).append(bars[i])
     return [shapely.union_all(g).convex_hull.buffer(ZEBRA_OUT) for g in groups.values() if len(g) >= ZEBRA_N]
+
+
+def parking_boxes(zi, lv):
+    """Footprints of the parking spots of the sites files (parking.py), as shapely polygons."""
+    out = []
+    for f in ("city.sites.json", "facilities.sites.json"):
+        name = f"{lv}/{f}"
+        if name not in zi.NameToInfo:
+            continue
+        for sp in json.loads(zi.read(name)).get("parkingSpots", []):
+            x, y = sp["pos"][:2]
+            qx, qy, qz, qw = sp.get("rot", [0, 0, 0, 1])
+            yaw = 2 * np.arctan2(qz, qw)
+            w, l = sp.get("scl", [2.5, 5.0, 3])[:2]
+            c, s_ = np.cos(yaw), np.sin(yaw)
+            q = [(x + u * c - v * s_, y + u * s_ + v * c) for u, v in ((-w / 2, -l / 2), (w / 2, -l / 2),
+                                                                       (w / 2, l / 2), (-w / 2, l / 2))]
+            out.append(shapely.Polygon(q))
+    return out
 
 
 def ai_lines(zi, lv):
@@ -329,6 +351,15 @@ def sidewalks_step(root, report=None):
         g = np.clip(da / AI_RAMP, 0.0, 1.0)
         rep["flush_vertices"] = int((g < 1).sum())
         raise_v = raise_v * g
+    # nor under a parking spot of the game's parked cars (a car spawned on the kerb jumps)
+    spots = parking_boxes(zi, lv)
+    if spots:
+        su = shapely.union_all(spots).buffer(PARK_CLEAR)
+        shapely.prepare(su)
+        dp = shapely.distance(su, shapely.points(Pv[:, :2]))
+        gp = np.clip(dp / AI_RAMP, 0.0, 1.0)
+        rep["parking_flush_vertices"] = int((gp < 1).sum())
+        raise_v = raise_v * gp
     low_e = side & (raise_v[Ea] + raise_v[Eb] < 2 * KERB_H - 0.02)
     rep["lowered_m"] = round(float(ln[low_e].sum()))
     rep["kerb_lowered_m"] = round(float(ln[low_e & (lab == LABELS.index("carriage"))].sum()))
@@ -375,12 +406,14 @@ def sidewalks_step(root, report=None):
     topc = Cover(top, np.ones(len(top)))
     tri_tree = topc.tree
 
-    def lift(P):
-        """Raise (m) of the pavement under each point (n, 2); 0 off the pavements."""
+    def lift(P, old=False):
+        """Raise (m) of the pavement under each point (n, 2); 0 off the pavements. old: also the pavement's height
+        before (nan off the pavements)."""
         P = np.asarray(P, np.float64).reshape(-1, 2)
         r = np.zeros(len(P))
+        z0 = np.full(len(P), np.nan)
         if not len(P):
-            return r
+            return (r, z0) if old else r
         _, I = tri_tree.query(P, k=8)
         done = np.zeros(len(P), bool)
         for j in range(I.shape[1]):
@@ -397,8 +430,9 @@ def sidewalks_step(root, report=None):
             ins = ok & (uu >= -1e-6) & (vv >= -1e-6) & (uu + vv <= 1 + 1e-6) & ~done
             rv = raise_v[vid[ii]]
             r[ins] = (rv[:, 0] * (1 - uu - vv) + rv[:, 2] * uu + rv[:, 1] * vv)[ins]
+            z0[ins] = (T[ii, 0, 2] * (1 - uu - vv) + T[ii, 2, 2] * uu + T[ii, 1, 2] * vv)[ins]
             done |= ins
-        return r
+        return (r, z0) if old else r
 
     files = {}
     with tempfile.TemporaryDirectory() as tmp:
@@ -424,6 +458,52 @@ def sidewalks_step(root, report=None):
     if not any(r.get("name") == "sidewalks" and r.get("class") == "SimGroup" for r in rows):
         rows.append({"name": "sidewalks", "class": "SimGroup", "persistentId": bng.pid(), "__parent": "roads"})
     files[r_items] = ("\n".join(json.dumps(r, separators=(",", ":")) for r in rows) + "\n").encode("utf-8")
+
+    # the props merged into one shape per tile (position z 0, the geometry in world coordinates): every piece of it
+    # (corners joined by its triangles) that stands on a pavement goes up with it
+    rep["merged_pieces_raised"] = 0
+    for name in zi.namelist():
+        if not name.endswith("items.level.json") or not any(f"/MissionGroup/{g}/" in name for g in OBJ_GROUPS):
+            continue
+        for o in read_items(zi, name):
+            pos, sn = o.get("position"), o.get("shapeName", "").lstrip("/")
+            if not (isinstance(pos, list) and len(pos) == 3 and pos[2] == 0) or sn not in zi.NameToInfo \
+                    or o.get("rotationMatrix") not in (None, [1, 0, 0, 0, 1, 0, 0, 0, 1]) \
+                    or o.get("scale") not in (None, [1, 1, 1]):
+                continue
+            text = zi.read(sn).decode("utf-8")
+            m = re.search(r'(<float_array id="g-pa" count="\d+">)([^<]*)(</float_array>)', text)
+            if not m:
+                continue
+            V = np.array(m.group(2).split(), np.float64).reshape(-1, 3)
+            W = V + np.asarray(pos, np.float64)
+            dz_v, z0_v = lift(W[:, :2], old=True)
+            if not (dz_v > 0.005).any():
+                continue
+            _, _, _, _, parts, _ = optimize_level.parse(text)
+            from scipy.sparse import coo_matrix
+            from scipy.sparse.csgraph import connected_components
+            tri = np.concatenate([idx[:, 0].reshape(-1, 3) for _, idx in parts])
+            ei = np.r_[tri[:, 0], tri[:, 1], tri[:, 2]]
+            ej = np.r_[tri[:, 1], tri[:, 2], tri[:, 0]]
+            _, comp = connected_components(coo_matrix((np.ones(len(ei)), (ei, ej)), shape=(len(V), len(V))),
+                                           directed=False)
+            add = np.zeros(len(V))
+            n = 0
+            for cid in np.unique(comp[dz_v > 0.005]):
+                k = np.flatnonzero(comp == cid)
+                lo = k[W[k, 2] <= W[k, 2].min() + 0.05]          # the piece's feet
+                ext = np.ptp(W[k, :2], axis=0).max()
+                if ext > PIECE_MAX or not np.isfinite(z0_v[lo]).all() or \
+                        not (-1.0 < (W[lo, 2] - z0_v[lo])).all() or ((W[lo, 2] - z0_v[lo]) > 0.25).any():
+                    continue                    # not standing in the pavement (posts go down into it), or too long
+                add[k] = dz_v[lo].max()
+                n += 1
+            if n:
+                V[:, 2] += add
+                rep["merged_pieces_raised"] += n
+                arr = " ".join("%.4f" % v for v in V.reshape(-1))
+                files[sn] = (text[:m.start(2)] + arr + text[m.end(2):]).encode("utf-8")
 
     # objects: TSStatics and prefabs of the prop groups, the items of the forest files
     for name in zi.namelist():
