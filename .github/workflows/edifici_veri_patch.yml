@@ -11,7 +11,7 @@ on:
     paths: [beamng/nightly/edifici_veri_stamp.txt]
 
 concurrency:
-  group: nightly-zip
+  group: nightly-build-refs/heads/claude/tetti-fluttuanti-8q4m1p   # the group of the other patches of the zip
   cancel-in-progress: false
 
 permissions:
