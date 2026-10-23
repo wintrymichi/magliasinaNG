@@ -280,6 +280,10 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - A finishing step can only be tried on a released level after undoing what the step itself added: the released
   .ter already has the verge twins and understory_step refuses it. Map the Verge layers back and drop their names
   from the .ter tail, terrain.json and terrain materials (done for the v3.1 test, 85 s for the step).
+- Render views of the forest floor from a road: most roads run in a cut or on a fill and the floor is hidden behind the
+  bank. Pick road points (Asphalt layer) whose ground on the wood side stays within -3..+1.2 m of the road for 30 m.
+  Only 19 road samples (5 m apart) lie above 950 m (the highest road reaches 993 m), all in a cut: the beech view
+  needed the camera 3 m up on the downhill edge (2026-10-23).
 
 ## Data from the cloud sessions
 
