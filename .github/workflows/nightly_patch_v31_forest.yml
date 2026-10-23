@@ -1,0 +1,68 @@
+# Patch the v3.1 test zip of the pre-release "nightly" without building it again (2026-10-23): the forest floor as a
+# mosaic (patch_forest_mosaic.py: ragged wood edges, thickets and bare leaf litter by sun and altitude, outcrops,
+# wooded steep banks, woodland grass; the build has it as the finish step forest_mosaic). Started by a change of
+# beamng/nightly/patch_v31_forest_stamp.txt on the v3.1 integration branch. Shares the concurrency group of the other
+# nightly patches: they run one after the other, each on the zip the one before uploaded.
+name: nightly patch (v3.1 forest mosaic)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/tetti-fluttuanti-8q4m1p]
+    paths: [beamng/nightly/patch_v31_forest_stamp.txt]
+
+concurrency:
+  group: nightly-build-refs/heads/claude/tetti-fluttuanti-8q4m1p
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      ZIP_NAME: magliaso_pura_v3.1_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow opencv-python-headless scikit-image
+
+      - name: Download the nightly zip
+        run: |
+          mkdir -p "$RUNNER_TEMP/z"
+          gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
+          ls -l "$RUNNER_TEMP/z"
+
+      - name: The forest floor as a mosaic
+        working-directory: beamng/pipeline
+        run: |
+          python patch_forest_mosaic.py "$RUNNER_TEMP/z/$ZIP_NAME.zip" | tee "$RUNNER_TEMP/patch.log"
+          grep -q "forest mosaic patched: 4 files rewritten" "$RUNNER_TEMP/patch.log"
+          python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+
+      - name: Upload it again
+        run: |
+          gh release upload nightly "$RUNNER_TEMP/z/$ZIP_NAME.zip" --clobber
+          gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
+          {
+            echo
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the forest floor as a mosaic: ragged wood edges (narrow along roads under the crowns, wide along meadows), thickets on sunny slopes, bare leaf litter under the beech crowns and on cold slopes, rock outcrops with stones, ferns and stones on the wooded steep banks, woodland grass in the light (\`$ZIP_NAME.zip\` replaced)."
+          } >> "$RUNNER_TEMP/notes.md"
+          gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"

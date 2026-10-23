@@ -374,6 +374,20 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   .ter already has the verge twins and understory_step refuses it. Map the Verge layers back and drop their names
   from the .ter tail, terrain.json and terrain materials (done for the v3.1 test, 85 s for the step).
 
+## Forest floor (understory, forest_mosaic)
+
+- `understory.face_cells` over the terrain skin (`level_objects/terrain_skin`, 3.9 GB of DAE, ~20 M triangles) ran more
+  than 30 min without finishing in the cloud; the SOLID groups alone take about 2 min. The skin's triangles are about a
+  terrain square: rasterise its vertices (forest_mosaic.skin_cells, 23 s).
+- understory.py imports trees.py, which needs scikit-image: a patch workflow that imports understory must install it.
+- The shade rows of the undergrowth hold 10 m fallen beeches and 4 m clumps: understory kept the shade EDGE_M (10 m)
+  from every edge. Narrowing the edge to 3 m along roads under the crowns (forest_mosaic) first put the shade 3 m from
+  the asphalt; within SHADE_CLEAR_M of a solid mesh there is now only light (reach-checked models) or bare litter.
+- A steep bank (Bank layer, >40 deg) is not an opening of the wood: counted as one, the cut slopes made every road in
+  the wood look like a meadow edge (wide light bands). Thresholding one smooth noise field gives round blobs with
+  smooth outlines: add a finer octave (forest_mosaic._field).
+- `/usr/bin/time` is not installed in the cloud container (a background run died at once): use resource.getrusage.
+
 ## Data from the cloud sessions
 
 - swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
