@@ -283,6 +283,31 @@ def terrain_low(ter, x, y):
     return np.minimum(a, b)
 
 
+def skin_height(lv, x, y, z):
+    """Height of the steep skin's surface (its near detail) nearest z at every (x, y), NaN where there is none.
+    Read one skin tile at a time: the whole skin is about 20 M triangles."""
+    out = np.full(len(x), np.nan)
+    f = os.path.join(lv, "main", "MissionGroup", "level_objects", "terrain_skin", "items.level.json")
+    if not len(x) or not os.path.exists(f):
+        return out
+    for o in pr.items(f):
+        shape = o.get("shapeName", "")
+        path = os.path.join(lv, *shape.split("/")[3:]) if shape.startswith(LEVEL_PREFIX) else None
+        if path is None or not os.path.exists(path):
+            continue
+        V, _, _, _, parts = pr.read_dae(path)          # the first geometry: the near detail
+        Vw = V + np.array(o.get("position", [0, 0, 0]), float)
+        lo, hi = Vw.min(0), Vw.max(0)
+        k = np.flatnonzero((x >= lo[0]) & (x <= hi[0]) & (y >= lo[1]) & (y <= hi[1]))
+        if not len(k) or not parts:
+            continue
+        h = TriSurface(np.concatenate([Vw[idx[:, 0].reshape(-1, 3)] for _, idx in parts])).height(
+            x[k], y[k], "near", z[k])
+        better = np.isfinite(h) & ~(np.abs(out[k] - z[k]) <= np.abs(h - z[k]))
+        out[k[better]] = h[better]
+    return out
+
+
 class Ground:
     """The ground a plant stands on: the terrain, or the ground mesh behind a retaining wall where
     that is higher (the terrain is lowered at the foot of the wall)."""
@@ -742,6 +767,14 @@ def check(lv, places=None):
     tree = np.isin(kinds, ("broadleaf", "conifer"))
     sink = np.where(tree, SINK["tree"], 0.1)
     off = F.z - ground.height(F.x, F.y)
+    up = off > FLOAT_TOL
+    if up.any():
+        # v3.1: the steep skin (steep_skin.py) is the ground on the steep banks, and its bushes stand on it
+        zs = skin_height(lv, F.x[up], F.y[up], F.z[up])
+        ok = np.isfinite(zs)
+        o = off[up]
+        o[ok] = np.minimum(o[ok], F.z[up][ok] - zs[ok])
+        off[up] = o
     res = {"forest_floating": int((off > FLOAT_TOL).sum()), "forest_buried": int((off < -BURY_TOL).sum()),
            "crowns_in_profile": 0, "crowns_in_profile_by_class": {c: 0 for c in CLASS_NAMES},
            "crowns_in_profile_max_m": 0.0, "trunks_in_solids": 0, "trunks_in_solids_by_kind": {}}
