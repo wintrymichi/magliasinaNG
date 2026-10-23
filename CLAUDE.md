@@ -240,6 +240,20 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   by check_level counts: network_holes rose 418 -> 1417 and the cells showed two causes, the intended banks and
   network.LakeCut removing the paved yards on the Tresa valley floor (at lake level, 2026-10-21).
 
+## Pavements and kerbs (sidewalks.py, v3.1)
+
+- Up to the v3.1 test zip every pavement (mp_sidewalk) was meshed flush with the road (dz 0 on the shared edges): no
+  kerb anywhere. The finish step `sidewalks` raises them on the built level (works on a folder, so a zip can be patched).
+- The AI roads are as wide as the carriageway: "no kerb within the AI road's half width" lowered 94 % of the kerbs
+  (the kerb IS the AI road's edge). Only the part more than 1.25 m inside the half width stays flush (AI_CLEAR).
+- A yard (mp_hard_*) next to a pavement is not always an entrance: the survey draws a garden wall as a line between
+  the two areas, so check the walls and fences along the edge before lowering the kerb (barriers()).
+- Merged pipeline shapes have their position at the tile middle with z 0: lifting objects by the ground under their
+  position would lift a whole tile. Skip objects whose position z is 0.
+- numpy 2: np.cross of 2D vectors raises ValueError; write the 2D cross product out.
+- Mapillary photos and orthophoto crops for a few points: luoghi_ref.yml commits them to beamng/verifica/luoghi/ref on
+  the thread branch (a check only: never merge that folder; the photos are CC BY-SA).
+
 ## Meshes
 
 - The FLP track showed as a brown zigzag in michi's video beside the cantonale (2026-10-22): the geometry is straight
