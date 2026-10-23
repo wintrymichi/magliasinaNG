@@ -17,6 +17,7 @@ The pictures are 3D renders made in the cloud (before | after), not in-game scre
 
 ## Known issues of this build
 - Via Golf underpass: the two footways beside the road under the tracks lie about 2 m above the road (a raised strip under the deck), and the deck is 2.9 m over the road at its north edge. The footways are fixed for the official v3.1. (The stone wing walls that stood up to 0.9 m into the asphalt at the four corners were moved out of the road by the patch of 2026-10-23.)
+- Bus stop paint patch: the few marked crossings it adds (8) were laid after the pavements were raised, so their kerbs stay 12 cm high instead of being lowered; the official v3.1 build lowers them.
 - Magliaso bridges: a step of up to 0.4 m at the south-east corner of the main deck and 6-8 cm at the upstream bridge, both outside the lanes.
 - The level is 7.9 GB unpacked (+1.3 GB, mostly the cut slopes). Expect a lower frame rate in the woods.
 
