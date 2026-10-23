@@ -1,0 +1,106 @@
+# Fourth patch of the v3.1 test zip of the pre-release "nightly" (2026-10-23): the keep-right poles of the traffic
+# islands get the black and yellow sleeve of the Swiss island posts, the white beacon beside them goes
+# (patch_island_bollards.py; islands.py builds them so since v3.1). Started by hand, or by a change of
+# beamng/nightly/patch_bollards_stamp.txt: the zip is replaced only when that file's first word is "upload" (or the
+# input upload is true), else only tested.
+name: nightly patch (v3.1 island posts)
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "replace the zip on the nightly pre-release (true) or only test the patch (false)"
+        default: "false"
+  push:
+    branches: [claude/project-thread-bpnv3b, claude/tetti-fluttuanti-8q4m1p]
+    paths: [beamng/nightly/patch_bollards_stamp.txt]
+
+concurrency:
+  group: nightly-build-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      ZIP_NAME: magliaso_pura_v3.1_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow opencv-python-headless
+
+      - name: Download and extract the nightly zip
+        run: |
+          df -h "$RUNNER_TEMP" | tail -1
+          mkdir -p "$RUNNER_TEMP/z" "$RUNNER_TEMP/lvl"
+          gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
+          md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          # the entries and how each was stored, to write the zip again the same way
+          python -c "import zipfile,json,sys; z=zipfile.ZipFile(sys.argv[1]); json.dump([(i.filename,i.compress_type) for i in z.infolist()], open(sys.argv[2],'w'))" \
+            "$RUNNER_TEMP/z/$ZIP_NAME.zip" "$RUNNER_TEMP/entries.json"
+          unzip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -d "$RUNNER_TEMP/lvl"
+          rm "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          df -h "$RUNNER_TEMP" | tail -1
+
+      - name: Island posts
+        working-directory: beamng/pipeline
+        run: |
+          python patch_island_bollards.py "$RUNNER_TEMP/lvl" | tee "$RUNNER_TEMP/patch.log"
+          python - "$RUNNER_TEMP/patch.log" <<'PY'
+          import re, sys
+          n, g = map(int, re.search(r"island bollards: (\d+) poles sleeved, (\d+) beacon triangles removed", open(sys.argv[1]).read()).groups())
+          # measured on the v3.1 test zip in the cloud session: 155 poles, 3100 triangles (20 a beacon)
+          assert 120 <= n <= 200 and g == 20 * n, (n, g)
+          print("island posts ok", n)
+          PY
+
+      - name: Write the zip again
+        run: |
+          python - "$RUNNER_TEMP/lvl" "$RUNNER_TEMP/entries.json" "$RUNNER_TEMP/z/$ZIP_NAME.zip" <<'PY'
+          import json, os, sys, zipfile
+          root, entries, out = sys.argv[1:]
+          how = dict(json.load(open(entries)))
+          names = []
+          for dp, _, fs in os.walk(root):
+              for f in fs:
+                  names.append(os.path.relpath(os.path.join(dp, f), root).replace(os.sep, "/"))
+          order = {n: i for i, (n, _) in enumerate(json.load(open(entries)))}
+          names.sort(key=lambda n: (order.get(n, 10 ** 9), n))
+          with zipfile.ZipFile(out, "w", allowZip64=True) as z:
+              for n in names:
+                  z.write(os.path.join(root, *n.split("/")), n, compress_type=how.get(n, zipfile.ZIP_DEFLATED))
+          print(len(names), "entries,", len(set(names) - set(how)), "new,", len(set(how) - set(names) - {n for n in how if n.endswith("/")}), "gone")
+          PY
+          python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+          ls -l "$RUNNER_TEMP/z"; md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
+
+      - name: Upload it again
+        run: |
+          if [ "${{ github.event.inputs.upload }}" != "true" ] && [ "$(awk 'NR==1{print $1}' beamng/nightly/patch_bollards_stamp.txt)" != "upload" ]; then
+            echo "test only: the nightly zip is not replaced"; exit 0
+          fi
+          gh release upload nightly "$RUNNER_TEMP/z/$ZIP_NAME.zip" --clobber
+          gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
+          {
+            echo
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the keep-right poles of the traffic islands have the black and yellow sleeve of the Swiss island posts, as in the street photos (the white beacons are gone) (\`$ZIP_NAME.zip\` replaced)."
+          } >> "$RUNNER_TEMP/notes.md"
+          gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"
