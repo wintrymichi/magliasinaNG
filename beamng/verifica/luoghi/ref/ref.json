@@ -220,5 +220,121 @@
  "rot_manno": {
   "ortho": "swissimage-dop10_2024_2715-1099_0.1_2056.tif",
   "photos": []
+ },
+ "bus_purasca_paese": {
+  "ortho": "swissimage-dop10_2024_2709-1092_0.1_2056.tif",
+  "photos": []
+ },
+ "bus_neggio_bivio": {
+  "ortho": "swissimage-dop10_2024_2712-1093_0.1_2056.tif",
+  "photos": []
+ },
+ "bus_cassina_posta": {
+  "ortho": "swissimage-dop10_2024_2712-1094_0.1_2056.tif",
+  "photos": []
+ },
+ "bus_agno_chiesa": {
+  "ortho": "swissimage-dop10_2024_2713-1095_0.1_2056.tif",
+  "photos": []
+ },
+ "bus_curio_paese": {
+  "ortho": "swissimage-dop10_2024_2710-1095_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "279512423855302",
+    "dist_m": 18.5,
+    "bearing": 148,
+    "pano": false,
+    "captured_at": 1616259346216,
+    "creator": "alexanderar",
+    "compass": 138.8148806617
+   },
+   {
+    "id": "203846244741848",
+    "dist_m": 8.5,
+    "bearing": 160,
+    "pano": false,
+    "captured_at": 1616259347223,
+    "creator": "alexanderar",
+    "compass": 139.2061060272
+   },
+   {
+    "id": "504579117625152",
+    "dist_m": 10.0,
+    "bearing": 153,
+    "pano": false,
+    "captured_at": 1572189753361,
+    "creator": "kaitu",
+    "compass": 135.58993887873
+   }
+  ]
+ },
+ "bus_bioggio_paese": {
+  "ortho": "swissimage-dop10_2024_2713-1097_0.1_2056.tif",
+  "photos": []
+ },
+ "bus_pura_ronchetti": {
+  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "296175215328639",
+    "dist_m": 29.1,
+    "bearing": 152,
+    "pano": false,
+    "captured_at": 1616259636140,
+    "creator": "alexanderar",
+    "compass": 142.71398424275
+   },
+   {
+    "id": "954280762051361",
+    "dist_m": 17.4,
+    "bearing": 157,
+    "pano": false,
+    "captured_at": 1572190031479,
+    "creator": "kaitu",
+    "compass": 136.2706097732
+   },
+   {
+    "id": "156895366398340",
+    "dist_m": 29.4,
+    "bearing": 281,
+    "pano": false,
+    "captured_at": 1572163076244,
+    "creator": "kaitu",
+    "compass": 292.84486272216
+   }
+  ]
+ },
+ "bus_magliaso_stazione": {
+  "ortho": "swissimage-dop10_2024_2711-1093_0.1_2056.tif",
+  "photos": [
+   {
+    "id": "791379951499654",
+    "dist_m": 17.4,
+    "bearing": 54,
+    "pano": false,
+    "captured_at": 1325891578000,
+    "creator": "kaitu",
+    "compass": 59.757028219001
+   },
+   {
+    "id": "198468121933379",
+    "dist_m": 23.1,
+    "bearing": 65,
+    "pano": false,
+    "captured_at": 1325891524000,
+    "creator": "kaitu",
+    "compass": 60.262106564132
+   },
+   {
+    "id": "483124912775781",
+    "dist_m": 18.0,
+    "bearing": 53,
+    "pano": false,
+    "captured_at": 1325891571000,
+    "creator": "kaitu",
+    "compass": 42.483643991773
+   }
+  ]
  }
 }
