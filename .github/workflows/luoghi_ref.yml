@@ -1,0 +1,39 @@
+# Reference pictures of recognisable places (v3.1, thread "Punti riconoscibili come dal vero"): the 10 cm SWISSIMAGE and
+# the nearest open street-level photos (Mapillary) at the points of beamng/verifica/luoghi/punti.json, committed to
+# beamng/verifica/luoghi/ref on the branch (luoghi_ref.py). A check only: the ref folder never goes into main.
+# Started by a change of punti.json or by hand.
+name: luoghi ref (orthophoto + open photos)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-bpnv3b]
+    paths: [beamng/verifica/luoghi/punti.json]
+
+permissions:
+  contents: write
+
+jobs:
+  ref:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAPILLARY_TOKEN: ${{ secrets.MAPILLARY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependencies
+        run: pip install --progress-bar off numpy pyproj rasterio pillow requests
+      - name: Pictures
+        working-directory: beamng/pipeline
+        run: python luoghi_ref.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add beamng/verifica/luoghi/ref
+          git commit -m "luoghi ref: orthophoto and open photos at the points (check only, not for main)" || exit 0
+          for i in 1 2 3 4; do git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break; sleep $((i * 5)); done
