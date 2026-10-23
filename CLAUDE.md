@@ -295,6 +295,12 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   whole blocks of Agno came out without buildings and looked like a level bug. The margin is now 560 m.
 - luoghi_ref read only one orthophoto tile: crops near a 1 km tile edge came out half white. It now mosaics every tile
   the crop touches.
+- Bus shelters (bus_shelters.py): "the edge of the asphalt" was found on parking.Ground.S, which holds every paved
+  surface (yards, pavements): where a yard joined the road no edge was found and the shelter stood at the AI lane's
+  half width + 0.5 m, on the carriageway (6 of the 36 v3.0 shelters, one on a roof). Read the edge on the mp_road_*
+  faces only. The shelter (Italy's model) is not in the cloud and render3d draws nothing there: check placements
+  by drawing the footprints on the orthophoto crops (luoghi/gialli has 60 m crops of every bus stop). The step took
+  33 min because the edge scan asked TriSurface.height one point at a time: one call for the 32 offsets, 5 min.
 
 ## Meshes
 
