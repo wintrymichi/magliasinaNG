@@ -62,7 +62,8 @@ ROCK_SHARE = 0.18                   # share of the steepest floor (up to STEEP_B
 SHADE_CLEAR_M = understory.EDGE_M   # m: the shade (fallen trees, big clumps) begins this far from a road, path, wall,
                                     # building, the railway or the skin; nearer, what is not light is bare litter
 BANK_TREE_M = 8.0                   # m: a steep bank with a measured trunk this near is in the wood
-BANK_CLEAR = 3                      # terrain squares from anything solid, the skin, the verge twins and the light
+ROCK_CLEAR_M = 10.0                 # m: no outcrop (stones to 2 m) this near a solid mesh, the skin or a verge twin
+BANK_CLEAR = 5                      # terrain squares from anything solid, the skin, the verge twins and the light
 SKIN = "level_objects/terrain_skin"   # steep_skin.py: its triangles are a terrain square or less, its vertices mark it
 FOREST_ROCK, BANK_WOOD = "ForestRock", "BankWood"
 TWIN_OF = {FOREST_ROCK: "Rock", BANK_WOOD: "Bank"}
@@ -72,8 +73,8 @@ _ALL = groundcover._ALL
 # GroundCovers: name, material, radius, dissolve, grid, seed, maxElements per layer, layers, rows. Billboard rows:
 # (uvs, probability, size min, max, clump min, max, clump radius); model rows as groundcover.UNDERSTORY_COVERS.
 WOOD_GRASS = ("understory_grass", "mp_gc_grass_long", 50.0, 30.0, 6, 31, 3600, groundcover.LIGHT, [
-    (groundcover.LONG_TOP, 1.0, 0.30, 0.55, 2, 5, 0.6),
-    (groundcover.LONG_HALF, 0.5, 0.40, 0.70, 1, 3, 0.5),
+    (groundcover.LONG_TOP, 1.0, 0.30, 0.55, 2, 5, 0.4),
+    (groundcover.LONG_HALF, 0.5, 0.40, 0.70, 1, 3, 0.4),
     (groundcover.SHORT_HALF_R, 0.4, 0.25, 0.40, 2, 4, 0.4)])
 # the stones of an outcrop, half in the ground; the Rock layer of the land cover keeps its own look
 ROCKS = ("understory_rocks", "mp_gc_grass_short", 70.0, 50.0, 6, 37, 420, (FOREST_ROCK,), [
@@ -88,8 +89,8 @@ BANK = ("understory_bank", "mp_gc_grass_short", 60.0, 40.0, 6, 41, 520, (BANK_WO
     (_IT + "generibush_small.dae", 0.30, 0.5, 0.8, 1, 2, 1.0, 80, _ALL),
     (_IT + "scraggly_bush.dae", 0.20, 0.30, 0.42, 1, 1, 1.0, 80, (-1000.0, 1100.0)),
     (_EF + "fir_dead_branches.dae", 0.15, 0.5, 0.9, 1, 1, 1.0, 80, _ALL),
-    (_ER + "eca_rock_small_2.dae", 0.35, 0.8, 2.4, 1, 3, 2.0, 80, _ALL),
-    (_ER + "eca_rock_small_3.dae", 0.30, 0.8, 2.2, 1, 2, 2.0, 80, _ALL)])
+    (_ER + "eca_rock_small_2.dae", 0.35, 0.7, 1.6, 1, 3, 1.5, 80, _ALL),
+    (_ER + "eca_rock_small_3.dae", 0.30, 0.7, 1.5, 1, 2, 1.5, 80, _ALL)])
 COVERS = (WOOD_GRASS, ROCKS, BANK)
 
 
@@ -189,6 +190,7 @@ def mosaic(H, lay, names, trees, near_solid):
     dsol = _cv2.distanceTransform((~solid).view(np.uint8), _cv2.DIST_L2, 5) * TER_SQUARE
     del solid
     roadside = wood & ~light & (dsol <= SHADE_CLEAR_M)
+    far_from_road = dsol > ROCK_CLEAR_M
     del dsol
     road_light = roadside & (_field((n, n), BLOB_M / 2, rng) < 0.5)
     light |= road_light
@@ -196,8 +198,8 @@ def mosaic(H, lay, names, trees, near_solid):
     bare = (interior & ~light & (_field((n, n), BLOB_M, rng) < p_bare)) | (roadside & ~road_light)
     del p_bare, warm, beech
     steep = np.clip((slope - ROCK_SLOPE) / (STEEP_BANK - ROCK_SLOPE), 0, 1)
-    rock = interior & (slope >= ROCK_SLOPE) & (_field((n, n), ROCK_BLOB_M, rng) < ROCK_SHARE * steep)
-    del steep, heat
+    rock = interior & far_from_road & (slope >= ROCK_SLOPE) & (_field((n, n), ROCK_BLOB_M, rng) < ROCK_SHARE * steep)
+    del steep, heat, far_from_road
 
     names2 = list(names) + [FOREST_ROCK, BANK_WOOD]
     out = lay.copy()
@@ -207,6 +209,11 @@ def mosaic(H, lay, names, trees, near_solid):
     for m, t in understory.TWIN.items():
         out[bare & (base == ids[m])] = ids[t]
     out[rock] = names2.index(FOREST_ROCK)
+    # under the terrain skin and within a square of a solid mesh nothing grows (the skin has its own bushes; the
+    # undergrowth stood on the terrain under it, through the skin on the shoulders of the roads)
+    under = wood & near_solid
+    for m, t in understory.TWIN.items():
+        out[under & (base == ids[m])] = ids[t]
     # the wooded steep banks, clear of everything that is not wood or bank
     keep_off = near_solid | ~(wood | bank) | np.isin(lay, [ids[t] for t in understory.TWIN.values()])
     keep_off = ndi.binary_dilation(keep_off, np.ones((2 * BANK_CLEAR + 1,) * 2, bool))
@@ -214,7 +221,7 @@ def mosaic(H, lay, names, trees, near_solid):
     out[bankwood] = names2.index(BANK_WOOD)
     del keep_off, bank_trees, base
     stats.update({
-        "roadside_light": int(road_light.sum()), "roadside_bare": int((roadside & ~road_light).sum()),
+        "under_skin_or_solid": int(under.sum()), "roadside_light": int(road_light.sum()), "roadside_bare": int((roadside & ~road_light).sum()),
         "edge": int(edge.sum()), "gap": int((gap & ~edge).sum()), "thicket": int(thicket.sum()),
         "bare": int(bare.sum()), "outcrop": int(rock.sum()), "bank": int(bank.sum()), "bank_wood": int(bankwood.sum()),
         "after": {m: int((out == names2.index(m)).sum()) for m in
@@ -250,14 +257,16 @@ def objects():
 
 
 def check_light_reach():
-    """The light along the roads begins 1.5 m from a road mesh: the grass there is low anyway; the models of
-    ROCKS and BANK stand only BANK_CLEAR squares or EDGE_MIN + 3 m inside the wood."""
+    """The light begins 1.5 m from a road mesh (understory: the verge twins) and the grass's clumps spread 0.4 m;
+    the models of ROCKS stand ROCK_CLEAR_M, those of BANK BANK_CLEAR squares from any road, wall, building, the
+    railway and the skin: each reaches less than that from its foot (with its clump radius)."""
     b = json.load(open(groundcover.BOUNDS))
-    for name, _, _, _, _, _, _, _, rows in (ROCKS, BANK):
-        for shape, _, _, smax, *_ in rows:
+    for (name, _, _, _, _, _, _, _, rows), clear in ((ROCKS, ROCK_CLEAR_M), (BANK, BANK_CLEAR * TER_SQUARE)):
+        for shape, _, _, smax, _, _, crad, *_ in rows:
             lo, hi = b[shape]
-            reach = smax * max(abs(lo[0]), abs(lo[1]), hi[0], hi[1])
-            assert reach < min(BANK_CLEAR, (EDGE_MIN + 3.0) / TER_SQUARE) * TER_SQUARE + 1.0, (name, shape, reach)
+            reach = smax * max(abs(lo[0]), abs(lo[1]), hi[0], hi[1]) + crad
+            assert reach < clear, (name, shape, reach)
+    assert all(r[6] <= 0.4 for r in WOOD_GRASS[8])
 
 
 def skin_cells(zi, lv, n):
@@ -297,7 +306,7 @@ def changes(zi, report=None):
     if not all(m in names for m in groundcover.LIGHT):
         raise SystemExit("forest_mosaic: run understory first (no light twins in the level)")
     near = pw.corners_of(understory.face_cells(zi, lv, n)) | skin_cells(zi, lv, n)
-    near = ndi.binary_dilation(near, np.ones((3, 3), bool))
+    near = ndi.binary_dilation(near, np.ones((5, 5), bool))       # two squares: the skin's vertices leave gaps
     print("forest_mosaic: solid meshes and skin read (%.0f s)" % (time.time() - t0), flush=True)
     H = (Z0 + q.astype(np.float32) / np.float32(65535.0) * np.float32(MAXH))
     new_lay, names2, stats = mosaic(H, lay, names, understory.trunks(zi, lv), near)
