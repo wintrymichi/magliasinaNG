@@ -758,7 +758,9 @@ class Renderer:
     def _soups(self, x0, y0, x1, y1, origin):
         L = self.level
         out = {}
-        far_x0, far_y0, far_x1, far_y1 = x0 - 300, y0 - 300, x1 + 300, y1 + 300
+        # a merged shape's position is a corner of its 384 m chunk: a margin under that dropped whole chunks of
+        # buildings from a small view (Agno, 2026-10-23)
+        far_x0, far_y0, far_x1, far_y1 = x0 - 560, y0 - 560, x1 + 560, y1 + 560
 
         def place(tri, pos, M):
             return (tri if M is None else tri @ M.astype(np.float32)) + pos

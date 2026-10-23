@@ -23,22 +23,32 @@ PHOTOS = 3
 
 
 def ortho(e, n, path):
-    lat, lon = lv95_to_wgs(e, n)
-    r = requests.get(STAC, params={"bbox": f"{lon - 1e-4},{lat - 1e-4},{lon + 1e-4},{lat + 1e-4}", "limit": 100},
-                     timeout=60).json()
-    tifs = []
+    """The crop from every 1 km tile it touches, the newest flight of each (a point near a tile's edge came out
+    half white when only one tile was read)."""
+    h = SIDE / 2
+    lat0, lon0 = lv95_to_wgs(e - h, n - h)
+    lat1, lon1 = lv95_to_wgs(e + h, n + h)
+    r = requests.get(STAC, params={"bbox": f"{lon0},{lat0},{lon1},{lat1}", "limit": 100}, timeout=60).json()
+    tiles = {}
     for it in r.get("features", []):
         for a in it["assets"].values():
             if a["href"].endswith("_0.1_2056.tif"):
-                tifs.append((it["properties"].get("datetime", ""), a["href"]))
-    if not tifs:
+                tile = a["href"].split("/")[-1].split("_")[-3]          # swissimage-dop10_<year>_<e>-<n>_0.1_2056.tif
+                d = it["properties"].get("datetime", "")
+                if d >= tiles.get(tile, ("", ""))[0]:
+                    tiles[tile] = (d, a["href"])
+    if not tiles:
         return None
-    url = sorted(tifs)[-1][1]
-    h = SIDE / 2
-    with rasterio.open("/vsicurl/" + url) as s:
-        a = s.read(window=from_bounds(e - h, n - h, e + h, n + h, s.transform), boundless=True, fill_value=255)
-    Image.fromarray(np.moveaxis(a[:3], 0, -1)).save(path, quality=88)
-    return url.split("/")[-1]
+    out = None
+    for _, url in tiles.values():
+        with rasterio.open("/vsicurl/" + url) as s:
+            a = s.read(window=from_bounds(e - h, n - h, e + h, n + h, s.transform), boundless=True, fill_value=0)[:3]
+        if out is None:
+            out = np.full_like(a, 255)
+        m = a.max(0) > 0
+        out[:, m] = a[:, m]
+    Image.fromarray(np.moveaxis(out, 0, -1)).save(path, quality=88)
+    return [u.split("/")[-1] for _, u in tiles.values()]
 
 
 def photos(cam, pt, tok):
