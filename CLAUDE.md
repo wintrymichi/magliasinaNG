@@ -152,6 +152,12 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   TLM_EISENBAHN printed into a workflow log (swisstopo blocked here) and railway.build run on the released level
   (rebuilt "before" matched the released sleepers to the cm). render3d.Level takes the level name from the folder
   name: a copy of the level in a folder named otherwise draws none of its meshes.
+- network.SKIP left out every swissTLM3D underpass (KUNSTBAUTE Unterfuehrung) with the tunnels: Via Golf (Caslano -
+  Magliaso, 874,-1306) ran down into its cutting on both sides of the FLP and ended against 4-5 m of railway embankment
+  (v3.0.40, 2026-10-23). The rails there are not a TLM Bruecke: the road line carries the structure. An underpass is
+  kept only under a railway and under no road (network.underpasses; Caslano station's footway runs under the Via
+  Cantonale too), and the lines over it become bridges there (over_underpass). In the TLM a Treppe (stairs) is not
+  an underpass: filter on the exact KUNSTBAUTE value (a probe filtering "not Keine/Bruecke" listed 200 stairs).
 - A height band is not the lake: network.LakeCut cut every dtm05 cell between lake level -2 m and +0.15 m out of the
   surveyed paved polygons, and the floor of the Tresa valley below Ponte Tresa (268.6-270.5 m, lake 270.48) lost its
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).

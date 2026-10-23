@@ -12,6 +12,9 @@ nominal width of its class (4.5 m for a 4m Strasse) between approaches measured 
 than the road on most bridges. A bridge station outside the carriageways is measured in the bridge polygons, less
 BRIDGE_RIM m on each side (the parapets); a bridge with neither is as wide as the narrower of the roads at its ends
 (widen_bridges). A bridge built on the survey's outline (ponti.json "deck": "survey") keeps its widths.
+v3.0.40 patch: an underpass under a railway (KUNSTBAUTE Unterfuehrung, under no road) is kept, and the track and the
+paths over it become bridges there (over_underpass): skipped, Via Golf (Caslano - Magliaso) ran down into its cutting on
+both sides of the FLP and ended against the embankment of the tracks.
 v3.0.40: a dead end that runs down into the lake (a slipway: the whole Caslano shore came into the area) stops where
 the ground (dtm05) reaches the lake level + WET m, so no road is drawn under the water.
 Output: work/network.npz (stations and segments) and work/network.json (summary).
@@ -44,17 +47,22 @@ BRIDGE_RIM = 0.3       # m of a survey bridge polygon on each side outside the c
 APPROACH = (2.0, 12.0)  # m from a bridge's end: the stations of the road there that give its width (widen_bridges)
 SKIP = {"Tunnel", "Unterfuehrung", "Unterfuehrung mit Treppe", "Galerie"}
 BRIDGE = {"Bruecke", "Bruecke mit Treppe", "Steg", "Bruecke mit Galerie"}
+UNDER = "Unterfuehrung"     # kept where it passes under a railway and under no road (underpasses())
+UNDER_CLEAR = 1.5           # m beyond the half width of a kept underpass: a line over it is a bridge there
+UNDER_Z = 2.5               # m over the underpass: a line this high crosses over it (lower: it joins it)
+RAIL_KINDS = ("Schmalspur", "Normalspur")
 
 
 def load_lines():
     """swissTLM3D lines in the area: [(props, (n, 3) local x, y, z)], each cut to the area + CLIP."""
     d = json.load(open(os.path.join(DATA, "tlm", "TLM_STRASSE.json")))
+    kept = {p.get("UUID") for p, _ in underpasses()[0]}
     keep = area.polygon().buffer(CLIP)
     shapely.prepare(keep)
     out = []
     for f in d["features"]:
         p = f["props"]
-        if p.get("OBJEKTART") not in CLASSES or p.get("KUNSTBAUTE") in SKIP:
+        if p.get("OBJEKTART") not in CLASSES or p.get("KUNSTBAUTE") in SKIP and p.get("UUID") not in kept:
             continue
         for part in f["parts"]:
             P = np.array(part, np.float64)
@@ -68,12 +76,104 @@ def load_lines():
             if not ins.any():
                 continue
             if ins.all():
-                out.append((p, Q))
+                out += over_underpass(p, Q)
                 continue
             edges = np.flatnonzero(np.diff(np.r_[0, ins.astype(int), 0]))
             for a, b in zip(edges[::2], edges[1::2]):
                 if b - a >= 3:
-                    out.append((p, Qd[a:b]))
+                    out += over_underpass(p, Qd[a:b])
+    return out
+
+
+_UNDER = None
+
+
+def _local(part):
+    P = np.array(part, np.float64)
+    x, y = lv95_to_local(P[:, 0], P[:, 1])
+    return np.column_stack([x, y, P[:, 2]])
+
+
+def underpasses():
+    """v3.0.40 patch: the underpasses of swissTLM3D kept in the network: KUNSTBAUTE Unterfuehrung lines that cross a
+    railway (TLM_EISENBAHN, not in a tunnel) and cross no road (a line of kind "road"; a path beside the tracks may
+    pass over them). The underpass of Caslano station also runs under the Via Cantonale and stays out (a road over it
+    would be cut). Returns ([(props, (n, 3) local x, y, z)], the area over them where a line higher by UNDER_Z m is a
+    bridge (shapely, None without any), cKDTree and heights of their points every metre). Once per process."""
+    global _UNDER
+    if _UNDER is not None:
+        return _UNDER
+    _UNDER = ([], None, None, None)
+    fr, fs = os.path.join(DATA, "tlm", "TLM_EISENBAHN.json"), os.path.join(DATA, "tlm", "TLM_STRASSE.json")
+    if not (os.path.exists(fr) and os.path.exists(fs)):
+        return _UNDER
+    rails = [shapely.LineString(_local(part)[:, :2]) for f in json.load(open(fr))["features"]
+             if f["props"].get("OBJEKTART") in RAIL_KINDS and f["props"].get("KUNSTBAUTE") != "Tunnel"
+             for part in f["parts"] if len(part) > 1]
+    feats = json.load(open(fs))["features"]
+    roads = [shapely.LineString(_local(part)[:, :2]) for f in feats
+             if CLASSES.get(f["props"].get("OBJEKTART"), (0, ""))[1] == "road" and f["props"].get("KUNSTBAUTE") not in SKIP
+             for part in f["parts"] if len(part) > 1]
+    zone = area.polygon().buffer(CLIP)
+    rt, ot = shapely.STRtree(rails), shapely.STRtree(roads)
+    kept = []
+    for f in feats:
+        p = f["props"]
+        if p.get("KUNSTBAUTE") != UNDER or p.get("OBJEKTART") not in CLASSES:
+            continue
+        for part in f["parts"]:
+            if len(part) < 2:
+                continue
+            Q = _local(part)
+            g = shapely.LineString(Q[:, :2])
+            if not g.intersects(zone):
+                continue
+            under_rail = any(g.crosses(rails[i]) for i in rt.query(g))
+            under_road = any(g.crosses(roads[i]) for i in ot.query(g))
+            if under_rail and not under_road:
+                kept.append((p, Q))
+    if not kept:
+        return _UNDER
+    over = shapely.union_all([shapely.LineString(Q[:, :2]).buffer(CLASSES[p["OBJEKTART"]][0] / 2 + UNDER_CLEAR)
+                              for p, Q in kept])
+    pts = np.concatenate([densify(Q, 1.0) for _, Q in kept])
+    shapely.prepare(over)
+    _UNDER = (kept, over, cKDTree(pts[:, :2]), pts[:, 2])
+    print("underpasses under the railway kept: %s" % ", ".join("%s %s at %.0f, %.0f" % (
+        p.get("OBJEKTART"), p.get("STRNAME") or "", Q[:, 0].mean(), Q[:, 1].mean()) for p, Q in kept), flush=True)
+    return _UNDER
+
+
+def over_underpass(props, Q):
+    """[(props, Q)]: the line Q (n, 3) cut where it passes over a kept underpass (UNDER_Z m or more over it, in the area
+    of underpasses()): those pieces are bridges (KUNSTBAUTE Bruecke), each piece shares its end points with the next.
+    The track and the path beside it over Via Golf. Every other line comes back as it is."""
+    kept, over, tree, zu = underpasses()
+    if over is None or (props.get("KUNSTBAUTE") or "Keine") != "Keine":
+        return [(props, Q)]
+    x0, y0, x1, y1 = over.bounds
+    if Q[:, 0].max() < x0 or Q[:, 0].min() > x1 or Q[:, 1].max() < y0 or Q[:, 1].min() > y1:
+        return [(props, Q)]
+    Qd = densify(Q, 0.5)
+    ins = shapely.contains_xy(over, Qd[:, 0], Qd[:, 1])
+    if ins.any():
+        _, j = tree.query(Qd[ins, :2])
+        ins[np.flatnonzero(ins)] = Qd[ins, 2] - zu[j] >= UNDER_Z
+    e = np.flatnonzero(np.diff(np.r_[0, ins.astype(int), 0]))
+    for a, b in zip(e[::2], e[1::2]):
+        if (b - a) * 0.5 < 2.0:                  # a corner of the area, not a crossing
+            ins[a:b] = False
+    if not ins.any():
+        return [(props, Q)]
+    out = []
+    e = np.flatnonzero(np.diff(ins.astype(int))) + 1
+    cuts = np.r_[0, e, len(Qd) - 1]
+    for a, b in zip(cuts[:-1], cuts[1:]):
+        piece = Qd[a:b + 1]
+        if len(piece) < 2:
+            continue
+        pr = dict(props, KUNSTBAUTE="Bruecke") if ins[a] else props
+        out.append((pr, piece))
     return out
 
 
