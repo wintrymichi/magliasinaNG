@@ -31,6 +31,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   the branch (nightly_from_test.yml copies the draft test build to the nightly pre-release on GitHub's side).
 - A force-push of a branch restarts every workflow whose push paths the branch touches: two rebases of the roofs
   branch reran roofs_pack.yml (it committed nothing new). Check `actions/runs?branch=` after a force-push.
+- The cloud session cannot edit a release either (PATCH .../releases/<id>: 403 "not permitted for this session type",
+  2026-10-23): a change to the nightly notes goes into beamng/nightly/v31_notes.md and reaches the release only with the
+  next workflow that rewrites the notes.
 - `gh release download` fails in the cloud (GraphQL blocked): download release assets through the REST API
   (`gh api .../releases/tags/<tag>`, then the asset URL with `Accept: application/octet-stream`).
 - pip can hang with no output in the cloud: run it with `timeout` and `--progress-bar off`, kill and retry.
