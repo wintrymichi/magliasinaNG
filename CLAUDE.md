@@ -43,6 +43,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   Read the asset id from the release itself: an id passed on between threads was wrong (669661675, real 669853164).
   DESKTOP-OUPOLOA has no winget (gh zip from github.com/cli/cli/releases, in %LOCALAPPDATA%\Programs\GitHubCLI), and the
   RC safety filter blocked `gh auth login --web` ("Create Public Surface"): michi must log in himself or say yes in the thread.
+  With michi's "sì" in the thread it ran; gh is now logged in on DESKTOP-OUPOLOA (%LOCALAPPDATA%\Programs\GitHubCLI).
+  v3.1 was published this way (2026-10-23 23:16Z): the nightly release is gone (only its git tag is left), so the next
+  nightly workflow has to create the release again.
 - pip can hang with no output in the cloud: run it with `timeout` and `--progress-bar off`, kill and retry.
 - `git commit` during an unfinished rebase folds the new commit into the one being picked: run
   `git rebase --continue` (check `git status`) before committing anything else.
