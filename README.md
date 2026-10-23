@@ -372,6 +372,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | v3.0.40: the time trials were not driven in the game test (the screenshots stand on their routes), and the sounds of the water were not listened to. BeamNG.drive 0.40 has no church bells, birds or crickets. The open street photos were analysed only around Pura, Miglieglia and Novaggio, and the façades measured from them are off (the detector misses about half of the windows). The slipway at Caslano goes on under the lake (fixed for v3.1). | [#84](https://github.com/wintrymichi/magliasinaNG/issues/84) |
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
 | Magliaso bridges over the Magliasina: at the south-east corner of the main deck, over the river bank, the deck meets the road with a step of up to 0.4 m over about 1.5 m, and at the west corners of the upstream bridge with 6-8 cm. Both are outside the lanes. | – |
+| Via Golf underpass under the FLP (Caslano - Magliaso, v3.1 test build): at the four corners of the opening the ends of the stone wing walls stand up to 0.9 m inside the asphalt edge, and the rail deck is 2.9 m over the road at its north edge. | – |
 
 ## Repository layout
 
