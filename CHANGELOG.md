@@ -2,9 +2,12 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
-## Next version (v3.1, in preparation)
+## v3.1 (23 October 2026)
 
-Already in the code after the v3.0.40 zip (nightly #2), in the next build:
+For BeamNG.drive 0.40. The zip is the nightly test build of the integration branch (built from `21ff47b`, run 39915080591) with eight patches applied to the zip in place on 23 October 2026: the Via Golf wing walls out of the asphalt, pavements on kerbs, 19 buildings closer to the real ones, the asphalt age from the orthophoto, roundabouts and parking spots off the kerbs, the forest floor mosaic, the bus stop paint and the island posts. Published before the in-game test. The fix of the Via Golf footways (`7a9530c`) is in the code but not in this zip.
+
+Also in v3.1: the Magliaso bridge from the survey, bridges as wide as the road, no floating roofs (469 -> 0) and posts under porches, detailed roofs, rock cut slopes with bushes, wilder undergrowth, ballast up to the sleepers and no rails into the wall at Caslano, walls without saw-tooth tops, time trial starts facing the route. Details below and in the README.
+
 
 - **Lids over the grooves between two walls** (`walls.wall_gaps_step`): where the survey draws one wall as two lines that were not joined, or a wall has a notch at a pillar, two walls stood a few centimetres apart and showed a dark groove from above (1,100 gaps, 8.6 km in v3.0 and v3.0.40): every gap narrower than 25 cm between the wall tops gets a lid in the material of the tops beside it, and a face down into the ground where it opens at the end of the walls. The hole check of `check_level` no longer counts slivers, faces back to back and T joints as holes.
 - **No road under the lake at the Caslano slipway** (`network.LakeCut`): the surveyed carriageway polygon of the slipway went on into the lake (30 road faces under the water in v3.0.40); the surveyed paved polygons and road strips now stop at the shore, cut only where the ground as low as the lake touches the surveyed lake (the floor of the Tresa valley below Ponte Tresa is as low, and a first version cut away its yards and roads).
