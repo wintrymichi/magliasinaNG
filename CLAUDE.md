@@ -129,6 +129,15 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
   keep the relief small within 2 m of a road (RELIEF_NEAR). The report counts the points before the clamp.
 - road_obstacles (check_level) cannot run on a released folder in the cloud: it needs network.load() data in WORK. The
   steep_skin report's skin_points_over_road stands in for it for the skin.
+- The skin's 90,000 bushes made check_level forest_floating jump 3,751 -> 31,847 (build test v2, 2026-10-23): canopy.check
+  measured items against the terrain and mp_fill only, and the skin stands up to metres over the terrain. On the v2 zip
+  every bush was 8 cm into the skin (PLANT_SINK), none over it. canopy.skin_height now reads the skin as ground (one
+  tile at a time: the whole skin, 20 M triangles, in one TriSurface was OOM-killed in the 15 GB container): 1,690. A
+  new kind of surface things stand on must go into every check that measures "ground", not only into its own step.
+- The skin DAEs grew +51 % for +25 % triangles (v2): the rock/earth split, the clip along rw = 0.5 and the per-axis
+  projection add vertices (0.59 -> 0.72 per triangle), and write_dae repeats every corner index 4 times in <p> (56 % of
+  a skin file). One index per corner (all inputs at offset 0, valid COLLADA) measured -42 % on 80 tiles: not applied,
+  it needs a load test in the game first (it would change every mesh of the map).
 - render3d draws every forest tree as a big cone or crown: views of slopes in woods show only trees. Render from a copy of
   the level without its `forest` folder (cp -al, then rm the folder: the hard links keep the original).
 - A 3x3 median "tooth" scan near the roads found 28,000 vertices, mostly in villages (yards, sidewalks): not a way to find
