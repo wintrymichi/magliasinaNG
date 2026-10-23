@@ -950,6 +950,7 @@ FINISH = [
     ("parking", "parking", "parking_step", {"report": True}),        # v3.0 review: parking spots for the game's parked cars
     ("bus_shelters", "bus_shelters", "bus_shelters_step", {"report": True}),   # v3.0 review: shelters at the bus stops
     ("sidewalks", "sidewalks", "sidewalks_step", {"report": True}),   # v3.1: pavements on kerbs, what stands on them up
+    ("roundabouts", "roundabouts", "roundabouts_step", {"report": True}),   # v3.1: green middles on kerbs, rings of setts
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
     ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: rivers, streams, the lake

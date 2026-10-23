@@ -251,6 +251,17 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - Merged pipeline shapes have their position at the tile middle with z 0: lifting objects by the ground under their
   position would lift a whole tile. Skip objects whose position z is 0.
 - numpy 2: np.cross of 2D vectors raises ValueError; write the 2D cross product out.
+- Parking spots (city.sites.json) can reach over a pavement: a car spawned on a raised kerb jumps. The build keeps the
+  pavement flush under them; the nightly patched before that had its 8 spots removed (patch_parking_kerbs.py).
+- Props merged per tile (delineators, direction signs, OSM furniture) are not moved by changing an item position: lift
+  each connected piece of the DAE whose feet stood on the pavement (sidewalks.py, merged_pieces_raised).
+- sidewalks.py is not idempotent: on a zip that already has roads/sidewalks it finds no pavement in roads/surfaces.
+  A follow-up to a patched zip needs its own small patch, not the step again.
+- Roundabouts (roundabouts.py): the survey draws the setts round the middle as an island (islands.py raised it and put
+  a keep-right sign on it), leaves asphalt under part of the middle, and the terrain makes a mound there; a green top
+  on a plane cut through both. The middle reaches out to that island ring, the road faces under it go, and the top
+  never goes under the highest terrain vertex round each point. The mean of an OSM ring arc is off-centre: use the
+  box of the joined ways.
 - Mapillary photos and orthophoto crops for a few points: luoghi_ref.yml commits them to beamng/verifica/luoghi/ref on
   the thread branch (a check only: never merge that folder; the photos are CC BY-SA).
 
