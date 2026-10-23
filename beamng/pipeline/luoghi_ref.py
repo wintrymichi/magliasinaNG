@@ -22,10 +22,10 @@ NEAR = 60.0             # m round the camera: photos looked for
 PHOTOS = 3
 
 
-def ortho(e, n, path):
+def ortho(e, n, path, side=SIDE, quality=88):
     """The crop from every 1 km tile it touches, the newest flight of each (a point near a tile's edge came out
     half white when only one tile was read)."""
-    h = SIDE / 2
+    h = side / 2
     lat0, lon0 = lv95_to_wgs(e - h, n - h)
     lat1, lon1 = lv95_to_wgs(e + h, n + h)
     r = requests.get(STAC, params={"bbox": f"{lon0},{lat0},{lon1},{lat1}", "limit": 100}, timeout=60).json()
@@ -47,7 +47,7 @@ def ortho(e, n, path):
             out = np.full_like(a, 255)
         m = a.max(0) > 0
         out[:, m] = a[:, m]
-    Image.fromarray(np.moveaxis(out, 0, -1)).save(path, quality=88)
+    Image.fromarray(np.moveaxis(out, 0, -1)).save(path, quality=quality)
     return [u.split("/")[-1] for _, u in tiles.values()]
 
 
@@ -81,6 +81,24 @@ def photos(cam, pt, tok):
     return out[:PHOTOS]
 
 
+def gialli():
+    """Orthophoto crops at every Swiss bus stop and marked crossing of OSM (beamng/verifica/luoghi/gialli.json),
+    for measuring their yellow paint in the cloud session (stop_paint.py): beamng/verifica/luoghi/gialli/."""
+    out = os.path.join(HERE, "..", "verifica", "luoghi", "gialli")
+    os.makedirs(out, exist_ok=True)
+    idx = {}
+    for p in json.load(open(os.path.join(HERE, "..", "verifica", "luoghi", "gialli.json"))):
+        path = os.path.join(out, f"{p['name']}.jpg")
+        if os.path.exists(path):
+            continue
+        e, n = local_to_lv95(p["x"], p["y"])
+        try:
+            idx[p["name"]] = ortho(e, n, path, p["side"], quality=92)
+        except Exception as ex:
+            print("ortho", p["name"], ex, flush=True)
+    print(len(idx), "crops", flush=True)
+
+
 def main():
     tok = os.environ.get("MAPILLARY_TOKEN", "")
     os.makedirs(OUT, exist_ok=True)
@@ -110,4 +128,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    gialli() if sys.argv[1:] == ["gialli"] else main()

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     branches: [claude/project-thread-bpnv3b]
-    paths: [beamng/verifica/luoghi/punti.json]
+    paths: [beamng/verifica/luoghi/punti.json, beamng/verifica/luoghi/gialli.json]
 
 permissions:
   contents: write
@@ -16,7 +16,7 @@ permissions:
 jobs:
   ref:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 75
     env:
       MAGLIASO_ROOT: ${{ github.workspace }}/../bm
       MAPILLARY_TOKEN: ${{ secrets.MAPILLARY_TOKEN }}
@@ -29,11 +29,13 @@ jobs:
         run: pip install --progress-bar off numpy pyproj rasterio pillow requests
       - name: Pictures
         working-directory: beamng/pipeline
-        run: python luoghi_ref.py
+        run: |
+          python luoghi_ref.py
+          python luoghi_ref.py gialli
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add beamng/verifica/luoghi/ref
+          git add beamng/verifica/luoghi/ref beamng/verifica/luoghi/gialli
           git commit -m "luoghi ref: orthophoto and open photos at the points (check only, not for main)" || exit 0
           for i in 1 2 3 4; do git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break; sleep $((i * 5)); done
