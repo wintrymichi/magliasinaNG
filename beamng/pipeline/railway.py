@@ -13,7 +13,8 @@ painted on the terrain (land cover 'binario'). Every line outside tunnels and bu
   parking deck of the Ponte Tresa station) it is left out, like the tunnels;
 - at level crossings (a road mesh under the track, within LEVEL_DZ m of its height) only the rails,
   their heads flush with the road surface;
-- on the bridges of swissTLM3D (KUNSTBAUTE Bruecke) a deck (bridges.deck_geometry) at the height of the
+- on the bridges of swissTLM3D (KUNSTBAUTE Bruecke, and v3.0.40 patch: over an underpass kept in the road network,
+  network.over_underpass) a deck (bridges.deck_geometry) at the height of the
   line, the track on it, with no pier on the roads under it.
 The catenary of the electrified lines is not built (its masts are not in the data).
 One mesh per 512 m tile in MissionGroup/railway, with collision.
@@ -25,6 +26,7 @@ from scipy.ndimage import distance_transform_edt, gaussian_filter1d
 import bng
 from config import DATA, LEVEL_NAME, lv95_to_local
 import area
+import network
 import argparse, json, math, os, re, sys, time, zipfile
 from scipy.spatial import cKDTree
 import optimize_level
@@ -92,7 +94,8 @@ def tracks():
             e = np.flatnonzero(np.diff(np.r_[0, ins.astype(int), 0]))
             for a, b in zip(e[::2], e[1::2]):
                 if b - a >= 3:
-                    out.append((p, Qd[a:b]))
+                    # v3.0.40 patch: a bridge over a kept underpass (network.underpasses: Via Golf)
+                    out += [(pp, Qp) for pp, Qp in network.over_underpass(p, Qd[a:b]) if len(Qp) >= 3]
     return out
 
 
