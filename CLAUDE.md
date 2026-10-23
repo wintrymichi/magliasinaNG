@@ -41,6 +41,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   Windows DESKTOP-OUPOLOA install gh with winget and let michi enter the device code. A nightly becomes a release
   without re-upload: delete the old assets, rename the zip (PATCH releases/assets/<id>), `gh release edit --tag`.
   Read the asset id from the release itself: an id passed on between threads was wrong (669661675, real 669853164).
+  DESKTOP-OUPOLOA has no winget (gh zip from github.com/cli/cli/releases, in %LOCALAPPDATA%\Programs\GitHubCLI), and the
+  RC safety filter blocked `gh auth login --web` ("Create Public Surface"): michi must log in himself or say yes in the thread.
 - pip can hang with no output in the cloud: run it with `timeout` and `--progress-bar off`, kill and retry.
 - `git commit` during an unfinished rebase folds the new commit into the one being picked: run
   `git rebase --continue` (check `git status`) before committing anything else.
