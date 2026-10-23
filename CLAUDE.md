@@ -36,6 +36,11 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   next workflow that rewrites the notes.
 - `gh release download` fails in the cloud (GraphQL blocked): download release assets through the REST API
   (`gh api .../releases/tags/<tag>`, then the asset URL with `Accept: application/octet-stream`).
+- Cloud sessions cannot create, edit or delete releases or their assets (403 "not permitted for this session type",
+  2026-10-23, publishing v3.1). Do it from michi's PC through Remote Control: gh is logged in on the Linux PC; on
+  Windows DESKTOP-OUPOLOA install gh with winget and let michi enter the device code. A nightly becomes a release
+  without re-upload: delete the old assets, rename the zip (PATCH releases/assets/<id>), `gh release edit --tag`.
+  Read the asset id from the release itself: an id passed on between threads was wrong (669661675, real 669853164).
 - pip can hang with no output in the cloud: run it with `timeout` and `--progress-bar off`, kill and retry.
 - `git commit` during an unfinished rebase folds the new commit into the one being picked: run
   `git rebase --continue` (check `git status`) before committing anything else.
