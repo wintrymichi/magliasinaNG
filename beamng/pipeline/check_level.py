@@ -26,6 +26,9 @@
   carriageways, 2.5 m over sidewalks, yards and paths), trunks inside walls, buildings, parapets,
   guardrails, fences or street furniture, plants floating over the ground or sunk into it;
 - AI network: connected components of the AI roads (ends closer than 3 m are joined);
+- floating roofs (v3.1): the roofs of the buildings (their faces of a roof material, joined where they touch) with no
+  wall, post or other building face within ROOF_REACH m of their outline and more than ROOF_FLOAT m over the
+  terrain (up to v3.0.40 the 620 roofs without walls of swissBUILDINGS3D hung in the air);
 - files: every file inside the level folder that its json files refer to exists; the vanilla files
   it refers to are listed;
 - forest item count and the size of the level folder.
@@ -81,6 +84,8 @@ LIMITS = {"terrain_over_road": 50, "terrain_over_road_max_m": 1.5, "road_seams":
           "missing_files": 0,
           # v3.0.40: a far model without its baked imposters is baked by BeamNG 0.40 in the session: squares
           "far_models_without_imposters": 0,
+          # v3.1: roofs without anything under them (buildings_mesh.canopy puts posts under the roofs without walls)
+          "floating_roofs": 10,
           # v2.4: wall faces of the buildings turned into them (seen from outside the house is transparent)
           "building_walls_inward_share": 0.02}
 OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "verifica", "check_level.json")
@@ -467,6 +472,60 @@ HOLE_STEP = 0.08           # m across an open edge where the surface that closes
 NOTCH_TOL = 0.30           # m: a wall top corner this much under another at its place and in the ground
 
 
+ROOF_REACH = 0.3           # m around the outline of a roof where a wall or post holds it
+ROOF_FLOAT = 0.6           # m of a roof over the terrain (buildings_mesh.POST_MIN): lower, it lies on the ground
+ROOF_MIN_AREA = 2.0        # m2
+
+
+def floating_roofs(lv, ter, places):
+    """v3.1: the roofs of the buildings with nothing under them: no face of another material of the buildings
+    (walls, posts) within ROOF_REACH m of their outline that reaches ROOF_FLOAT m under their eaves (the slab of a
+    canopy does not), ROOF_FLOAT m or more over the terrain."""
+    R, O = [], []
+    for o in pr.items(os.path.join(lv, "main", "MissionGroup", "buildings", "items.level.json")):
+        if o.get("class") != "TSStatic" or "shapeName" not in o:
+            continue
+        path = os.path.join(lv, *o["shapeName"].split("/")[3:])
+        if not os.path.exists(path):
+            continue
+        V, N, T, C, parts = pr.read_dae(path)
+        V = V + np.array(o.get("position", [0, 0, 0]), float)
+        for mat, idx in parts:
+            t = V[idx[:, 0].reshape(-1, 3)]
+            if mat.startswith("bld_roof"):
+                R.append(t)
+            elif not mat.startswith("bld_openings"):
+                O.append(t)
+    if not R:
+        return {"floating_roofs": 0}
+    R = np.concatenate(R)
+    O = np.concatenate(O) if O else np.zeros((0, 3, 3))
+    polys = shapely.polygons(np.concatenate([R[:, :, :2], R[:, :1, :2]], 1))
+    polys = polys[shapely.area(polys) > 1e-4]
+    U = shapely.union_all(shapely.buffer(polys, 0.15, join_style="mitre"))
+    comps = [c for c in getattr(U, "geoms", [U]) if c.area >= ROOF_MIN_AREA]
+    rtree = shapely.STRtree(shapely.polygons(np.concatenate([R[:, :, :2], R[:, :1, :2]], 1)))
+    otree = shapely.STRtree(shapely.linestrings(O[:, [0, 1, 2, 0], :2])) if len(O) else None
+    n, worst = 0, 0.0
+    ozmin = O[:, :, 2].min(1) if len(O) else np.zeros(0)
+    for c in comps:
+        rt = R[rtree.query(c, predicate="intersects")]
+        eave = float(rt[:, :, 2].min())
+        if otree is not None:
+            near = otree.query(c.buffer(ROOF_REACH), predicate="intersects")
+            if (ozmin[near] < eave - ROOF_FLOAT).any():          # reaching down from the roof (not its slab)
+                continue
+        P = np.asarray(c.exterior.coords)
+        over = eave - float(terrain_top(ter, P[:, 0], P[:, 1]).max())
+        if over < ROOF_FLOAT:
+            continue
+        n += 1
+        worst = max(worst, over)
+        places.add("tetto sospeso", c.centroid.x, c.centroid.y, eave, over,
+                   area=round(c.area, 1))
+    return {"floating_roofs": n, "floating_roofs_max_m": round(worst, 2)}
+
+
 def wall_holes(lv, ter, places):
     """v3.0.40: holes in the walls (the game draws one side of a face: through a gap in a wall mesh one sees the
     ground behind it). A wall mesh is closed but at its feet under the ground: an edge of only one triangle (the
@@ -793,6 +852,7 @@ def main(lv=None):
     if net is not None:
         res.update(obstacles(lv, net, places, zsurf))
     res.update(inward_walls(lv, places))
+    res.update(floating_roofs(lv, ter, places))
     print("inward walls:", res["building_walls_inward_share"], flush=True)
     res.update(wall_holes(lv, ter, places))
     print("wall holes:", {k: v for k, v in res.items() if k.startswith("wall_")}, flush=True)

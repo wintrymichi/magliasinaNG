@@ -23,6 +23,7 @@ import scipy.sparse as sp
 from scipy.sparse.linalg import spsolve
 from scipy.sparse.csgraph import connected_components
 from scipy.ndimage import gaussian_filter1d
+from scipy.spatial import cKDTree
 from config import WORK
 from geo import Grid
 import network
@@ -36,6 +37,8 @@ W_DECK = 1e-3                                   # weight of the swissTLM3D deck 
 STRAIGHT = 145.0                                # deg, two lines leaving a node this far apart carry on
 DIP = 1.5                                       # m, a bridge over a dip shallower than this rests on the ground
 ON_GROUND = 1.0                                 # m, ... if its swissTLM3D line is no higher above the DTM
+UNDER_KERB = 0.15                               # m, a footway of an underpass over its road (v3.1)
+UNDER_NEAR = 8.0                                # m, ... where the road runs this near
 
 
 def tangents(st, segs):
@@ -54,6 +57,22 @@ def dtm_across(dtm, x, y, N, w, fr):
     for k, f in enumerate(fr):
         out[:, k] = dtm.sample(x + N[:, 0] * f * w, y + N[:, 1] * f * w)
     return out
+
+
+def under_walkways(st, segs, d):
+    """v3.1: the paths of a kept underpass (network.underpasses: the two 1 m footways beside Via Golf under the FLP) take
+    the height of its road + UNDER_KERB, not the DTM: beside the road the DTM is the railway embankment smeared under
+    the deck, and in the 3.1 test build they ran 2 m over the road, 1.2 m under the rail deck (9 'binario' obstacles
+    on the paths, check_level). d (DTM data of every station) is changed in place."""
+    sel = lambda kind: np.concatenate([np.arange(s["first"], s["first"] + s["n"]) for s in segs
+                                       if s["structure"] == network.UNDER and s["kind"] == kind] or [np.zeros(0, int)])
+    road, path = sel("road"), sel("path")
+    if not len(road) or not len(path):
+        return
+    dist, j = cKDTree(np.column_stack([st["x"][road], st["y"][road]])).query(np.column_stack([st["x"][path], st["y"][path]]))
+    near = dist < UNDER_NEAR
+    d[path[near]] = d[road[j[near]]] + UNDER_KERB
+    print("  underpass footways on the height of their road: %d stations" % int(near.sum()), flush=True)
 
 
 def unknowns(st, segs, n_nodes):
@@ -139,6 +158,7 @@ def solve(verbose=True):
     bridge = np.array([segs[k]["bridge"] for k in seg])
     D = dtm_across(dtm, x, y, N, w, (-1 / 3, -1 / 6, 0.0, 1 / 6, 1 / 3))
     d = np.median(D, axis=1)
+    under_walkways(st, segs, d)
     u, n_unk = unknowns(st, segs, len(node_pos))
     hold, zhold = cantonale_hold(st)
     # not on a bridge (its deck is not the surface beside it) nor where the corridor surface is

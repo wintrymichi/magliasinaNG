@@ -1,0 +1,71 @@
+# What the photos say about the asphalt (v3.1, "asfalto meno uniforme", 2026-10-23): the 10 cm SWISSIMAGE straightened
+# along every AI road of the v3.1 nightly zip, and Mapillary's manholes and gullies (asphalt_survey.py). swisstopo and
+# Mapillary are blocked from the cloud sessions, so this runs here and commits the small results back to the branch.
+# Started by a change of beamng/nightly/asphalt_survey_stamp.txt.
+name: asphalt survey
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-encc19]
+    paths: [beamng/nightly/asphalt_survey_stamp.txt]
+
+concurrency:
+  group: asphalt-survey-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  survey:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAPILLARY_TOKEN: ${{ secrets.MAPILLARY_TOKEN }}
+      PYTHONUNBUFFERED: "1"
+      ZIP_NAME: magliaso_pura_v3.1_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 requests==2.33.1
+
+      - name: The AI roads of the nightly zip
+        run: |
+          mkdir -p "$RUNNER_TEMP/z"
+          gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
+          cd "$RUNNER_TEMP/z" && unzip -q "$ZIP_NAME.zip" 'levels/*/main/MissionGroup/AIRoads/*' && rm "$ZIP_NAME.zip"
+
+      - name: Mapillary manholes and gullies
+        working-directory: beamng/pipeline
+        continue-on-error: true
+        run: python asphalt_survey.py "$RUNNER_TEMP/z" mapillary
+
+      - name: Orthophoto along the roads
+        working-directory: beamng/pipeline
+        run: python asphalt_survey.py "$RUNNER_TEMP/z" ortho
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/dati/asphalt_ortho.npz beamng/dati/asphalt_ortho_years.json
+          [ -f beamng/dati/asphalt_drains.json ] && git add beamng/dati/asphalt_drains.json
+          git diff --cached --stat
+          if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
+          git commit -m "Asphalt survey: orthophoto along the AI roads, Mapillary drains (asphalt_survey.py)"
+          for i in 1 2 3; do git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }} && break; sleep 5; done

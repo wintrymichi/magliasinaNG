@@ -21,6 +21,16 @@ a wall, a building, the railway or the lake) take a skin:
   where the terrain under it is lowered by LOWER at most and looks the same. The far levels cast no shadow
   (the terrain under them casts the same) on a material of their own (MAT_FAR).
 
+- v3.1 (the cut slopes, "burroni"): the skin drawn on a lattice seen from above takes a colour per lattice column, and
+  on a face of 60-80 degrees one lattice step is 2-4 m of height: the green of the meadow above ran down the cut in
+  vertical streaks and the whole face was one smooth, stretched sheet of earth and moss. Now the faces steeper than
+  ROCK_DEG (a wavy line, ROCK_JITTER: outcrops on the gentler banks too) are bare rock as in the road cuts of the Malcantone (gneiss in layers, joints,
+  lichen): their own material (MAT_ROCK, rock_texture, ROCK_TILE_M m per repeat), a relief of ribs and gullies
+  (ROCK_RIB m apart, up to RELIEF m out of the face, along its normal: always over the terrain, never towards the
+  road at its foot, TOE_CLEAR m) and their own colour (ROCK_TONE, from a 3D noise of COLOUR_SCALE m: no streaks),
+  moss only on the ledges (under MOSS_DEG). The gentler banks keep the earth, their colour pulled towards EARTH
+  (less meadow green) and blurred over COLOUR_BLUR squares; the foot of a cut (TOE_SCREE m) greyer, as scree.
+
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish steep_skin
 """
 import io, json, os, tempfile, time, zipfile
@@ -43,7 +53,7 @@ EDGE_ISO = 0.55               # the skin cut where the blurred mask is under thi
 EDGE_FADE = 0.3               # ... and down onto the terrain where it is under EDGE_ISO + this
 SMOOTH = 0.8                  # terrain squares, blur of the heights the skin is drawn through
 RING_BLUR = 1.2               # terrain squares, blur of the terrain under the skin
-COLOUR_BLUR = 1.5             # terrain squares, blur of the vertex colours
+COLOUR_BLUR = 3.0             # terrain squares, blur of the vertex colours (v3.0: 1.5, vertical streaks on the cuts)
 INSIDE_IN = 2.0               # half squares: the cut at least this far inside the outline of the skin squares
 INSIDE_FADE = 3.0             # half squares further in: the skin down onto the terrain over these
 INSIDE_BLUR = 1.5             # half squares, blur of the distance inside (a round line, not the staircase)
@@ -55,12 +65,61 @@ PIX_K = 1000.0                # = optimize_level.PIX_K: pixels on screen per (ra
 TILE_M = 3.0                  # m of slope per repeat of the texture
 TEX_N = 512                   # pixels of the texture
 TEX_MEAN = 205.0              # mean sRGB of the texture: the vertex colours bring it to the terrain's
+ROCK_TEX_MEAN = 150.0         # mean sRGB of the rock texture (v3.1; the vertex colours only shade it)
 FOOT_STEP = 0.5               # m between the samples of the shapes' footprints
 D = "art/shapes/terrain_skin"
 MAT = "mp_steep_bank"
 MAT_FAR = "mp_steep_bank_far"
+# v3.1: rock on the steepest faces
+MAT_ROCK = "mp_steep_rock"
+ROCK_DEG = 47.0               # degrees: the faces steeper than this are bare rock (the skin is round: 5 % of it over 55)
+ROCK_JITTER = 10.0            # degrees, the line between rock and earth made wavy (outcrops on the gentler banks) by a noise of ROCK_JITTER_M m
+ROCK_JITTER_M = 8.0
+ROCK_BLEND = 5.0              # degrees over which the rock colour blends into the earth
+ROCK_TILE_M = 4.0             # m of rock per repeat of its texture
+ROCK_TEX_N = 1024             # pixels of the rock texture
+RELIEF = 0.55                 # m, the most a rock face stands out of the smooth skin (ribs and knobs)
+ROCK_RIB = 2.6                # m between the ribs and gullies of a rock face (across), ROCK_RIB_V up the face
+ROCK_RIB_V = 7.0
+ROCK_KNOB = 1.4               # m, size of the smaller knobs on it
+TOE_WIN = 9                   # half squares: the foot of a cut, the lowest skin point within this window
+TOE_CLEAR = 0.6               # m over the foot of the cut: no relief below (nothing stands out towards the road)
+TOE_RAMP = 1.2                # m over TOE_CLEAR in which the relief grows to its full height
+TOE_SCREE = 1.0               # m over the foot: scree colour
+COLOUR_SCALE = 9.0            # m, the size of the colour patches of the rock (3D noise, not per lattice column)
+MOSS_DEG = 63.0               # degrees: rock gentler than this (ledges) may take moss
+ROCK_TONE = (0.98, 0.96, 0.92)          # colour multiplier of the rock texture (gneiss grey-brown)
+MOSS = (0.70, 0.84, 0.50)               # ... where moss grows on it
+EARTH = (1.00, 0.93, 0.84)              # the earth texture's own colour, mixed into the terrain colour by EARTH_MIX
+EARTH_MIX = 0.45
+SCREE = (0.95, 0.93, 0.90)
 ROADS = ("roads",)
 SOLID = ("roads", "walls", "buildings", "railway")
+HARD = ("walls", "buildings", "railway")   # v3.1: the skin never on these; it goes on down to a road (FOOT)
+FOOT = 2                      # v3.1: terrain squares the skin goes on from a steep bank into the road beside it
+ROAD_DIVE = 0.06              # m: ... there under the road surface (hidden by it), never over it
+ROAD_LIFT_MAX = 1.0           # m: skin points up to this over a road surface go under it (more: a road below)
+ROAD_CLAMP = 1.5              # m: within this of a road the skin no higher than the terrain (EPS): the smoothed
+                              # lattice lifted the low side of a 5-7 m step into a lip at the road edge (issue #15)
+RELIEF_NEAR = 0.12            # m, the most relief within RELIEF_ROAD m (horizontal) of a road: a rib 55 cm out of a
+RELIEF_ROAD = 2.0             # vertical cut at the road edge would overhang the lane at mirror height
+RELIEF_RAMP = 1.5             # m beyond RELIEF_ROAD in which the relief grows to RELIEF
+# v3.1: plants on the skin (michi's reference: shrubs, ivy-like bushes in the gullies of the rock) as forest items at
+# the skin's surface (a groundcover on the terrain would stand on the ground lowered under the skin); vanilla bushes
+# that ship their imposters (no bake in the session: white squares), no collision
+PLANTS = {   # type: (shape, half width at scale 1 m, scales)
+    "skin_fluffy_bush": ("/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae", 1.665, (0.30, 0.65)),
+    "skin_generibush": ("/levels/italy/art/shapes/trees/trees_italy/generibush.dae", 2.30, (0.25, 0.55)),
+}
+PLANT_P_EARTH = 0.030         # per lattice point (0.56 m2): earth banks gentler than PLANT_DEG
+PLANT_P_LEDGE = 0.050         # rock ledges (gentler than MOSS_DEG)
+PLANT_P_GULLY = 0.025         # in the gullies of the rock (hanging bushes)
+PLANT_DEG = 50.0
+PLANT_FOOT = 1.0              # m: none lower than this over the foot of the cut within PLANT_ROAD m of a road
+PLANT_ROAD = 2.0
+PLANT_CLEAR = 0.3             # m between a plant's crown (half width x scale) and the road surface
+PLANT_SINK = 0.08             # m into the skin
+PLANT_MAX = 90000             # cap over the map
 
 
 # ------------------------------------------------------------------------------------------------ texture
@@ -98,13 +157,126 @@ def bank_texture(n=TEX_N, seed=47):
     return to8(col), normal_map(hgt, 1.0 / mm)
 
 
+def rock_texture(n=ROCK_TEX_N, seed=53):
+    """(colour, normal) uint8 images of a bare gneiss face, tileable: layers across the image (the texture's v is
+    up the face), joints across them, broken blocks with lighter fresh breaks, dark lichen; its mean ROCK_TEX_MEAN."""
+    from bld_textures import noise, aniso_noise, normal_map, to8
+    rng = np.random.default_rng(seed)
+    mm = ROCK_TILE_M * 1000 / n
+    fine, mid = noise(n, n, 1.0, rng), noise(n, n, 6, rng)
+    layers = aniso_noise(n, n, 3.0, 60.0, rng)                    # rows: up the face; long along it
+    warp = aniso_noise(n, n, 20.0, 40.0, rng)
+    rows = (np.arange(n)[:, None] + 9.0 * warp) % n
+    band = np.sin(rows / n * 2 * np.pi * 9) * 0.5 + 0.5          # nine layers per repeat
+    # blocks: cells of a jittered grid, each a tilted plane (the facets of a blasted face)
+    from scipy.spatial import cKDTree
+    k = 80
+    C = rng.random((k, 2)) * [n, n]
+    tiles = np.concatenate([C + [dx * n, dy * n] for dx in (-1, 0, 1) for dy in (-1, 0, 1)])
+    Y, X = np.mgrid[0:n, 0:n]
+    stretch = np.array([2.4, 1.0])                                  # wider along the layers than up the face
+    wy, wx = noise(n, n, 12, rng), noise(n, n, 12, rng)          # jagged joints, not straight cell edges
+    Yw, Xw = Y + 6.0 * wy + 1.5 * fine, X + 6.0 * wx + 1.5 * fine
+    d, i = cKDTree(tiles * stretch).query(np.column_stack([Yw.ravel() % n, Xw.ravel() % n]) * stretch, k=2)
+    cid = (i[:, 0] % k).reshape(n, n)
+    edge = np.clip((d[:, 1] - d[:, 0]).reshape(n, n) / 9.0, 0, 1)   # 0 on a joint between two blocks
+    edge = np.maximum(edge, np.clip(noise(n, n, 30, rng) - 0.9, 0, 1))  # joints that fade out (not a mosaic)
+    tilt = rng.normal(0, 1, (k, 2))
+    dy = (Yw - C[cid, 0] + n / 2) % n - n / 2                     # from the block's centre (wrapped)
+    dx = (Xw - C[cid, 1] + n / 2) % n - n / 2
+    plane = (tilt[cid, 0] * dy + tilt[cid, 1] * dx) / n * 8
+    plane = (plane - plane.mean()) / max(plane.std(), 1e-6)
+    hgt = 6.0 * plane + 5.0 * edge + 2.0 * mid + 0.8 * fine + 2.5 * band
+    tone = rng.uniform(-0.06, 0.06, k)[cid]
+    base = np.array([0.55, 0.53, 0.50], np.float32)
+    col = base * (1 + tone[..., None] + 0.05 * fine[..., None] + 0.06 * mid[..., None] + 0.08 * (band[..., None] - 0.5))
+    # mica sparkle and darker biotite layers
+    col = col * (1 - 0.12 * np.clip(layers, 0, None)[..., None])
+    # joints dark
+    col = col * (0.62 + 0.38 * edge[..., None] ** 0.6) * (1 + 0.07 * plane[..., None])
+    # fresh breaks lighter and warmer (rusty) on a few blocks
+    fresh = (rng.random(k) < 0.12)[cid] & (edge > 0.3)
+    col = np.where(fresh[..., None], col * [1.07, 1.03, 0.97], col)
+    # lichen: dark grey-green patches
+    lich = np.clip((noise(n, n, 4, rng) - 1.6) * 1.5, 0, 1) * edge
+    col = col * (1 - 0.5 * lich[..., None]) + 0.5 * lich[..., None] * np.array([0.34, 0.34, 0.31], np.float32)
+    # dark streaks of water down the face (the texture's rows run down it)
+    wet = np.clip(aniso_noise(n, n, 90.0, 12.0, rng) - 1.0, 0, 1)
+    col = col * (1 - 0.25 * wet[..., None])
+    col = np.clip(col * (ROCK_TEX_MEAN / 255.0 / col.reshape(-1, 3).mean()), 0, 1)
+    return to8(col), normal_map(hgt, 1.2 / mm * 0.25)
+
+
+def vnoise3(P, scale, seed=0):
+    """Smooth value noise 0..1 of points P (k, 3) in m, its cells scale (sx, sy, sz) m."""
+    Q = np.asarray(P, np.float64) / np.asarray(scale, np.float64)
+    i0 = np.floor(Q).astype(np.int64)
+    f = Q - i0
+    f = f * f * (3 - 2 * f)
+
+    def h(ix, iy, iz):
+        v = (ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791) ^ (seed * 2654435761)
+        v = (v ^ (v >> 13)) * 1274126177
+        return ((v ^ (v >> 16)) & 0xFFFF) / 65535.0
+    out = 0.0
+    for a in (0, 1):
+        for b in (0, 1):
+            for c in (0, 1):
+                w = (f[:, 0] if a else 1 - f[:, 0]) * (f[:, 1] if b else 1 - f[:, 1]) * (f[:, 2] if c else 1 - f[:, 2])
+                out = out + w * h(i0[:, 0] + a, i0[:, 1] + b, i0[:, 2] + c)
+    return out
+
+
+def rock(keys, P, N, z, wv, droad=None):
+    """v3.1: rock on the steep faces. (P moved out along N by the relief, N of the moved faces, rock weight 0..1,
+    colour (k, 3)) of the lattice points; z their heights (the foot of the cut from them), wv the cut values."""
+    deg = np.degrees(np.arccos(np.clip(N[:, 2], -1, 1)))
+    jit = (vnoise3(P, (ROCK_JITTER_M,) * 3, 1) - 0.5) * 2 * ROCK_JITTER
+    rw = np.clip((deg + jit - ROCK_DEG) / ROCK_BLEND + 0.5, 0, 1)
+    k0 = keys.min(0)
+    kk = keys - k0
+    G = np.full(kk.max(0) + 1, np.inf)
+    G[kk[:, 0], kk[:, 1]] = z
+    toe = ndi.minimum_filter(G, size=TOE_WIN, mode="nearest")[kk[:, 0], kk[:, 1]]
+    hab = z - toe
+    # relief: ribs and gullies down the face, knobs on them; only out of the face, none at its foot or edge
+    ribs = vnoise3(P, (ROCK_RIB, ROCK_RIB, ROCK_RIB_V), 2)
+    knobs = vnoise3(P, (ROCK_KNOB,) * 3, 3)
+    d = RELIEF * np.clip(0.75 * ribs + 0.45 * knobs - 0.15, 0, 1)
+    d *= np.clip((rw - 0.3) / 0.5, 0, 1) * np.clip((hab - TOE_CLEAR) / TOE_RAMP, 0, 1)
+    if droad is not None:                               # little relief beside a road: nothing over the lane
+        near = RELIEF_NEAR + (RELIEF - RELIEF_NEAR) * np.clip((droad - RELIEF_ROAD) / RELIEF_RAMP, 0, 1)
+        d = np.minimum(d, near)
+    if wv is not None:
+        d *= np.clip((wv - EDGE_ISO) / EDGE_FADE - 0.5, 0, 1)
+    Pm = P + N * d[:, None]
+    # colours: rock grey-brown with big soft patches, moss on the ledges; earth less green; scree at the foot
+    big = vnoise3(P, (COLOUR_SCALE,) * 3, 4)
+    rc = np.array(ROCK_TONE) * (0.88 + 0.24 * big)[:, None]
+    moss = np.clip((MOSS_DEG - deg) / 6.0, 0, 1) * np.clip((vnoise3(P, (3.0,) * 3, 5) - 0.45) * 3, 0, 1)
+    rc = rc * (1 - moss[:, None]) + np.array(MOSS) * moss[:, None]
+    return Pm, rw, rc, hab, deg, ribs
+
+
+def face_normals(P, T, N0):
+    """Vertex normals of the triangles T (area weighted); N0 where a vertex has none."""
+    fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
+    N = np.zeros_like(P)
+    for j in range(3):
+        np.add.at(N, T[:, j], fn)
+    L = np.linalg.norm(N, axis=1, keepdims=True)
+    return np.where(L > 1e-9, N / np.maximum(L, 1e-9), N0)
+
+
 def materials():
     t = f"/levels/{LEVEL_NAME}/{D}"
     m = bng.material(MAT, f"{t}/t_steep_bank_b.color.png", normal_map=f"{t}/t_steep_bank_nm.normal.png",
                      roughness=0.95, ground_type="DIRT", vert_color=True)
     far = bng.material(MAT_FAR, f"{t}/t_steep_bank_b.color.png", normal_map=f"{t}/t_steep_bank_nm.normal.png",
                        roughness=0.95, ground_type="DIRT", vert_color=True, extra={"castShadows": False})
-    return [m, far]
+    rk = bng.material(MAT_ROCK, f"{t}/t_steep_rock_b.color.png", normal_map=f"{t}/t_steep_rock_nm.normal.png",
+                      roughness=0.9, ground_type="ROCK", vert_color=True)
+    return [m, far, rk]
 
 
 # ------------------------------------------------------------------------------------------------ terrain
@@ -179,6 +351,15 @@ def skin_mask(H, road, solid, sq):
     return S, steep
 
 
+def foot(S, road, hard):
+    """v3.1: the vertices of the road FOOT squares from the skin S (not hard): the skin stopped a square short of
+    the road, and the face of a cut right beside it (5-7 m in one square, the terrain drawn from above) stayed
+    bare, smeared in vertical streaks. Now the skin runs down to the road and under its edge."""
+    near = ndi.binary_dilation(S, np.ones((3, 3)), iterations=FOOT + 1)
+    roadish = ndi.binary_dilation(road, np.ones((3, 3)), iterations=1)
+    return near & roadish & ~hard & ~S
+
+
 def tile_skin(H, S, sq, core, sol):
     """Skin of a block: (new terrain heights, changed vertices, squares (r, c) of the core window). The terrain
     under it lowered under the inner squares and smoothed (not on sol)."""
@@ -186,6 +367,7 @@ def tile_skin(H, S, sq, core, sol):
     Hn = H - LOWER * np.clip((dch - 1) / 2, 0, 1)
     w = np.clip(dch / 2.0, 0, 1) * ~sol                 # its edge vertices half way: the ground beyond as it was
     Hn = Hn + w * (ndi.gaussian_filter(H, RING_BLUR) - H)
+    Hn = np.where(sol, H, Hn)                           # v3.1: the skin reaches the road (foot): its ground stays
     low = np.abs(Hn - H) > 0.005
     sqm = S[:-1, :-1] & S[:-1, 1:] & S[1:, :-1] & S[1:, 1:]
     r0, r1, c0, c1 = core
@@ -252,9 +434,10 @@ def clip(P, N, col, T, f):
     return np.array(P), np.array(N), np.array(col), np.concatenate(out)
 
 
-def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=()):
+def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=(), droad=None, RS=None):
     """Triangles of the skin squares into mb, one add per projection axis; lods: [(k, lift, MeshBuilder)] the
-    far detail levels (coarse_mesh), filled from the same lattice."""
+    far detail levels (coarse_mesh), filled from the same lattice. (triangle count, info): v3.1 the lattice points
+    for the plants and the check of the skin over the road surfaces (RS)."""
     span = int(keys[:, 1].max()) + 2
     lut = {int(k): i for i, k in enumerate(keys[:, 0] * span + keys[:, 1])}
     P = np.column_stack([x0 + keys[:, 1] * sq / 2, y0 + keys[:, 0] * sq / 2, z])
@@ -276,17 +459,67 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=()):
         p = [lut[(2 * r + a) * span + 2 * c + b] for a, b in ring]
         tris += [(ctr, p[i], p[(i + 1) % 8]) for i in range(8)]
     T = np.array(tris, np.int64)
+    # v3.1: rock on the steep faces (moved out by its relief), the earth less green, scree at the foot
+    Pm, rw, rc, hab, deg, ribs = rock(keys, P, N, z, wv, droad)
+    earth = (1 - EARTH_MIX) * np.asarray(colour) + EARTH_MIX * np.array(EARTH)
+    scree = np.clip(1 - hab / TOE_SCREE, 0, 1)[:, None] * 0.6
+    earth = earth * (1 - scree) + np.array(SCREE) * scree
+    colour = earth * (1 - rw[:, None]) + rc * rw[:, None]
     col = np.column_stack([colour, np.ones(len(z))])
     for k, lift, mbk in lods:
         coarse_mesh(mbk, keys, P, N, col, rr, cc, wv if wv is not None else np.ones(len(z)), k, lift)
+    N = face_normals(Pm, T, N)
+    P = Pm
+    col = np.column_stack([col, rw])                   # the rock weight carried through the cut as a fifth column
     if wv is not None:
         P, N, col, T = clip(P, N, col, T, wv - EDGE_ISO)
-    add_projected(mb, MAT, P, N, col, T)
-    return len(T)
+    # rock and earth cut apart along the line where the rock weight is 1/2 (not along the triangles: teeth)
+    n_tri = len(T)
+    info = {"P": Pm, "rw": rw, "deg": deg, "hab": hab, "ribs": ribs, "over_road": 0, "over_road_max": -9.0}
+    for mat, sgn, tile in ((MAT, -1.0, TILE_M), (MAT_ROCK, 1.0, ROCK_TILE_M)):
+        Pk, Nk, ck, Tk = clip(P, N, col, T, sgn * (col[:, 4] - 0.5) + 1e-6)
+        if RS is not None and len(Tk):
+            # v3.1: no point of the skin over a road surface (its foot is under it, ROAD_DIVE). The lattice is
+            # clamped before the relief: a point moved by it, or cut in by clip(), can still stand on the road
+            used = np.unique(Tk)
+            hr = RS.height(Pk[used, 0], Pk[used, 1], "near", Pk[used, 2])
+            dz = Pk[used, 2] - hr
+            ok = np.isfinite(dz)
+            if ok.any():
+                info["over_road"] += int((dz[ok] > 0.0).sum())
+                info["over_road_max"] = max(info["over_road_max"], float(dz[ok].max()))
+                low = ok & (dz > -ROAD_DIVE) & (dz < ROAD_LIFT_MAX)    # not a road far under it (tunnel, gallery)
+                Pk[used[low], 2] = hr[low] - ROAD_DIVE
+        add_projected(mb, mat, Pk, Nk, ck[:, :4], Tk, tile)
+    return n_tri, info
 
 
-def add_projected(mb, mat, P, N, col, T):
+def plants(info, wv, hr, droad, rng):
+    """v3.1: forest items on the skin: [(type, x, y, z, yaw, scale)] of the lattice points (info of tile_mesh)."""
+    P, rw, deg, hab, ribs = info["P"], info["rw"], info["deg"], info["hab"], info["ribs"]
+    inside = (wv > EDGE_ISO + 0.5 * EDGE_FADE) & ~np.isfinite(hr)
+    inside &= ~((droad < PLANT_ROAD) & (hab < PLANT_FOOT))
+    earth = (rw < 0.5) & (deg < PLANT_DEG)
+    ledge = (rw >= 0.5) & (deg < MOSS_DEG)
+    gully = (rw >= 0.5) & ~ledge & (ribs < 0.35)
+    p = np.where(earth, PLANT_P_EARTH, 0.0) + np.where(ledge, PLANT_P_LEDGE, 0.0) + np.where(gully, PLANT_P_GULLY, 0.0)
+    pick = inside & (rng.random(len(P)) < p)
+    out = []
+    names = list(PLANTS)
+    for i in np.flatnonzero(pick):
+        t = names[0] if (earth[i] and rng.random() < 0.6) else names[1]
+        _, hw, (s0, s1) = PLANTS[t]
+        sc = float(rng.uniform(s0, s1))
+        if droad[i] < hw * sc + PLANT_CLEAR:                # its crown would reach over the road
+            continue
+        out.append((t, float(P[i, 0]), float(P[i, 1]), float(P[i, 2]) - PLANT_SINK, float(rng.uniform(0, 2 * np.pi)), sc))
+    return out
+
+
+def add_projected(mb, mat, P, N, col, T, tile_m=TILE_M):
     """The triangles T into mb, one add per projection axis (each face takes the axis it is turned to)."""
+    if not len(T):
+        return
     fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
     axis = np.argmax(np.abs(fn), axis=1)                 # 0: x (u = y, v = z), 1: y (u = x, v = z), 2: z (u = x, v = y)
     for ax, (ui, vi) in enumerate(((1, 2), (0, 2), (0, 1))):
@@ -294,7 +527,7 @@ def add_projected(mb, mat, P, N, col, T):
         if not len(Ta):
             continue
         used, inv = np.unique(Ta.ravel(), return_inverse=True)
-        uv = np.column_stack([P[used, ui], P[used, vi]]) / TILE_M
+        uv = np.column_stack([P[used, ui], P[used, vi]]) / tile_m
         mb.add(mat, P[used], uvs=uv, normals=N[used], tris=inv.reshape(-1, 3), colors=col[used])
 
 
@@ -370,7 +603,12 @@ def steep_skin_step(root, report=None):
     data = zi.read(ter_name)
     n, q, lay, names = pw.read_ter(data)
     road = footprints(zi, lv, n, X0, Y0, sq, ROADS)
-    solid = ndi.binary_dilation(footprints(zi, lv, n, X0, Y0, sq, SOLID) | road, iterations=1)
+    hard = ndi.binary_dilation(footprints(zi, lv, n, X0, Y0, sq, HARD), iterations=1)
+    solid = ndi.binary_dilation(hard | road, iterations=1)
+    # v3.1: the road surfaces, to take the skin under them where it runs down to a road (foot)
+    import network_mesh, road_mesh
+    _, rtop = network_mesh.top_faces(zi, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
+    RS = road_mesh.TriSurface(rtop)
     # the lake: no skin at or under its level (+0.3 m)
     lake = [o for f in zi.namelist() if f.endswith("items.level.json") and "/Water/" in f
             for o in read_items(zi, f) if o.get("class") == "WaterBlock"]
@@ -378,6 +616,7 @@ def steep_skin_step(root, report=None):
     colours = BaseColours(zi, lv, names, n)
     q_new = q.copy()
     files, objs = {}, []
+    trees = []
     rep = {"tiles": 0, "squares": 0, "triangles": 0, "steep_vertices": 0, "changed_vertices": 0,
            "changed_max_m": 0.0}
     m = int(np.ceil(REACH / sq)) + DILATE + 4
@@ -388,6 +627,8 @@ def steep_skin_step(root, report=None):
             H = Z0 + q[a0:a1, b0:b1].astype(np.float64) / 65535.0 * MAXH
             sol = solid[a0:a1, b0:b1] | (H < lake_z + 0.3)
             S, steep = skin_mask(H, road[a0:a1, b0:b1], sol, sq)
+            if S.any():
+                S = S | foot(S, road[a0:a1, b0:b1], hard[a0:a1, b0:b1] | (H < lake_z + 0.3))
             core = (tr - a0, min(tr + TILE, n - 1) - a0, tc - b0, min(tc + TILE, n - 1) - b0)
             if not S[core[0]:core[1] + 1, core[2]:core[3] + 1].any():
                 continue
@@ -408,6 +649,16 @@ def steep_skin_step(root, report=None):
             wv = EDGE_ISO + np.minimum(wv - EDGE_ISO, inside(keys))      # the cut never on the squares' staircase
             fl = split_max(Hq, R, C) + EPS                  # down onto the terrain towards the cut: no lip
             z = fl + np.clip((wv - EDGE_ISO) / EDGE_FADE, 0.0, 1.0) * (z - fl)
+            # v3.1: under a road surface the skin is under it (its foot): hidden by the road, never over it
+            hr = RS.height(X0 + (b0 + C) * sq, Y0 + (a0 + R) * sq, "low")
+            z = np.where(np.isfinite(hr), np.minimum(z, hr - ROAD_DIVE), z)
+            # v3.1: m from the nearest road vertex (less half a square: about the edge of its surface); beside a road
+            # the skin no higher than the terrain (EPS): no lip at the road edge
+            dv = ndi.distance_transform_edt(~road[a0:a1, b0:b1]) * sq
+            droad = np.maximum(ndi.map_coordinates(dv, [R, C], order=1) - sq / 2, 0.0)
+            clamp = (droad <= ROAD_CLAMP) & ~np.isfinite(hr)
+            rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > fl + 1e-6)).sum())
+            z = np.where(clamp, np.minimum(z, fl), z)
             gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
             cg = colours(lay[a0:a1, b0:b1].ravel(), (gr + a0).ravel(), (gc + b0).ravel()).reshape(a1 - a0, b1 - b0, 3)
             col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
@@ -415,7 +666,11 @@ def steep_skin_step(root, report=None):
             mb = bng.MeshBuilder()
             far = [(1, LOD_LIFT[1], bng.MeshBuilder()), (2, LOD_LIFT[2], bng.MeshBuilder())]
             ox, oy = X0 + b0 * sq, Y0 + a0 * sq
-            ntri = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far)
+            ntri, info = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far, droad, RS)
+            rep["skin_points_over_road"] = rep.get("skin_points_over_road", 0) + info["over_road"]
+            rep["skin_over_road_max_m"] = round(max(rep.get("skin_over_road_max_m", -9.0), info["over_road_max"]), 3)
+            if ntri:
+                trees += plants(info, wv, hr, droad, np.random.default_rng(tr * 100003 + tc))
             if not ntri:                                    # nothing left inside the cut: the terrain as it was
                 continue
             sub = q_new[a0:a1, b0:b1][cr, ccs]
@@ -429,6 +684,8 @@ def steep_skin_step(root, report=None):
                 lods = [(px[i + 1], mbk) for i, (_, _, mbk) in enumerate(far) if not mbk.empty()]
                 mb.write_dae(f, name=f"skin_{tr}_{tc}", origin=origin, detail=px[0], weld=False, lods=lods)
                 rep["triangles_far"] = rep.get("triangles_far", 0) + sum(m.triangle_count() for _, m in lods)
+                for k, (_, mk) in enumerate(lods):
+                    rep[f"triangles_lod{k + 1}"] = rep.get(f"triangles_lod{k + 1}", 0) + mk.triangle_count()
                 rel = f"{D}/skin_{tr:04d}_{tc:04d}.dae"
                 files[f"{lv}/{rel}"] = open(f, "rb").read()
             ob = bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=True, decal=False)
@@ -441,10 +698,29 @@ def steep_skin_step(root, report=None):
             rep["changed_vertices"] += int(lo.sum())
             dz = np.abs(Hn - H)[cr, ccs]
             rep["changed_max_m"] = max(rep["changed_max_m"], float(dz.max()) if dz.size else 0.0)
+    # v3.1: the plants, capped, as forest items of their own types (a new run replaces them)
+    if len(trees) > PLANT_MAX:
+        keep = np.random.default_rng(7).choice(len(trees), PLANT_MAX, replace=False)
+        trees = [trees[i] for i in sorted(keep)]
+    rep["plants"] = {t: sum(1 for p in trees if p[0] == t) for t in PLANTS}
+    if trees:
+        for t in PLANTS:
+            files[f"{lv}/forest/{t}.forest4.json"] = "".join(
+                json.dumps({"ctxid": 1, "pos": [round(x, 3), round(y, 3), round(z, 3)],
+                            "rotationMatrix": bng.rot_local_x_to(yaw), "scale": round(sc, 4), "type": t},
+                           separators=(",", ":")) + "\n" for (tt, x, y, z, yaw, sc) in trees if tt == t).encode("utf-8")
+        mdn = f"{lv}/art/forest/managedItemData.json"
+        managed = json.loads(zi.read(mdn)) if mdn in zi.NameToInfo else {}
+        for t, (shape, _, _) in PLANTS.items():
+            managed[t] = {"name": t, "internalName": t, "class": "TSForestItemData", "persistentId": bng.pid(),
+                          "radius": 0.5, "shapeFile": shape}
+        files[mdn] = json.dumps(managed, indent=1).encode("utf-8")
     print("steep skin: %s" % rep, flush=True)
     if objs:
         col_img, nrm_img = bank_texture()
-        for name, im in (("t_steep_bank_b.color.png", col_img), ("t_steep_bank_nm.normal.png", nrm_img)):
+        rock_col, rock_nrm = rock_texture()
+        for name, im in (("t_steep_bank_b.color.png", col_img), ("t_steep_bank_nm.normal.png", nrm_img),
+                         ("t_steep_rock_b.color.png", rock_col), ("t_steep_rock_nm.normal.png", rock_nrm)):
             b = io.BytesIO()
             Image.fromarray(im).save(b, "PNG", optimize=True)
             files[f"{lv}/{D}/{name}"] = b.getvalue()

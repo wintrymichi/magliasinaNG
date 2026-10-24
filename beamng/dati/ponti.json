@@ -135,8 +135,9 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Bridge over the Tresa at Ponte Tresa (border): deck at the swissTLM3D height (272.8 m), 2.3 m above the water; on the Italian side it ends on the Copernicus terrain.",
-   "checked": true
+   "note": "Bridge over the Tresa at Ponte Tresa (border): deck at the swissTLM3D height (272.8 m), 2.3 m above the water; on the Italian side it ends on the Copernicus terrain. v3.1: width 11 m by hand (two lanes and two sidewalks): the survey polygon of the Swiss half (19.7 x 18.6 m) takes in the bridgehead and gave 18 m.",
+   "checked": true,
+   "width": 11.0
   },
   {
    "tlm": "{A6995468-1DA6-4B88-95A8-203F982B7DE6}",
@@ -299,8 +300,9 @@
    ],
    "max_height_m": 5.6,
    "auto_type": "open",
-   "note": "Checked: deck continuous with the approaches.",
-   "checked": true
+   "note": "v3.1: deck on the outline of the survey's bridge polygons, top from the LiDAR surface model (the narrow bridge upstream of the Via Cantonale; the strip deck left the river showing through the bridge). Checked: deck continuous with the approaches.",
+   "checked": true,
+   "deck": "survey"
   },
   {
    "tlm": "{BCB458F1-F90B-4A8F-A3BF-8E45417666BD}",
@@ -686,8 +688,9 @@
    ],
    "max_height_m": 2.4,
    "auto_type": "open",
-   "note": "Via Lugano in Ponte Tresa: deck at the swissTLM3D height above the water (previously it followed the water because the DTM is flat over the river).",
-   "checked": true
+   "note": "Via Lugano in Ponte Tresa: deck at the swissTLM3D height above the water (previously it followed the water because the DTM is flat over the river). v3.1: width 11 m by hand (two lanes and two sidewalks): the survey polygon of the Swiss half (19.7 x 18.6 m) takes in the bridgehead and gave 18 m.",
+   "checked": true,
+   "width": 11.0
   },
   {
    "tlm": "{9FFF3597-A9E2-4EC5-80F4-49D8B7B0FFE4}",
@@ -770,8 +773,9 @@
    ],
    "max_height_m": 6.4,
    "auto_type": "open",
-   "note": "Via Cantonale over the Magliasina river: flat profile between the approaches at 300.5 m (previously a station constrained to the road below pulled it down by 20-35 m).",
-   "checked": true
+   "note": "v3.1: deck on the outline of the survey's bridge polygons, top from the LiDAR surface model (one deck about 25 m wide with the curve from the west; the strip deck left the river showing through the bridge). Via Cantonale over the Magliasina river: flat profile between the approaches at 300.5 m (previously a station constrained to the road below pulled it down by 20-35 m).",
+   "checked": true,
+   "deck": "survey"
   },
   {
    "tlm": "{7DE14058-3A2F-44B3-8DC3-071C4845EF68}",
@@ -793,8 +797,9 @@
    ],
    "max_height_m": 6.3,
    "auto_type": "open",
-   "note": "Via Cantonale over the Magliasina river: flat profile between the approaches at 300.5 m, like the adjacent stretch.",
-   "checked": true
+   "note": "v3.1: deck on the outline of the survey's bridge polygons, top from the LiDAR surface model (one deck about 25 m wide with the curve from the west; the strip deck left the river showing through the bridge). Via Cantonale over the Magliasina river: flat profile between the approaches at 300.5 m, like the adjacent stretch.",
+   "checked": true,
+   "deck": "survey"
   },
   {
    "tlm": "{34DE98D5-C2DA-45AB-B7A8-B6034630798A}",

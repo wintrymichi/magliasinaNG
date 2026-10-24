@@ -238,6 +238,12 @@ def stage_roads(scene, ctx):
             gi = gi.difference(fresh)
         items.append((gi, mat, cell, uvt, pid))
 
+    # v3.1: the decks on the survey's outline (bridges.survey_decks) take the place of the surfaces under them
+    sfoot = [f for f, _ in bridges.survey_decks()]
+    if sfoot:
+        su = shapely.union_all(sfoot)
+        items = [(gi.difference(su) if gi.intersects(su) else gi, *rest) for gi, *rest in items]
+
     def key_fn(pid):
         return lambda x, y: S.surfaces_at_polygon(x, y, pid)
 
@@ -359,7 +365,20 @@ def stage_roads(scene, ctx):
 
     def on_cap(r, c, z):
         cap[r, c] = np.minimum(cap[r, c], z)
-    recs = bridges.build(net, lambda x, y: dtm.sample(x, y), on_deck, on_cap, xs, ys, exclude=corridor)
+    # v3.1: the road meshes around the survey decks, for the height of the roads that join them
+    deck_surface = None
+    sfeet = [f for f, _ in bridges.survey_decks()]
+    if sfeet:
+        near = shapely.union_all(sfeet).buffer(3.0)
+        shapely.prepare(near)
+        cand = [t[shapely.contains_xy(near, t[:, :, 0].mean(1), t[:, :, 1].mean(1))]
+                for t in tops + [t for v in chunk_tops.values() for t in v] if len(t)]
+        cand = [t for t in cand if len(t)]
+        if cand:
+            rs = road_mesh.TriSurface(np.concatenate(cand))
+            deck_surface = lambda x, y, z: rs.height(x, y, mode="near", zhint=z)
+    recs = bridges.build(net, lambda x, y: dtm.sample(x, y), on_deck, on_cap, xs, ys, exclude=corridor,
+                         surface=deck_surface)
     bridges.save_records(recs)
     print("chunk seams stitched:", stitch_chunks(builders), flush=True)
     ntri = 0
@@ -922,13 +941,20 @@ FINISH = [
     ("direction_signs", "direction_signs", "direction_signs_step", {"report": True}),   # v3.0: at the roundabouts
     ("lake", "water", "lake_step", {"report": True}),
     ("house_details", "buildings_mesh", "house_details_step", {"report": True}),
+    ("edifici_veri", "edifici_veri", "edifici_veri_step", {"report": True}),   # v3.1: 19 buildings as the photos show them
     ("house_extras", "house_extras", "house_extras_step", {"report": True}),   # v3.0: flower boxes, woodpiles
+    ("roof_details", "roof_details", "roof_details_step", {"report": True}),   # v3.1: roof rims, ridge caps
     ("fuel_stations", "fuel_stations", "fuel_stations_step", {"report": True}),   # v3.0: canopies, pumps, totems
+    ("roof_posts", "roof_posts", "roof_posts_step", {"report": True}),   # v3.1: posts under the roofs nothing holds
     ("street_life", "street_life", "street_life_step", {"report": True}),   # v3.0: bins, hydrants, terraces, mirrors
     ("shopfronts", "shopfronts", "shopfronts_step", {"report": True}),      # v3.0: parody shop signs, awnings, props
     ("parking", "parking", "parking_step", {"report": True}),        # v3.0 review: parking spots for the game's parked cars
     ("bus_shelters", "bus_shelters", "bus_shelters_step", {"report": True}),   # v3.0 review: shelters at the bus stops
+    ("stop_paint", "stop_paint", "stop_paint_step", {"report": True}),   # v3.1: yellow paint of the bus stops, as photographed
+    ("sidewalks", "sidewalks", "sidewalks_step", {"report": True}),   # v3.1: pavements on kerbs, what stands on them up
+    ("roundabouts", "roundabouts", "roundabouts_step", {"report": True}),   # v3.1: green middles on kerbs, rings of setts
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
+    ("forest_mosaic", "forest_mosaic", "forest_mosaic_step", {"report": True}),   # v3.1: the forest floor as a mosaic
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
     ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: rivers, streams, the lake
     ("races", "races", "races_step", {"report": True}),          # v3.0.40: time trials over the AI roads

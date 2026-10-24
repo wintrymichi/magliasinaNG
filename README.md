@@ -5,14 +5,14 @@
 **The Malcantone (Canton Ticino, Switzerland) rebuilt at 1:1 scale for BeamNG.drive: 58.6 km² of villages, roads, trails, woods and lake between Ponte Tresa, Caslano, Agno, Bioggio, Gravesano, Arosio and Novaggio.**
 
 ![BeamNG.drive 0.40](https://img.shields.io/badge/BeamNG.drive-0.40-orange)
-![Version](https://img.shields.io/badge/release-3.0.40-blue)
+![Version](https://img.shields.io/badge/release-3.1-blue)
 ![Scale](https://img.shields.io/badge/scale-1%3A1-brightgreen)
 ![Area](https://img.shields.io/badge/area-58.6%20km%C2%B2-informational)
 ![Data](https://img.shields.io/badge/data-swisstopo%20%C2%B7%20MU%20TI%20%C2%B7%20OSM-lightgrey)
 [![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey)](LICENSE)
 [![Website](https://img.shields.io/badge/website-wintrymichi.ch-00549b)](https://wintrymichi.ch)
 
-**[wintrymichi.ch](https://wintrymichi.ch)** · [Download v3.0.40](https://github.com/wintrymichi/magliasinaNG/releases/latest)
+**[wintrymichi.ch](https://wintrymichi.ch)** · [Download v3.1](https://github.com/wintrymichi/magliasinaNG/releases/latest)
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/wintrymichii)
 
@@ -28,13 +28,13 @@ Nothing is modelled by hand. A Python pipeline builds the whole map from open da
 
 ## Quick start
 
-1. **Download** `magliaso_pura_v3.0.40.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
+1. **Download** `magliaso_pura_v3.1.zip` from the [latest release](https://github.com/wintrymichi/magliasinaNG/releases/latest).
 2. **Install it:** copy the zip, without unpacking it, to `Documents/BeamNG.drive/current/mods/` (or add it from the game's mod manager).
 3. **Remove older versions** of the map from the same folder (any other `magliaso_pura_v*.zip`, also `magliaso_pura_v3.0.zip`). Every version uses the same level name, `magliaso_pura`, so two zips in the folder conflict.
 4. **Enable it** in the game's mod manager if it shows as disabled: after an update of the game (0.39 → 0.40) BeamNG.drive switches every mod off.
 5. **Play:** in the game choose *Freeroam* → *Malcantone - Magliaso, Pura and around*. You start at the Magliaso junction, at the foot of the cantonal road to Pura.
 
-**What you need:** BeamNG.drive 0.40 and 16 GB of RAM. v3.0.40 is made for 0.40: the game moved its own textures that the map uses, and v3.0 shows missing textures there (on 0.39 keep v3.0). v3.0.40, measured in its in-game test (BeamNG.drive 0.40.1, Windows, Direct3D 12, RTX 4070): loads in about 230 s (0.40 empties its cache at every start, so every load is a first load), 6.7 GB of RAM and 5.8 GB of video memory at its peak, 8.8 GB of RAM with the traffic and parked cars on. v3.0, measured in its in-game test (native Linux build, RTX 4070, 14 GB RAM): loads in about 80 s with a warm cache, 10.3 GB of memory at its peak (the first v3.0 test build: 11.1 GB). v2.8 was tested on BeamNG.drive 0.39 (native Linux build) with an RTX 4070: the game used 6.4 GB of memory at its peak. Under Windows with DirectX 12 it needs much more (v2.7 measured about 12 GB): if the game stalls, start it with DirectX 11 (`-gfx dx11`).
+**What you need:** BeamNG.drive 0.40 and 16 GB of RAM. v3.1, measured in its in-game test (BeamNG.drive 0.40.3, Windows, Direct3D 12, RTX 4070): loads in about 229 s, 16.8 GB of RAM and 7.2 GB of video memory at its peak (about 12.5 GB of RAM once loaded); it is 7.9 GB unpacked, 1.3 GB more than v3.0.40. v3.0.40 is made for 0.40: the game moved its own textures that the map uses, and v3.0 shows missing textures there (on 0.39 keep v3.0). v3.0.40, measured in its in-game test (BeamNG.drive 0.40.1, Windows, Direct3D 12, RTX 4070): loads in about 230 s (0.40 empties its cache at every start, so every load is a first load), 6.7 GB of RAM and 5.8 GB of video memory at its peak, 8.8 GB of RAM with the traffic and parked cars on. v3.0, measured in its in-game test (native Linux build, RTX 4070, 14 GB RAM): loads in about 80 s with a warm cache, 10.3 GB of memory at its peak (the first v3.0 test build: 11.1 GB). v2.8 was tested on BeamNG.drive 0.39 (native Linux build) with an RTX 4070: the game used 6.4 GB of memory at its peak. Under Windows with DirectX 12 it needs much more (v2.7 measured about 12 GB): if the game stalls, start it with DirectX 11 (`-gfx dx11`).
 
 **Loading time:** v2.8 loaded in about 130 s in the test. The first time is the slowest, because the game converts the map's shapes and tree pictures and keeps them in its cache.
 
@@ -101,6 +101,93 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ## Gallery
 
+### New in v3.1: bridges, roofs, slopes and woods
+
+> **Released on 23 October 2026, tested in the game on 24 October 2026.** The screenshots below are from that test. **The AI traffic is still broken** ([#83](https://github.com/wintrymichi/magliasinaNG/issues/83)): see the known limitations.
+
+v3.1 rebuilds the Magliaso bridge from the survey, gives every roof its walls or posts, and adds detail to the roofs, the road cuts and the woods. The full list is in [`CHANGELOG.md`](CHANGELOG.md).
+
+**In-game test:** BeamNG.drive 0.40.3 on Windows, Direct3D 12, RTX 4070, at 2048 × 1152, Ultra preset with normal texture quality. The map loads in about 229 seconds, uses 16.8 GB of RAM (working set, during the load; about 12.5 GB once loaded) and 7.2 GB of video memory at peak, and runs at 54–78 FPS at six places (the Magliaso roundabout, the Via Golf underpass, a Cantonale cut slope, a woods road, the Ponte Tresa bridge, 150 m over Magliaso; v3.0.40: 230 s, 6.7 GB, 5.8 GB, 62–134 FPS at 13 places). The level is 7.9 GB unpacked (+1.3 GB, mostly the cut slopes) and the zip 1.5 GB. At night 2,113 lamp lights light the road between the lamps. The time trials and the AI traffic were not part of this test. The complete test report is in [`beamng/verifica/v3.1/ingame_test_report.md`](beamng/verifica/v3.1/ingame_test_report.md).
+
+#### What changed
+
+- **The Magliaso bridge rebuilt from the survey.** The Via Cantonale bridge over the Magliasina at the Magliaso roundabout is one 25 m deck taken from the outline of the cadastral survey, its height fitted to the swissSURFACE3D lidar, instead of two narrow strips with the river showing between them and parapets in the middle of the road (issues [#73](https://github.com/wintrymichi/magliasinaNG/issues/73), [#78](https://github.com/wintrymichi/magliasinaNG/issues/78)). The channelled river banks are stone instead of grey asphalt ramps.
+- **Bridges as wide as the road.** About 20 bridges were narrower than the road on both sides of them. They now take the width of the surveyed bridge, or of the road at their ends; the Ponte Tresa border bridge is 11 m wide. The steps between deck and road at the Magliaso bridges are gone.
+- **The Via Golf underpass** between Caslano and Magliaso. The road ran into the FLP embankment from both sides; it now passes under the tracks (its two footways still stand about 2 m above the road there, see the known limitations).
+- **No more floating roofs.** 469 roofs of swissBUILDINGS3D hung in the air without walls (canopies, covered car parks, boat houses, sheds): now none. The cadastral survey decides what each one is. Shelters stand on posts kept off roads and tracks, houses and low sheds get walls, and about 4,300 posts hold up porches and lean-tos.
+- **Detailed roofs.** Eaves with a rim of tile heads, fascia boards, ridge caps, and new textures for coppi, flat tiles and metal sheet.
+- **Rock cuts along the roads.** Where a road is cut into the hill the face is rock down to the asphalt instead of green earth, with a brown stepped strip at its foot and about 90,000 bushes on the steep faces.
+- **Wilder undergrowth.** Ferns, shrubs, deadwood and fallen trunks under the trees, denser at the wood edges and in clearings.
+- **Railway.** The ballast reaches up to the sleepers, and between Caslano and Ponte Tresa the rails no longer climb a ramp of sleepers into the retaining wall.
+- **Walls.** Fewer saw-tooth tops (in the game some walls of the Magliaso–Pura Cantonale, the hairpin among them, still have them), and a lid over the dark grooves where two walls stood a few centimetres apart (1,100 gaps, 8.6 km).
+- **Street lamps that light the road at night.** Each lamp lit only a small pool under itself and left the road between lamps dark. They now cast a warm cone downwards, as in the game's Italy level.
+- **Time trials.** The cars start facing up the route.
+- **Pavements on kerbs.** Pavements were flush with the road everywhere; they now stand on 12 cm kerbs, lowered at entrances and pedestrian crossings.
+- **Roundabouts** with a raised green middle on its kerb inside a mountable ring of setts.
+- **Less uniform asphalt.** Newer and older stretches, patches and joints read from the 2024 orthophoto; cracks only where the road is old.
+- **19 buildings closer to the real ones** along the main roads: plaster colours and details from open street photos.
+- **The forest floor as a mosaic:** ragged wood edges, thickets on sunny slopes, bare leaf litter under the beeches, rock outcrops, ferns and stones on the wooded banks.
+- **Bus stops** with their yellow zigzags, BUS letters and yellow lines as the orthophoto shows them, and the crossings the rules had missed.
+- **Traffic islands:** the keep-right poles stand in the black and yellow sleeve of the Swiss island posts.
+- **Bus shelters** off the carriageway (6 stood on it), squared to the road beside their stop.
+- **Also:** the Caslano slipway stops at the lake shore instead of going on under the water ([#84](https://github.com/wintrymichi/magliasinaNG/issues/84)); the strip of Arosio that the OpenStreetMap extract did not cover; the far trees' pictures for the distance are made by the build itself (v3.0.40 got them by a patch of its zip).
+
+#### At the wheel
+
+*Screenshots from the driver's seat of an ETK 800 in the right-hand lane.*
+
+| | |
+|---|---|
+| ![Crossing the Magliaso bridge](beamng/verifica/screenshots/v3.1/driver-magliaso-bridge.jpg)<br>*Over the Magliasina at the Magliaso roundabout, one 25 m deck* | ![The Ponte Tresa border bridge](beamng/verifica/screenshots/v3.1/driver-ponte-tresa-bridge.jpg)<br>*The Ponte Tresa border bridge, now 11 m wide* |
+| ![The Via Golf underpass](beamng/verifica/screenshots/v3.1/driver-via-golf-underpass.jpg)<br>*Via Golf under the FLP between Caslano and Magliaso* | ![A rock cut beside the road](beamng/verifica/screenshots/v3.1/driver-cut-slope.jpg)<br>*Rock cut down to the asphalt beside the road* |
+| ![A road through the woods](beamng/verifica/screenshots/v3.1/driver-forest-undergrowth.jpg)<br>*A road through the woods, ferns and deadwood under the trees* | ![The wall at the Magliaso–Pura hairpin](beamng/verifica/screenshots/v3.1/driver-hairpin-wall.jpg)<br>*The Magliaso–Pura hairpin wall: its top is still saw-toothed in the game* |
+| ![The road lit at night](beamng/verifica/screenshots/v3.1/driver-night-lamps.jpg)<br>*The road lit between the lamps at night* | |
+
+#### Bridges and the underpass
+
+| | |
+|---|---|
+| ![The Magliaso bridge from above](beamng/verifica/screenshots/v3.1/bridge-magliaso-above.jpg)<br>*The Magliaso bridge and its stone river banks* | ![A bridge as wide as the road](beamng/verifica/screenshots/v3.1/bridges-wide.jpg)<br>*A bridge as wide as the road* |
+| ![The Via Golf underpass from the side](beamng/verifica/screenshots/v3.1/underpass-via-golf-side.jpg)<br>*The Via Golf underpass and the FLP above it* | ![Magliaso from above](beamng/verifica/screenshots/v3.1/overview-magliaso.jpg)<br>*Magliaso, the lake and the Magliasina from above* |
+
+#### Roofs
+
+| | |
+|---|---|
+| ![A canopy at Caslano](beamng/verifica/screenshots/v3.1/roofs-caslano-canopy.jpg)<br>*A large canopy on its posts beside the FLP at Caslano* | ![A covered car park](beamng/verifica/screenshots/v3.1/roofs-covered-car-park.jpg)<br>*A covered car park on posts* |
+| ![Posts under porches](beamng/verifica/screenshots/v3.1/roofs-porch-posts.jpg)<br>*Posts under porches and lean-tos* | ![Coppi roofs in a village core](beamng/verifica/screenshots/v3.1/roofs-coppi-village.jpg)<br>*Coppi roofs with ridge caps and tile heads at the eaves* |
+
+#### Slopes, woods and railway
+
+| | |
+|---|---|
+| ![Bushes on the cut slopes](beamng/verifica/screenshots/v3.1/cut-slopes-bushes.jpg)<br>*Bushes on the steep cut faces* | ![Undergrowth at a wood edge](beamng/verifica/screenshots/v3.1/undergrowth-wood-edge.jpg)<br>*Undergrowth at a wood edge* |
+| ![A clearing with fallen trunks](beamng/verifica/screenshots/v3.1/undergrowth-clearing.jpg)<br>*Ferns, shrubs and fallen trunks in a clearing* | ![Ballast at Caslano](beamng/verifica/screenshots/v3.1/railway-caslano-ballast.jpg)<br>*Ballast up to the sleepers at Caslano* |
+| ![The rails beside the wall](beamng/verifica/screenshots/v3.1/railway-wall-caslano-tresa.jpg)<br>*The rails beside the wall between Caslano and Ponte Tresa* | ![A village at night](beamng/verifica/screenshots/v3.1/lamps-night-village.jpg)<br>*A village at night under the new street lamps* |
+
+<details>
+<summary>3D renders of the test build, v3.0.40 and v3.1 side by side (not in-game)</summary>
+
+| | |
+|---|---|
+| ![Magliasina bridge](beamng/verifica/v3.1/render/01_ponte_magliaso.jpg)<br>*The Magliaso bridge* | ![Bridges as wide as the road](beamng/verifica/v3.1/render/02_ponti_allargati.jpg)<br>*Bridges as wide as the road* |
+| ![No steps at the Magliaso bridges](beamng/verifica/v3.1/render/03_ponti_scalini.jpg)<br>*No steps at the Magliaso bridges* | ![Via Golf underpass](beamng/verifica/v3.1/render/04_sottopassaggio_via_golf.jpg)<br>*Via Golf underpass* |
+| ![Caslano station canopy](beamng/verifica/v3.1/render/05_tettoia_caslano.jpg)<br>*Caslano station canopy* | ![Covered car park](beamng/verifica/v3.1/render/06_parcheggio_coperto.jpg)<br>*Covered car park* |
+| ![Posts under porches](beamng/verifica/v3.1/render/07_tettoie_case.jpg)<br>*Posts under porches* | ![Coppi roofs](beamng/verifica/v3.1/render/08_tetti_coppi.jpg)<br>*Coppi roofs* |
+| ![Magliaso roofs](beamng/verifica/v3.1/render/09_tetti_magliaso.jpg)<br>*Magliaso roofs* | ![Cut slope beside the Cantonale](beamng/verifica/v3.1/render/10_scarpate_cantonale.jpg)<br>*Cut slope beside the Cantonale* |
+| ![Bushes on the cut slopes](beamng/verifica/v3.1/render/11_scarpate_cespugli.jpg)<br>*Bushes on the cut slopes* | ![Undergrowth at a wood edge](beamng/verifica/v3.1/render/12_sottobosco_margine.jpg)<br>*Undergrowth at a wood edge* |
+| ![Rails at Caslano](beamng/verifica/v3.1/render/13_binari_caslano.jpg)<br>*Rails at Caslano* | ![Wall at the hairpin](beamng/verifica/v3.1/render/14_muro_tornante.jpg)<br>*Wall at the hairpin* |
+| ![Street lamps at night](beamng/verifica/v3.1/render/15_lampioni_notte.jpg)<br>*Street lamps at night* | |
+
+</details>
+
+#### Coming next
+
+- **AI traffic that flows.** The spawn points off the carriageway, a test with the player driving, and the give-way junctions where cars ran into each other in the v3.0.40 test (see *Known limitations*).
+- **A Swiss licence plate** for the cars of the map, instead of the game's default.
+- The pale bands on some wall tops and the pale patches in the grass at Agno ([#73](https://github.com/wintrymichi/magliasinaNG/issues/73)), the windowless street façade of the Panetteria Magliasino ([#74](https://github.com/wintrymichi/magliasinaNG/issues/74)), the palm at Magliaso and the ochre of Bedigliora ([#77](https://github.com/wintrymichi/magliasinaNG/issues/77)), the ground against the walls ([#78](https://github.com/wintrymichi/magliasinaNG/issues/78)).
+- **Windows and doors measured from the open street photos**, once the detector finds more than about half of them; and the roofs the photos measured off by 0.5–2.9 m, once they are checked one by one.
+
 ### New in v3.0.40: the map on BeamNG.drive 0.40
 
 v3.0.40 adapts the map to BeamNG.drive 0.40 and includes the fixes and additions since v3.0. The full list is in [`CHANGELOG.md`](CHANGELOG.md).
@@ -150,39 +237,6 @@ v3.0.40 adapts the map to BeamNG.drive 0.40 and includes the fixes and additions
 | ![Church of Agno and its bell tower, viewed from the road](beamng/verifica/screenshots/v3.0.40/church-agno.jpg)<br>*Church of Agno and its bell tower, viewed from the road* | ![Miglieglia from above, with a Monte Lema cable-car pylon](beamng/verifica/screenshots/v3.0.40/lema-cable-car-miglieglia.jpg)<br>*Miglieglia from above, with a Monte Lema cable-car pylon* |
 | ![Slopes above Novaggio on BeamNG 0.40, with no squares among distant trees](beamng/verifica/screenshots/v3.0.40/overview-far-trees-040.jpg)<br>*Slopes above Novaggio: no squares among distant trees* | ![Monte Caslano and the lake, with the whole area present since v3.0.40](beamng/verifica/screenshots/v3.0.40/overview-monte-caslano.jpg)<br>*Monte Caslano and the lake* |
 | ![Complete village of Arosio viewed from above](beamng/verifica/screenshots/v3.0.40/overview-arosio.jpg)<br>*Arosio viewed from above* |
-### Coming in v3.1
-
-> v3.1 is the next version, in the works now. The pictures below are **3D renders of the test level, not in-game screenshots**: the v3.0.40 level on the left, the v3.1 fix on the right. Nothing of this is in a release yet.
-
-**The Magliaso bridge rebuilt from the survey.** The Via Cantonale bridge over the Magliasina at the Magliaso roundabout becomes one 25 m deck taken from the outline of the cadastral survey, its height fitted to the swissSURFACE3D lidar (within about 0.2 m), instead of two narrow strips with the river showing between them and parapets in the middle of the road (issues [#73](https://github.com/wintrymichi/magliasinaNG/issues/73), [#78](https://github.com/wintrymichi/magliasinaNG/issues/78)). The channelled banks of the river are stone instead of grey asphalt ramps.
-
-| |
-|---|
-| ![The Magliaso bridge from the south, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/bridge-magliaso-from-south.jpg)<br>*The Magliaso bridge from the south: two strips and the river through them (left), one deck and stone banks (right)* |
-| ![Driving up to the Magliaso bridge, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/bridge-magliaso-driver.jpg)<br>*Driving up to the bridge from the roundabout* |
-
-**No more floating roofs.** About 620 roofs of swissBUILDINGS3D had no walls under them (canopies, covered car parks, boat houses, sheds) and hung in the air. In v3.1 the cadastral survey decides what each one is: shelters get a slab and posts, kept off roads and tracks, while houses and low sheds get walls. In the test level the floating roofs drop from 469 to 8.
-
-| |
-|---|
-| ![A canopy between two industrial buildings, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/roofs-canopy-industry.jpg)<br>*A canopy between two industrial buildings, now on posts* |
-| ![A covered car park, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/roofs-covered-car-park.jpg)<br>*A covered car park by the railway* |
-| ![Two sheds, v3.0.40 left, v3.1 right](beamng/verifica/screenshots/v3.1-preview/roofs-sheds-closed.jpg)<br>*Two sheds in the fields: roofs lying on the grass (left) get their walls (right)* |
-
-**Lids over the grooves between walls.** Where the survey draws one wall as two lines, or a wall has a notch at a pillar, two walls stood a few centimetres apart and showed a dark groove from above (1,100 gaps, 8.6 km): every gap narrower than 25 cm between the tops gets a lid.
-
-| |
-|---|
-| ![A wall along the cantonal road with its groove, before and after](beamng/verifica/screenshots/v3.1-preview/walls-groove-lids.jpg)<br>*A wall along the road: the dark groove on its top (left) closed by a lid (right)* |
-
-**Also in v3.1:** the slipway at Caslano stops at the lake shore instead of going on under the water; the strip of Arosio the OpenStreetMap extract did not cover; the far trees' pictures for the distance made by the build itself (v3.0.40 got them by a patch of its zip).
-
-**Next, after v3.1:**
-- **AI traffic that flows.** The spawn points off the carriageway, a test with the player driving, and the give-way junctions where cars ran into each other in the v3.0.40 test (see *Known limitations*).
-- **A Swiss licence plate** for the cars of the map, instead of the game's default.
-- The pale bands on some wall tops and the pale patches in the grass at Agno ([#73](https://github.com/wintrymichi/magliasinaNG/issues/73)), the windowless street façade of the Panetteria Magliasino ([#74](https://github.com/wintrymichi/magliasinaNG/issues/74)), the palm at Magliaso and the ochre of Bedigliora ([#77](https://github.com/wintrymichi/magliasinaNG/issues/77)), the ground against the walls ([#78](https://github.com/wintrymichi/magliasinaNG/issues/78)).
-- **Windows and doors measured from the open street photos**, once the detector finds more than about half of them; and the roofs the photos measured off by 0.5–2.9 m, once they are checked one by one.
-
 ### v3.0 in the game: the review round
 
 > v3.0 was released on 17 October 2026 for BeamNG.drive 0.39. After the first v3.0 test build (the `v3 build test` workflow) came a review round with the fixes and additions below. It was built on a PC from scratch and **tested in the game** (BeamNG.drive 0.39.4, native Linux, RTX 4070, 2560 × 1440, Ultra): the frame rate at 13 fixed places before and after, and the screenshots below. Full test in [`beamng/verifica/v3.0/ingame_test_report.md`](beamng/verifica/v3.0/ingame_test_report.md), all screenshots in [`beamng/verifica/screenshots/v3.0/`](beamng/verifica/screenshots/v3.0).
@@ -326,7 +380,7 @@ flowchart LR
     Q --> Z[v3.0.40 zip<br/>package.py]
 ```
 
-**How a release is built.** The [`release_v2.8.yml`](.github/workflows/release_v2.8.yml) workflow builds the level from scratch on a GitHub server (*Actions* → *Release v2.8* → *Run workflow*): it downloads the data, builds the level with every finishing step, runs the checks and publishes the zip. Up to v2.8 the versions after v2.4 were patch scripts run on the previous zip; since v2.8 those steps are part of the build itself (`build_level.FINISH`), and [`v28_build_test.yml`](.github/workflows/v28_build_test.yml) makes the same zip for the test in the game. v2.8 itself is the zip of the [`final_build_test.yml`](.github/workflows/final_build_test.yml) workflow, tested in the game and published unchanged by [`release_v2.8_tested.yml`](.github/workflows/release_v2.8_tested.yml). v3.0 is built the same way by [`v3_build_test.yml`](.github/workflows/v3_build_test.yml): the level from scratch with every finishing step, the checks and the zip to test in the game. Since v3.0.40 every build to test goes to the pre-release [*nightly*](https://github.com/wintrymichi/magliasinaNG/releases/tag/nightly), built by [`nightly_build.yml`](.github/workflows/nightly_build.yml) when `beamng/nightly/stamp.txt` changes: it replaces the previous nightly and is never the latest release. A release is a nightly zip tested in the game.
+**How a release is built.** The [`release_v2.8.yml`](.github/workflows/release_v2.8.yml) workflow builds the level from scratch on a GitHub server (*Actions* → *Release v2.8* → *Run workflow*): it downloads the data, builds the level with every finishing step, runs the checks and publishes the zip. Up to v2.8 the versions after v2.4 were patch scripts run on the previous zip; since v2.8 those steps are part of the build itself (`build_level.FINISH`), and [`v28_build_test.yml`](.github/workflows/v28_build_test.yml) makes the same zip for the test in the game. v2.8 itself is the zip of the [`final_build_test.yml`](.github/workflows/final_build_test.yml) workflow, tested in the game and published unchanged by [`release_v2.8_tested.yml`](.github/workflows/release_v2.8_tested.yml). v3.0 is built the same way by [`v3_build_test.yml`](.github/workflows/v3_build_test.yml): the level from scratch with every finishing step, the checks and the zip to test in the game. Since v3.0.40 every build to test goes to the pre-release [*nightly*](https://github.com/wintrymichi/magliasinaNG/releases/tag/nightly), built by [`nightly_build.yml`](.github/workflows/nightly_build.yml) when `beamng/nightly/stamp.txt` changes: it replaces the previous nightly and is never the latest release. A release is a nightly zip tested in the game. v3.1 is the exception: the nightly of 23 October 2026 (built from `21ff47b`) with nine small patches applied to its zip in place by the `nightly_patch_*` workflows of the integration branch, published before the in-game test.
 
 ```bash
 cd beamng/pipeline
@@ -368,9 +422,12 @@ Each limitation has an issue where the details, the places and the possible fix 
 | One-way streets only where OpenStreetMap records them. | [#20](https://github.com/wintrymichi/magliasinaNG/issues/20) |
 | Road signs only where OpenStreetMap maps them or records the rule that needs them: signs nobody mapped that no rule implies are missing (direction signs only at the junctions with the main roads, since v3.0.40); 35 plates of the cantonal road keep a single colour; the general 50 has no village name in the communes of several villages. | [#21](https://github.com/wintrymichi/magliasinaNG/issues/21) |
 | v3.0: tested in the game (frame rate, memory, the new features). The façade of the Panetteria Magliasino at Magliaso Paese (a block of the survey made of several houses) still has no windows on its street side. On the Strada Cantonale between Magliaso and Agno, at the foot of some retaining walls on the hill side, the ground rises in a slope against the wall as in the terrain model. The twin bridges of the Strada Cantonale over the Magliasina keep the two decks of v1.1 with the gap between them. 92 bus stops have no room for a shelter beside the road. The parked cars need the game's traffic with parked vehicles on. The AI driver stopped at a few spots in v2.8 (Mugena, Vezio, Miglieglia, Pura): spots to look at, not roads you cannot drive (see *Quality and verification*). | — |
-| v3.0.40: the AI traffic stalls. In the game test the 12 cars stopped within one or two minutes and never moved again: they gather around the player's car standing still. At the level's default spawn, which is on the carriageway of the cantonal road just before the Magliaso roundabout, six cars queued in one line behind it, undamaged, and waited for it until the end of the test (10 minutes); at two give-way points cars ran into each other. The game moves only cars that are far from the player and out of sight (2 of 12), so the jam never clears. With the player's car standing on the open cantonal road it was the same: all 12 stopped within 133 m of it, none at a signal. To fix after v3.1: the spawn points beside the road, the give-way junctions, a test with the player driving. | [#83](https://github.com/wintrymichi/magliasinaNG/issues/83) |
+| v3.0.40: the AI traffic stalls. In the game test the 12 cars stopped within one or two minutes and never moved again: they gather around the player's car standing still. At the level's default spawn, which is on the carriageway of the cantonal road just before the Magliaso roundabout, six cars queued in one line behind it, undamaged, and waited for it until the end of the test (10 minutes); at two give-way points cars ran into each other. The game moves only cars that are far from the player and out of sight (2 of 12), so the jam never clears. With the player's car standing on the open cantonal road it was the same: all 12 stopped within 133 m of it, none at a signal. **Still broken in v3.1:** in its game test 13 cars queued behind the player's car parked on the Magliaso bridge and then ran into the traffic island at the roundabout exit; 8 of 12 cars were damaged within 2 minutes. To fix: the spawn points beside the road, the give-way junctions and islands, a test with the player driving. | [#83](https://github.com/wintrymichi/magliasinaNG/issues/83) |
 | v3.0.40: the time trials were not driven in the game test (the screenshots stand on their routes), and the sounds of the water were not listened to. BeamNG.drive 0.40 has no church bells, birds or crickets. The open street photos were analysed only around Pura, Miglieglia and Novaggio, and the façades measured from them are off (the detector misses about half of the windows). The slipway at Caslano goes on under the lake (fixed for v3.1). | [#84](https://github.com/wintrymichi/magliasinaNG/issues/84) |
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
+| Magliaso bridges over the Magliasina: at the south-east corner of the main deck, over the river bank, the deck meets the road with a step of up to 0.4 m over about 1.5 m, and at the west corners of the upstream bridge with 6-8 cm. Both are outside the lanes. | – |
+| v3.1: under the FLP at the Via Golf underpass (Caslano - Magliaso) the two footways beside the road lie about 2 m above the road, and the rail deck is 2.9 m over the road at its north edge. The footways are fixed in the code for the next build. The 8 marked crossings added at bus stops keep a 12 cm kerb. | – |
+| v3.1, seen in the game test: some walls of the Magliaso–Pura Cantonale (the hairpin, a cut above Magliaso) still have saw-tooth tops; the Via Golf underpass deck is a flat grey slab with no texture; the new traffic island posts miss two materials (`mp_island_reflector`, `mp_island_beacon`); grass tufts grow on the asphalt of the Ponte Tresa bridge at its Italian end; large angular wall blocks beside the Cantonale near Magliaso. The game also warns that its bindless material slots are full (8,192) and finds no licence plate template for the level. | [#85](https://github.com/wintrymichi/magliasinaNG/issues/85) |
 
 ## Repository layout
 

@@ -202,7 +202,7 @@ Heights are orthometric (LN02). The BeamNG terrain measures 12.3 × 12.3 km: 819
 | Far trees (v2.7) | `far_trees.py`, `far_trees.far_trees_step` | the trees the thinning leaves out, as three drawn models in three shades with an imposter detail level; a finishing step of the build |
 | Ground behind the walls (v2.8) | `walls.carve_terrain`, `walls.wall_fill_step` | the terrain keeps the ground behind the retaining walls, no backfill mesh; no game grass over walls lower than the grass |
 | Street lamps (v2.8) | `lamps.lamps_step`, `lamps_tour.py`, `run_lamps_screenshots.ps1` | a street lamp of the game's Italy model every 30 m along the roads of the villages (where the Federal Register has at least 6 buildings within 45 m), beside the carriageway; the lights of the street lamps; into a built zip; the places and views of its check, rendered with `render3d.py` or in the game (with the frame rate and the peak memory) |
-| Undergrowth (v2.8) | `understory.understory_step`, `groundcover.py` (`understory_object`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; low shrubs of the game's bush models on them around the camera (a GroundCover); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; a finishing step of the build |
+| Undergrowth (v2.8, v3.1) | `understory.understory_step`, `groundcover.py` (`understory_objects`), `understory_tour.py`, `run_understory_screenshots.ps1` | the forest floor layers a darker olive; v3.1: a wild wood around the camera (three GroundCovers of the game's models: ferns, shrubs and brambles, dead wood and stones), sparse in the shade, thick in the light of the wood's edge and the canopy gaps (light twins of the forest layers); verge twins of the forest layers along roads, paths, walls, buildings and the railway, without them; a finishing step of the build |
 | Delineators and pole lines (v2.8) | `poles.roadside_step`, `roadside_tour.py`, `run_roadside_screenshots.ps1` | delineator posts (pipeline meshes, no collision) along the 6 m roads outside the villages; lines of the game's wooden pole with a cable along the country roads past houses; a finishing step of the build |
 | Paved edges flush (v2.8) | `network_mesh.paved_edges_step` (with `network_mesh.unpaved_step`), `paved_tour.py`, `run_paved_screenshots.ps1` | the terrain raised to 4 cm under the outer edges of the asphalt, sett, cobble and pavement meshes (the meshes unchanged), not within 2 m of a guard rail, fence, wall, building, the railway or a bridge parapet; into a built zip, before the other v2.8 patches (it changes the terrain heights) |
 | Warning and parking signs (v2.8) | `signs_more.py`, `signs_more.signs_more_step`, `signs_ch.py` (1.03, 1.04, 1.13, 1.15, 1.16, 1.23, 1.24), `signs_more_tour.py`, `run_signs_more_screenshots.ps1` | the signs OpenStreetMap does not map, by the Swiss rules: curve warnings before the unexpected sharp curves of the main roads outside the villages, the warnings of the level crossings, the hazards OSM records on a road, the parking signs at the public car parks; put up as `signs_net.signs_step` does, into a built zip (after `network_mesh.paved_edges_step`: the poles stand on the ground) |
@@ -256,7 +256,7 @@ Also in v2.8, in the stages of the build:
   game's own collision mesh replaces the pipeline's meshes, whose collisions were broken. The two materials only the
   Italy level defines are copied into the level (`dati/italy_guardrail_materials.json`); the checks
   (`check_level.py`), the canopy, the lamps and the paved edges see the modules as solids (`guardrail_mesh.module_faces`).
-- **Street lamps lit at night** (`props.lamp_light`, `lamps.py`): every lamp's PointLight, those of the cantonal road
+- **Street lamps lit at night** (`props.lamp_light`, `lamps.py`): every lamp's light (since v3.1 a SpotLight aimed at the road as in Italy, before a PointLight of 14 m that lit only under the lamp), those of the cantonal road
   and of the villages, is off by day and lit by the game at night (`nightLight`); no shadows.
 - **Windows lit at night** (`bld_textures.emissive`, `facades.lit_window`, `buildings_mesh.NIGHT`): the glass of the
   openings has an emissive map (`t_bld_openings_e.color.png`, 1024 x 512); a share of the windows with glass that shows
@@ -467,6 +467,45 @@ Checked without the game: `verifica/v2.8/catenary/`; in the game: `run_catenary_
 
 `render3d.py` draws the game models it cannot load as posts of their known height (`POST_HEIGHT`). Checked without
 the game: `verifica/v2.8/roadside/`; in the game: `run_roadside_screenshots.ps1`.
+
+### Version 3.1: a wild wood
+
+Up to v3.0.40 the woods had one GroundCover of low bushes (at most 600 within 60 m, about one shrub per 30 m2 of
+forest floor) on a bare floor. A wood of the Malcantone left to itself is layered: the chestnut coppice (the old
+selve) up to about 900-1000 m, the beech wood above; under the crowns a field layer of bracken and ferns, a shrub layer
+of hazel, holly, young beech, oak and birch and brambles, dead wood (fallen trunks, heaps of branches, the stumps of
+the coppice) and gneiss stones; the undergrowth is thin in the shade and thick where light reaches the ground: the
+mantle along the edge of the wood (meadows, roads, yards) and the gaps of the canopy.
+
+`understory.understory_step` now also:
+- puts the forest floor vertices in the light on the twins `ForestFloorLight` and `ForestFloor2Light` (the same
+  textures): within `EDGE_M` = 10 m of the edge of the wood (any other layer, the verge twins included, openings
+  smaller than 400 m2 not counted) or with no tree trunk within `GAP_M` = 9 m (and one within 30 m). On v3.0.40: 9.7
+  million edge and 3.2 million gap vertices of 39.8 million forest floor vertices (12.9 million moved to the light
+  twins), 85 s for the whole step;
+- writes the undergrowth as GroundCovers (`groundcover.UNDERSTORY_COVERS`): three covers, each one GroundCover per
+  forest floor layer (shade rows on ForestFloor and ForestFloor2, light rows on their twins), at most 8 Types each
+  (Torque3D's `MAX_COVERTYPES`; the game's levels never have more), every type between the elevations of its belt
+  (`CHESTNUT_TOP` = 950 m):
+
+| GroundCover | Radius (fade from) | Models (vanilla, all with their imposters) | Plants per m2 at 500 m, shade / light | maxElements per layer, shade / light |
+|---|---|---|---|---|
+| `understory_ferns_<layer>` | 45 m (30) | ECA `lush_ferns_01_a/_b`, `_02_a/_b` | 0.10 / 0.32 (0.025 in the shade of the beech wood) | 380 / 790 |
+| `understory_<layer>` | 60 m (40) | hazel (`tree_beech_bush_d`), holly (Italy `holm_oak_bush`, below 950 m), young beech, oak, birch (`tree_beech_bush_a/b/c`, `tree_oak_bush_a`, `tree_aspen_bush_a/b`), brambles (Italy `scraggly_bush` at 0.35-0.48, `generibush_small`), `fluffy_bush` | 0.030 / 0.090 | 370 / 880 |
+| `understory_deadwood_<layer>` | 80 m (55) | shade: fallen beech (`tree_beech_dead_b`, 10 m, slopes up to 4 deg), trunks (`tree_beech_dead_a`, 6 deg), dead branches (`fir_dead_branches`), stumps (`tree_douglasfir_chopped`), stones (`eca_rock_small_2/_3` up to 1.5 m); light: small stones only | 0.008 / 0.003 | 140 / 50 |
+
+  Nothing has collision. In the light (from the verge twins, 1.5 m or more from a road mesh) no stumps, stones at
+  most scale 1, and no model reaches more than `LIGHT_REACH` = 1.3 m from its foot at its largest scale
+  (`groundcover.check_light_reach`, from the boxes in `dati/asset_bounds.json`; the step stops otherwise): the big
+  clumps, the big stones and the fallen trees only in the shade. A GroundCover stands its shapes upright, so the long
+  trunks only on nearly flat ground. The density is `groundcover.density`: maxElements over the square of the radius,
+  each a type drawn by probability among the cover's types and kept only within its elevation and slope, a clump of
+  plants; the step's report gives it with the most plants one GroundCover can hold (`max_plants`);
+- adds the material definitions the models need and the level lacks (`art/shapes/groundcover/understory.materials.json`
+  from `dati/understory_materials.json`, taken once from the game: the ferns' `forest_vegetation` is not defined in
+  East Coast USA, it is driver_training's).
+
+No collision, no shadows, nothing stored per plant (the GroundCovers place them around the camera as it moves).
 
 ### Version 2.8: undergrowth and a darker forest floor
 

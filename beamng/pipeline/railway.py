@@ -13,7 +13,8 @@ painted on the terrain (land cover 'binario'). Every line outside tunnels and bu
   parking deck of the Ponte Tresa station) it is left out, like the tunnels;
 - at level crossings (a road mesh under the track, within LEVEL_DZ m of its height) only the rails,
   their heads flush with the road surface;
-- on the bridges of swissTLM3D (KUNSTBAUTE Bruecke) a deck (bridges.deck_geometry) at the height of the
+- on the bridges of swissTLM3D (KUNSTBAUTE Bruecke, and v3.0.40 patch: over an underpass kept in the road network,
+  network.over_underpass) a deck (bridges.deck_geometry) at the height of the
   line, the track on it, with no pier on the roads under it.
 The catenary of the electrified lines is not built (its masts are not in the data).
 One mesh per 512 m tile in MissionGroup/railway, with collision.
@@ -21,10 +22,11 @@ One mesh per 512 m tile in MissionGroup/railway, with collision.
 import json, os
 import numpy as np
 import shapely
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import distance_transform_edt, gaussian_filter1d
 import bng
 from config import DATA, LEVEL_NAME, lv95_to_local
 import area
+import network
 import argparse, json, math, os, re, sys, time, zipfile
 from scipy.spatial import cKDTree
 import optimize_level
@@ -41,12 +43,18 @@ SLEEPER_STEP = 0.62
 SLEEPER_W, SLEEPER_H = 0.26, 0.16
 RAIL_W, RAIL_H = 0.07, 0.15
 BALLAST_EXTRA = 0.35          # m of ballast beyond the sleepers on each side
+CRIB = 0.04                   # v3.1: m of the sleepers over the ballast between them (the ballast up to their tops):
+                              # sleepers standing 16 cm out of a flat bed threw the rails' shadow in steps, sleeper
+                              # top, ballast, sleeper top, and the track showed as a brown zigzag (michi, 2026-10-22)
+CRIB_RAMP = 3.0               # m: the ballast down to the sleepers' feet towards a level crossing or a covered piece
+                              # (no 12 cm lip beside the road there)
 BALLAST_SLOPE = 0.9           # m out, down to the terrain
 SMOOTH = 6.0                  # m, smoothing of the bed along the line
 STEP = 1.0                    # m between the stations of a track
 XY_SMOOTH = 3.0               # m, smoothing of the line sideways (swissTLM3D vertices)
 LEVEL_DZ = 0.6                # m, a road mesh this close to the bed is a level crossing
 RAISE = 2.5                   # m, the line may stand this far over the terrain of the level (on an embankment)
+LIFT = 0.3                    # m, the bed sits at most this far over the middle of the ground across it (v3.1)
 COVER = 1.0                   # m, a line this far under the terrain across its whole bed runs under a deck: left out
 CARVE_W = 0.3                 # m of the terrain lowered beyond the ballast (carve_terrain)
 CARVE_MAX = 4.0               # m, deepest the terrain is lowered under a track
@@ -86,7 +94,8 @@ def tracks():
             e = np.flatnonzero(np.diff(np.r_[0, ins.astype(int), 0]))
             for a, b in zip(e[::2], e[1::2]):
                 if b - a >= 3:
-                    out.append((p, Qd[a:b]))
+                    # v3.0.40 patch: a bridge over a kept underpass (network.underpasses: Via Golf)
+                    out += [(pp, Qp) for pp, Qp in network.over_underpass(p, Qd[a:b]) if len(Qp) >= 3]
     return out
 
 
@@ -128,7 +137,10 @@ def carve_terrain(H, xs, ys, keep=None):
         low = minimum_filter1d(low, 13)                                                          # +- 3 m
         deck = maximum_filter1d((np.isfinite(low) & (low > COVER)).astype(np.uint8), 13) > 0   # +- 3 m
         target = z + np.maximum(d - half, 0.0) * CUT_SLOPE
-        cut = (h > target) & (h - target <= CARVE_MAX) & ~deck[j[inb]]
+        # v3.1: within one terrain step of the bed every vertex is lowered, however high: a lone vertex of the ground
+        # on top of a wall beside the line (raised with the pavement up there) stood 4.1 m over the cutting, more than
+        # CARVE_MAX, was kept, and build() lifted the track 2.5 m onto it (Caslano - Ponte Tresa, at -361, -2326)
+        cut = (h > target) & ((h - target <= CARVE_MAX) | (d <= half + sq)) & ~deck[j[inb]]
         if keep is not None:
             # v3.0: the ground of a road (a pavement) standing KEEP_DROP m or more over the cutting is lowered too,
             # under the edge of its mesh, whose skirt reaches down to the cutting (bed_fn): kept, it stood at the
@@ -285,8 +297,14 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
             # the bed: on top of the terrain across its whole width, smoothed along the line
             offs = np.linspace(-half + 0.2, half - 0.2, 7)
             Z = np.stack([terrain_top(P[:, 0] + N[:, 0] * o, P[:, 1] + N[:, 1] * o) for o in offs], 1)
-            top_t = Z.max(1)
+            # v3.1: the bed stands on the ground across it, not on a tooth or the foot of a wall or bank at its edge
+            # (no higher than LIFT over the middle of the samples): one terrain vertex 4 m high at the edge of the
+            # bed lifted the track 2.5 m in a few metres, up a ramp of sleepers and into the wall beside the line
+            top_t = np.minimum(Z.max(1), np.median(Z, 1) + LIFT)
             covered = gaussian_filter1d((P3[:, 2] < Z.min(1) - COVER).astype(float), 2.0, mode="nearest") > 0.2
+            # v3.1: the ground over a covered piece (the deck over the tracks of the Ponte Tresa station) is not
+            # smoothed into the bed beside it: the four tracks climbed a metre up to the face of the deck
+            top_t = np.where(covered, np.minimum(top_t, P3[:, 2]), top_t)
             bed = gaussian_filter1d(top_t + np.clip(P3[:, 2] - top_t, 0.0, RAISE), SMOOTH / STEP / 2, mode="nearest")
             bed = np.maximum(bed, top_t - 0.02)
             stats["covered_m"] += float(covered.sum() * STEP)
@@ -302,6 +320,10 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
             out = half + np.clip(EMBANK * (base - top_t), BALLAST_SLOPE, EMBANK_MAX)
             gL = terrain_top(P[:, 0] + N[:, 0] * out, P[:, 1] + N[:, 1] * out)
             gR = terrain_top(P[:, 0] - N[:, 0] * out, P[:, 1] - N[:, 1] * out)
+            blocked = crossing | covered
+            gap = np.full(len(P), np.inf) if not blocked.any() else \
+                distance_transform_edt(~blocked) * STEP
+            crib = (SLEEPER_H - CRIB) * np.clip(gap / CRIB_RAMP, 0.0, 1.0)
             q = []
             for i in range(len(P) - 1):
                 if crossing[i] or crossing[i + 1] or covered[i] or covered[i + 1]:
@@ -310,7 +332,7 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
                 Rc0, Rc1 = P[i] - N[i] * half, P[i + 1] - N[i + 1] * half
                 Lo0, Lo1 = P[i] + N[i] * out[i], P[i + 1] + N[i + 1] * out[i + 1]
                 Ro0, Ro1 = P[i] - N[i] * out[i], P[i + 1] - N[i + 1] * out[i + 1]
-                z0, z1 = base[i], base[i + 1]
+                z0, z1 = base[i] + crib[i], base[i + 1] + crib[i + 1]
                 l0, l1 = min(gL[i], z0) - 0.2, min(gL[i + 1], z1) - 0.2
                 r0, r1 = min(gR[i], z0) - 0.2, min(gR[i + 1], z1) - 0.2
                 q += [np.r_[Rc0, z0], np.r_[Lc0, z0], np.r_[Lc1, z1], np.r_[Rc0, z0], np.r_[Lc1, z1], np.r_[Rc1, z1]]

@@ -455,5 +455,245 @@
    2.601,
    10.0
   ]
+ ],
+ "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_01_a.dae": [
+  [
+   -1.2,
+   -0.6,
+   -0.1
+  ],
+  [
+   0.65,
+   1.1,
+   0.93
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_01_b.dae": [
+  [
+   -1.52,
+   -1.76,
+   -0.15
+  ],
+  [
+   1.25,
+   1.17,
+   1.34
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_02_a.dae": [
+  [
+   -0.73,
+   -0.57,
+   -0.1
+  ],
+  [
+   0.43,
+   0.75,
+   1.05
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_02_b.dae": [
+  [
+   -1.06,
+   -0.88,
+   -0.33
+  ],
+  [
+   1.5,
+   0.85,
+   1.13
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_a.dae": [
+  [
+   -0.32,
+   -0.63,
+   -0.15
+  ],
+  [
+   0.47,
+   0.37,
+   1.05
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_b.dae": [
+  [
+   -1.3,
+   -0.76,
+   -0.05
+  ],
+  [
+   0.7,
+   0.98,
+   3.19
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_d.dae": [
+  [
+   -3.42,
+   -2.43,
+   -0.89
+  ],
+  [
+   3.27,
+   2.91,
+   6.34
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_dead_a.dae": [
+  [
+   -0.06,
+   -1.54,
+   -1.01
+  ],
+  [
+   5.41,
+   0.92,
+   1.06
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_dead_b.dae": [
+  [
+   -7.45,
+   -2.46,
+   -1.17
+  ],
+  [
+   2.6,
+   1.81,
+   1.8
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_a.dae": [
+  [
+   -0.48,
+   -0.49,
+   -0.02
+  ],
+  [
+   0.39,
+   0.37,
+   1.25
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_c.dae": [
+  [
+   -1.09,
+   -1.61,
+   -0.13
+  ],
+  [
+   1.37,
+   1.19,
+   2.99
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/fir_dead_branches.dae": [
+  [
+   -2.06,
+   -3.06,
+   -0.64
+  ],
+  [
+   2.65,
+   1.63,
+   0.88
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/tree_douglasfir_chopped.dae": [
+  [
+   -0.33,
+   -0.38,
+   -0.45
+  ],
+  [
+   0.32,
+   0.37,
+   0.55
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_bush_a.dae": [
+  [
+   -0.7,
+   -0.53,
+   -0.26
+  ],
+  [
+   1.07,
+   0.86,
+   1.95
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_bush_b.dae": [
+  [
+   -0.95,
+   -0.82,
+   -0.23
+  ],
+  [
+   1.28,
+   1.06,
+   2.25
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/rocks/eca_rock_small_2.dae": [
+  [
+   -0.45,
+   -0.27,
+   -0.47
+  ],
+  [
+   0.35,
+   0.33,
+   0.39
+  ]
+ ],
+ "/levels/east_coast_usa/art/shapes/rocks/eca_rock_small_3.dae": [
+  [
+   -0.52,
+   -0.49,
+   -0.36
+  ],
+  [
+   0.49,
+   0.66,
+   0.27
+  ]
+ ],
+ "/levels/italy/art/shapes/trees/trees_italy/generibush_small.dae": [
+  [
+   -1.61,
+   -1.33,
+   -0.68
+  ],
+  [
+   1.77,
+   1.43,
+   1.41
+  ]
+ ],
+ "/levels/italy/art/shapes/trees/trees_italy/holm_oak_bush.dae": [
+  [
+   -3.07,
+   -3.09,
+   -0.67
+  ],
+  [
+   2.75,
+   3.92,
+   5.19
+  ]
+ ],
+ "/levels/italy/art/shapes/trees/trees_italy/scraggly_bush.dae": [
+  [
+   -2.39,
+   -2.68,
+   -0.93
+  ],
+  [
+   2.64,
+   2.48,
+   2.87
+  ]
  ]
 }

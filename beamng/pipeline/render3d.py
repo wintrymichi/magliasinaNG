@@ -38,19 +38,19 @@ HAZE = (350.0, 10000.0)                 # m, linear fog from, to
 SUN_AZ, SUN_EL = 200.0, 42.0            # degrees: from the south-south-west
 RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
-GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
+GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/sidewalks", "roads/roundabouts", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
           "landmarks",                    # v3.0.40: the cable car of Monte Lema, the summit (landmarks.py)
           # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
           "level_objects/Water", "level_objects/vegetation/vineyards", "level_objects/terrain_skin")
 # the translucent overlays of a road from the bottom up (road_wear.LAYER): drawn in this order, each a little
 # further towards the camera (polygon offset)
-OVERLAYS = ("variation", "cracks", "track", "edge")
+OVERLAYS = ("age_", "patch", "variation", "cracks", "track", "frayed", "edge", "joint", "seam", "drain")   # v3.1: road_age
 
 # material name (substring) -> sRGB colour; the first match wins
 MAT_COLORS = [
     ("mp_fill_", (-1.0, -1.0, -1.0)),       # the ground restored behind the walls: the orthophoto, as the terrain
     ("asphalt_fresh", (0.23, 0.23, 0.24)), ("mp_road_asphalt", (0.36, 0.36, 0.37)),
-    ("hard_asphalt", (0.40, 0.40, 0.40)), ("sidewalk", (0.56, 0.56, 0.55)), ("island", (0.62, 0.62, 0.58)),
+    ("hard_asphalt", (0.40, 0.40, 0.40)), ("sidewalk_kerb", (0.72, 0.71, 0.68)), ("rb_grass", (0.36, 0.48, 0.24)), ("sidewalk", (0.56, 0.56, 0.55)), ("island", (0.62, 0.62, 0.58)),
     ("road_wall", (0.56, 0.51, 0.45)), ("gravel", (0.64, 0.59, 0.49)), ("_dirt", (0.55, 0.45, 0.33)),
     ("_sett", (0.55, 0.55, 0.53)), ("_cobble", (0.56, 0.54, 0.50)),
     ("path_paved", (0.46, 0.46, 0.45)), ("parapet", (0.74, 0.73, 0.70)), ("paint_yellow", (0.93, 0.78, 0.2)),
@@ -758,7 +758,9 @@ class Renderer:
     def _soups(self, x0, y0, x1, y1, origin):
         L = self.level
         out = {}
-        far_x0, far_y0, far_x1, far_y1 = x0 - 300, y0 - 300, x1 + 300, y1 + 300
+        # a merged shape's position is a corner of its 384 m chunk: a margin under that dropped whole chunks of
+        # buildings from a small view (Agno, 2026-10-23)
+        far_x0, far_y0, far_x1, far_y1 = x0 - 560, y0 - 560, x1 + 560, y1 + 560
 
         def place(tri, pos, M):
             return (tri if M is None else tri @ M.astype(np.float32)) + pos

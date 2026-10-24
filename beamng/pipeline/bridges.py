@@ -16,12 +16,22 @@ a line each) with less than TWIN_GAP m between their decks are one bridge, as th
 closed by a deck of the same slab under a median MEDIAN_KERB m high, and no parapet stands along the side where the
 other deck is. Up to the v3 test build they were two bridges with the river showing between them (the Via Cantonale
 over the Magliasina at the Magliaso roundabout).
+v3.1: survey decks. A deck drawn as a strip along the swissTLM3D line is only as wide as the line's carriageway: the
+Via Cantonale over the Magliasina at the Magliaso roundabout is one deck about 25 m wide (the main road, the curve
+from the west that joins it on the bridge, the sidewalk), and the strip left the river showing through it, parapets
+in the middle of the road and the rest of the bridge at the height of the river bed. A bridge marked "deck": "survey"
+in ponti.json is built on the outline of the cadastral survey's bridge polygons (SOSF ponte_passerella, drawn from
+the aerial photos) that its line runs over; the lines over the same polygons are one deck. Its top is the plane of
+the swissSURFACE3D surface model (the LiDAR returns of the deck) over the outline, eased at the edges where a road
+joins it to the height of the ground there (swissALTI3D), with the side, the slab and the parapets along the edges
+over a drop; the roads of the network and of the corridor stay out of the outline.
 beamng/dati/ponti.json lists every bridge (swissTLM3D id, place, length, height above the ground,
 the check flags) and holds the manual corrections, read back at every build:
   "z0" / "z1": deck height at the first / last end (m), "profile": "straight" (a straight deck
   between the ends) or "tlm" (the 3D line of swissTLM3D, met to the network at the ends: a footbridge
   over a road with its stairs), "type": "open" | "culvert", "skip": true (no deck: the road follows
-  the ground). bridge_report.py draws the profile and a view of every bridge for the review.
+  the ground), "deck": "survey" (v3.1: the deck on the survey's outline, above). bridge_report.py draws the
+  profile and a view of every bridge for the review.
 No pier stands on a road or path of the network (the one under the bridge).
 """
 import json, os
@@ -46,6 +56,18 @@ PARAPET_RUN = 2.0      # m the parapet goes on beyond it
 TWIN_GAP = 10.0        # m between two road decks side by side that are one bridge
 TWIN_ANGLE = 25.0      # degrees between their directions, at most
 MEDIAN_KERB = 0.12     # m of the median between them over the decks
+SURVEY_ON = 3.0        # m of a line over a survey bridge polygon for the polygon to be its deck
+SURVEY_IN = 1.0        # m inside the outline: the surface model cells of the deck plane
+SURVEY_RMS = 0.35      # m: a plane further from the cells than this is not a deck (the lines' heights then)
+SURVEY_OFF = 1.5       # m: nor a plane further than this from the heights of the lines on it
+SURVEY_JOIN = 0.5      # m: an edge with the ground within this of the deck 1-3 m out is a road joining the deck
+SURVEY_FADE = 6.0      # m: how far into the deck the joins pull its height
+SURVEY_CELL = 1.0      # m, the triangles of the top
+SURVEY_HULL = 1.12     # the hull of a deck's outline if it is at most this much larger
+SURVEY_ROAD = 0.5      # m: a road surface this close to the deck just outside its edge is a road joining the deck (one
+                       # further off is a path under or beside it: the edge there is no join, also with the ground)
+SURVEY_ROAD_OUT = (0.25, 0.5, 1.0)   # m outside the edge where the joining road surface is read (the first found)
+_survey = {}
 
 
 def load_overrides():
@@ -57,6 +79,219 @@ def load_overrides():
 def half_width(st, s):
     a, n = s["first"], s["n"]
     return 0.5 * float(np.median(st["width"][a:a + n])) + EXTRA_W
+
+
+def survey_decks(segs=None, x=None, y=None, w=None):
+    """v3.1: the decks on the survey's outline, [(footprint, [line ids])], of the bridges marked "deck": "survey" in
+    ponti.json: the survey bridge polygons each line runs over for SURVEY_ON m or more and the polygons beside them,
+    the lines whose polygons touch one deck; with the strip of each line where it goes on past the polygons (onto
+    the abutment, where the terrain model slopes down under the bridge's end). Computed once per build (the
+    network and the corridor cut them out before the bridges are built)."""
+    if "decks" in _survey:
+        return _survey["decks"]
+    if segs is None:
+        segs, st, _ = network.load()
+        x, y, w = st["x"], st["y"], st["width"]
+    over = load_overrides()
+    want = [s for s in segs if s["bridge"] and over.get(s["tlm"], {}).get("deck") == "survey"]
+    groups = []
+    if want:
+        import pickle
+        av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
+        polys = [g for g, _ in av["SOSF"].get("ponte_passerella", []) if g.area > 1.0]
+        tree = shapely.STRtree(polys)
+        for s in want:
+            a, n = s["first"], s["n"]
+            L = shapely.LineString(np.column_stack([x[a:a + n], y[a:a + n]]))
+            took = {int(i) for i in tree.query(L) if polys[i].intersection(L).length >= SURVEY_ON}
+            while took:                                # and the polygons beside them (a bridge drawn in parts)
+                more = {int(i) for i in tree.query(shapely.union_all([polys[k] for k in took]).buffer(0.2),
+                                                   predicate="intersects")} - took
+                if not more:
+                    break
+                took |= more
+            took = [polys[i] for i in sorted(took)]
+            if not took:
+                print("survey deck: no survey bridge under %s, a strip deck" % s["tlm"], flush=True)
+                continue
+            strip = L.buffer(half_width({"width": w}, s), cap_style="flat")
+            groups.append([shapely.union_all(took + [strip]), {s["id"]}])
+        merged = True
+        while merged:                                  # the lines over one bridge: one deck
+            merged = False
+            for i in range(len(groups)):
+                for j in range(i + 1, len(groups)):
+                    if groups[i][0].buffer(0.2).intersects(groups[j][0]):
+                        groups[i] = [shapely.union_all([groups[i][0], groups[j][0]]), groups[i][1] | groups[j][1]]
+                        del groups[j]
+                        merged = True
+                        break
+                if merged:
+                    break
+    from shapely.geometry.polygon import orient
+    out = []
+    for g, ids in groups:
+        # the survey polygons of one bridge side by side, the strips past them: no sliver or notch between them (the
+        # hull where it adds little: the corners between a strip and the polygon's edge are road)
+        g = g.buffer(0.05, join_style="mitre").buffer(-0.05, join_style="mitre")
+        g = max(shapely.get_parts(g), key=lambda p: p.area)
+        if g.convex_hull.area <= SURVEY_HULL * g.area:
+            g = g.convex_hull
+        out.append((orient(g), sorted(ids)))
+    _survey["decks"] = out
+    return out
+
+
+def survey_height(foot, ground, P_line, z_line, dsm=None, surface=None):
+    """Height (x, y) -> z of the top of a survey deck: the plane of the surface model (swissSURFACE3D, the deck's
+    LiDAR returns) over the outline SURVEY_IN m inside it, fitted without the cells off it (vehicles, a lamp post);
+    the heights of the lines on it where there is no such plane. Where a road joins the deck the height goes to the
+    road's over SURVEY_FADE m: v3.1, the road surface just outside the edge (surface(x, y, z near): the meshes of the
+    corridor and of the network, NaN where there is none) within SURVEY_ROAD m of the deck; elsewhere the ground 1-3 m
+    out within SURVEY_JOIN m of it. Returns (fn, info)."""
+    from scipy.spatial import cKDTree
+    info = {}
+    base = None
+    if dsm is None and any(os.path.exists(os.path.join(WORK, f)) for f in ("dsm05.npz", "dsm05.npy")):
+        from geo import Grid                           # a big grid is stored as dsm05.npy + .json (Grid.save)
+        dsm = Grid.load(os.path.join(WORK, "dsm05.npz"))
+    if dsm is not None:
+        x0, y0, x1, y1 = foot.bounds
+        win, _, _ = dsm.window(x0, y0, x1, y1, pad=2)
+        h, w = win.a.shape
+        cx = win.x_min + (np.arange(w) + 0.5) * win.res
+        cy = win.y_max - (np.arange(h) + 0.5) * win.res
+        X, Y = np.meshgrid(cx, cy)
+        inner = foot.buffer(-SURVEY_IN)
+        m = shapely.contains_xy(inner, X, Y) & np.isfinite(win.a)
+        if m.sum() >= 12:
+            c = np.array(foot.centroid.coords[0])
+            A = np.column_stack([X[m] - c[0], Y[m] - c[1], np.ones(m.sum())])
+            Z = np.asarray(win.a, np.float64)[m]
+            keep = np.ones(len(Z), bool)
+            for _ in range(4):
+                co = np.linalg.lstsq(A[keep], Z[keep], rcond=None)[0]
+                r = Z - A @ co
+                mad = 1.4826 * np.median(np.abs(r[keep] - np.median(r[keep])))
+                keep = np.abs(r) <= max(3.0 * mad, 0.15)
+            rms = float(np.sqrt(np.mean(r[keep] ** 2)))
+            zl = float(np.median(z_line - (co[2] + (P_line - c) @ co[:2])))
+            info.update(plane_rms=round(rms, 3), plane_vs_lines=round(zl, 2), cells=int(keep.sum()),
+                        cross_grade=round(float(np.hypot(*co[:2])), 3))
+            if rms <= SURVEY_RMS and abs(zl) <= SURVEY_OFF:
+                base = lambda x, y, co=co, c=c: co[2] + (np.asarray(x) - c[0]) * co[0] + (np.asarray(y) - c[1]) * co[1]
+    if base is None:                                   # the lines' heights, as the deck between twin decks
+        kt = cKDTree(P_line)
+
+        def base(x, y):
+            q = np.column_stack([np.ravel(x), np.ravel(y)])
+            d, k = kt.query(q, k=min(4, len(P_line)))
+            d, k = d.reshape(len(q), -1), k.reshape(len(q), -1)
+            wt = 1.0 / np.maximum(d, 0.1)
+            return ((z_line[k] * wt).sum(1) / wt.sum(1)).reshape(np.shape(x))
+        info["plane"] = "none: the heights of the lines"
+    # the joins along the outline
+    ring = foot.exterior
+    s = np.arange(0.0, ring.length, 1.0)
+    E = np.array([ring.interpolate(v).coords[0] for v in s])
+    E2 = np.array([ring.interpolate(v + 0.05).coords[0] for v in s])
+    T = E2 - E
+    T /= np.maximum(np.linalg.norm(T, axis=1)[:, None], 1e-9)
+    Nout = np.column_stack([T[:, 1], -T[:, 0]])          # exterior counter-clockwise: right of the way is out
+    # the ground 1 to 3 m out, the highest (the terrain model slopes down for a metre or two at a bridge's end)
+    g = np.max([np.asarray(ground((E + Nout * k)[:, 0], (E + Nout * k)[:, 1]), np.float64) for k in (1.0, 2.0, 3.0)], 0)
+    zb = base(E[:, 0], E[:, 1])
+    d = g - zb
+    join = np.abs(d) <= SURVEY_JOIN
+    # v3.1: where a road surface (the corridor's, the network's) meets the edge, the deck goes to its height there:
+    # pulled to the bare ground the deck stood up to 0.45 m over or under the road that joins it (a step at the
+    # Magliaso bridge over the Magliasina, at its corners)
+    on_road = np.zeros(len(E), bool)
+    if surface is not None:
+        zr = np.full(len(E), np.nan)
+        other = np.zeros(len(E), bool)
+        for k in SURVEY_ROAD_OUT:
+            Q = E + Nout * k
+            h = np.asarray(surface(Q[:, 0], Q[:, 1], zb), np.float64)
+            new = ~np.isfinite(zr) & np.isfinite(h) & (np.abs(h - zb) <= SURVEY_ROAD)
+            zr[new] = h[new]
+            other |= np.isfinite(h)
+        on_road = np.isfinite(zr)
+        d = np.where(on_road, zr - zb, d)
+        join = on_road | (join & ~other)                # a road surface off the deck's height: a drop, no join
+        info["road_joins_m"] = int(on_road.sum())
+    info["joins_m"] = int(join.sum())
+    info["join_step_max"] = round(float(np.abs(d[join]).max()), 2) if join.any() else 0.0
+    Ej, dj = E[join], d[join]
+    tj = cKDTree(Ej) if len(Ej) else None
+
+    def fn(x, y):
+        z = base(x, y)
+        if tj is None:
+            return z
+        q = np.column_stack([np.ravel(x), np.ravel(y)])
+        dd, k = tj.query(q, k=min(8, len(Ej)))
+        dd, k = dd.reshape(len(q), -1), k.reshape(len(q), -1)
+        # v3.1: the edge itself on the joins' heights (a floor of 0.5 m left it at a mean of the joins 1-2 m around)
+        wt = 1.0 / np.maximum(dd, 0.05) ** 2
+        corr = (dj[k] * wt).sum(1) / (wt.sum(1) + 1.0 / SURVEY_FADE ** 2)
+        return z + corr.reshape(np.shape(z))
+    fn.edge = (E, Nout, join)
+    return fn, info
+
+
+def survey_geometry(foot, zfn, ground, kind):
+    """Triangles (k, 3, 3) of a survey deck: (top, sides and underside, parapets), facing outwards. The parapets
+    stand on the edges over a drop of PARAPET_DROP m (not where a road joins), PARAPET_W m wide inside the edge."""
+    import road_mesh
+    V, T = road_mesh.mesh_polygon(foot, zfn, cell=SURVEY_CELL)
+    top = V[T]
+    n = np.cross(top[:, 1] - top[:, 0], top[:, 2] - top[:, 0])
+    top[n[:, 2] < 0] = top[n[:, 2] < 0][:, ::-1]
+    under = top[:, ::-1].copy()
+    under[:, :, 2] -= SLAB
+    sides, par = [under], []
+    up = np.array([0, 0, 1.0])
+    ph = PARAPET if kind == "road" else RAIL
+    rise = np.array([0, 0, ph])
+    for ring in [foot.exterior] + list(foot.interiors):
+        # points every <= 1 m along the ring, the outward normal of every piece (orient(): the outline runs
+        # counter-clockwise, the holes clockwise, so the outside of the deck is on the right of both)
+        P = np.array(shapely.segmentize(shapely.LineString(np.array(ring.coords)), 1.0).coords)
+        z = zfn(P[:, 0], P[:, 1])
+        D = np.diff(P, axis=0)
+        Lg = np.maximum(np.linalg.norm(D, axis=1), 1e-9)
+        Tn = D / Lg[:, None]
+        Nn = np.column_stack([Tn[:, 1], -Tn[:, 0]])
+        for i in range(len(D)):
+            sides.append(_quad(np.r_[P[i], z[i]], np.r_[P[i + 1], z[i + 1]], np.r_[P[i + 1], z[i + 1] - SLAB],
+                               np.r_[P[i], z[i] - SLAB], np.r_[Nn[i], 0.0]))
+        M = 0.5 * (P[:-1] + P[1:])
+        g = np.max([np.asarray(ground((M + Nn * k)[:, 0], (M + Nn * k)[:, 1]), np.float64) for k in (1.0, 2.0, 3.0)], 0)
+        drop = (0.5 * (z[:-1] + z[1:]) - g) > PARAPET_DROP
+        drop &= Lg > 1e-6
+        # runs of pieces over a drop (a ring is closed: a run may go on past its start)
+        idx = np.flatnonzero(np.diff(np.r_[0, drop.astype(int), 0]))
+        runs = list(zip(idx[0::2], idx[1::2]))
+        if len(runs) > 1 and runs[0][0] == 0 and runs[-1][1] == len(drop):
+            runs = [(runs[-1][0], runs[0][1] + len(drop))] + runs[1:-1]
+        for a, b in runs:
+            seq = [i % len(drop) for i in range(a, b)]
+            if sum(Lg[i] for i in seq) < 1.5:
+                continue
+            for i in seq:
+                o0, o1 = np.r_[P[i], z[i]], np.r_[P[i + 1], z[i + 1]]
+                i0 = np.r_[P[i] - Nn[i] * PARAPET_W, z[i]]
+                i1 = np.r_[P[i + 1] - Nn[i] * PARAPET_W, z[i + 1]]
+                par.append(_quad(o0, o1, o1 + rise, o0 + rise, np.r_[Nn[i], 0.0]))
+                par.append(_quad(i0, i1, i1 + rise, i0 + rise, np.r_[-Nn[i], 0.0]))
+                par.append(_quad(o0 + rise, o1 + rise, i1 + rise, i0 + rise, up))
+            for i, k, s_ in ((seq[0], seq[0], -1.0), (seq[-1], seq[-1] + 1, 1.0)):
+                o = np.r_[P[k], z[k]]
+                ii = np.r_[P[k] - Nn[i] * PARAPET_W, z[k]]
+                par.append(_quad(o, ii, ii + rise, o + rise, np.r_[Tn[i] * s_, 0.0]))
+    cat = lambda L_: np.concatenate(L_) if L_ else np.zeros((0, 3, 3))
+    return top, cat(sides), cat(par)
 
 
 def _quad(a, b, c, d, out):
@@ -189,10 +424,11 @@ def ends_to_ground(P, N, z, s, degree, ground, max_ext=60.0):
     return P, N, z, notes
 
 
-def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
+def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None, surface=None):
     """Deck meshes of every bridge (on_mesh(x, y, material, uv tile, soup, kind)), the ground
     under them lowered where it rises above the slab (on_carve_min(rows, cols, z)), the record of
-    every bridge in ponti.json. `exclude`: polygon of the cantonale corridor (its bridges stay)."""
+    every bridge in ponti.json. `exclude`: polygon of the cantonale corridor (its bridges stay).
+    `surface(x, y, z)`: the height of the road meshes already built nearest to z (NaN: none), v3.1."""
     import shapely
     from rasterio import features
     from rasterio.transform import Affine
@@ -205,13 +441,28 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
     for q in segs:
         for nd in q["nodes"]:
             degree[nd] = degree.get(nd, 0) + 1
+    sdecks = survey_decks(segs, st_x, st_y, net.w)   # v3.1: decks on the survey's outline
+    on_survey = {i: k for k, (_, ids) in enumerate(sdecks) for i in ids}
+
+    def carve(foot, zf):
+        """The ground under a deck no higher than the underside of its slab (zf: its top)."""
+        x0, y0, x1, y1 = foot.bounds
+        c0, c1 = max(int(np.searchsorted(xs, x0)) - 1, 0), min(int(np.searchsorted(xs, x1)) + 1, len(xs))
+        r0, r1 = max(int(np.searchsorted(ys, y0)) - 1, 0), min(int(np.searchsorted(ys, y1)) + 1, len(ys))
+        if c1 > c0 and r1 > r0:
+            tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)
+            m = features.rasterize([(foot, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0, dtype=np.uint8,
+                                   all_touched=True).astype(bool)
+            rr, cc = np.nonzero(m)
+            if len(rr):
+                on_carve_min(r0 + rr, c0 + cc, zf(xs[c0 + cc], ys[r0 + rr]) - SLAB - 0.15)
     todo = []
     for s in segs:
         if not s["bridge"]:
             continue
         a, n = s["first"], s["n"]
         P = np.column_stack([st_x[a:a + n], st_y[a:a + n]])
-        if exclude is not None and shapely.LineString(P).within(exclude.buffer(1.0)):
+        if exclude is not None and s["id"] not in on_survey and shapely.LineString(P).within(exclude.buffer(1.0)):
             continue
         N = np.column_stack([net.nx[a:a + n], net.ny[a:a + n]])
         z = net.z[a:a + n].copy()
@@ -228,8 +479,9 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         if not ("z0" in o or "z1" in o or o.get("profile")):
             P, N, z, notes = ends_to_ground(P, N, z, s, degree, ground)
         todo.append(dict(s=s, a=a, n=n, P=P, N=N, z=z, o=o, hw=hw, z_line=z_line, notes=notes,
-                         foot=shapely.LineString(P).buffer(hw, cap_style="flat")))
-    twins = twin_pairs(todo)
+                         foot=shapely.LineString(P).buffer(hw, cap_style="flat"), survey=on_survey.get(s["id"])))
+    plain = [i for i, b in enumerate(todo) if b["survey"] is None]      # the survey decks have no twins
+    twins = [(plain[i], plain[j]) for i, j in twin_pairs([todo[i] for i in plain])]
     for b in todo:
         s, a, n, P, N, z, o, hw, z_line, notes = (b[k] for k in ("s", "a", "n", "P", "N", "z", "o", "hw", "z_line", "notes"))
         g = ground(P[:, 0], P[:, 1])
@@ -240,37 +492,31 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
             under = net.ptree.query(shapely.LineString(P).buffer(hw + 3.0), predicate="intersects")
             if len(under):
                 avoid = shapely.union_all([net.polys[i]["geom"] for i in under])
-        top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ, avoid, b.get("no_parapet"))
         mat_top = {("road", "hard"): "mp_road_asphalt", ("road", "natural"): "mp_road_gravel",
                    ("path", "hard"): "mp_path_paved", ("path", "natural"): "mp_path_dirt"}[(s["kind"], s["surface"])]
+        b["mat_top"] = mat_top
         cxy = P.mean(0)
         if twins:
             notes = notes + [f"twin of {t}" for t in b.get("twin_of", [])]
-        on_mesh(cxy[0], cxy[1], mat_top, 6.0 if mat_top in ("mp_road_asphalt", "mp_path_paved", "mp_sidewalk", "mp_hard_asphalt") else 1.25, top, "top")   # v3.0: the asphalt over 6 m
-        on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
-        if len(par):
-            on_mesh(cxy[0], cxy[1], "mp_bridge_parapet", 1.6, par, "side")
-        if len(piers):
-            on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, piers, "side")
-        net.deck_tops.append(top)
-        # ground under the deck no higher than the underside of the slab
-        foot = shapely.LineString(P).buffer(hw, cap_style="flat")
-        if hasattr(net, "deck_feet"):
-            net.deck_feet.append((s["kind"], foot))
-        x0, y0, x1, y1 = foot.bounds
-        c0, c1 = int(np.searchsorted(xs, x0)) - 1, int(np.searchsorted(xs, x1)) + 1
-        r0, r1 = int(np.searchsorted(ys, y0)) - 1, int(np.searchsorted(ys, y1)) + 1
-        c0, r0 = max(c0, 0), max(r0, 0)
-        c1, r1 = min(c1, len(xs)), min(r1, len(ys))
-        if c1 > c0 and r1 > r0:
-            tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)
-            m = features.rasterize([(foot, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0, dtype=np.uint8,
-                                   all_touched=True).astype(bool)
-            rr, cc = np.nonzero(m)
-            if len(rr):
-                from scipy.spatial import cKDTree
-                j = cKDTree(P).query(np.column_stack([xs[c0 + cc], ys[r0 + rr]]))[1]
-                on_carve_min(r0 + rr, c0 + cc, z[j] - SLAB - 0.15)
+        if b["survey"] is not None:                    # built below, one deck for all its lines
+            notes = notes + ["survey deck"]
+            top = None
+        else:
+            top, sides, par, piers = deck_geometry(P, N, z, hw, ground, s["kind"], typ, avoid, b.get("no_parapet"))
+        if top is not None:
+            on_mesh(cxy[0], cxy[1], mat_top, 6.0 if mat_top in ("mp_road_asphalt", "mp_path_paved", "mp_sidewalk", "mp_hard_asphalt") else 1.25, top, "top")   # v3.0: the asphalt over 6 m
+            on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
+            if len(par):
+                on_mesh(cxy[0], cxy[1], "mp_bridge_parapet", 1.6, par, "side")
+            if len(piers):
+                on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, piers, "side")
+            net.deck_tops.append(top)
+            foot = shapely.LineString(P).buffer(hw, cap_style="flat")
+            if hasattr(net, "deck_feet"):
+                net.deck_feet.append((s["kind"], foot))
+            from scipy.spatial import cKDTree
+            kt = cKDTree(P)
+            carve(foot, lambda x, y, kt=kt, z=z: z[kt.query(np.column_stack([x, y]))[1]])
         # checks for the review: deck against the 3D line of swissTLM3D (on a bridge its height is the
         # deck's), steepest grade, grade change where the deck meets the approaches
         ztlm = net.z_tlm[a:a + n] if getattr(net, "z_tlm", None) is not None else np.full(n, np.nan)
@@ -295,7 +541,7 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
                         "length_m": round(s["length"], 1), "width_m": round(2 * hw, 1),
                         "z_ends": [round(float(z[0]), 2), round(float(z[-1]), 2)],
                         "max_height_m": round(float(clear.max() + SLAB), 1), "auto_type": typ,
-                        "override": {k: v for k, v in o.items() if k in ("z0", "z1", "profile", "type", "skip")}})
+                        "override": {k: v for k, v in o.items() if k in ("z0", "z1", "profile", "type", "skip", "deck", "width")}})
     for i, j in twins:                                 # v3.0: the deck between two twin decks
         med = median_geometry(todo[i], todo[j])
         if med is None:
@@ -307,16 +553,31 @@ def build(net, ground, on_mesh, on_carve_min, xs, ys, exclude=None):
         net.deck_tops.append(top)
         if hasattr(net, "deck_feet"):
             net.deck_feet.append(("road", foot))
-        x0, y0, x1, y1 = foot.bounds
-        c0, c1 = max(int(np.searchsorted(xs, x0)) - 1, 0), min(int(np.searchsorted(xs, x1)) + 1, len(xs))
-        r0, r1 = max(int(np.searchsorted(ys, y0)) - 1, 0), min(int(np.searchsorted(ys, y1)) + 1, len(ys))
-        if c1 > c0 and r1 > r0:
-            tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)
-            m = features.rasterize([(foot, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0, dtype=np.uint8,
-                                   all_touched=True).astype(bool)
-            rr, cc = np.nonzero(m)
-            if len(rr):
-                on_carve_min(r0 + rr, c0 + cc, zf(xs[c0 + cc], ys[r0 + rr]) - SLAB - 0.15)
+        carve(foot, zf)
+    for k, (foot, ids) in enumerate(sdecks):           # v3.1: the decks on the survey's outline
+        mine = [b for b in todo if b["survey"] == k]
+        if not mine:
+            continue
+        P_l = np.vstack([b["P"] for b in mine])
+        z_l = np.concatenate([b["z"] for b in mine])
+        zf, info = survey_height(foot, ground, P_l, z_l, surface=surface)
+        kind = "road" if any(b["s"]["kind"] == "road" for b in mine) else "path"
+        top, sides, par = survey_geometry(foot, zf, ground, kind)
+        mat_top = next((b["mat_top"] for b in mine if b["s"]["kind"] == kind), mine[0]["mat_top"])
+        cxy = np.array(foot.centroid.coords[0])
+        on_mesh(cxy[0], cxy[1], mat_top, 6.0 if mat_top in ("mp_road_asphalt", "mp_path_paved") else 1.25, top, "top")
+        on_mesh(cxy[0], cxy[1], "mp_road_wall", 1.6, sides, "side")
+        if len(par):
+            on_mesh(cxy[0], cxy[1], "mp_bridge_parapet", 1.6, par, "side")
+        net.deck_tops.append(top)
+        if hasattr(net, "deck_feet"):
+            net.deck_feet.append((kind, foot))
+        carve(foot, zf)
+        info.update(area_m2=round(foot.area, 1), parapet_tris=len(par))
+        print("survey deck", [b["s"]["tlm"] for b in mine], info, flush=True)
+        for r in records:
+            if r["seg"] in ids:
+                r["survey"] = info
     return records
 
 
@@ -420,10 +681,11 @@ def save_records(records, reviewed=None):
         o = old.get(r["tlm"], {})
         e = dict(r)
         e.pop("override", None)
-        for k in ("z0", "z1", "profile", "type", "skip", "note", "checked"):
+        for k in ("z0", "z1", "profile", "type", "skip", "deck", "width", "note", "checked"):
             if k in o:
                 e[k] = o[k]
         out.append(e)
     json.dump({"note": "Bridges of the v2.0 network (bridges.py). Manual corrections: z0/z1 (deck height at "
-                       "the ends, m), profile 'straight', type 'open'|'culvert', skip true; note, checked.",
+                       "the ends, m), profile 'straight', type 'open'|'culvert', skip true, deck 'survey', width (m, the "
+                       "carriageway, v3.1); note, checked.",
                "ponti": out}, open(PONTI, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
