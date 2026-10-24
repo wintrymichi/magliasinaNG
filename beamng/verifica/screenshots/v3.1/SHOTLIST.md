@@ -1,6 +1,6 @@
 # v3.1 in-game screenshots
 
-The README shows a grey placeholder for each file below. Take the shot in the game and save it under the same name (JPEG, 2560 x 1440 or 1600 x 900): the README needs no change. Rules: wait until every texture has loaded; no non-drivable ground in the foreground; driver's seat shots with an ETK 800 in the middle of the right-hand lane (not the rally car).
+All shots below were taken in the game test of 24 October 2026 (BeamNG.drive 0.40.3, 1600 x 900), except `race-start-facing.jpg`: the time trials were skipped, so it is not in the README. The hairpin wall still has a saw-tooth top in the game (caption changed in the README). Rules: wait until every texture has loaded; no non-drivable ground in the foreground; driver's seat shots with an ETK 800 in the middle of the right-hand lane (not the rally car).
 
 | File | Caption | Where | Camera | Time |
 |---|---|---|---|---|
@@ -11,7 +11,7 @@ The README shows a grey placeholder for each file below. Take the shot in the ga
 | `driver-forest-undergrowth.jpg` | A road through the woods, ferns and deadwood under the trees | a wood road (render 12 place), wood edge in view | driver's seat | day |
 | `driver-night-lamps.jpg` | The road lit between the lamps at night | Magliaso, Via Cantonale with street lamps, about 22:00 | driver's seat | night |
 | `driver-hairpin-wall.jpg` | The Magliaso-Pura hairpin wall, a straight top | Magliaso-Pura hairpin (render 14) | driver's seat | day |
-| `race-start-facing.jpg` | Time trial start: the car faces up the route | Magliaso-Pura time trial, start screen | chase | day |
+| `race-start-facing.jpg` (not taken) | Time trial start: the car faces up the route | Magliaso-Pura time trial, start screen | chase | day |
 | `bridge-magliaso-above.jpg` | The Magliaso bridge and its stone river banks from above | above the Magliaso roundabout, looking south-east | free camera, 25 m up | day |
 | `bridges-wide.jpg` | A bridge as wide as the road | one of the widened bridges (render 02 place) | chase | day |
 | `underpass-via-golf-side.jpg` | The Via Golf underpass and the FLP above it | beside Via Golf, the train line crossing over | free camera, 4 m up | day |

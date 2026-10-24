@@ -108,6 +108,22 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   from the thread, not from michi (2026-10-22): ask michi to write the download in his own words in the thread first.
   DESKTOP-OUPOLOA has no gh, so a DRAFT release asset cannot reach it: put test zips on the public pre-release nightly.
 
+- v3.1 in-game test (2026-10-24, 0.40.3, DESKTOP-OUPOLOA): the driver camera in 0.40 is not called `driver`:
+  `core_camera.getDriverCameraNameById(vehId)` returns `occupant.FL`; set head yaw/pitch through
+  `core_camera.getCameraDataById(id)['occupant.FL'].relativeYaw/relativePitch` about 2 s after teleporting (a teleport
+  resets it). Asking for "driver" is why every v3.0.40 cockpit shot came out as a chase view.
+- BeamNG vehicles face -Y: pass `quatFromDir(-dir, up)` to `setPositionRotation`, or the car stands backwards.
+- An unfocused game window is capped at 30 FPS (`fpsLimitBackgroundEnabled`, `fpsLimitBackground` = 30), and on the
+  virtual display it is never focused: turn it off with `settings.setValue` before measuring FPS and restore
+  settings.json afterwards, or every FPS number is 30.
+- `startFreeroamByName(level, spawn, nil, false)` loads the level with no player car and leaves the main menu on top:
+  spawn a car, then `guihooks.trigger('ChangeState', {state='play'})`.
+- A raycast down from 2000 m hits tree crowns and roofs: use `core_terrain.getTerrainHeight` for eye-level cameras, and
+  expect eye-level cameras near buildings to end up inside walls.
+- PowerShell parses `"$var:text"` as a scoped variable: write `"${var}:text"`.
+- v3.1 was published before its game test, with README captions written from cloud renders: the test (2026-10-24)
+  found the hairpin caption "a straight top" false. Write captions of in-game screenshots only after the test.
+
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 
 Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), level coordinates:
@@ -116,6 +132,17 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 - a post on a traffic island in Magliaso village, about (1111, -963);
 - on the route spawn_magliaso -> spawn_pura, between nodes 10 and 14, a junction where the AI road drops 4 m from the
   lower road to the upper one: the car ends against a wall.
+
+Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test_report.md), causes not yet looked at:
+- saw-tooth wall tops still on the Magliaso-Pura Cantonale (the hairpin, the cut near node 58 above Magliaso), after
+  the v3.1 saw-top fix: the renders of the fix did not show them;
+- missing materials `mp_island_reflector` and `mp_island_beacon` (30 errors each in beamng.log): the traffic island
+  posts added by a nightly patch. Grep beamng.log for missing materials after every patch;
+- the Via Golf underpass deck renders as a flat grey slab with no texture;
+- grass tufts on the asphalt of the Ponte Tresa bridge at its Italian end (the bridge was widened in v3.1);
+- large angular wall blocks beside strada_cantonale_1 near (-222, -60);
+- AI traffic (#83) still broken: 13 cars queued behind the player's car parked on the Magliaso bridge, then crashed
+  into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes.
 
 ## Terrain fixes
 
