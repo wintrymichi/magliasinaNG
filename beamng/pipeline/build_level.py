@@ -125,6 +125,9 @@ TL = "/assets/materials/tileable"
 ASPHALT_TILE = 4.0      # v3.0: italy_mats.ASPHALT_TILE (Italy's asphalt tiled over 1.25 m up to v2.8, without its detail map)
 ROAD_TINT = [0.85, 0.85, 0.85]   # Italy's asphalt at 1.0 reads as concrete on wide carriageways (about 150 sRGB)
 ITALY_STONE = {"sett": "italy_cobblestone_patterned", "cobble": "italy_cobblestone"}
+# v3.1.1: Italy's setts and cobbles at 1.0 are near white on the lanes and paths of the map (the visual review of v3.1:
+# 0367, a cobbled path in a meadow brighter than anything round it); the grey granite of the nuclei is darker
+STONE_TINT = [0.66, 0.65, 0.63]       # linear (about -18 % in sRGB)
 ROAD_CLASSES = {  # cadastral class: (material, mesh cell m, uv tile m)
     "strada_sentiero": ("mp_road_asphalt", 1.0, ASPHALT_TILE),
     "altro_rivestimento_duro": ("mp_hard_asphalt", 2.0, ASPHALT_TILE),
@@ -167,7 +170,7 @@ def surface_materials():
             if surf == "hard":
                 continue
             if surf in ITALY_STONE:                       # v3.0: Italy's cobbles (italy_mats.py)
-                out.append(it.material(name, ITALY_STONE[surf], ground[surf]))
+                out.append(it.material(name, ITALY_STONE[surf], ground[surf], tint=STONE_TINT))
                 continue
             out.append(bng.material(name, f"{t}/t_road_{surf}_b.color.png", f"{t}/t_road_{surf}_nm.normal.png",
                                     f"{t}/t_road_{surf}_r.data.png", f"{t}/t_road_{surf}_ao.data.png",
@@ -961,6 +964,7 @@ FINISH = [
     ("sidewalks", "sidewalks", "sidewalks_step", {"report": True}),   # v3.1: pavements on kerbs, what stands on them up
     ("roundabouts", "roundabouts", "roundabouts_step", {"report": True}),   # v3.1: green middles on kerbs, rings of setts
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
+    ("steep_yards", "steep_skin", "steep_yards_step", {"report": True}),   # v3.1.1: no asphalt on the steep yard faces
     ("forest_mosaic", "forest_mosaic", "forest_mosaic_step", {"report": True}),   # v3.1: the forest floor as a mosaic
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
     ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: rivers, streams, the lake

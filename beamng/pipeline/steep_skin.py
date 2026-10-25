@@ -38,7 +38,7 @@ a wall, a building, the railway or the lake) take a skin:
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish steep_skin
 """
-import io, json, os, tempfile, time, zipfile
+import io, json, os, re, tempfile, time, zipfile
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
@@ -98,7 +98,10 @@ MOSS_DEG = 63.0               # degrees: rock gentler than this (ledges) may tak
 ROCK_TONE = (0.98, 0.96, 0.92)          # colour multiplier of the rock texture (gneiss grey-brown)
 MOSS = (0.70, 0.84, 0.50)               # ... where moss grows on it
 EARTH = (1.00, 0.93, 0.84)              # the earth texture's own colour, mixed into the terrain colour by EARTH_MIX
-EARTH_MIX = 0.45
+EARTH_MIX = 0.25              # v3.1.1: 0.45 up to v3.1 (with the brightness of EARTH: pale, grey-beige banks)
+EARTH_LIFT = 0.08             # v3.1.1: luminance added to the terrain's for the earth of a bank (bare earth is a little
+                              # lighter than the leaf litter, and the terrain's detail textures are lighter up close)
+PAVED_LAYERS = ("Asphalt", "Concrete", "Gravel")   # v3.1.1: terrain layers of roads and yards, never the skin's colour
 SCREE = (0.95, 0.93, 0.90)
 ROADS = ("roads",)
 SOLID = ("roads", "walls", "buildings", "railway")
@@ -145,6 +148,17 @@ PLANT_ROAD = 2.0
 PLANT_CLEAR = 0.3             # m between a plant's crown (half width x scale) and the road surface
 PLANT_SINK = 0.08             # m into the skin
 PLANT_MAX = 90000             # cap over the map
+# v3.1.1: the steep faces of the yards. The survey's 'altro_rivestimento_duro' (yards, forecourts, the ground of a
+# farm) is meshed on the DTM, which smears every wall and terrace edge into a slope: 14 ha of the v3.1 yards were
+# asphalt at 20-60 degrees, grey wedges under the walls and asphalt banks beside the roads (visual review of v3.1,
+# 0030, 0160, 0161, 0399). A yard face steeper than YARD_DEG is
+# ground: the earth of the skin's banks, with the colour of the terrain beside it (YARD_MAT; same mesh, same
+# collision). The faces steeper than YARD_SKIRT are the skirts that take a surface's edge down into the ground.
+YARD_MATS = ("mp_hard_asphalt", "mp_hard_sett", "mp_hard_cobble")
+YARD_MAT = "mp_hard_bank"
+YARD_DEG = 18.0             # 32 %: the steepest driveways of the area are about 25-30 %
+YARD_SKIRT = 72.0
+YARD_MIN_M2 = 6.0             # m2: smaller pieces of steep faces stay as they are (a speck of earth in a yard)
 
 
 # ------------------------------------------------------------------------------------------------ texture
@@ -352,6 +366,17 @@ def subdivide(P, Pm, N, col, rw, hab, wv, droad, T):
     return Pm, A["N"], A["col"], A["rw"], A.get("wv"), T
 
 
+def earth_colour(colour):
+    """The skin's earth: the terrain colour (k, 3) pulled towards the hue of EARTH by EARTH_MIX, at the terrain's own
+    brightness (plus EARTH_LIFT). v3.1.1: up to v3.1 it was pulled towards EARTH itself (a light colour): every bank was about twice as
+    bright as the forest floor or meadow round it, a pale patch with a sharp edge (visual review 0192, 0509, 0519)."""
+    colour = np.asarray(colour, np.float64)
+    lum = lambda c: c @ np.array([0.2126, 0.7152, 0.0722])
+    e = np.array(EARTH)[None] * (lum(colour) / lum(np.array(EARTH)))[:, None]
+    lc = np.maximum(lum(colour), 1e-3)
+    return np.clip(((1 - EARTH_MIX) * colour + EARTH_MIX * e) * ((lc + EARTH_LIFT) / lc)[:, None], 0, 1)
+
+
 def face_normals(P, T, N0):
     """Vertex normals of the triangles T (area weighted); N0 where a vertex has none."""
     fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
@@ -360,6 +385,12 @@ def face_normals(P, T, N0):
         np.add.at(N, T[:, j], fn)
     L = np.linalg.norm(N, axis=1, keepdims=True)
     return np.where(L > 1e-9, N / np.maximum(L, 1e-9), N0)
+
+
+def yard_material():
+    t = f"/levels/{LEVEL_NAME}/{D}"
+    return bng.material(YARD_MAT, f"{t}/t_steep_bank_b.color.png", normal_map=f"{t}/t_steep_bank_nm.normal.png",
+                        roughness=0.95, ground_type="DIRT", vert_color=True)
 
 
 def materials():
@@ -631,7 +662,7 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=(), droad=N
     T = np.array(tris, np.int64)
     # v3.1: rock on the steep faces (moved out by its relief), the earth less green, scree at the foot
     Pm, rw, rc, hab, deg, ribs = rock(keys, P, N, z, wv, droad)
-    earth = (1 - EARTH_MIX) * np.asarray(colour) + EARTH_MIX * np.array(EARTH)
+    earth = earth_colour(colour)
     scree = np.clip(1 - hab / TOE_SCREE, 0, 1)[:, None] * 0.6
     earth = earth * (1 - scree) + np.array(SCREE) * scree
     colour = earth * (1 - rw[:, None]) + rc * rw[:, None]
@@ -732,16 +763,29 @@ def coarse_mesh(mb, keys, P, N, col, rr, cc, wv, k, lift):
 
 class BaseColours:
     """Colour (0..1 multiplier of the texture) of the terrain at its vertices: the base colour map of the material
-    of the vertex (art/terrains/t_base_<material>_b.png, BASE_FLIP: image row 0 at the north edge)."""
+    of the vertex (BASE_FLIP: image row 0 at the north edge). v3.1.1: the map each layer of the .ter names in the
+    level's terrain materials (baseColorBaseTex). Up to v3.1 the map was looked up as t_base_<layer>_b.png, which the
+    twins added by understory and forest_mosaic (ForestFloorVerge, ForestFloorLight, ForestRock, BankWood...) do
+    not have: their vertices took a flat 0.55 grey, and with EARTH_MIX the whole skin of a bank in the wood came out
+    a pale grey-green sheet (visual review of v3.1: the hairpin at -3872,119 and every cut in the woods)."""
 
     def __init__(self, zi, lv, names, n):
         import terrain
         self.n, self.img = n, {}
+        tex = {}
+        mf = f"{lv}/art/terrains/main.materials.json"
+        if mf in zi.NameToInfo:
+            for m in json.loads(zi.read(mf)).values():
+                if isinstance(m, dict) and m.get("class") == "TerrainMaterial" and m.get("baseColorBaseTex"):
+                    tex[m["internalName"]] = m["baseColorBaseTex"].lstrip("/")
         for i, name in enumerate(names):
             src = terrain.VERGE_OF.get(name, name)
-            f = f"{lv}/art/terrains/t_base_{src.lower()}_b.png"
-            if f in zi.NameToInfo:
-                self.img[i] = np.asarray(Image.open(io.BytesIO(zi.read(f))).convert("RGB"), np.float32)
+            for f in (tex.get(name), f"{lv}/art/terrains/t_base_{src.lower()}_b.png"):
+                if f and f in zi.NameToInfo:
+                    self.img[i] = np.asarray(Image.open(io.BytesIO(zi.read(f))).convert("RGB"), np.float32)
+                    break
+        self.missing = [nm for i, nm in enumerate(names) if i not in self.img]
+        self.paved = np.isin(np.arange(256), [i for i, nm in enumerate(names) if nm in PAVED_LAYERS])
         self.flip = terrain.BASE_FLIP
 
     def __call__(self, lay, R, C):
@@ -757,6 +801,20 @@ class BaseColours:
                 ir = im.shape[0] - 1 - ir
             out[m] = im[ir, ic] / TEX_MEAN
         return np.clip(out, 0, 1)
+
+    def ground(self, lay, r0, c0):
+        """(h, w, 3) colours of the window lay (rows from r0, columns from c0) of the ground beside the roads: a
+        vertex of a road or yard layer (PAVED_LAYERS: the light grey of the asphalt under the meshes) takes the
+        colour of the nearest vertex of another layer (v3.1.1: the skin runs into the road and its colours are
+        blurred over COLOUR_BLUR squares, so the asphalt layer greyed the foot of every bank)."""
+        h, w = lay.shape
+        gr, gc = np.mgrid[0:h, 0:w]
+        cg = self(lay.ravel(), (gr + r0).ravel(), (gc + c0).ravel()).reshape(h, w, 3)
+        pv = self.paved[lay]
+        if pv.any() and not pv.all():
+            _, (ir, ic) = ndi.distance_transform_edt(pv, return_indices=True)
+            cg = cg[ir, ic]
+        return cg
 
 
 # ------------------------------------------------------------------------------------------------ step
@@ -785,6 +843,8 @@ def steep_skin_step(root, report=None):
             for o in read_items(zi, f) if o.get("class") == "WaterBlock"]
     lake_z = max((float(o["position"][2]) for o in lake), default=-1e9)
     colours = BaseColours(zi, lv, names, n)
+    if colours.missing:
+        print("steep skin: no base colour map for the layers %s (flat grey)" % colours.missing, flush=True)
     q_new = q.copy()
     files, objs = {}, []
     trees = []
@@ -862,8 +922,7 @@ def steep_skin_step(root, report=None):
             low = low | moved
             lo = low[cr, ccs]
             qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
-            gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
-            cg = colours(lay[a0:a1, b0:b1].ravel(), (gr + a0).ravel(), (gc + b0).ravel()).reshape(a1 - a0, b1 - b0, 3)
+            cg = colours.ground(lay[a0:a1, b0:b1], a0, b0)
             col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
                                    for k in range(3)])
             mb = bng.MeshBuilder()
@@ -949,6 +1008,114 @@ def steep_skin_step(root, report=None):
                     zo.writestr(i, zi.read(i), compress_type=i.compress_type)
             for nm, b in files.items():
                 zo.writestr(zipfile.ZipInfo(nm, now), b, compress_type=zipfile.ZIP_DEFLATED)
+    rep["seconds"] = round(time.time() - t0)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(rep, open(report, "w"), indent=1)
+    return rep
+
+
+def steep_faces(F):
+    """bool (k,): the faces F (k, 3, 3) between YARD_DEG and YARD_SKIRT degrees, in pieces of YARD_MIN_M2 or more
+    (pieces joined through corners within 1 cm)."""
+    nn = np.cross(F[:, 1] - F[:, 0], F[:, 2] - F[:, 0])
+    a = np.linalg.norm(nn, axis=1) / 2
+    deg = np.degrees(np.arccos(np.clip(np.abs(nn[:, 2]) / np.maximum(2 * a, 1e-12), 0, 1)))
+    st = (deg >= YARD_DEG) & (deg < YARD_SKIRT) & (a > 1e-6)
+    if not st.any():
+        return st
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    idx = np.flatnonzero(st)
+    key = np.round(F[idx].reshape(-1, 3) * 100).astype(np.int64)
+    _, vid = np.unique(key, axis=0, return_inverse=True)
+    vid = vid.reshape(-1, 3)
+    k, nv = len(idx), int(vid.max()) + 1
+    A = coo_matrix((np.ones(3 * k), (np.repeat(np.arange(k), 3), vid.ravel())), shape=(k, nv)).tocsr()
+    nc, comp = connected_components(A @ A.T, directed=False)
+    area = np.bincount(comp, weights=a[idx], minlength=nc)
+    st[idx] = area[comp] >= YARD_MIN_M2
+    return st
+
+
+def steep_yards_step(root, report=None):
+    """v3.1.1 (finish step after steep_skin, whose bank texture it uses): the yard faces steeper than YARD_DEG take
+    YARD_MAT, coloured like the natural ground beside them."""
+    import walls as pw
+    t0 = time.time()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    rep = {"shapes": 0, "faces": 0, "m2": 0.0}
+    if f"{lv}/{D}/t_steep_bank_b.color.png" not in zi.NameToInfo:
+        print("steep yards: no terrain skin texture (run steep_skin first)", flush=True)
+        return rep
+    blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
+               if o.get("class") == "TerrainBlock")
+    X0, Y0, sq = float(blk["position"][0]), float(blk["position"][1]), float(blk.get("squareSize", 1.0))
+    n, _, lay, names = pw.read_ter(zi.read(f"{lv}/theTerrain.ter"))
+    colours = BaseColours(zi, lv, names, n)
+    files = {}
+    for o in read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"):
+        sn = o.get("shapeName", "").lstrip("/")
+        if o.get("class") != "TSStatic" or sn not in zi.NameToInfo:
+            continue
+        text = zi.read(sn).decode("utf-8")
+        if not any(f'material="{m}-mat"' in text for m in YARD_MATS) or f'material="{YARD_MAT}-mat"' in text:
+            continue
+        V, N, UV, C, parts, node = optimize_level.parse(text)
+        pos = np.asarray(o.get("position", [0, 0, 0]), np.float64)
+        mb = bng.MeshBuilder()
+        moved = []
+        for mat, idx in parts:
+            col = C[idx[:, 3]] if C is not None and idx.shape[1] > 3 else None
+            if mat in YARD_MATS:
+                st = np.repeat(steep_faces(V[idx[:, 0]].reshape(-1, 3, 3)), 3)
+                if st.any():
+                    moved.append(idx[st])
+                    idx = idx[~st]
+                    col = col[~st] if col is not None else None
+                    if not len(idx):
+                        continue
+            mb.add(mat, V[idx[:, 0]], uvs=UV[idx[:, 2]], normals=N[idx[:, 1]],
+                   tris=np.arange(len(idx)).reshape(-1, 3), colors=col)
+        if not moved:
+            continue
+        idx = np.concatenate(moved)
+        P, Nm = V[idx[:, 0]], N[idx[:, 1]]
+        W = P + pos
+        # the colour of the natural ground nearest each corner, as the skin's earth (EARTH_MIX)
+        cc = (W[:, 0] - X0) / sq
+        rr = (W[:, 1] - Y0) / sq
+        r0, r1 = max(int(rr.min()) - 12, 0), min(int(rr.max()) + 14, n)
+        c0, c1 = max(int(cc.min()) - 12, 0), min(int(cc.max()) + 14, n)
+        cg = colours.ground(lay[r0:r1, c0:c1], r0, c0)
+        cg = np.stack([ndi.gaussian_filter(cg[..., k], COLOUR_BLUR) for k in range(3)], -1)
+        ir = np.clip(np.rint(rr).astype(int) - r0, 0, r1 - r0 - 1)
+        ic = np.clip(np.rint(cc).astype(int) - c0, 0, c1 - c0 - 1)
+        earth = earth_colour(cg[ir, ic])
+        col = np.column_stack([earth, np.ones(len(P))])
+        add_projected(mb, YARD_MAT, P, Nm, col, np.arange(len(P)).reshape(-1, 3))
+        F = P.reshape(-1, 3, 3)
+        rep["shapes"] += 1
+        rep["faces"] += len(F)
+        rep["m2"] += float(np.linalg.norm(np.cross(F[:, 1] - F[:, 0], F[:, 2] - F[:, 0]), axis=1).sum() / 2)
+        base, detail = re.match(r"(.*)_a(\d+)$", node).groups()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "s.dae")
+            mb.write_dae(path, name=base, origin=(0, 0, 0), detail=int(detail))
+            files[sn] = open(path, "rb").read()
+    rep["m2"] = round(rep["m2"])
+    print("steep yards: %s" % rep, flush=True)
+    if files:
+        mf = f"{lv}/art/shapes/roads/main.materials.json"
+        mats = json.loads(zi.read(mf))
+        mm = yard_material()
+        mats[mm["name"]] = mm
+        files[mf] = json.dumps(mats, indent=1).encode("utf-8")
+        with zi.writer() as zo:
+            for i in zi.infolist():
+                nm = i.filename
+                zo.writestr(i, files.pop(nm) if nm in files else zi.read(i), compress_type=i.compress_type)
     rep["seconds"] = round(time.time() - t0)
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
