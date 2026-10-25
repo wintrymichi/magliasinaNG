@@ -112,6 +112,7 @@ CLAMP_RAMP = 1.0              # CLAMP_RAMP m above it
 RELIEF_NEAR = 0.12            # m, the most relief within RELIEF_ROAD m (horizontal) of a road: a rib 55 cm out of a
 RELIEF_ROAD = 2.0             # vertical cut at the road edge would overhang the lane at mirror height
 RELIEF_RAMP = 1.5             # m beyond RELIEF_ROAD in which the relief grows to RELIEF
+RELIEF_CLEAR = 0.6            # v3.2: beside a road the relief may also reach RELIEF_NEAR + this x the m to the road edge
 RELIEF_HAB = 3.2              # v3.2: m over the foot of the cut from which the face beside a road has its full relief
                               # too (over RELIEF_RAMP m; a bus is 3.2 m high)
 SUB_DZ = 1.5                  # v3.2: m, skin edges on the rock that climb more than this are halved (up to SUB_PASSES
@@ -254,7 +255,9 @@ def relief(P, rw, hab, wv=None, droad=None):
         # has its ribs too (a cut right at the road edge was one smooth plane up to the top)
         far = np.maximum(np.clip((droad - RELIEF_ROAD) / RELIEF_RAMP, 0, 1),
                          np.clip((hab - RELIEF_HAB) / RELIEF_RAMP, 0, 1))
-        d = np.minimum(d, RELIEF_NEAR + (RELIEF - RELIEF_NEAR) * far)
+        # ... and as far out as a part of the clearance to the road edge (a rib a metre back from the edge stays over
+        # the verge): the face of a cut in the square beside the road was one plane up to RELIEF_HAB
+        d = np.minimum(d, np.maximum(RELIEF_NEAR + (RELIEF - RELIEF_NEAR) * far, RELIEF_NEAR + RELIEF_CLEAR * droad))
     if wv is not None:
         d *= np.clip((wv - EDGE_ISO) / EDGE_FADE - 0.5, 0, 1)
     return d, ribs

@@ -193,6 +193,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (mp_steep_bank_far parts index their own g1/g2 arrays: optimize_level.parse reads only the first geometry, so a probe
   that takes every part of a skin DAE gets triangles of 200 m). Seeding every steep vertex of the ring cost +48 % skin
   triangles; only those over STEEP_ROAD (45) and halving rock edges only over SUB_DZ 1.5 m: +11.6 % (19.4 -> 21.6 M).
+  Halving edges alone did not round a face beside a road (0439): within ROAD_CLAMP the lattice was set to the terrain's
+  facet and the relief capped at 12 cm, so it stayed one plane however finely cut. Now the clamp holds only the foot
+  (CLAMP_HAB) and the relief may reach part of the clearance to the road edge (RELIEF_CLEAR); skin points over a road
+  surface stayed 7 (none over 0.3 m) on the whole map. Each try = steep_skin on the whole released level (12 min) +
+  renders (10 min): compare against a "before" run of main's steep_skin on the same copy (the step lowers the terrain
+  again on a released level, so the released skin is no fair "before").
 - render3d (textured) draws many road surfaces as smooth untextured grey: in the review renders a big grey sheet in front
   of the camera is the road or a yard, not a terrain slope.
 - A 3x3 median "tooth" scan near the roads found 28,000 vertices, mostly in villages (yards, sidewalks): not a way to find
