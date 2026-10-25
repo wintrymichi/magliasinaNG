@@ -171,18 +171,104 @@ def lifts(P, sx, snrm, sdz, sR, splane):
     return out
 
 
+SAG_IN = 0.3           # m: the lane ends this far inside the AI road's half width
+SAG_EPS = 0.08         # m under the middle of the road ...
+SAG_SLOPE = 0.06       # ... plus this per m out from it (crossfall, superelevation) is no sag yet
+SAG_MAX = 1.2          # m: a face further under is another level (a road beside, under a wall), not a sag
+SAG_EDGE = 0.3         # m beyond the AI road's half width: the carriageway's own edge row is lifted too
+
+
+def _ai_lines(zi, lv):
+    """[(n, 4) nodes x, y, z, width] of the AI roads."""
+    name = f"{lv}/main/MissionGroup/AIRoads/items.level.json"
+    return [np.asarray(o["nodes"], np.float64) for o in _items(zi, name) if len(o.get("nodes", [])) > 1]
+
+
+def sags(P, iscw, Tcw, lines):
+    """Lift of every corner P (n, 3) of a road surface that lies inside an AI road's lane and further under the
+    carriageway at the road's middle than a crossfall can explain: up to that floor. Where a track or a yard
+    joins a road from below, its mesh pulled the road's edge down with it (Magliaso - Pura above the hairpins,
+    545,-965: the uphill lane's edge 0.75 m down over 6.5 m, the "hole on the right", michi 2026-10-25)."""
+    out = np.zeros(len(P))
+    S = TriSurface(Tcw)
+    X, Y, Z, Wd, L, D = [], [], [], [], [], []
+    for n in lines:
+        cum = np.r_[0, np.cumsum(np.hypot(*np.diff(n[:, :2], axis=0).T))]
+        if cum[-1] < 1:
+            continue
+        s = np.arange(0, cum[-1], 0.5)
+        x, y = np.interp(s, cum, n[:, 0]), np.interp(s, cum, n[:, 1])
+        tx, ty = np.gradient(x), np.gradient(y)
+        nn = np.maximum(np.hypot(tx, ty), 1e-9)
+        X.append(x); Y.append(y); Z.append(np.interp(s, cum, n[:, 2])); Wd.append(np.interp(s, cum, n[:, 3]))
+        D.append(np.column_stack([tx / nn, ty / nn])); L.append(np.column_stack([-ty / nn, tx / nn]))
+    if not X:
+        return out
+    X, Y, Z, Wd = (np.concatenate(a) for a in (X, Y, Z, Wd))
+    D, L = np.concatenate(D), np.concatenate(L)
+    zc = S.height(X, Y, "near", zhint=Z)
+    ok = np.isfinite(zc)
+    X, Y, zc, Wd, D, L = X[ok], Y[ok], zc[ok], Wd[ok], D[ok], L[ok]
+    tree = cKDTree(np.column_stack([X, Y]))
+    dist, ii = tree.query(P[:, :2], k=6, distance_upper_bound=6.0)
+    for c in range(ii.shape[1]):
+        j = ii[:, c]
+        has = np.isfinite(dist[:, c])
+        j = np.where(has, j, 0)
+        v = P[:, :2] - np.column_stack([X[j], Y[j]])
+        along = np.abs(np.einsum("ij,ij->i", v, D[j]))
+        off = np.abs(np.einsum("ij,ij->i", v, L[j]))
+        floor = zc[j] - SAG_EPS - SAG_SLOPE * off
+        depth = floor - P[:, 2]
+        reach = np.where(iscw, Wd[j] / 2 + SAG_EDGE, Wd[j] / 2 - SAG_IN)
+        hit = has & (along <= 0.4) & (off <= reach) & (depth > out) & (depth <= SAG_MAX)
+        hit[hit] = _joined(S, np.column_stack([X[j[hit]], Y[j[hit]], zc[j[hit]]]), P[hit])
+        out = np.where(hit, depth, out)
+    # what joins the lifted edge from outside (the yard, the track, the next piece) ramps up to it
+    up = np.flatnonzero(out > 0)
+    if len(up):
+        top = P[up, 2] + out[up]
+        R = np.clip(RAMP_PER_M * out[up], RAMP_MIN, RAMP_MAX)
+        tree = cKDTree(P[up, :2])
+        for i, nb in enumerate(tree.query_ball_point(P[:, :2], r=RAMP_MAX)):
+            if not nb or out[i] > 0:
+                continue
+            nb = np.asarray(nb)
+            d = np.linalg.norm(P[i, :2] - P[up[nb], :2], axis=1)
+            k = (d < R[nb]) & (top[nb] > P[i, 2])
+            if k.any():
+                f = 0.5 * (1 + np.cos(np.pi * d[k] / R[nb][k]))
+                out[i] = float((np.minimum(out[up[nb[k]]], top[nb[k]] - P[i, 2]) * f).max())
+    return out
+
+
+def _joined(S, A, B, n=24):
+    """Whether the carriageway runs from A to B (both (m, 3)) without a step over STEP_MAX: a sag slopes down to
+    the edge; a road beside, under a wall or a skirt, is another level (the cantonale above Magliaso, 690,-1046,
+    has a lower lane 1.2 m down inside the AI road's width)."""
+    ok = np.ones(len(A), bool)
+    z = A[:, 2].copy()
+    for k in range(1, n + 1):
+        u = k / n
+        x, y = A[:, 0] + (B[:, 0] - A[:, 0]) * u, A[:, 1] + (B[:, 1] - A[:, 1]) * u
+        h = S.height(x, y, "near", zhint=z)
+        ok &= np.isfinite(h) & (np.abs(h - z) <= STEP_MAX * 0.5)
+        z = np.where(np.isfinite(h), h, z)
+    return ok & (np.abs(z - B[:, 2]) <= 0.1)
+
+
 def road_seams_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     roads = _shapes(zi, lv, "roads/surfaces")
-    # the carriageway's top faces, every shape's corners in world coordinates
-    Tw, owner = [], []
+    # the top faces of the road surfaces (carriageway, yards, paths), every shape's corners in world coordinates
+    Tw, owner, cw = [], [], []
     for si, (sn, text, pos) in enumerate(roads):
         V, N, UV, C, parts, node = optimize_level.parse(text)
         W = V + pos
         for mat, idx in parts:
-            if mat not in CARRIAGEWAY:
+            if mat == "mp_road_wall":
                 continue
             vi = idx[:, 0].reshape(-1, 3)
             t = W[vi]
@@ -190,13 +276,22 @@ def road_seams_step(root, report=None):
             up = n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-12) > 0.5
             Tw.append(t[up])
             owner.append(np.column_stack([np.full(int(up.sum()), si), vi[up]]))
-    res = {"faces": 0, "seam_m": 0.0, "step_cm_p50": 0.0, "step_cm_max": 0.0, "shapes": 0, "corners_raised": 0,
-           "overlay_corners_raised": 0, "lift_cm_max": 0.0}
+            cw.append(np.full(int(up.sum()), mat in CARRIAGEWAY))
+    res = {"faces": 0, "sag_corners": 0, "sag_cm_max": 0.0, "seam_m": 0.0, "step_cm_p50": 0.0, "step_cm_max": 0.0,
+           "shapes": 0, "corners_raised": 0, "overlay_corners_raised": 0, "lift_cm_max": 0.0}
     if not Tw:
-        print("road seams: no carriageway", flush=True)
+        print("road seams: no road surfaces", flush=True)
         return res
-    T = np.concatenate(Tw)
+    Tall = np.concatenate(Tw)
     owner = np.concatenate(owner)                      # (k, 4): shape, three corner indices
+    cw = np.concatenate(cw)
+    Pall = Tall.reshape(-1, 3)
+    # 1. no sag across a lane
+    sag = sags(Pall, np.repeat(cw, 3), Tall[cw], _ai_lines(zi, lv))
+    res["sag_corners"] = int((sag > 0).sum())
+    res["sag_cm_max"] = round(float(sag.max(initial=0)) * 100, 1)
+    # 2. no step between two pieces of carriageway (after the sags are lifted)
+    T = (Pall + np.column_stack([np.zeros((len(Pall), 2)), sag])).reshape(-1, 3, 3)[cw]
     res["faces"] = len(T)
     P = T.reshape(-1, 3)
     root_ = _weld(P)
@@ -207,12 +302,15 @@ def road_seams_step(root, report=None):
         res["step_cm_p50"], res["step_cm_max"] = round(float(np.median(sdz)) * 100, 1), round(float(sdz.max()) * 100, 1)
     # one pass: a second one (seams left at corners where three pieces meet) took 217 -> 121 m of steps over 8 cm
     # and stacked ramps up to 78 cm high
-    lift = lifts(P, sx, snrm, sdz, sR, splane)
+    lift_cw = lifts(P, sx, snrm, sdz, sR, splane)
     # what is left (corners, a ramp ending on a third piece), for the report
-    Pi = P + np.column_stack([np.zeros((len(P), 2)), lift])
+    Pi = P + np.column_stack([np.zeros((len(P), 2)), lift_cw])
     left = seams(Pi.reshape(-1, 3, 3), root_, Faces(Pi.reshape(-1, 3, 3)))[2]
     res["seam_m_left"] = round(len(left) * SAMPLE, 1)
     res["seam_m_left_over_8cm"] = round(float((left >= 0.08).sum()) * SAMPLE, 1)
+    lift = sag.copy()
+    lift[np.repeat(cw, 3)] += lift_cw
+    F = Faces(Tall)                                    # what lies on the road surfaces, before the lifts
     new = {}
     if lift.max(initial=0) > 0:
         res["lift_cm_max"] = round(float(lift.max()) * 100, 1)

@@ -216,6 +216,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (1.1 km over 8 cm, max 30 cm), each a vertical skirt with collision. Finish step `road_seams` (after `roundabouts`)
   raises the lower piece into a ramp (12 m per m of step, 0.75-3 m) with its paint/wear/islands/pavements: 1.9 km
   left, 215 m over 8 cm (corners where three pieces meet; a second pass stacked ramps up to 78 cm, not done).
+- The hole of michi's screenshot (2026-10-25: "after the two hairpins up from Magliaso, right after the ~90 degree
+  curve", 545,-968) was not a seam: a yard and a dirt track join the cantonale from 1-3 m below, and the corridor's
+  edge row was pulled down to them, the uphill lane's edge 0.75-0.85 m under the middle over 2 m (a ramp into a pit
+  beside the guard rail). road_seams.sags lifts road-surface corners inside the AI road's lane (and the carriageway's
+  own edge row, half width + 0.3 m) to the middle's height minus a crossfall, and ramps what joins from outside up to
+  them. Corners in the lane are sparse (rows 1 m apart, the edge row just outside half width - 0.3): lifting only the
+  lane's own corners changed nothing in the cross-sections. A height test alone also lifted the lower lane beside
+  the wall above Magliaso (690,-1046) by 1.18 m: a sag must be joined to the middle without a step (_joined).
+  Found by 0.5 m cross-sections of every AI road (drop at the lane edge vs the middle), not by holes in the mesh:
+  the asphalt was there, only too low. Render the place from the player's screenshot pose before guessing.
 - First version told the two sides of a seam by connected component: the two strips were one welded component
   (joined elsewhere) and both went up 20 cm, step kept. A corner is on the low side only if it lies behind the seam
   edge (outward normal) and more than half the step under the higher face's plane.
