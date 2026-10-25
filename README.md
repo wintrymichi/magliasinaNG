@@ -116,7 +116,7 @@ On 24–25 October about 650 in-game shots were taken along every road of v3.1 (
 - **Props** no longer stand inside the AI roads' width (432 pallets, benches, drums and skips), and no bench on a rock face.
 - **Bus stop paint** without the yellow blobs and stars traced from the photo: clean zigzags and strips only.
 - **Bridges.** No grass on the Ponte Tresa deck, the Via Golf rail deck in concrete.
-- **Patched into the nightly zip after the build** (both are finishing steps of the build, so the next build has them by itself): ramps instead of steps between two pieces of carriageway (the 22–26 cm step after the Magliaso–Pura hairpin that punctured tyres; steps over 8 cm 1,144 m → 222 m), and grass in the woods on the bare leaf litter away from the roads.
+- **Patched into the nightly zip after the build** (both are finishing steps of the build, so the next build has them by itself): ramps instead of steps between two pieces of carriageway (the 22–26 cm step after the Magliaso–Pura hairpin that punctured tyres; steps over 8 cm 1,144 m → 222 m), grass in the woods on the bare leaf litter away from the roads, and grass instead of pale earth on the steep meadow banks (the light yellow-green patches on the slopes of the Magliaso–Pura road).
 
 **Build checks:** every finishing step ran; the road surfaces cover the same 2 m cells as v3.1; floating roofs 0; the level is 7.99 GB unpacked (+0.36 GB: the vertex colours the steep yards add to the road meshes) and the zip 1.54 GB. The terrain skin has 26.2 M triangles (v3.1: about 19–21 M).
 
