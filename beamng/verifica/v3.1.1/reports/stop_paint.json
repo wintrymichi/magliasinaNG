@@ -1,0 +1,12 @@
+{
+ "in": 1015,
+ "laid": 107,
+ "painted_already": 448,
+ "off_road": 460,
+ "kinds": {
+  "zigzag": 38,
+  "crossing": 9,
+  "strip": 16
+ },
+ "seconds": 43
+}

@@ -1,21 +1,6 @@
-Nightly build of v3.0.40 (writing this file starts .github/workflows/nightly_build.yml)
+Nightly build (writing this file starts .github/workflows/nightly_build.yml on the integration branch)
 
-2026-10-20 10:05 UTC (12:05 CEST): first nightly, every thread of the v3.0.40 round merged:
-- Chiazze chiare sulla strada: textures in BeamNG 0.40 (game_paths), road wear with shadows, without breaks or holes,
-  one file per texture (same_textures)
-- Scalini e alberi in strada: road steps and trees on the roads
-- Caslano e Arosio interi (issue #16)
-- Suoni d'ambiente: rivers, streams, the lake
-- Muri con i buchi (issue #76)
-- Guidabilita e traffico: AI roads, give way, speed limits, Swiss road rules
-- Gare e cronoscalate: 4 time trials
-- Idee per nuove migliorie: direction pointers, English level info and preview
-- Monumenti riconoscibili: churches, bell towers, the Monte Lema cable car (issue #11)
-- Riferimento foto stradali: hedges and fountains from open street photos (3 test zones; measured facades off)
-
-2026-10-20 14:20 UTC (16:20 CEST): second nightly (michi: "Sì, adesso"), what changed since the first:
-- Riferimento foto stradali: the whole area (hedges, fountains, street furniture; measured roofs held back), and
-  the photo hedges actually applied in the build (vegetation.py; the first nightly had none of them)
-- Caslano e Arosio interi: dead ends that run down into the lake stop at the shore (no road under the water)
-- Monumenti: no warning in landmark_textures
-- the reports of the build also as nightly_reports.zip on the pre-release
+2026-10-25 07:30 UTC (08:30 CET): v3.1.1 nightly, the fixes of the v3.1 visual check merged from main:
+#90 bus stop paint, #91 straight wall tops, #92 AI lanes round the islands + island materials, #93 props off the
+roads, #94 bare concrete + yard wear + the Tresa channel, #95 skin on the cuts beside the roads, #96 no teeth at the
+foot of the cuts, #97 ground materials + steep_yards, #98 road ends and bridge decks on the ground.

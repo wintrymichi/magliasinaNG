@@ -1,0 +1,32 @@
+{
+ "events": {
+  "river": {
+   "event": "event:>Ambient>Water>River",
+   "how": "game"
+  },
+  "stream": {
+   "event": "event:>Ambient>Water>River",
+   "how": "game"
+  },
+  "lake": {
+   "event": "event:>Ambient>Water>Waves",
+   "how": "game"
+  },
+  "forest": {
+   "event": null,
+   "how": "not in the game"
+  }
+ },
+ "game_events": 31,
+ "emitters": {
+  "river": 75,
+  "stream": 50,
+  "lake": 49,
+  "forest": 0
+ },
+ "silent": [
+  "forest"
+ ],
+ "dense_wood_cells": 11270,
+ "seconds": 15
+}

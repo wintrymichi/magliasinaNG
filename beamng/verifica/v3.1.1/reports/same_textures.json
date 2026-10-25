@@ -1,0 +1,14 @@
+{
+ "textures": 794,
+ "copies": 256,
+ "removed": 254,
+ "kept_named_elsewhere": 2,
+ "references": 389,
+ "per_file": {
+  "art/shapes/props/osm.materials.json": 119,
+  "art/shapes/props/signs_ch.materials.json": 83,
+  "art/shapes/props/signs_ch_v28.materials.json": 18,
+  "art/shapes/signs/dir/direction.materials.json": 169
+ },
+ "seconds": 78.0
+}

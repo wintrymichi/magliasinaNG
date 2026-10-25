@@ -101,6 +101,32 @@ Found something wrong on the map? Open an [issue](https://github.com/wintrymichi
 
 ## Gallery
 
+### Nightly v3.1.1: the fixes of the visual check (not released, not tested in the game)
+
+> **A test build, not a release.** The pre-release [`nightly`](https://github.com/wintrymichi/magliasinaNG/releases/tag/nightly) (`magliaso_pura_v3.1.1_nightly.zip`, 1.54 GB) was built from scratch on 25 October 2026. **Nobody has driven it yet:** the game PC was off, so every change below was checked only on 3D renders of the built level made in the cloud (render3d, not the game's renderer), and there are no FPS, memory or load-time numbers for it. The latest release is still v3.1.
+
+On 24–25 October about 650 in-game shots were taken along every road of v3.1 (one point in each 250 m square with a road, and every 60 m of the Cantonale). What looked wrong was sorted into nine groups, and each group was fixed in the pipeline (PRs #90–#98); the full list is in [`CHANGELOG.md`](CHANGELOG.md).
+
+- **Cut slopes and banks.** The cuts right beside the roads that were bare, faceted terrain with a stretched texture now have the rock and earth skin; the green and brown "teeth" along the foot of the rock cuts are gone; the banks are no longer pale grey-green (the skin took a flat grey for the woodland layers).
+- **Walls of the Cantonale.** The roadside walls follow a smoothed foot and line, short stubs are dropped, and the survey walls' tops are smoothed along their outline. Not yet seen in the game.
+- **Ground materials.** 16.7 ha of yards meshed on slopes are earth instead of asphalt, gravel and setts are less white, no roof is green any more (tree crowns over a roof were taken for its colour), the grey-blue flat patches (the bare Concrete layer, 36.6 ha) take the ground beside them.
+- **Yards** of 600 m² or more have patches, cracks and dusty edges; road and yard edges standing more than 0.5 m over the ground went from 127.8 to 49.9 km.
+- **The Tresa** goes on where the border leaves it (the Swiss survey stopped there), from OpenStreetMap.
+- **Traffic islands.** Where an island stood in an AI lane the road is split round it: lanes over islands 1,718 m → 363 m in this build. The missing materials of the island posts are defined again.
+- **Props** no longer stand inside the AI roads' width (432 pallets, benches, drums and skips), and no bench on a rock face.
+- **Bus stop paint** without the yellow blobs and stars traced from the photo: clean zigzags and strips only.
+- **Bridges.** No grass on the Ponte Tresa deck, the Via Golf rail deck in concrete.
+- **Patched into the nightly zip after the build** (both are finishing steps of the build, so the next build has them by itself): ramps instead of steps between two pieces of carriageway (the 22–26 cm step after the Magliaso–Pura hairpin that punctured tyres; steps over 8 cm 1,144 m → 222 m), grass in the woods on the bare leaf litter away from the roads, and no skin earth on the steep meadow banks, which are meadow with the game's grass again (the light yellow-green patches on the slopes of the Magliaso–Pura road).
+
+**Build checks:** every finishing step ran; the road surfaces cover the same 2 m cells as v3.1; floating roofs 0; the level is 7.99 GB unpacked (+0.36 GB: the vertex colours the steep yards add to the road meshes) and the zip 1.54 GB. The terrain skin has 26.2 M triangles (v3.1: about 19–21 M).
+
+| | |
+|---|---|
+| ![Foot of a rock cut](beamng/verifica/v3.1.1/render/01_punte_piede_taglio.jpg)<br>*No teeth at the foot of a rock cut (left v3.1, right the nightly)* | ![Bank beside the Cantonale](beamng/verifica/v3.1.1/render/02_cantonale_scarpata.jpg)<br>*The bank beside the Cantonale gets the skin* |
+| ![A cut in a hairpin](beamng/verifica/v3.1.1/render/03_taglio_tornante.jpg)<br>*A faceted cut in a hairpin, skinned* | ![A yard on a slope](beamng/verifica/v3.1.1/render/04_piazzale_ripido.jpg)<br>*Steep yard faces earth instead of asphalt* |
+| ![The Tresa at the border](beamng/verifica/v3.1.1/render/05_tresa_confine.jpg)<br>*The Tresa beyond the survey* | ![A road end](beamng/verifica/v3.1.1/render/06_fine_strada.jpg)<br>*A road end joined to the ground* |
+| ![A pallet on the road](beamng/verifica/v3.1.1/render/07_bancale.jpg)<br>*Props off the AI road* | ![Bus stop paint](beamng/verifica/v3.1.1/render/08_segnaletica_gialla.jpg)<br>*Bus stop paint without traced blobs* |
+
 ### New in v3.1: bridges, roofs, slopes and woods
 
 > **Released on 23 October 2026, tested in the game on 24 October 2026.** The screenshots below are from that test. **The AI traffic is still broken** ([#83](https://github.com/wintrymichi/magliasinaNG/issues/83)): see the known limitations.
@@ -427,7 +453,7 @@ Each limitation has an issue where the details, the places and the possible fix 
 | Within about 12 m the far trees (v2.7) look almost black. No road comes that close to them, but on foot or off-road you can see it. | [#30](https://github.com/wintrymichi/magliasinaNG/issues/30) |
 | Magliaso bridges over the Magliasina: at the south-east corner of the main deck, over the river bank, the deck meets the road with a step of up to 0.4 m over about 1.5 m, and at the west corners of the upstream bridge with 6-8 cm. Both are outside the lanes. | – |
 | v3.1: under the FLP at the Via Golf underpass (Caslano - Magliaso) the two footways beside the road lie about 2 m above the road, and the rail deck is 2.9 m over the road at its north edge. The footways are fixed in the code for the next build. The 8 marked crossings added at bus stops keep a 12 cm kerb. | – |
-| v3.1, seen in the game test: some walls of the Magliaso–Pura Cantonale (the hairpin, a cut above Magliaso) still have saw-tooth tops; the Via Golf underpass deck is a flat grey slab with no texture; the new traffic island posts miss two materials (`mp_island_reflector`, `mp_island_beacon`); grass tufts grow on the asphalt of the Ponte Tresa bridge at its Italian end; large angular wall blocks beside the Cantonale near Magliaso. The game also warns that its bindless material slots are full (8,192) and finds no licence plate template for the level. | [#85](https://github.com/wintrymichi/magliasinaNG/issues/85) |
+| v3.1, seen in the game test: some walls of the Magliaso–Pura Cantonale (the hairpin, a cut above Magliaso) still have saw-tooth tops; the Via Golf underpass deck is a flat grey slab with no texture; the new traffic island posts miss two materials (`mp_island_reflector`, `mp_island_beacon`); grass tufts grow on the asphalt of the Ponte Tresa bridge at its Italian end; large angular wall blocks beside the Cantonale near Magliaso. The nightly v3.1.1 has fixes for all of these except the wall blocks near Magliaso, not yet tested in the game. The game also warns that its bindless material slots are full (8,192) and finds no licence plate template for the level. | [#85](https://github.com/wintrymichi/magliasinaNG/issues/85) |
 
 ## Repository layout
 

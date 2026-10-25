@@ -1,0 +1,14 @@
+{
+ "islands": 131,
+ "island_m2": 3869,
+ "signs": 169,
+ "ai_roads_in_islands": 156,
+ "ai_split": 80,
+ "ai_moved": 78,
+ "ai_blocked": 6,
+ "ai_junction": 0,
+ "ai_open_joints": 6,
+ "ai_roads_in_islands_after": 155,
+ "shapes_rewritten": 40,
+ "seconds": 88
+}

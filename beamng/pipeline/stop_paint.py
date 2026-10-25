@@ -14,9 +14,13 @@ had them in pieces), vehicles (yellow buses, compact blobs with dark windows) an
 Each blob becomes:
 - a crossing bar (BAR_L long, BAR_S wide, filled): the bars of one crossing grouped (parallel, side by side) and
   laid again as clean ZEBRA_W m bars at their measured axis, phase and length (ZEBRA_L);
-- a zigzag (longer than ZIG_L, thin: under ZIG_FILL of its rectangle): its outline as traced, widened to LINE_W;
-- a strip (a yellow kerb line, a no-parking line, the frame of a bus bay): a clean rectangle;
-- a mark (BUS, an arrow): the outline as traced, smoothed.
+- a zigzag (longer than ZIG_L, thin: under ZIG_FILL of its rectangle, swinging left and right ZIG_TURNS times with
+  legs of ZIG_LEG m): redrawn as straight legs LINE_W wide along its measured centre line (G9 review: the traced
+  outline was a thick wavy band in the game, and frame corners taken for zigzags lay about as L shapes);
+- a strip (a yellow kerb line, a no-parking line, the frame of a bus bay): a clean rectangle, kept only when at least
+  STRIP_MIN_L long and within CONTEXT_R of a zigzag or a crossing (a lone bar in a lane was a sunlit shade edge);
+- a mark (BUS, an arrow, a cross): measured but not laid; traced in 10 cm cells it came out as yellow blobs, stars
+  and L shapes, and a yellow bus front or a motorcyclist's jacket in the lane passed as one (G9 review, 2026-10-25).
 Output: dati/stop_paint.json.gz {"polygons": [{"ring", "kind", "src"}]}.
 
 stop_paint_step (FINISH, before sidewalks: the crossings it adds get their kerbs lowered there): the polygons that
@@ -52,8 +56,16 @@ ZEBRA_L = (2.5, 3.0, 4.0)    # m, bar lengths along the road
 GROUP_R = 4.5                # m, bars of one crossing
 MIN_BARS = 3                 # a crossing has at least this many bars seen (two parallel dashes are not one)
 ZIG_L, ZIG_FILL = 4.0, 0.45
+ZIG_BIN = 0.2                # m, stations along a zigzag where its centre line is measured
+ZIG_SIMPLIFY = 0.15          # m, the legs of a zigzag: its centre line simplified to straight pieces
+ZIG_TURN, ZIG_TURNS = 35.0, 3   # a zigzag turns at least ZIG_TURNS times, by more than ZIG_TURN degrees, left and
+                             # right in turn (the corner of a bay frame, an L or a U, turns once or twice one way)
+ZIG_LEG, ZIG_SWING = 1.0, 0.6   # m: a zigzag has ZIG_TURNS legs this long and swings this far across (a traced
+                             # arrow turns as often, with short legs)
 LINE_W = 0.15                # m, the width a zigzag is drawn with
 STRIP_S, STRIP_FILL = 0.45, 0.5
+STRIP_MIN_L = 2.0            # m: a shorter strip is a fragment (a piece of a faded bay frame, a parking dash)
+CONTEXT_R = 15.0             # m: a strip is laid only this close to a zigzag or a crossing of the stop
 MARK_AREA, MARK_L = 0.2, 3.5
 ON_ROAD = 0.7                # share of a polygon's area on the road meshes
 NEAR_OLD = 0.8               # m: paint of the level this close means the place is painted already
@@ -140,7 +152,9 @@ def blobs(img, x0, y1):
                 elif S <= STRIP_S and fill >= STRIP_FILL and Ln >= 0.6:
                     out.append(("strip", g))
                 elif Ln >= ZIG_L and fill < ZIG_FILL and S <= 3.0:
-                    out.append(("zigzag", g))
+                    line = zigzag_line(g, cc, ax)
+                    if line is not None:                    # an L, a U, a frame corner: not a zigzag
+                        out.append(("zigzag", line))
                 elif g.area >= MARK_AREA and Ln <= MARK_L:
                     # a yellow car or a flower bed reads like a letter: dark windows, shade or leaves round it
                     ring_d = (L[r0:r1, c0:c1] < VEHICLE_DARK) & ring
@@ -148,6 +162,38 @@ def blobs(img, x0, y1):
                         continue
                     out.append(("mark", g))
     return out
+
+
+def zigzag_line(g, cc, ax):
+    """The clean centre line of a traced zigzag (straight legs, LINE_W wide, as a polygon), or None when the figure
+    does not swing left and right at least ZIG_TURNS times: the traced outline drawn as it was came out as a thick
+    wavy line in the game, and the corners of the bay frames it took for zigzags as scattered L shapes."""
+    n = np.array([-ax[1], ax[0]])
+    x0, y0, x1, y1 = g.bounds
+    X, Y = np.meshgrid(np.arange(x0, x1, RES / 2), np.arange(y0, y1, RES / 2))
+    X, Y = X.ravel(), Y.ravel()
+    inside = shapely.contains_xy(g, X, Y)
+    if inside.sum() < 10:
+        return None
+    P = np.column_stack([X[inside], Y[inside]]) - cc
+    s, t = P @ ax, P @ n
+    k = np.floor((s - s.min()) / ZIG_BIN).astype(int)
+    st = [(float(np.median(s[k == i])), float(np.median(t[k == i]))) for i in range(k.max() + 1) if (k == i).any()]
+    if len(st) < 4:
+        return None
+    pl = shapely.LineString(st).simplify(ZIG_SIMPLIFY)
+    c = np.asarray(pl.coords)
+    d = np.diff(c, axis=0)
+    turns = []
+    for a, b in zip(d[:-1], d[1:]):
+        ang = np.degrees(np.arctan2(a[0] * b[1] - a[1] * b[0], a @ b))
+        if abs(ang) > ZIG_TURN:
+            turns.append(np.sign(ang))
+    alt = 1 + sum(1 for a, b in zip(turns[:-1], turns[1:]) if a != b) if turns else 0
+    if alt < ZIG_TURNS or (np.hypot(d[:, 0], d[:, 1]) >= ZIG_LEG).sum() < ZIG_TURNS or np.ptp(c[:, 1]) < ZIG_SWING:
+        return None
+    xy = cc + np.outer(c[:, 0], ax) + np.outer(c[:, 1], n)
+    return shapely.LineString(xy).buffer(LINE_W / 2, cap_style="flat", join_style="mitre", mitre_limit=3.0)
 
 
 def zebras(bars):
@@ -213,10 +259,10 @@ def measure():
             if kind == "strip":
                 cc, ax, Ln, S = rect_of(g)
                 g = shapely.Polygon(rect_poly(cc, ax, Ln, min(max(S, 0.12), 0.3)))
-            elif kind == "zigzag":
-                g = g.buffer(max(0.0, (LINE_W - RES) / 2)).simplify(0.04)
-            else:
-                g = g.buffer(0.04).buffer(-0.04).simplify(0.04)
+            elif kind == "mark":
+                # BUS letters, arrows, crosses traced in 10 cm cells: in the game they were yellow blobs, stars and
+                # L shapes (and a yellow bus front, a motorcyclist's jacket in the lane): none is laid
+                continue
             for gg in getattr(g, "geoms", [g]):
                 if isinstance(gg, shapely.Polygon) and gg.area >= 0.06:
                     polys.append({"ring": np.asarray(gg.exterior.coords).round(3).tolist(), "kind": kind, "src": name})
@@ -228,6 +274,20 @@ def measure():
         for g in single:                                    # a lone bar: a stop line of a bus bay, a short strip
             cc, ax, Ln, S = rect_of(g)
             polys.append({"ring": rect_poly(cc, ax, Ln, S).round(3).tolist(), "kind": "strip", "src": name})
+    # strips only where the stop is: long, and near a zigzag or a crossing (a lone yellow bar in the lane was the
+    # sunlit edge of a tree's shade, short pieces the fragments of faded frames)
+    anchors = [shapely.Polygon(q["ring"]) for q in polys if q["kind"] in ("zigzag", "crossing")]
+    tree_a = shapely.STRtree(anchors) if anchors else None
+    kept = []
+    for q in polys:
+        if q["kind"] == "strip":
+            g = shapely.Polygon(q["ring"])
+            if rect_of(g)[2] < STRIP_MIN_L or tree_a is None or \
+                    not len(tree_a.query(g, predicate="dwithin", distance=CONTEXT_R)):
+                stats["strip_dropped"] = stats.get("strip_dropped", 0) + 1
+                continue
+        kept.append(q)
+    polys = kept
     # crops overlap (stops on both sides of a road): one copy of each polygon
     keep, seen = [], []
     tree_g = []

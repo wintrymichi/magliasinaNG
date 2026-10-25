@@ -1,0 +1,38 @@
+{
+ "wood_vertices": 38979791,
+ "before": {
+  "ForestFloor": 26012871,
+  "ForestFloor2": 98053,
+  "ForestFloorLight": 12760316,
+  "ForestFloor2Light": 108551
+ },
+ "under_skin_or_solid": 2199627,
+ "roadside_light": 1187107,
+ "roadside_bare": 1180971,
+ "edge": 4086542,
+ "gap": 4627893,
+ "thicket": 1731997,
+ "bare": 4934479,
+ "outcrop": 877024,
+ "bank": 5683438,
+ "bank_wood": 1986751,
+ "after": {
+  "ForestFloor": 21746900,
+  "ForestFloor2": 72700,
+  "ForestFloorLight": 9743353,
+  "ForestFloor2Light": 90210,
+  "ForestFloorVerge": 7231946,
+  "ForestFloor2Verge": 56809,
+  "ForestRock": 877024,
+  "BankWood": 1986751
+ },
+ "light_share_before": 0.33,
+ "light_share_after": 0.252,
+ "groundcovers": [
+  "understory_bank_BankWood",
+  "understory_grass_ForestFloor2Light",
+  "understory_grass_ForestFloorLight",
+  "understory_rocks_ForestRock"
+ ],
+ "terrain_heights_unchanged": true
+}

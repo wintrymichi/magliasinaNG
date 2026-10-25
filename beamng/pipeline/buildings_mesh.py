@@ -334,6 +334,10 @@ def _post(c, z0, z1, w=POST_W):
     return np.array(out)
 
 
+ROOF_VEG = 4.0                 # sRGB: a roof pixel this much greener than red and blue is a crown over the roof
+ROOF_VEG_KEEP = 0.25           # of the pixels: fewer left than this, the median of all of them (then made grey)
+
+
 def roof_colors(blds):
     """Median orthophoto colour of every roof (footprint eroded 1.5 m against relief displacement)."""
     from geo import ortho_sampler
@@ -358,7 +362,16 @@ def roof_colors(blds):
         c = c[~np.isnan(c).any(1)]
         if len(c) < 3:
             continue
-        cols[b["uuid"]] = np.median(c, 0) / 255.0
+        # v3.1.1: the crowns over a roof are not the roof: 5-14 % of the roof area of v3.1 came out green (a shed
+        # under a tree with a grass-green roof, visual review 0165). Pixels greener than red and blue are left out,
+        # and a roof is never green: what is left greener is taken as its grey.
+        veg = (c[:, 1] > c[:, 0] + ROOF_VEG) & (c[:, 1] > c[:, 2] + ROOF_VEG)
+        if (~veg).sum() >= max(3, ROOF_VEG_KEEP * len(c)):
+            c = c[~veg]
+        m = np.median(c, 0) / 255.0
+        if m[1] > max(m[0], m[2]):
+            m = np.full(3, 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2])
+        cols[b["uuid"]] = m
     return cols
 
 

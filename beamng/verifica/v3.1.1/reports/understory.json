@@ -1,0 +1,165 @@
+{
+ "forest_floor_vertices": 39818942,
+ "to_verge": {
+  "ForestFloor -> ForestFloorVerge": 820420,
+  "ForestFloor2 -> ForestFloor2Verge": 18731,
+  "ForestFloor -> ForestFloorLight": 12760316,
+  "ForestFloor2 -> ForestFloor2Light": 108551
+ },
+ "floor_colour_before": {
+  "ForestFloor": [
+   102,
+   98,
+   67
+  ],
+  "ForestFloor2": [
+   101,
+   97,
+   66
+  ]
+ },
+ "floor_colour_after": [
+  62,
+  66,
+  42
+ ],
+ "light": {
+  "edge": 9700953,
+  "gap": 3167914
+ },
+ "understory_materials": [
+  "eca_rocks",
+  "forest_vegetation",
+  "m_oak_leaves_02_distant",
+  "m_scraggly_distant",
+  "oak_leaves_02",
+  "scraggly",
+  "scraggly_branches",
+  "trunk_chopped",
+  "wood_splinters"
+ ],
+ "understory": {
+  "understory_ferns_shade": {
+   "radius_m": 45.0,
+   "max_elements_per_layer": 380,
+   "layers": [
+    "ForestFloor",
+    "ForestFloor2"
+   ],
+   "max_plants_per_layer": 931,
+   "per_m2": {
+    "500m": 0.0996,
+    "1200m": 0.0246
+   },
+   "shapes": [
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_01_a.dae",
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_01_b.dae",
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_02_a.dae",
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_02_b.dae"
+   ]
+  },
+  "understory_ferns_light": {
+   "radius_m": 45.0,
+   "max_elements_per_layer": 790,
+   "layers": [
+    "ForestFloorLight",
+    "ForestFloor2Light"
+   ],
+   "max_plants_per_layer": 2600,
+   "per_m2": {
+    "500m": 0.321,
+    "1200m": 0.321
+   },
+   "shapes": [
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_01_a.dae",
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_01_b.dae",
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_02_a.dae",
+    "/levels/east_coast_usa/art/shapes/groundcover/lush_ferns_02_b.dae"
+   ]
+  },
+  "understory_shade": {
+   "radius_m": 60.0,
+   "max_elements_per_layer": 370,
+   "layers": [
+    "ForestFloor",
+    "ForestFloor2"
+   ],
+   "max_plants_per_layer": 500,
+   "per_m2": {
+    "500m": 0.0297,
+    "1200m": 0.0215
+   },
+   "shapes": [
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_d.dae",
+    "/levels/italy/art/shapes/trees/trees_italy/holm_oak_bush.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_a.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_b.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_a.dae",
+    "/levels/italy/art/shapes/trees/trees_italy/fluffy_bush.dae",
+    "/levels/italy/art/shapes/trees/trees_italy/scraggly_bush.dae"
+   ]
+  },
+  "understory_light": {
+   "radius_m": 60.0,
+   "max_elements_per_layer": 880,
+   "layers": [
+    "ForestFloorLight",
+    "ForestFloor2Light"
+   ],
+   "max_plants_per_layer": 1299,
+   "per_m2": {
+    "500m": 0.0902,
+    "1200m": 0.0645
+   },
+   "shapes": [
+    "/levels/italy/art/shapes/trees/trees_italy/scraggly_bush.dae",
+    "/levels/italy/art/shapes/trees/trees_italy/generibush_small.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_d.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_a.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_bush_c.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_oak/tree_oak_bush_a.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_bush_a.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_aspen/tree_aspen_bush_b.dae"
+   ]
+  },
+  "understory_deadwood_shade": {
+   "radius_m": 80.0,
+   "max_elements_per_layer": 140,
+   "layers": [
+    "ForestFloor",
+    "ForestFloor2"
+   ],
+   "max_plants_per_layer": 212,
+   "per_m2": {
+    "500m": 0.0083,
+    "1200m": 0.0058
+   },
+   "shapes": [
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_dead_b.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_beech/tree_beech_dead_a.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/fir_dead_branches.dae",
+    "/levels/east_coast_usa/art/shapes/trees/trees_douglasfir/tree_douglasfir_chopped.dae",
+    "/levels/east_coast_usa/art/shapes/rocks/eca_rock_small_2.dae",
+    "/levels/east_coast_usa/art/shapes/rocks/eca_rock_small_3.dae"
+   ]
+  },
+  "understory_deadwood_light": {
+   "radius_m": 80.0,
+   "max_elements_per_layer": 50,
+   "layers": [
+    "ForestFloorLight",
+    "ForestFloor2Light"
+   ],
+   "max_plants_per_layer": 75,
+   "per_m2": {
+    "500m": 0.0029,
+    "1200m": 0.0029
+   },
+   "shapes": [
+    "/levels/east_coast_usa/art/shapes/rocks/eca_rock_small_2.dae",
+    "/levels/east_coast_usa/art/shapes/rocks/eca_rock_small_3.dae"
+   ]
+  }
+ },
+ "terrain_heights_unchanged": true
+}

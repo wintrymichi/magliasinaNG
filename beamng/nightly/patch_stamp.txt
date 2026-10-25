@@ -1,1 +1,21 @@
+Nightly patch (writing this file starts .github/workflows/nightly_patch.yml on the integration branch)
+
 2026-10-20 18:05 UTC: nightly #2 patched with the baked imposters of the far trees (white squares in BeamNG 0.40)
+2026-10-25 12:30 UTC: v3.1.1 nightly (run 40170633614) patched with the finishing step road_seams (0db867c, thread
+"Gomme bucate"): ramps instead of steps between two pieces of carriageway. Tried on the unpacked zip in the cloud
+first: 263 shapes, 6.2 km of seams, steps over 8 cm left on 222 m.
+2026-10-25 12:45 UTC: then the finishing step forest_grass (c043a2b, thread "Aggiungere erba nel bosco", michi asked for
+it in the nightly): grass in the woods. Tried in the cloud on the unpacked nightly after road_seams: 4.25 M terrain
+vertices of bare litter -> the new litter layers, 5 files changed, 189 s.
+2026-10-25 13:40 UTC: skin_grass of 68f2839 (grass texture on the meadow banks) started and CANCELLED before upload: michi
+rejected the look. Instead, skin_grass of ab4a5d7 (thread "Togliere le macchie chiare sul terreno"): no skin earth on
+the meadow banks, the meadow layer and its grass there again; rock stays. Tried in the cloud on the unpacked build:
+917 skin files changed, 41 removed, 15.2 % of the skin triangles gone, 6 min. Not idempotent: once on this zip.
+2026-10-25 15:10 UTC: road_sags (road_seams.road_sags_step of 1c09ad3, thread "gomme bucate"): the lane edges pulled
+down by yards and tracks joining from below lifted (545,-968: edge 1.13 -> 0.43 m under the middle, the lane within 0.2 m).
+The steps pass is skipped: this zip has the road_seams ramps already. Tried in the cloud on the current zip: 28,407
+corners, max 96 cm, 174 shapes, 409 s.
+2026-10-25 15:15 UTC: road_sags again: the first run (40205173203) lifted the sags but stopped before the upload (zip -d on an empty list, a blank line made gone.txt non-empty); zip unchanged.
+2026-10-25 16:35 UTC: skin_blend (steep_skin 1a08824, thread "Rendere omogenee le scarpate", asked by michi): homogeneous,
+sharper cut slopes. Tried by that thread on the 15:18Z zip: 6.5 min, 1338 skin DAEs + 5 PNGs + 2 materials files, +9 % skin
+triangles, nothing deleted, a no-op on a level that has the fringe.

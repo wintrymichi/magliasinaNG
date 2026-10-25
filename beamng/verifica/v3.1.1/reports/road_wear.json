@@ -1,0 +1,22 @@
+{
+ "roads": 911,
+ "ring_roads": 29,
+ "patches": 26,
+ "drains_mly_cover": 15,
+ "drains_sag_grate": 35,
+ "joined": 2018,
+ "joints": 275,
+ "junctions": 1889,
+ "meshes": 222,
+ "seconds": 284,
+ "track_km": 338.4,
+ "edge_km": 537.8,
+ "variation_km": 210.9,
+ "cracks_km": 32.9,
+ "bridged_km": 7.8,
+ "frayed_km": 27.5,
+ "transition_km": 75.4,
+ "age_new_km": 10.4,
+ "joint_km": 1.2,
+ "age_old_km": 20.7
+}

@@ -56,6 +56,9 @@ STOP_SIZE = 0.60          # m across the octagon (Swiss sizes 60 / 90 / 110 cm; 
 GIVEWAY_SIZE = 0.90       # m, side of the triangle (60 / 90 / 120 cm)
 PLATE_LOW = 1.50          # m, underside of a plate over the ground
 EDGE_OUT = 0.60           # m from the edge of the carriageway to the pole
+FOOT_R = 0.8              # m: footprint radius of a bench (1.6 m long), a bin, a hydrant
+FOOT_STEP = 0.8           # m of ground height over that footprint at most (27 deg): more is a bank or a rock cut (v3.1: a bench
+                          # stood on the rock face of a road cut at -3921, 2303, its OSM node at the top edge)
 RED = (193, 18, 28)       # RAL 3020 traffic red
 L = f"/levels/{LEVEL_NAME}"
 
@@ -185,6 +188,13 @@ def timetable_texture(w=128, h=192):
         x1 = int(rng.uniform(0.45, 0.9) * (w - 16)) + 8
         d.line([12, y, x1, y], fill=(90, 90, 90, 255), width=2)
     return img
+
+
+def steep(ground, x, y, r=FOOT_R):
+    """True where the ground under a footprint of radius r round (x, y) rises more than FOOT_STEP m."""
+    a = np.radians(np.arange(0, 360, 45))
+    z = ground(np.r_[x, x + r * np.cos(a)], np.r_[y, y + r * np.sin(a)])
+    return not np.all(np.isfinite(z)) or float(z.max() - z.min()) > FOOT_STEP
 
 
 def box(c, t, n, w, dpt, z0, z1):
@@ -466,8 +476,8 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
                 counts["shelter"] = counts.get("shelter", 0) + int(c[2])
                 placed_list.append([round(float(c[0]), 2), round(float(c[1]), 2), "bus_stop", n["id"]])
             continue
-        # furniture and lamps: off the carriageway, not in a building or wall
-        if on_carriageway([x], [y])[0] or blocked([x], [y])[0]:
+        # furniture and lamps: off the carriageway, not in a building or wall, the furniture not on a bank
+        if on_carriageway([x], [y])[0] or blocked([x], [y])[0] or (kind != "street_lamp" and steep(ground, x, y)):
             counts["left_out"] += 1
             continue
         theta = facing(x, y)
@@ -490,7 +500,7 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
             continue
         if any(k == kind and (px - x) ** 2 + (py - y) ** 2 < PHOTO_NEAR ** 2 for px, py, k, _ in placed_list):
             continue
-        if on_carriageway([x], [y])[0] or blocked([x], [y])[0]:
+        if on_carriageway([x], [y])[0] or blocked([x], [y])[0] or steep(ground, x, y):
             counts["left_out"] += 1
             continue
         theta = facing(x, y)

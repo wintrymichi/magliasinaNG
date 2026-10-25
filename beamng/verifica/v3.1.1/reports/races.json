@@ -1,0 +1,81 @@
+{
+ "races": [
+  {
+   "id": "001-Magliaso_Pura",
+   "length_m": 3729,
+   "climb_m": 238,
+   "rise_m": 238,
+   "checkpoints": 11,
+   "gold_s": 214.0,
+   "bronze_s": 364.0,
+   "start": [
+    752.506,
+    -1100.725,
+    300.725
+   ],
+   "finish": [
+    -707.485,
+    1103.505,
+    538.431
+   ]
+  },
+  {
+   "id": "002-Penudria",
+   "length_m": 4061,
+   "climb_m": 495,
+   "rise_m": 491,
+   "checkpoints": 13,
+   "gold_s": 257.0,
+   "bronze_s": 437.0,
+   "start": [
+    3606.9,
+    5766.917,
+    371.753
+   ],
+   "finish": [
+    2279.557,
+    6304.347,
+    862.388
+   ]
+  },
+  {
+   "id": "003-Astano_Banco",
+   "length_m": 3021,
+   "climb_m": 40,
+   "rise_m": -46,
+   "checkpoints": 9,
+   "gold_s": 140.0,
+   "bronze_s": 238.0,
+   "start": [
+    -4432.821,
+    2216.028,
+    629.905
+   ],
+   "finish": [
+    -2024.676,
+    2054.694,
+    583.408
+   ]
+  },
+  {
+   "id": "004-Giro_villaggi",
+   "length_m": 5605,
+   "climb_m": 196,
+   "rise_m": 152,
+   "checkpoints": 18,
+   "gold_s": 304.0,
+   "bronze_s": 518.0,
+   "start": [
+    -1056.794,
+    2063.727,
+    638.362
+   ],
+   "finish": [
+    -19.736,
+    4658.956,
+    790.011
+   ]
+  }
+ ],
+ "seconds": 1
+}

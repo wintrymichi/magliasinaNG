@@ -1,0 +1,12 @@
+{
+ "car_parks": 469,
+ "spots": 10897,
+ "left_out": {
+  "lane": 894,
+  "obstacle": 476,
+  "outside": 6462,
+  "tilt": 967
+ },
+ "paint_lines": 7404,
+ "seconds": 2200
+}

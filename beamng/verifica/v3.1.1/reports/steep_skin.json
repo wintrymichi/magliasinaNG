@@ -1,0 +1,21 @@
+{
+ "tiles": 1379,
+ "squares": 3221257,
+ "triangles": 26220326,
+ "steep_vertices": 3205026,
+ "changed_vertices": 2824647,
+ "changed_max_m": 11.501575319295455,
+ "lip_clamped_points": 46770,
+ "foot_lowered_vertices": 9451,
+ "foot_lowered_max_m": 3.0,
+ "skin_points_over_road": 4568,
+ "skin_over_road_max_m": 0.785,
+ "triangles_far": 7741080,
+ "triangles_lod1": 6359418,
+ "triangles_lod2": 1381662,
+ "plants": {
+  "skin_fluffy_bush": 42635,
+  "skin_generibush": 47365
+ },
+ "seconds": 1157
+}

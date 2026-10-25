@@ -1,0 +1,11 @@
+{
+ "road_faces": 152245,
+ "wall_faces": 1962508,
+ "road_faces_in_a_wall": 23064,
+ "road_faces_in_a_wall_m2": 10817,
+ "wall_faces_in_a_road_face": 105,
+ "wall_faces_in_a_road_face_m2": 32,
+ "wall_faces_in_a_wall": 3401,
+ "wall_faces_in_a_wall_m2": 539,
+ "shapes_rewritten": 381
+}

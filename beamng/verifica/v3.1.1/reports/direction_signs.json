@@ -1,0 +1,9 @@
+{
+ "roundabouts_exits": 35,
+ "junction_poles": 292,
+ "placed": 214,
+ "no_room": 27,
+ "pointers": 380,
+ "off_mesh": 86,
+ "seconds": 70
+}

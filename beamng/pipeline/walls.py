@@ -250,7 +250,7 @@ def _context():
     LP = np.column_stack([lid["x"][nonveg], lid["y"][nonveg]])
     import json
     rw_file = os.path.join(WORK, "roadside_walls.json")
-    rw = json.load(open(rw_file)) if os.path.exists(rw_file) else []
+    rw = roadside_runs() if os.path.exists(rw_file) else []
     rw_zone = shapely.union_all([shapely.LineString(np.array(r["pts"])[:, :2]).buffer(1.5) for r in rw
                                  if len(r["pts"]) > 1]) if rw else None
     caps_f = os.path.join(WORK, "wall_caps.json")
@@ -363,6 +363,42 @@ def caps_at(ctx, P, r):
     return np.array([Z[ii].max() if ii else np.inf for ii in tree.query_ball_point(P, r=r)])
 
 
+CUT_MIN_LEN = 1.5  # m: the pieces of a wall cut by a drivable way (above_way) shorter than this are left out
+
+
+def _length(poly):
+    """The longer side of the minimum rotated rectangle of poly."""
+    c = np.asarray(poly.minimum_rotated_rectangle.exterior.coords)
+    return float(max(np.linalg.norm(c[1] - c[0]), np.linalg.norm(c[2] - c[1]))) if len(c) >= 3 else 0.0
+
+
+TOP_ALONG = 2.0  # m along the outline: the window of the running median of a wall top (then a mean over half of it)
+
+
+def ring_smooth(rings, z, r=TOP_ALONG):
+    """z (one value per vertex of the rings, concatenated as allv) smoothed along each closed ring by arc length:
+    the median within r, then the mean within r / 2. A step of the top longer than r stays a step (ramped over r),
+    a tooth or notch shorter than r goes."""
+    out, i0 = np.empty(len(z)), 0
+    for ring in rings:
+        n = len(ring)
+        zz = np.asarray(z[i0:i0 + n], np.float64)
+        seg = np.linalg.norm(np.diff(np.vstack([ring, ring[:1]]), axis=0), axis=1)
+        L = seg.sum()
+        s = np.r_[0.0, np.cumsum(seg)[:-1]]
+        S3, Z3 = np.r_[s - L, s, s + L], np.tile(zz, 3)     # around the closed ring
+        for h, f in ((r, np.median), (0.5 * r, np.mean)):
+            if L <= 2 * h:
+                zz = np.full(n, f(zz))
+            else:
+                a, b = np.searchsorted(S3, s - h), np.searchsorted(S3, s + h, side="right")
+                zz = np.array([f(Z3[i:j]) for i, j in zip(a, b)])
+            Z3 = np.tile(zz, 3)
+        out[i0:i0 + n] = zz
+        i0 += n
+    return out
+
+
 def wall_geometry(ctx=None):
     """Yield every cadastral wall polygon with its per-vertex base/top heights (see module doc)."""
     ctx = ctx or _context()
@@ -465,9 +501,14 @@ def wall_geometry(ctx=None):
                     zr_all[near] = zr
             # v2.4: the panoramas see the paving over it (a retaining wall under the edge of a street):
             # the top flush with the paving (the road surface, else the ground), not above it
+            # v3.1 review: one continuous top along the outline (ring_smooth): each rule above holds per vertex
+            # (caps or none within reach, within 1.25 m of the road or not, paving or ground under a flush top)
+            # and neighbours 1 m apart fell on either side of it: teeth and notches of 0.3-1.5 m along the walls
+            ztop = ring_smooth(rings, ztop)
             if flush:
                 zp = np.where(np.isfinite(zr_all), zr_all, zhi) if zr_all is not None else zhi
-                ztop = np.maximum(np.minimum(ztop, zp - 0.02), zbot + 0.05)
+                ztop = np.minimum(ztop, ring_smooth(rings, zp) - 0.02)
+            ztop = np.maximum(ztop, zbot + 0.05)
             return dict(key=key, poly=poly, rings=rings, allv=allv, zlo=zlo, ztop=ztop,
                         zbot=zbot, zhi=zhi, samp=samp, dmax=dmax)
 
@@ -482,7 +523,9 @@ def wall_geometry(ctx=None):
                 yield w
                 continue
             for pq, part in enumerate(polygons(w["poly"].difference(cut))):
-                if part.area >= 0.05:
+                # v3.1 review: a stub the cut leaves at the edge of the way (up to v3.1 every piece of 0.05 m2) stood
+                # as a lone block or wedge beside or in the asphalt ("frammenti di muro isolati"): CUT_MIN_LEN at least
+                if part.area >= 0.05 and _length(part) >= CUT_MIN_LEN:
                     yield measure(part, f"w{wi}_{pj}_{pq}")
 
 
@@ -762,6 +805,50 @@ def carve_terrain(feet, xs, ys, H):
 
 
 END_SPILL = 0.3        # m past the end of a roadside wall the terrain is still lowered/raised for it
+RUN_JOIN = 6.5         # m along the road: two roadside runs on the same side this close are one wall (gap filled)
+RUN_MIN = 8.0          # m: a roadside run shorter than this (after the joins) is left out
+RUN_BASE_MED = 9       # stations (0.5 m): running median of the foot of a roadside run ...
+RUN_SIGMA = 3.0        # ... then a gaussian of this many stations; the plan line gets the gaussian only
+
+
+def roadside_runs(runs=None):
+    """The roadside walls of roadside_walls.json made into continuous walls (v3.1 review).
+    roadside_walls.py smooths the HEIGHT of a run over 8 m but takes its foot (z_base) station by station, where
+    the scan of the DTM profile first finds the steep rise (0.25 m steps across): the foot jumped 0.3 m from one
+    0.5 m station to the next, up to 1.5 m on the Cantonale above Magliaso, and the top (foot + height) with it, a
+    saw along every wall of the road (24 of 58 points of the Cantonale in the v3.1 screenshots; the caps fix of
+    the survey walls, caps_at, never touched these). The foot is smoothed (median, then a gaussian) and the top
+    stays the foot plus the measured height; the plan line, the face offset taken in 0.25 m steps, gets the
+    gaussian (0.3-0.5 m jogs on some runs). Runs split by a gap of a few metres in the photo votes stood as
+    separate blocks with a short stub between them, 4-7 m long: runs closer than RUN_JOIN are joined over the gap,
+    and the runs shorter than RUN_MIN left are dropped (there the DTM bank stays)."""
+    from scipy.ndimage import median_filter, gaussian_filter1d
+    if runs is None:
+        runs = json.load(open(os.path.join(WORK, "roadside_walls.json")))
+    runs = sorted((r for r in runs if len(r["pts"]) > 1), key=lambda r: (r["side"], r["s0"]))
+    joined = []
+    for r in runs:
+        P = np.array(r["pts"], np.float64)
+        prev = joined[-1] if joined else None
+        if prev is not None and prev["side"] == r["side"] and r["s0"] - prev["s1"] <= RUN_JOIN:
+            a, b = prev["P"][-1], P[0]
+            n = int(np.ceil(np.linalg.norm(b[:2] - a[:2]) / 0.5))
+            t = np.linspace(0.0, 1.0, n + 1)[1:-1, None]
+            prev["P"] = np.vstack([prev["P"], a + t * (b - a), P])
+            prev["s1"] = r["s1"]
+            continue
+        joined.append(dict(side=r["side"], s0=r["s0"], s1=r["s1"], P=P))
+    out = []
+    for r in joined:
+        P = r["P"]
+        if r["s1"] - r["s0"] < RUN_MIN or len(P) < 3:
+            continue
+        h = P[:, 3] - P[:, 2]
+        zb = gaussian_filter1d(median_filter(P[:, 2], RUN_BASE_MED, mode="nearest"), RUN_SIGMA, mode="nearest")
+        xy = gaussian_filter1d(P[:, :2], RUN_SIGMA, axis=0, mode="nearest")
+        xy[[0, -1]] = P[[0, -1], :2]                       # the ends where they were
+        out.append(dict(side=r["side"], s0=r["s0"], s1=r["s1"], pts=np.column_stack([xy, zb, zb + h])))
+    return out
 
 
 def roadside_shut(face, back, zb, zt, s, away, T, thick):
@@ -789,7 +876,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
     The face is textured from the panoramas (texturing.texture_ribbon)."""
     import json
     import cv2
-    runs = json.load(open(os.path.join(WORK, "roadside_walls.json")))
+    runs = roadside_runs()
     import roadheight
     S = roadheight.load()
     CH = 128.0

@@ -124,6 +124,42 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - v3.1 was published before its game test, with README captions written from cloud renders: the test (2026-10-24)
   found the hairpin caption "a straight top" false. Write captions of in-game screenshots only after the test.
 
+- Automatic in-game runs on Windows (v3.1 visual check, DESKTOP-OUPOLOA, 2026-10-24/25): start
+  `Bin64\BeamNG.drive.x64.exe` from the game folder. `BeamNG.drive.exe` opens the launcher, and with `-gfx dx12` the
+  game said "There is no valid rendering device".
+- `[System.Windows.Forms.Screen]::AllScreens` is cached inside a long-running PowerShell process: when the monitor went
+  to standby the virtual screen moved to 0,0 and gdigrab failed for 40 minutes with the old offset. Compute the offset
+  in a NEW process for every shot, and check the picture file exists after each one.
+- A command started in the background by the PowerShell tool is not found by Get-CimInstance on its CommandLine: two
+  shot runners ran at once and stole each other's teleports. Stop them with TaskStop and redo those points.
+- PowerShell variables ignore case (again): a script parameter `[string]$Plan` was overwritten by `$plan = Import-Csv`.
+- A test mod in `mods/unpacked` is added to `mods/db.json` by the game by itself: after removing it, restore the
+  db.json saved before the test.
+- The external camera behind the car ends inside trees and buildings in about 90 of 650 shots: the static raycast
+  does not see the forest's vegetation (forest items are not in the static collision it tests).
+- The night of 25.10 the clocks go back (03:00 -> 02:00 CEST -> CET): log timestamps run backwards for an hour.
+- michi (2026-10-24): in in-game tests that do not measure FPS, cap the frame rate at 30 fps.
+
+## Nightly v3.1.1 (merging the visual check, 2026-10-25)
+
+- Nine group PRs were opened from main at once (#90-#98): three of them changed steep_skin.py (#95, #96, #97) and the
+  merge had two real conflicts (the ROAD_CLAMP block, colours vs colours.ground). Run every merged finishing step on a
+  `cp -al` copy of the released level before starting a 4-5 h build: islands, bare_concrete, yard_wear, steep_skin
+  and steep_yards took 40 min together and caught nothing, but a crash at hour 4 costs the day.
+- The release "nightly" was gone (turned into v3.1) with its tag left: `gh release create` on an existing tag keeps the
+  tag's old commit. nightly_build.yml now deletes the tag first.
+- steep_yards (#97) gives a road_m shape vertex colours for all its faces as soon as one yard face in it turns
+  mp_hard_bank: the road meshes grew 1.15 -> 1.40 GB (+22 %) for the same triangles (the level +0.36 GB, the zip only
+  +16 MB). Writing the colours only into the mp_hard_bank part would save it.
+- check_level's network_holes (1,623) has no v3.1 value to compare with (the v3.1 checks were never kept): compare the
+  road coverage instead (2 m cells of the roads/surfaces up faces): identical to v3.1 but 7 cells. Keep
+  `nightly_reports.zip` of every release build in the repo's verifica folder from now on.
+- nightly_patch.yml runs any finishing step on the nightly zip (MOD.FN): unzip, run, `find -newer marker | zip -@`,
+  upload with --clobber (only a workflow can upload assets; the cloud gets 415).
+- road_seams got a second part (sags, 1c09ad3) after its first version was already patched into the nightly zip. Running
+  the whole step again would ramp the seams a second time (stacked ramps up to 78 cm): road_sags_step (steps=False) lifts
+  the sags alone. Ask whether a step is idempotent before patching a new version of it onto a zip that has the old one.
+
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 
 Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), level coordinates:
@@ -136,13 +172,74 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test_report.md), causes not yet looked at:
 - saw-tooth wall tops still on the Magliaso-Pura Cantonale (the hairpin, the cut near node 58 above Magliaso), after
   the v3.1 saw-top fix: the renders of the fix did not show them;
-- missing materials `mp_island_reflector` and `mp_island_beacon` (30 errors each in beamng.log): the traffic island
-  posts added by a nightly patch. Grep beamng.log for missing materials after every patch;
-- the Via Golf underpass deck renders as a flat grey slab with no texture;
-- grass tufts on the asphalt of the Ponte Tresa bridge at its Italian end (the bridge was widened in v3.1);
+- missing materials `mp_island_reflector` and `mp_island_beacon` (30 errors each in beamng.log). Looked at 2026-10-25:
+  NO file of the released v3.1 zip names them (every entry grepped); the bollards patch removed the beacon and its
+  two materials, and the 30 errors = the 30 island tiles with poles. The game used shapes compiled from an EARLIER
+  version (its .cdae cache), which is kept while it is newer than the .dae, and the patched .dae carried the date of
+  the patch run. Fixed in the pipeline: the two materials stay defined (islands.materials) and package.py dates every
+  zip entry at packaging time. Before an in-game test of a new zip, clear the level's compiled shapes in the user
+  folder; and grep the zip itself for a material name before chasing a NO-MATERIAL in the code;
+- the Via Golf underpass deck renders as a flat grey slab with no texture (fixed in railway.py, 2026-10-25, not built yet);
+- grass tufts on the asphalt of the Ponte Tresa bridge at its Italian end (the bridge was widened in v3.1) (fixed in
+  terrain.py, 2026-10-25, not built yet);
 - large angular wall blocks beside strada_cantonale_1 near (-222, -60);
 - AI traffic (#83) still broken: 13 cars queued behind the player's car parked on the Magliaso bridge, then crashed
-  into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes.
+  into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes. The island part is fixed in
+  islands.island_lanes (2026-10-25, see Traffic and AI), not tested in game.
+
+## Props and buildings placed wrong (v3.1 visual check, group 8, 2026-10-25)
+
+- street_life kept its props off the carriageway MESH only: 432 props (156 pallets, benches, drums, skips, bags) stood
+  inside the AI roads' width where a road crosses a yard, square or junction with no carriageway mesh (the yards are
+  `mp_hard_asphalt`, not `mp_road_*`). Site.free now also keeps off the AI road lines (half width + LANE_CLEAR 0.1 m):
+  0 left. A clear of 0.5 m threw out half the hydrants, letter boxes and mirrors, which stand on purpose 0.35-0.4 m
+  beyond the carriageway edge: measure a new clearance on the roadside props before choosing it.
+- props_osm put a bench of OSM on the rock face of a road cut (-3921, 2303; ground 656.4 to 661.9 m within 1 m): no
+  slope test. Furniture now skips a footprint (0.8 m round) that rises more than 0.8 m. props_osm runs in the main
+  build, so it cannot be rerun on a released level: check it by evaluating `props_osm.steep` on the final ground.
+- Not bugs of the data, checked before changing code (keep them out of the next visual check list):
+  "canopies on posts without a roof" are canopies whose roof and underside are there (render3d and the DAE): seen
+  from a road 1-2 m under their eaves the slab is edge-on and only the posts and roof_details fascias show.
+  "Trees on the road edge" (0304, 0321, 1040): no forest item stands within half width + 0.5 m of an AI road
+  (1 on the whole map); the shots had trees between the camera and the car. Buildings "on the carriageway" are
+  swissBUILDINGS3D houses at the edge of village lanes whose AI road is as wide as the lane (3,802 wall vertices
+  inside the AI widths): moving houses is wrong, the AI width would be the thing to narrow. "Sunk" buildings checked
+  (0341, 0403) are low sheds and houses built into the slope; telling a raised terrain from a hillside house needs the
+  DTM, which the cloud cannot download.
+- Render the in-game check points with render3d at the plan.csv pose (driver: eye 1.3 m; ext: 16 m back, 7 m to the
+  right, 6 m up) before reading anything from a shot: the ext camera often stands in a tree or a roof.
+
+## Tyre punctures and steps between road pieces (road_seams.py, v3.1.1)
+
+- In BeamNG 0.40 a puncture is a tyre beam breaking (vehicle/beamstate.lua, beamBroken: `beam.wheelID` -> deflateTire):
+  a sharp impact on an edge, never a ground model. Look for vertical edges the wheels can hit, not for materials.
+- The "hole on the right before Pura" (michi, 2026-10-25: uphill, right side, after the third main curve) was a 22-26 cm
+  step along 40 m between two asphalt pieces of road_m3_-01_-01 at about (-176,-122)..(-194,-104), just after the
+  hairpin: the uphill lane's outer strip was meshed lower than the rest. The whole map had 6.2 km of such seams
+  (1.1 km over 8 cm, max 30 cm), each a vertical skirt with collision. Finish step `road_seams` (after `roundabouts`)
+  raises the lower piece into a ramp (12 m per m of step, 0.75-3 m) with its paint/wear/islands/pavements: 1.9 km
+  left, 215 m over 8 cm (corners where three pieces meet; a second pass stacked ramps up to 78 cm, not done).
+- The hole of michi's screenshot (2026-10-25: "after the two hairpins up from Magliaso, right after the ~90 degree
+  curve", 545,-968) was not a seam: a yard and a dirt track join the cantonale from 1-3 m below, and the corridor's
+  edge row was pulled down to them, the uphill lane's edge 0.75-0.85 m under the middle over 2 m (a ramp into a pit
+  beside the guard rail). road_seams.sags lifts road-surface corners inside the AI road's lane (and the carriageway's
+  own edge row, half width + 0.3 m) to the middle's height minus a crossfall, and ramps what joins from outside up to
+  them. Corners in the lane are sparse (rows 1 m apart, the edge row just outside half width - 0.3): lifting only the
+  lane's own corners changed nothing in the cross-sections. A height test alone also lifted the lower lane beside
+  the wall above Magliaso (690,-1046) by 1.18 m: a sag must be joined to the middle without a step (_joined).
+  Found by 0.5 m cross-sections of every AI road (drop at the lane edge vs the middle), not by holes in the mesh:
+  the asphalt was there, only too low. Render the place from the player's screenshot pose before guessing.
+- First version told the two sides of a seam by connected component: the two strips were one welded component
+  (joined elsewhere) and both went up 20 cm, step kept. A corner is on the low side only if it lies behind the seam
+  edge (outward normal) and more than half the step under the higher face's plane.
+- patch_release.read_dae reads the g-pa array of the first geometry but the triangles of all of them: on the terrain
+  skin DAEs (three LODs) it made garbage triangles up to 80 cm over the road. A scan reads only up to the first
+  `</geometry>` (patch_release left as it is: rewrite_dae writes back what read_dae reads).
+- Not changed, also puncture candidates (checked with a 0.1 m scan across the Magliaso-Pura route): low walls 10-30 cm
+  standing up to 0.7 m inside the asphalt edge (walls.drive_free skips the cantonale and keeps walls under FREE_OVER
+  0.3 m: s 247-307 at (646,-972) is a stone kerb under the guard rail, (-252,85) a slab by a lamp); the 5-6 cm skirt lip
+  at every outer road edge; the 12 cm traffic islands. Real kerbs puncture too: left as they are.
+- Writing DAE numbers with "%.4f" grew every array by trailing zeros: strip them (road_seams._set_z).
 
 ## Terrain fixes
 
@@ -172,8 +269,38 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   road (645 by more than 3 cm, worst 0.60 m). Clamp the FINAL points of every material after the clips (tile_mesh),
   only up to ROAD_LIFT_MAX over the road ("near" surface: never pull the skin down to a road in a gallery below), and
   keep the relief small within 2 m of a road (RELIEF_NEAR). The report counts the points before the clamp.
+- Pale yellow-green patches with sharp edges on the meadow slopes of the Magliaso-Pura road (michi, 2026-10-25, hairpin
+  near (-200,-215) and below Pura near (-240,50)) were the steep skin's EARTH (t_steep_bank_b: light beige with bright moss
+  blobs and roots), laid on every bank between STEEP and ROCK_DEG, also on grass slopes, not a terrain layer. Under the
+  skin the terrain layer is mostly Bank (the steep vertices), which says nothing about meadow or wood: take the layer of
+  the nearest non-Bank, non-paved vertex. First fix: a grass texture of the skin's own in the meadow's colour. michi: "non
+  mi piace, non si deve vedere differenza": no mesh looks like the terrain with the game's GroundCover grass. Now the finish
+  step skin_grass (steep_skin.py, after steep_yards) removes the skin earth on meadow ground (15 % of the skin, 41 tiles
+  whole), turns the Bank vertices under it into the meadow layer beside them (so the grass grows) and drops the skin's
+  bushes there; rock (> ROCK_DEG) stays. It is not idempotent (the relayered vertices make more meadow: a second run took
+  another 0.4 %): run it once on a zip. michi's in-game colours matched the v3.1 skin (EARTH_MIX 0.45) with the vertex
+  colours taken as sRGB multipliers: a screenshot may come from the release, not the nightly; check which first.
 - road_obstacles (check_level) cannot run on a released folder in the cloud: it needs network.load() data in WORK. The
   steep_skin report's skin_points_over_road stands in for it for the skin.
+- The green and brown "teeth" along the foot of the rock cuts (G1 of the v3.1 visual check, ~45 points, e.g. 0277 at
+  2290,5649) were the SKIN, not terrain poking through it: sampled every 25 cm the terrain was under the skin
+  everywhere (max 7 cm). Within ROAD_CLAMP (1.5 m) of a road the skin was clamped to split_max of the terrain + EPS
+  (against the issue #15 lip), and where a road runs across the terrain grid its carve leaves the foot of a cut as a
+  staircase (road level, then 2-3 m up one square further): the higher split of those squares is a row of pyramids
+  one square apart, and the skin copied them. First tries that failed: blurring the normals the rock/earth line is
+  told by (the teeth stayed, the narrow faces lost their rock), blurring the rock weight alone (teeth stayed: they
+  were geometry). Now steep_skin.foot_line draws a line up from the TRUE road edge (a FOOT_FINE raster of the road
+  surface; the terrain-vertex footprint steps across the road too) and lower_under lowers the terrain under the
+  whole skin until no split of a square stands over it, the road's own vertices outside its surface included. The
+  first version of that left the terrain up to 3 m over the skin 25 cm outside the road edge: the line went on down
+  under every road, also where the bank falls away from the road (the skin comes up to its edge from below) and
+  under the terrain under the road. Check a skin change with the dense terrain-vs-skin sampling outside the road
+  surfaces (both splits, 25 cm), not only in renders. Preview harness: run steep_skin_step on a cp -al copy with
+  the tile loop limited to the tiles of the view (one tile 3 min, the whole map 13-16 min).
+- G1 points NOT from the skin: 0570 (2134,3110) is a ridge of 2-3 terrain vertices 2.4 m over the road at the edge of
+  an embankment with no mesh over it, the same in v3.0.40 (likely a DTM wall smear of a wall the level does not
+  build); 0328 and 0091 are teeth at the foot or top of walls (walls.carve_terrain lets a terrain square rise across a
+  wall "as a short bank of earth at its foot", which along a diagonal wall is a saw). Not fixed in the G1 thread.
 - The skin's 90,000 bushes made check_level forest_floating jump 3,751 -> 31,847 (build test v2, 2026-10-23): canopy.check
   measured items against the terrain and mp_fill only, and the skin stands up to metres over the terrain. On the v2 zip
   every bush was 8 cm into the skin (PLANT_SINK), none over it. canopy.skin_height now reads the skin as ground (one
@@ -183,8 +310,37 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   projection add vertices (0.59 -> 0.72 per triangle), and write_dae repeats every corner index 4 times in <p> (56 % of
   a skin file). One index per corner (all inputs at offset 0, valid COLLADA) measured -42 % on 80 tiles: not applied,
   it needs a load test in the game first (it would change every mesh of the map).
+- Cut slopes patchy and low-res (michi's v3.1.1 screenshot, 2026-10-25, "rendi più omogeneo e alta risoluzione"): three
+  causes in steep_skin. (1) The earth texture was 512 px over 3 m with bright green moss blobs and root lines: the
+  same blobs every 3 m on every bank. (2) Each face took the projection axis it is turned to: on a rock face about 45
+  degrees to x and y the relief flipped the axis from one triangle to the next, a patchwork of seams. (3) The rock
+  texture's mean was 150 and the earth's 205 (and yellow, 225/212/167) for the SAME vertex colour at the line where
+  they meet: a 27 % brightness and hue step along it. v3.1.3: textures 2048 px over 6 m, one mean (180, the earth
+  nearly grey), axes from normals averaged over 4.5 m (smooth_axes), a cut-out fringe of earth over the rock in 5
+  bands that nest (one alpha texture, alphaRef per band: border), the rock's moss calmer away from the line. A
+  built level gets it from the finish step skin_blend (6 min, no-op after a build; the steep yards keep the old
+  texture as t_hard_bank_*). +9 % skin triangles (the fringe), FPS not measured in game.
+- render3d views of cuts were covered by big flat grey planes: the coarse far terrain (one vertex every 12 squares
+  at far=2500, lowered only 1 m) spans the cut and stands over the skin inside the near region. It is not in the
+  game; for views of cut slopes lower the coarse terrain (scratch monkeypatch of Renderer._terrain, cast=False).
 - render3d draws every forest tree as a big cone or crown: views of slopes in woods show only trees. Render from a copy of
   the level without its `forest` folder (cp -al, then rm the folder: the hard links keep the original).
+- Visual review of v3.1, group 3 ("scarpate stirate", 2026-10-25): most of the ~50 stretched cuts had NO skin at all
+  (0022, 0338, 0548, 1011...): their steep vertices all lay within one or two squares of the road, inside `solid` (road
+  dilated by 1), so skin_mask never seeded them and foot() only runs on from a skin that exists. 23,000 vertices over 50
+  degrees near roads were bare terrain on the v3.1 zip. Before changing a texture or a threshold, check whether the face
+  in the screenshot is the skin or the terrain: rasterise the near skin triangles over the terrain slope on a top-view map
+  (mp_steep_bank_far parts index their own g1/g2 arrays: optimize_level.parse reads only the first geometry, so a probe
+  that takes every part of a skin DAE gets triangles of 200 m). Seeding every steep vertex of the ring cost +48 % skin
+  triangles; only those over STEEP_ROAD (45) and halving rock edges only over SUB_DZ 1.5 m: +11.6 % (19.4 -> 21.6 M).
+  Halving edges alone did not round a face beside a road (0439): within ROAD_CLAMP the lattice was set to the terrain's
+  facet and the relief capped at 12 cm, so it stayed one plane however finely cut. Now the clamp holds only the foot
+  (CLAMP_HAB) and the relief may reach part of the clearance to the road edge (RELIEF_CLEAR); skin points over a road
+  surface stayed 7 (none over 0.3 m) on the whole map. Each try = steep_skin on the whole released level (12 min) +
+  renders (10 min): compare against a "before" run of main's steep_skin on the same copy (the step lowers the terrain
+  again on a released level, so the released skin is no fair "before").
+- render3d (textured) draws many road surfaces as smooth untextured grey: in the review renders a big grey sheet in front
+  of the camera is the road or a yard, not a terrain slope.
 - A 3x3 median "tooth" scan near the roads found 28,000 vertices, mostly in villages (yards, sidewalks): not a way to find
   a place from a screenshot. Find it from the video it came from (frames, then the road and the railway beside it).
 - railway.carve_terrain kept every vertex more than CARVE_MAX (4 m) over the cutting, also one beside the bed: a lone
@@ -220,6 +376,64 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
   Cut only the low patches that touch the surveyed lake (MU specchio_acqua), and check a lake cut by the area it removes.
 
+## Yards, bare Concrete and river gaps (v3.1 visual review, group 5)
+
+- The "grey-blue flat surfaces without texture" of the review (0205, 0207, 0410, 0473, 0485, 0493; two were reported as
+  water planes) were no mesh at all: the terrain layer Concrete (classes edificio and bacino_idrico) where no building
+  stands. terrain_colors.py measured Concrete on the open ground of those cells, which is the water of pools and basins:
+  151,165,165, grey-blue, and the orthophoto base map made it bluer still. 36.6 ha of it lay bare (houses built into a
+  slope, buildings missing from swissBUILDINGS3D, basins). Before calling a flat surface "water" in a screenshot, look
+  for a water mesh there (level_objects/Water) and read the terrain layer: neither showed water at five of the six.
+  Fixed by the finish step bare_concrete (nearest non-Concrete layer where no solid mesh touches it), a fixed Concrete
+  colour in dati/terrain_colors.json (terrain_colors.FIXED) and no orthophoto base map for Concrete.
+- The big yards (mp_hard_asphalt, 172 ha) had none of road_wear's dressing: it works along AI roads only. yard_wear (after
+  road_wear, it needs its overlay materials) lays the blotches, dusty edges, patches and cracks on yards of 600 m2 or
+  more (452 yards, +754k overlay triangles, mostly the blotch layer). Random patch angles looked scattered: lay
+  rectangles along or across a yard's long axis.
+- The Swiss survey stops at the border, which runs along the Tresa: where the river is all in Italy the water ended
+  in a point (0391) and the bed went on dry under forest floor. rivers.osm_channels adds the channel along OSM
+  waterway=river outside the survey (lowest ground of each cross-section + CHANNEL_DZ). Tested in the cloud only by
+  emulation on the released level (the .ter as the DTM, the existing water as the survey): with CHANNEL_DZ 0.6 and no
+  opening it also took ragged patches of the flat ground beside the Tresa below Ponte Tresa; 0.45 and an opening of
+  2 cells left one small low patch. Check the build log's osm_channels / ha_osm_channels and the river near
+  (-2250, -1060) in the first build with it.
+- The render tool render.py of the thread was run on a `cp -al` copy; the .ter was replaced as a new file (os.remove,
+  then write) so the hard-linked original stayed as it was. Cameras placed by hand at (x, y, z) without reading the
+  terrain ended under the ground twice: take z from the .ter.
+
+## Ground materials (visual review of v3.1, group G4)
+
+- The pale grey-green banks all over the map (whole hairpins, every cut in the woods, 0456 at -3872,119) were the
+  terrain skin's colour, not its rock: steep_skin.BaseColours looked a layer's colour map up as
+  `t_base_<layer>_b.png`, and the twins added later (understory: ForestFloorVerge/Light, forest_mosaic: ForestRock,
+  BankWood) have no such file: their vertices took a flat 0.55 grey, which EARTH_MIX made pale. Read the map from the
+  level's terrain materials (baseColorBaseTex). A step that adds terrain layers must check every reader of layer names
+  (BaseColours, render3d._layer_colors, groundcover lists), not only its own.
+- The skin runs into the road (FOOT) and its colours are blurred over 3 squares: the light Asphalt/Concrete layer under
+  the road meshes greyed the foot of every bank. The skin takes the nearest natural layer's colour (BaseColours.ground).
+- With the colours right the skin was still about twice as bright as the forest floor round it (pale patches with a
+  sharp edge, 0192/0509/0519): EARTH_MIX 0.45 pulled every colour towards EARTH, a light beige. Three rounds of renders
+  to settle it: the terrain's brightness alone (as dark as the forest floor's macro colour, 62 sRGB, darker than the
+  detail-textured terrain beside it), times 1.35 (meadow banks still pale beige: the desaturation, not the brightness,
+  made the edge), then EARTH_MIX 0.25 at the terrain's luminance + EARTH_LIFT 0.08 (steep_skin.earth_colour). A full
+  steep_skin rerun + renders is about 40 min in the cloud: try a tint on a few lattice colours against the ground
+  colours of the review points first, and check it against the ground beside it, not alone.
+- `pkill -f "[s]hots.py /home/..."` in a command that also named that path later killed the shell again (exit 144).
+- The "asphalt on slopes" (0030, 0160, 0161, 0399) were survey yards (altro_rivestimento_duro) meshed on the DTM, which
+  smears walls and terrace edges into slopes: 14 ha of mp_hard_asphalt at 20-60 degrees in v3.1. Finish step
+  steep_yards (after steep_skin) gives yard faces over 18 degrees (32 %) the skin's earth (mp_hard_bank, same geometry);
+  24 degrees missed the light ramp of 0399, mostly 10-20 degrees.
+  The skirts (over 72 degrees) are left alone. Mean slopes per material lie: area per slope band is the useful probe.
+- Gravel at 150 sRGB (surface_textures.BRIGHTNESS) read near white with a blue cast in the game's light (0280); now 124.
+  Italy's setts and cobbles at 1.0 were the brightest thing in a meadow (0367): STONE_TINT.
+- Roof colours were the orthophoto median over the roof: tree crowns over a roof made 5-14 % of the roof area green
+  (0165, a shed with a "grass" roof). buildings_mesh.roof_colors drops the green pixels; a roof is never green.
+- Checking these in the cloud: probe the level for terrain layers and mesh materials near a point (layer counts +
+  mesh area per slope band) before guessing; render3d (no orthophoto) draws the terrain in the layer colours and the
+  skin with its vertex colours, so it reproduces the pale skin. Rerunning steep_skin on a released level lowers the
+  terrain under the old skin a second time (changed_max_m 4 m): fine for renders, never for a release.
+- PIL `save` onto a path that is a hard link (cp -al copy) writes into the original too: remove the file first.
+
 ## Bridges
 
 - On a bridge the survey draws the bridge (SOSF ponte_passerella), not the carriageway (LCSF strada_sentiero), so
@@ -240,6 +454,34 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   swapped into the extracted test build (roads/surfaces items + DAEs) they gave before/after renders and measures.
   First try of the road join took any road surface within 1 m: a path beside the bank pulled a deck corner 0.8 m
   down; within 0.5 m, and a surface further off is a drop (no join to the ground there either).
+
+- Grass on the Ponte Tresa deck (v3.1 test, visual check group 6, 2026-10-25): the deck, 11 m wide since v3.1, lies on
+  its Italian bank (Copernicus meadow, no survey) and paved_edges raised that ground to 5 cm under the asphalt; the
+  layer stayed Grass because no_cover (no GroundCover) is made from the road carve, and the decks are not carved, only
+  capped. 22 grass vertices there, 45 under all the decks. terrain.build_terrain now gives the verge twins (no cover)
+  to the ground under a deck within DECK_COVER m of its slab. render3d draws no GroundCover: check grass by the layer
+  under the road faces (Grass/GardenGrass vertices less than 1 m under a top face), not in a render.
+- The Via Golf rail deck was a flat grey slab in the game: mp_rail_deck was a plain colour (railway.build) and its uvs
+  the (x + z, y + z) of the track parts. Now Italy's m_concrete_old with box uvs, as the road decks.
+- The "road ends on a raised slab" points of the visual check (0055, 0352, 0373, 0440, 0479, 0576, 0577): 124 of the
+  128 km of paved outer edges more than 0.5 m over the ground were in the paved_edges keep-out (2 m of 1 m cells round
+  walls, buildings, fences, guard rails, railway, water, parapets), where nothing over KEEP_OUT_LIFT is raised. Most
+  of it was not a slab but a TRENCH: the road carve lowers the ground to 0.1 m under the lowest face within one
+  terrain step, so beside (and under) a road that climbs into a slope it dug up to 1.7 m (0576), and near a wall it
+  stayed. A first rule "raise where no wall is closer than the road + HOLD" (hold()) changed only 43,446 vertices and
+  no render showed it; the second rule (pits(): ground higher than the road by PIT_UP within PIT_N steps, not under a
+  road) does the work. Its first version compared with the vertex's NEW height and took the ground between the road
+  and a wall as "higher ground": 327,373 vertices, also beyond retaining walls. Compare with the road height
+  (block() now returns it). Together: 227,040 vertices, edges over 0.5 m 127.8 -> 49.9 km. 0448 and 0561 are flush
+  (the line just ends), 0352 is the lake (water kept out), 0577's yard stands 6 m over the ground (over EMB_MAX).
+  A rerun of paved_edges on a released level is no preview of a change: later steps moved things and the rerun alone
+  raised 321,241 vertices. Run it twice (with and without the change) and take only the vertices that differ into
+  the released terrain (about 15 min a run, PATCH_WORKERS=3). render3d cameras 9 m out from an uphill edge end up
+  under the ground: put them on the road looking out. Do not truncate a log a running process still writes (nohup
+  restarted on the same file left NULs and the old run's last lines in it).
+- The Ponte Tresa road ends at the border on the Italian meadow (no Italian roads in the level): the deck end is flush
+  with the ground (checked along the axis and 6.5 / 9 m to the sides); the "slab" of the shots is the deck's side over
+  the bank. Not changed.
 
 ## Checking a finish step in the cloud container
 
@@ -322,6 +564,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   them (windows, leaves), crossings need 3 parallel bars, and paint must lie on the asphalt faces of roads/surfaces
   (whitelist the materials: the up faces of mp_road_wall are wall tops). Paint "off the road" far east (x > 4000) is
   outside the level's network: OSM covers more than the map.
+- The v3.1 stop paint still laid every traced shape it could not name (G9 of the v3.1 visual check, 2026-10-25): BUS
+  letters and crosses of a faded bus yard came out as yellow blobs, a star and L shapes (Caslano station), a yellow bus
+  front and a motorcyclist's jacket in the lane passed the "mark" test, a sunlit shade edge on a mountain road became a
+  5 m yellow bar across the lane, the corners of bay frames passed as zigzags (Ln >= 4 m, low fill: an L has both), and
+  the real zigzags were their traced outline widened, a thick wavy band. Now marks are not laid, a zigzag must swing
+  left and right 3 times with 1 m legs and is redrawn straight from its centre line, and strips need 2 m and a zigzag
+  or crossing within 15 m: 626 pieces laid -> 107 on the v3.1 zip. Look at a traced class over the photo crops
+  (overlay of the polygons on luoghi/gialli, kept on claude/project-thread-bpnv3b) before laying it, not only at counts.
 - islands.py (v3.0) put a short white beacon with a yellow reflector beside every keep-right pole: no island of the
   area has one, the photos show the pole's foot in a black and yellow sleeve (155 poles). Check a street object's look
   against a photo of the area before modelling it from a norm or from memory.
@@ -491,6 +741,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   within two squares (forest_mosaic: the verge twins there), outcrops ROCK_CLEAR_M and bank stones BANK_CLEAR squares
   from it and every solid. Check every new GroundCover against the road AND the skin footprint in a render.
 - `/usr/bin/time` is not installed in the cloud container (a background run died at once): use resource.getrusage.
+- "No grass in the wood" (michi, 2026-10-25, v3.1.1): v3.1 had grass only on the light twins; the shade had none, and
+  the verge twins were both "near a mesh" and the mosaic's bare litter, so 75 % of the wood floor 5-10 m from an AI
+  road and 50 % at 25-40 m had no plant at all. Measure the layer shares by distance to the AI roads (what the car
+  sees) before tuning a cover's density. Now the litter twins (forest_mosaic.LITTER, +2 terrain layers) take the
+  bare litter more than two squares from any mesh or skin, and SHADE_GRASS/LITTER_GRASS put grass there; finish step
+  forest_grass does it on a level of v3.1. The ground right beside most woodland roads is the terrain skin (a mesh):
+  no GroundCover can green it, only its own bushes. The first density (1 tuft per m2 in the shade) looked bare in
+  the renders: 2 now. The renders draw each billboard as a 6-blade tuft, thinner than the game's textures: judge the
+  density in the game.
 
 ## Data from the cloud sessions
 
@@ -569,6 +828,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   lines behind, bank 4 m higher): taking the nearest cap only moved the teeth. walls.caps_at takes the highest cap
   within the wall's thickness. Never look up per-vertex data by rounded coordinates when the vertices can change.
   Found by a column check on the released zip (top of each xy column vs its mesh neighbours, ±0.6 m).
+- The caps_at fix above did NOT reach the Cantonale: there (24 of 58 points with saw tops in the v3.1 screenshots,
+  2026-10-25) the walls are the ROADSIDE walls (rwalls_*, walls.build_roadside from dati/roadside_walls.json), not the
+  survey walls. roadside_walls.py smooths a run's height over 8 m but takes its foot station by station (where the DTM
+  scan finds the steep rise, 0.25 m steps): the foot jumped 0.3 m every 0.5 m, up to 1.5 m, and the top (foot +
+  height) with it. walls.roadside_runs smooths foot and plan line, joins runs < RUN_JOIN apart and drops runs under
+  RUN_MIN (the 4-7 m stubs). Before fixing a wall, find WHICH builder made it (shape name: rwalls_ / walls_).
+  The survey walls took each top rule per vertex (caps or none, near the road or not, paving or ground under a flush
+  top): walls.ring_smooth now smooths the final top along the outline (2 m median + 1 m mean); stubs under CUT_MIN_LEN
+  left by the drive-free cut are dropped. Neither builder can run in the cloud (no WORK data): both were checked by
+  emulation on the released level (build_roadside with the road mesh as road surface reproduced the released rwalls to
+  the mm; ring_smooth applied to the top rings of the released DAEs) and render3d before/after.
+- render3d draws grey terrain rising in front of the roadside walls of the Cantonale that the game does not show
+  (seen in every view of them, before and after): do not read it as a wall fault.
 
 ## Buildings closer to the real ones (edifici_veri.py, v3.1)
 
@@ -619,6 +891,24 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - fuel_stations.LIGHT (the canopy lights) is defined but never placed: the v3.0.40 zip has no light but the lamps'.
 
 ## Traffic and AI
+
+- Splitter islands stood in the AI lanes (v3.1 visual check, spot 1102: a car set mid lane at the Magliaso
+  roundabout exit stood on the island, where the traffic crashed): swissTLM3D draws most roundabout arms and many
+  roads with a refuge as ONE line down the middle of the island, the AI road follows it and its two lanes (a quarter
+  of the width either side) run along the kerbs or over the island. 85 lane lines crossed 45 of the 124 islands.
+  islands.island_lanes (in the islands finish step, which knows the raised islands) splits such a road there into
+  two one-way roads, one each side in the middle of the free carriageway, or moves it to the side with room.
+  Measured on the released v3.1: 51 lane lines on 23 islands left (mostly the Agno junctions), network pieces and
+  dead ends unchanged (34 / 647). Three things it took:
+  - _ease must never move a road's end node (np.interp with the end both pinned at 0 and in the measured keys
+    took the measured value): the first try cut 19 pieces off the network (pieces 34 -> 53, dead ends +76).
+    Check ai_roads.graph_report before/after any change to AI road geometry.
+  - two roads meeting end to end in the middle of a long median each converged on their common node: the lanes
+    crossed the island in an X. Such ends (exactly two two-way roads, both with an island near) stay open and the
+    pieces are joined at the midpoint of their ends.
+  - races.route_line chains a named road by "<name>(_g?<n>)*": the pieces past an island are "<name>_i<n>"
+    (the way on), "<name>_j<n>" (the other direction, not chained) and "<name>_i<n>_0" (after it); the regex
+    now takes _i too. A new piece naming must be checked against every reader of the AI road names.
 
 - Started a full build on GitHub Actions for one thread while the other v3.0.40 threads were still working;
   michi stopped it. In a combined round, build only once, when every thread is ready (traffic_build.yml is manual).

@@ -1,0 +1,72 @@
+{
+ "roundabouts": 10,
+ "all_setts": 1,
+ "skipped": 2,
+ "objects_raised": 0,
+ "forest_raised": 4,
+ "list": [
+  {
+   "x": -2690.9,
+   "y": -594.7,
+   "R": 4.55,
+   "green": true
+  },
+  {
+   "x": 766.8,
+   "y": -1123.2,
+   "R": 7.98,
+   "green": true
+  },
+  {
+   "x": 1115.2,
+   "y": -966.2,
+   "R": 6.23,
+   "green": true
+  },
+  {
+   "x": 2955.6,
+   "y": 2477.8,
+   "R": 7.22,
+   "green": true
+  },
+  {
+   "x": 3375.2,
+   "y": 2874.5,
+   "R": 7.27,
+   "green": true
+  },
+  {
+   "x": 3633.7,
+   "y": 3394.5,
+   "R": 2.52,
+   "green": false
+  },
+  {
+   "x": 4186.5,
+   "y": 4971.6,
+   "R": 7.67,
+   "green": true
+  },
+  {
+   "x": 4035.5,
+   "y": 4501.4,
+   "R": 7.83,
+   "green": true
+  },
+  {
+   "x": 3779.3,
+   "y": 5216.3,
+   "R": 7.34,
+   "green": true
+  },
+  {
+   "x": 4170.4,
+   "y": 5704.8,
+   "R": 6.21,
+   "green": true
+  }
+ ],
+ "island_faces_removed": 3957,
+ "road_faces_removed": 3521,
+ "seconds": 68
+}

@@ -1,0 +1,17 @@
+{
+ "gaps": 1461,
+ "lids": 1459,
+ "lid_m2": 867.3,
+ "lid_m": 9149,
+ "end_faces": 1378,
+ "left_two_levels": 2,
+ "flips": 167,
+ "slivers_left": 1243,
+ "shapes_rewritten": 167,
+ "rise_m_p50_p90_p99": [
+  0.11,
+  0.63,
+  1.79
+ ],
+ "seconds": 189
+}

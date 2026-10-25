@@ -1,0 +1,13 @@
+{
+ "backfill_shapes": 0,
+ "wall_squares": 444006,
+ "grass_tall_m": 0.8,
+ "grass_removed_vertices": {
+  "Grass -> GrassVerge": 10617,
+  "GardenGrass -> GardenGrassVerge": 60635
+ },
+ "grass_removed_why": {
+  "over_wall_top": 71252
+ },
+ "terrain_heights_unchanged": true
+}
