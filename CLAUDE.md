@@ -214,6 +214,22 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   it needs a load test in the game first (it would change every mesh of the map).
 - render3d draws every forest tree as a big cone or crown: views of slopes in woods show only trees. Render from a copy of
   the level without its `forest` folder (cp -al, then rm the folder: the hard links keep the original).
+- Visual review of v3.1, group 3 ("scarpate stirate", 2026-10-25): most of the ~50 stretched cuts had NO skin at all
+  (0022, 0338, 0548, 1011...): their steep vertices all lay within one or two squares of the road, inside `solid` (road
+  dilated by 1), so skin_mask never seeded them and foot() only runs on from a skin that exists. 23,000 vertices over 50
+  degrees near roads were bare terrain on the v3.1 zip. Before changing a texture or a threshold, check whether the face
+  in the screenshot is the skin or the terrain: rasterise the near skin triangles over the terrain slope on a top-view map
+  (mp_steep_bank_far parts index their own g1/g2 arrays: optimize_level.parse reads only the first geometry, so a probe
+  that takes every part of a skin DAE gets triangles of 200 m). Seeding every steep vertex of the ring cost +48 % skin
+  triangles; only those over STEEP_ROAD (45) and halving rock edges only over SUB_DZ 1.5 m: +11.6 % (19.4 -> 21.6 M).
+  Halving edges alone did not round a face beside a road (0439): within ROAD_CLAMP the lattice was set to the terrain's
+  facet and the relief capped at 12 cm, so it stayed one plane however finely cut. Now the clamp holds only the foot
+  (CLAMP_HAB) and the relief may reach part of the clearance to the road edge (RELIEF_CLEAR); skin points over a road
+  surface stayed 7 (none over 0.3 m) on the whole map. Each try = steep_skin on the whole released level (12 min) +
+  renders (10 min): compare against a "before" run of main's steep_skin on the same copy (the step lowers the terrain
+  again on a released level, so the released skin is no fair "before").
+- render3d (textured) draws many road surfaces as smooth untextured grey: in the review renders a big grey sheet in front
+  of the camera is the road or a yard, not a terrain slope.
 - A 3x3 median "tooth" scan near the roads found 28,000 vertices, mostly in villages (yards, sidewalks): not a way to find
   a place from a screenshot. Find it from the video it came from (frames, then the road and the railway beside it).
 - railway.carve_terrain kept every vertex more than CARVE_MAX (4 m) over the cutting, also one beside the bed: a lone
