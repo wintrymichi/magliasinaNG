@@ -966,6 +966,7 @@ FINISH = [
     ("road_seams", "road_seams", "road_seams_step", {"report": True}),   # v3.1.1: ramps, not steps, between road pieces
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
     ("steep_yards", "steep_skin", "steep_yards_step", {"report": True}),   # v3.1.1: no asphalt on the steep yard faces
+    ("skin_grass", "steep_skin", "skin_grass_step", {"report": True}),   # v3.1.2: the meadow banks grass, not pale earth
     ("forest_mosaic", "forest_mosaic", "forest_mosaic_step", {"report": True}),   # v3.1: the forest floor as a mosaic
     ("forest_grass", "forest_mosaic", "grass_step", {"report": True}),   # v3.1.1: grass under the crowns too
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain

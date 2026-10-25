@@ -256,6 +256,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   road (645 by more than 3 cm, worst 0.60 m). Clamp the FINAL points of every material after the clips (tile_mesh),
   only up to ROAD_LIFT_MAX over the road ("near" surface: never pull the skin down to a road in a gallery below), and
   keep the relief small within 2 m of a road (RELIEF_NEAR). The report counts the points before the clamp.
+- Pale yellow-green patches with sharp edges on the meadow slopes of the Magliaso-Pura road (michi, 2026-10-25, hairpin
+  near (-200,-215) and below Pura near (-240,50)) were the steep skin's EARTH (t_steep_bank_b: light beige with bright moss
+  blobs and roots), laid on every bank between STEEP and ROCK_DEG, also on grass slopes, not a terrain layer. Its colour
+  comes from the terrain base colour, but under the skin the terrain layer is mostly Bank (the steep vertices), which says
+  nothing about meadow or wood. Finish step skin_grass (steep_skin.py, after steep_yards) gives the skin faces on meadow
+  ground (layer of the nearest non-Bank, non-paved vertex in MEADOW_LAYERS) a grass texture with a neutral mean in the
+  terrain's own colour: 18 % of the skin. It edits the skin DAEs in place and skips a geometry that has grass already, so
+  it runs once or again on a built zip. michi's in-game colours matched the v3.1 skin (EARTH_MIX 0.45) with the vertex
+  colours taken as sRGB multipliers: a screenshot may come from the release, not the nightly; check which before
+  measuring a fix against it.
 - road_obstacles (check_level) cannot run on a released folder in the cloud: it needs network.load() data in WORK. The
   steep_skin report's skin_points_over_road stands in for it for the skin.
 - The green and brown "teeth" along the foot of the rock cuts (G1 of the v3.1 visual check, ~45 points, e.g. 0277 at
