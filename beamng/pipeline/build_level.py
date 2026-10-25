@@ -88,7 +88,12 @@ def stage_terrain(scene, ctx):
     if override:
         from scipy.ndimage import binary_dilation
         no_cover = binary_dilation(override[1], iterations=1)
-    z0, maxh, H = terrain.build_terrain(LEVEL_DIR, *(override or (None, None, None)), post_fn=post,
+    ov3 = list(override or (None, None, None))
+    import rivers
+    if rivers.CHANNELS:                                  # v3.1: the river beds beyond the survey are gravel too
+        lo = rivers.channel_layers(rivers.CHANNELS, terrain.MAT_ID["Gravel"])
+        ov3[2] = lo if ov3[2] is None else np.where(lo >= 0, lo, ov3[2])
+    z0, maxh, H = terrain.build_terrain(LEVEL_DIR, *ov3, post_fn=post,
                                         cap=ctx.get("terrain_cap"), no_cover=no_cover)
     # v3.0: the open ground's base colour from the orthophoto over the whole block (terrain.base_color_maps)
     cols = {m: colors[m] if m in colors else colors[terrain.VERGE_OF[m]] for m in terrain.TERRAIN_MATS}
@@ -921,10 +926,12 @@ STAGES = ["roads", "walls", "water", "terrain", "railway", "sky", "backdrop", "b
 # (name, module, function, keyword arguments): the steps that finish the level, in this order
 FINISH = [
     ("optimize", "optimize_level", "level_step", {}),            # v2.5: fewer, lighter shapes
+    ("bare_concrete", "bare_concrete", "bare_concrete_step", {"report": True}),   # v3.1 review: no bare Concrete layer
     ("grass", "groundcover", "grass_step", {}),                  # v2.6: the game's grass
     ("unpaved", "network_mesh", "unpaved_step", {}),             # v2.7: tracks flush with the ground
     ("markings", "markings_rules", "markings_rules_step", {"report": True}),   # v3.0: the road paint by the Swiss rules
     ("road_wear", "road_wear", "road_wear_step", {"report": True}),   # v3.0: tyre tracks and dirty edges
+    ("yard_wear", "yard_wear", "yard_wear_step", {"report": True}),   # v3.1 review: blotches, edges, patches on the yards
     ("islands", "islands", "islands_step", {"report": True}),          # v3.0: raised islands, keep-right signs
     ("far_trees", "far_trees", "far_trees_step", {}),            # v2.7: far trees
     ("signs", "signs_net", "signs_step", {"report": True}),      # v2.7: road signs

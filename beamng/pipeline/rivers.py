@@ -21,6 +21,11 @@ over it, on a 1.5 m mesh: on the torrents it ran in and out of the banks in tria
 v3.0: the bed is lowered with a bank BANK m wide outside the surveyed surface, eased from the bed up to the ground
 (carve_terrain): up to the v3 test build only the vertices inside it went down, so the bank was a row of teeth one
 terrain square high, and the water cut on them in a zigzag (the Magliasina at the Magliaso roundabout).
+v3.1 review: the Swiss survey stops at the border, and the border runs along the Tresa, now in the middle of it, now
+on one bank: where the river is all in Italy the water ended in a sharp point and the bed went on dry under forest
+floor (visual review G5, 0391, a teal triangle at -3333,-541). osm_channels adds the channel of every OpenStreetMap
+waterway=river outside the survey: within CHANNEL_R m of the line, the ground no more than CHANNEL_DZ m over the
+lowest ground of its cross-section, connected to the line; the land the survey draws as anything else stays dry.
 """
 import os
 import numpy as np
@@ -39,6 +44,12 @@ DEPTH = 0.35            # m of terrain under the water
 CARVE_MAX = 1.5         # m, terrain higher than this over the water (a bank in a gorge) is not lowered
 BANK = 2.5              # m outside the river surface over which the bed rises to the ground (v3.0)
 FORD_KEEP = 2.5         # m around the roads and paths at the level of the ground: the terrain is not lowered
+CHANNEL_R = 20.0        # m either side of an OpenStreetMap river line: its channel outside the survey (v3.1)
+CHANNEL_DZ = 0.45       # m over the lowest ground of the cross-section: still the river's surface or bed
+CHANNEL_STEP = 2.0      # m between the cross-sections
+CHANNEL_CELL = 1.0      # m, the raster the channel is found on
+CHANNEL_OPEN = 2        # cells: the wet raster opened this much (strips narrower than about 4 m go)
+CHANNELS = []           # the channels osm_channels added in the last surfaces(): their bed goes to Gravel (build_level)
 CHUNK = 128.0
 
 
@@ -83,6 +94,22 @@ def surfaces(av, lake_boxes, at_grade, crossings, road_z):
             if p.geom_type == "Polygon" and p.area > 20 and p.area / max(0.5 * p.length, 1e-6) >= MIN_WIDTH:
                 polys.append(p)
     stats = {"surveyed": len(polys), "ha_surveyed": round(sum(p.area for p in polys) / 1e4, 1)}
+    # v3.1: the rivers beyond the survey (the Tresa where the border leaves it), not on the survey's other land
+    import osm
+    if osm.available():
+        lines = [q for w in osm.load()[0] if w["tags"].get("waterway") == "river" and w["line"].intersects(keep)
+                 for q in shapely.get_parts(w["line"].intersection(keep.buffer(CHANNEL_R)))
+                 if q.geom_type == "LineString"]
+        land = [g for cls, items in av["LCSF"].items() for g, _ in items]
+        tree = shapely.STRtree(land)
+        zone = shapely.union_all([l.buffer(CHANNEL_R + 2.0) for l in lines]) if lines else shapely.Polygon()
+        blocked = shapely.union_all([land[i] for i in tree.query(zone, predicate="intersects")]) \
+            if not zone.is_empty else shapely.Polygon()
+        extra = [p.intersection(keep) for p in osm_channels(lines, bare_ground, blocked)]
+        extra = [q for p in extra for q in shapely.get_parts(p) if q.geom_type == "Polygon" and q.area > 20]
+        polys += extra
+        CHANNELS[:] = extra
+        stats.update(osm_channels=len(extra), ha_osm_channels=round(sum(p.area for p in extra) / 1e4, 2))
     river = shapely.union_all(polys)
     # under the bridges: the gaps of the survey's river closed (up to 16 m), within the decks
     gaps = river.buffer(8.0, quad_segs=4).buffer(-8.0, quad_segs=4).difference(river)
@@ -117,6 +144,57 @@ def surfaces(av, lake_boxes, at_grade, crossings, road_z):
     return out, stats, keep
 
 
+def osm_channels(lines, ground, blocked=None):
+    """Polygons of the river channels along the lines (shapely LineStrings, OpenStreetMap waterway=river) outside
+    `blocked` (the survey's land that is not water, and its water): the cells of a CHANNEL_CELL m raster within
+    CHANNEL_R m of a line whose ground (ground(x, y): bare heights) is at most CHANNEL_DZ m over the lowest ground
+    of the nearest cross-section, joined to the line. A cross-section's lowest ground is the river's surface (the
+    laser models of the larger rivers are flat from bank to bank) or its bed."""
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from scipy.spatial import cKDTree
+    out = []
+    for line in lines:
+        if line.length < 2 * CHANNEL_STEP:
+            continue
+        s = np.arange(0, line.length + 1e-6, CHANNEL_STEP)
+        P = np.array([line.interpolate(d).coords[0] for d in s])
+        T = np.gradient(P, axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        Nl = np.column_stack([-T[:, 1], T[:, 0]])
+        off = np.arange(-CHANNEL_R, CHANNEL_R + 1e-6, CHANNEL_CELL)
+        Q = P[:, None, :] + Nl[:, None, :] * off[None, :, None]
+        g = ground(Q[..., 0].ravel(), Q[..., 1].ravel()).reshape(Q.shape[:2])
+        level = np.nanmin(np.where(np.isfinite(g), g, np.inf), axis=1)
+        level = ndi.median_filter(np.where(np.isfinite(level), level, np.nanmedian(level[np.isfinite(level)])
+                                           if np.isfinite(level).any() else 0.0), size=5, mode="nearest")
+        x0, y0, x1, y1 = line.buffer(CHANNEL_R + CHANNEL_CELL).bounds
+        nx, ny = int(np.ceil((x1 - x0) / CHANNEL_CELL)), int(np.ceil((y1 - y0) / CHANNEL_CELL))
+        X, Y = np.meshgrid(x0 + (np.arange(nx) + 0.5) * CHANNEL_CELL, y1 - (np.arange(ny) + 0.5) * CHANNEL_CELL)
+        d, k = cKDTree(P).query(np.column_stack([X.ravel(), Y.ravel()]))
+        near = d <= CHANNEL_R
+        wet = np.zeros(nx * ny, bool)
+        if near.any():
+            z = ground(X.ravel()[near], Y.ravel()[near])
+            wet[near] = np.isfinite(z) & (z <= level[k[near]] + CHANNEL_DZ)
+        # no ragged fringes on the flat ground along the bank (opened over CHANNEL_OPEN cells)
+        wet = ndi.binary_opening(wet.reshape(ny, nx), np.ones((3, 3), bool), iterations=CHANNEL_OPEN)
+        lab, _ = ndi.label(wet)
+        on = np.unique(lab[(d.reshape(ny, nx) <= 2 * CHANNEL_CELL) & wet])
+        wet = np.isin(lab, on[on > 0])
+        tr = from_origin(x0, y1, CHANNEL_CELL, CHANNEL_CELL)
+        polys = [shapely.geometry.shape(gm) for gm, v in features.shapes(wet.astype(np.uint8), mask=wet, transform=tr)
+                 if v == 1]
+        if not polys:
+            continue
+        ch = shapely.union_all(polys).buffer(0.75, quad_segs=2).buffer(-0.75, quad_segs=2).simplify(0.4)
+        if blocked is not None and not blocked.is_empty:
+            ch = ch.difference(blocked)
+        out += [q for q in shapely.get_parts(ch) if q.geom_type == "Polygon" and q.area > 20
+                and q.area / max(0.5 * q.length, 1e-6) >= MIN_WIDTH]
+    return out
+
+
 _water = {}
 
 
@@ -148,6 +226,30 @@ def water_z(x, y):
                     del _water[kk]
         out[m] = _water[key].sample(x[m], y[m]) + OVER
     return out
+
+
+def channel_layers(polys, layer_id):
+    """(TER_SIZE, TER_SIZE) int16 terrain layer override: layer_id at the vertices inside polys, -1 elsewhere (the
+    bed of the channels outside the survey, which the land cover does not know as water)."""
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from config import TER_SIZE, TER_SQUARE, TER_X0, TER_Y0
+    y_top = TER_Y0 + (TER_SIZE - 1) * TER_SQUARE
+    tr = from_origin(TER_X0 - TER_SQUARE / 2, y_top + TER_SQUARE / 2, TER_SQUARE, TER_SQUARE)
+    m = features.rasterize([(p, 1) for p in polys], out_shape=(TER_SIZE, TER_SIZE), transform=tr, dtype=np.uint8) \
+        if polys else np.zeros((TER_SIZE, TER_SIZE), np.uint8)
+    out = np.full((TER_SIZE, TER_SIZE), -1, np.int16)
+    out[m[::-1] > 0] = layer_id                          # raster row 0 north, terrain row 0 south
+    return out
+
+
+def bare_ground(x, y):
+    """Bare ground (swissALTI3D 0.5 m) at points, NaN outside it."""
+    from geo import Grid
+    from config import WORK
+    if "dtm" not in _water:
+        _water["dtm"] = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    return _water["dtm"].sample(np.asarray(x, np.float64), np.asarray(y, np.float64))
 
 
 def carve_terrain(H, xs, ys, polys, keep=None):

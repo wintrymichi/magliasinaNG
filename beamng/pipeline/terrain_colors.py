@@ -17,6 +17,12 @@ from landcover import CLASSES, CODE
 from terrain import LC_TO_MAT, TERRAIN_MATS
 
 
+# v3.1 review: Concrete (the classes edificio and bacino_idrico) measured on the open ground of its cells was the water
+# of the pools and basins and the edges of the roofs, 151,165,165: the bare Concrete of the level was a grey-blue sheet.
+# A plain concrete grey, a little warmer and darker than the yards' asphalt (166,166,163).
+FIXED = {"Concrete": (156, 154, 148)}
+
+
 def main():
     with rasterio.open(os.path.join(WORK, "ortho05.tif")) as s:
         o = s.read().transpose(1, 2, 0)
@@ -28,6 +34,9 @@ def main():
     lit = (v > 70) & (v < 250)
     colors = {}
     for mat in TERRAIN_MATS:
+        if mat in FIXED:
+            colors[mat] = list(FIXED[mat])
+            continue
         cls = [CODE[c] for c, m in LC_TO_MAT.items() if m == mat]
         m = np.isin(lc, cls) & open_ground & lit
         if m.sum() > 2000:
