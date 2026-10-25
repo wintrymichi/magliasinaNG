@@ -2,7 +2,9 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
-## v3.1.1 (nightly, 25 October 2026, not released)
+## v3.1.1 (25 October 2026)
+
+Released after its game test (BeamNG.drive 0.40.3, Windows 11, RTX 4070): loads in 152 s, 20.0 GB of RAM and 6.5 GB of video memory at the peak, 61-89 fps. The zip is the last nightly (sha256 945d4ab5...a942ff9). AI traffic still broken (#83).
 
 For BeamNG.drive 0.40. The fixes of the visual check of v3.1 (about 650 in-game shots along every road, 24-25 October 2026), built from scratch on the integration branch: PRs #90 to #98. Not tested in the game (the PC was off): every change was checked on cloud renders of the released v3.1 level only.
 
