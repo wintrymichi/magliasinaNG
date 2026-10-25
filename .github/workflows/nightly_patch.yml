@@ -2,7 +2,7 @@
 # build on the unpacked level, put back only the files the step wrote, upload it again under the same name and add a
 # line about it to the notes. v3.0.40: the far tree imposters (patch_far_imposters.py, gone). v3.1.1 (2026-10-25):
 # the finishing step road_seams (ramps instead of steps between two pieces of carriageway), which a build from this
-# branch runs by itself (road_seams is not idempotent: run it once on a zip). Then forest_grass (grass in the woods).
+# branch runs by itself (road_seams is not idempotent: run it once on a zip). Then forest_grass (grass in the woods), then skin_grass (meadow banks).
 #
 # It runs when beamng/nightly/patch_stamp.txt changes on the integration branch, or on demand. Never while
 # nightly_build.yml runs (that one replaces the whole pre-release at its end).
@@ -36,10 +36,10 @@ jobs:
       MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
       MAGLIASO_BEAMNG_GAME: /nonexistent
       ZIP_NAME: magliaso_pura_v3.1.1_nightly
-      STEP: forest_grass            # the name in build_level.FINISH; MOD.FN(level root, report=...) runs it
-      MOD: forest_mosaic
-      FN: grass_step
-      WHAT: grass in the woods, on the bare leaf litter away from the roads and meshes
+      STEP: skin_grass            # the name in build_level.FINISH; MOD.FN(level root, report=...) runs it
+      MOD: steep_skin
+      FN: skin_grass_step
+      WHAT: the steep skin on meadow banks as grass in the meadow's colour, no pale earth patches
     steps:
       - name: Disk space
         run: |
