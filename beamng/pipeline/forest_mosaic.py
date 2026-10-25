@@ -25,12 +25,21 @@ and models the level has already (only two terrain twins and five GroundCovers m
 - the steep banks (Bank, over terrain.STEEP_BANK degrees: bare up to now) inside the wood (a measured trunk within
   BANK_TREE_M, nothing solid, no terrain skin and no verge within BANK_CLEAR squares) go to BankWood (the Bank
   material, a twin) with stones, dead branches, ferns and small bushes;
-- the light gets tufts of woodland grass (the game's long grass billboards), sparse and in clumps.
+- the light gets tufts of woodland grass (the game's long grass billboards), in clumps;
+- v3.1.1: the shade gets grass too (SHADE_GRASS): up to v3.1 the floor under the crowns was bare between the ferns
+  and shrubs. Tufts of a duller grass (groundcover mp_gc_grass_wood), about two per m2 in the chestnut belt,
+  where the old selve are grassy, and a few in the beech wood above CHESTNUT_TOP;
+- v3.1.1: the bare leaf litter (the blobs above and, along every road, the half of the SHADE_CLEAR_M strip that is
+  not light) more than two squares from a solid mesh or the skin goes from the verge twins to the litter twins
+  ForestFloorLitter, ForestFloor2Litter (LITTER: the same material), with a few tufts of grass (LITTER_GRASS). Up to
+  v3.1 they shared the verge twins with the vertices beside the roads, and 50-75 % of the wood floor 5-40 m from a
+  road had no plant and no grass at all: what one sees of the wood from the car.
 Nothing is placed within a terrain square of a road, path, wall, building, the railway or the terrain skin: the
 verge twins mark those (understory.py), and BankWood keeps BANK_CLEAR squares from all of them. Random fields are
 seeded (SEED): the same level gives the same mosaic.
 
-python build_level.py --finish forest_mosaic; patch of a built zip: patch_forest_mosaic.py
+python build_level.py --finish forest_mosaic; on a level that has the mosaic already, only its GroundCovers and the
+grass materials again: python build_level.py --finish forest_grass (grass_step)
 """
 import json, os, struct, time, zipfile
 import numpy as np
@@ -66,16 +75,28 @@ ROCK_CLEAR_M = 10.0                 # m: no outcrop (stones to 2 m) this near a 
 BANK_CLEAR = 5                      # terrain squares from anything solid, the skin, the verge twins and the light
 SKIN = "level_objects/terrain_skin"   # steep_skin.py: its triangles are a terrain square or less, its vertices mark it
 FOREST_ROCK, BANK_WOOD = "ForestRock", "BankWood"
-TWIN_OF = {FOREST_ROCK: "Rock", BANK_WOOD: "Bank"}
+LITTER = {m: m + "Litter" for m in groundcover.FOREST_LAYERS}   # v3.1.1: bare litter away from the meshes
+TWIN_OF = {FOREST_ROCK: "Rock", BANK_WOOD: "Bank", **{t: m for m, t in LITTER.items()}}
 
 _EG, _EB, _EF, _ER, _IT = groundcover._EG, groundcover._EB, groundcover._EF, groundcover._ER, groundcover._IT
-_ALL = groundcover._ALL
+_ALL, _LO, _HI = groundcover._ALL, groundcover._LO, groundcover._HI
 # GroundCovers: name, material, radius, dissolve, grid, seed, maxElements per layer, layers, rows. Billboard rows:
-# (uvs, probability, size min, max, clump min, max, clump radius); model rows as groundcover.UNDERSTORY_COVERS.
-WOOD_GRASS = ("understory_grass", "mp_gc_grass_long", 50.0, 30.0, 6, 31, 3600, groundcover.LIGHT, [
+# (uvs, probability, size min, max, clump min, max, clump radius[, elevation range]); model rows as
+# groundcover.UNDERSTORY_COVERS. Plants per m2 of a layer: density().
+# v3.1.1: the light about 3 tufts per m2 (v3.1: 3600 elements and no short grass, about 1)
+WOOD_GRASS = ("understory_grass", "mp_gc_grass_long", 50.0, 30.0, 6, 31, 9000, groundcover.LIGHT, [
     (groundcover.LONG_TOP, 1.0, 0.30, 0.55, 2, 5, 0.4),
     (groundcover.LONG_HALF, 0.5, 0.40, 0.70, 1, 3, 0.4),
-    (groundcover.SHORT_HALF_R, 0.4, 0.25, 0.40, 2, 4, 0.4)])
+    (groundcover.SHORT_HALF_R, 0.4, 0.25, 0.40, 2, 4, 0.4),
+    (groundcover.SHORT_TOP, 0.5, 0.18, 0.30, 2, 5, 0.4)])
+# v3.1.1: the shade (the plain forest floor layers, SHADE_CLEAR_M or more from a road): about 2 tufts per m2 in the
+# chestnut belt, 0.4 in the beech wood (groundcover.CHESTNUT_TOP), lower and in looser clumps than in the light
+SHADE_GRASS = ("understory_grass_shade", "mp_gc_grass_wood", 40.0, 25.0, 6, 43, 5200, groundcover.SHADE, [
+    (groundcover.LONG_TOP, 1.0, 0.25, 0.45, 2, 5, 0.6, _LO),
+    (groundcover.LONG_HALF, 0.45, 0.30, 0.55, 1, 3, 0.6, _LO),
+    (groundcover.SHORT_HALF_R, 0.5, 0.20, 0.32, 2, 5, 0.7, _LO),
+    (groundcover.LONG_TOP, 0.30, 0.22, 0.38, 1, 3, 0.5, _HI),
+    (groundcover.SHORT_HALF_R, 0.25, 0.18, 0.28, 1, 3, 0.5, _HI)])
 # the stones of an outcrop, half in the ground; the Rock layer of the land cover keeps its own look
 ROCKS = ("understory_rocks", "mp_gc_grass_short", 70.0, 50.0, 6, 37, 420, (FOREST_ROCK,), [
     (_ER + "eca_rock_small_2.dae", 0.50, 1.0, 3.2, 1, 4, 2.5, 70, _ALL),
@@ -91,7 +112,28 @@ BANK = ("understory_bank", "mp_gc_grass_short", 60.0, 40.0, 6, 41, 520, (BANK_WO
     (_EF + "fir_dead_branches.dae", 0.15, 0.5, 0.9, 1, 1, 1.0, 80, _ALL),
     (_ER + "eca_rock_small_2.dae", 0.35, 0.7, 1.6, 1, 3, 1.5, 80, _ALL),
     (_ER + "eca_rock_small_3.dae", 0.30, 0.7, 1.5, 1, 2, 1.5, 80, _ALL)])
-COVERS = (WOOD_GRASS, ROCKS, BANK)
+# v3.1.1: the bare litter: fewer tufts, about 1.2 per m2 below the beech wood (2 squares or more from any mesh)
+LITTER_GRASS = ("understory_grass_litter", "mp_gc_grass_wood", 40.0, 25.0, 6, 47, 3600, tuple(LITTER.values()), [
+    (groundcover.LONG_TOP, 1.0, 0.22, 0.42, 1, 4, 0.5, _LO),
+    (groundcover.SHORT_HALF_R, 0.6, 0.18, 0.30, 2, 4, 0.5, _LO),
+    (groundcover.LONG_TOP, 0.4, 0.20, 0.35, 1, 2, 0.4, _HI)])
+COVERS = (WOOD_GRASS, SHADE_GRASS, LITTER_GRASS, ROCKS, BANK)
+GRASS_MAX = 3.0             # tufts per m2 at most on any forest layer (the meadows have some 40: keep the wood cheap)
+
+
+def density(cover, z=500.0, slope=0.0):
+    """Plants per m2 of one layer of `cover` (one of COVERS) at height z, as groundcover.density reads a GroundCover:
+    maxElements over the square of its radius, each a type picked by probability, dropped where the type's
+    elevation or slope does not fit, a kept one a clump of min-max plants (their mean)."""
+    _, _, radius, _, _, _, max_el, _, rows = cover
+    tot = sum(r[1] for r in rows)
+    ok = 0.0
+    for r in rows:
+        zr = r[8] if isinstance(r[0], str) else (r[7] if len(r) > 7 else _ALL)
+        slope_max = r[7] if isinstance(r[0], str) else 45
+        if zr[0] <= z < zr[1] and slope <= slope_max:
+            ok += r[1] * (r[4] + r[5]) / 2
+    return max_el / (2 * radius) ** 2 * ok / tot
 
 
 def _field(shape, sigma_m, rng):
@@ -220,15 +262,61 @@ def mosaic(H, lay, names, trees, near_solid):
     bankwood = bank & bank_trees & ~keep_off
     out[bankwood] = names2.index(BANK_WOOD)
     del keep_off, bank_trees, base
+    out, names2, litter = add_litter(out, names2, near_solid)
     stats.update({
         "under_skin_or_solid": int(under.sum()), "roadside_light": int(road_light.sum()), "roadside_bare": int((roadside & ~road_light).sum()),
         "edge": int(edge.sum()), "gap": int((gap & ~edge).sum()), "thicket": int(thicket.sum()),
         "bare": int(bare.sum()), "outcrop": int(rock.sum()), "bank": int(bank.sum()), "bank_wood": int(bankwood.sum()),
+        "litter": litter,
         "after": {m: int((out == names2.index(m)).sum()) for m in
-                  groundcover.FOREST_LAYERS + groundcover.LIGHT + tuple(understory.TWIN.values()) + (FOREST_ROCK, BANK_WOOD)}})
+                  groundcover.FOREST_LAYERS + groundcover.LIGHT + tuple(understory.TWIN.values()) + (FOREST_ROCK, BANK_WOOD)
+                  + tuple(LITTER.values())}})
     stats["light_share_before"] = round(sum(stats["before"][m] for m in groundcover.LIGHT) / max(1, stats["wood_vertices"]), 3)
     stats["light_share_after"] = round(sum(stats["after"][m] for m in groundcover.LIGHT) / max(1, stats["wood_vertices"]), 3)
     return out, names2, stats
+
+
+def add_litter(lay, names, near_solid):
+    """(layers, names, count): the vertices of the verge twins not near_solid (more than two squares from a solid
+    mesh or the terrain skin) moved to the LITTER twins (added to the names)."""
+    names2 = list(names) + [t for t in LITTER.values() if t not in names]
+    out = lay.copy()
+    count = 0
+    for m, t in LITTER.items():
+        sel = (lay == names.index(understory.TWIN[m])) & ~near_solid
+        out[sel] = names2.index(t)
+        count += int(sel.sum())
+    return out, names2, count
+
+
+def solid_vertices(zi, lv, n):
+    """(n, n) bool: the vertices within two squares of a solid mesh (understory.SOLID) or the terrain skin."""
+    near = pw.corners_of(understory.face_cells(zi, lv, n)) | skin_cells(zi, lv, n)
+    return ndi.binary_dilation(near, np.ones((5, 5), bool))       # two squares: the skin's vertices leave gaps
+
+
+def terrain_files(zi, lv, data, n, new_lay, names2):
+    """{name: bytes}: the .ter with new layers (heights as in data), the terrain json and the terrain materials with
+    a twin for every name of TWIN_OF the level does not define yet."""
+    tail = struct.pack("<I", len(names2)) + b"".join(struct.pack("<B", len(s.encode())) + s.encode() for s in names2)
+    new_ter = data[:5 + 2 * n * n] + np.ascontiguousarray(new_lay).tobytes() + tail
+    assert new_ter[:5 + 2 * n * n] == data[:5 + 2 * n * n]               # heights as they were
+    new = {f"{lv}/theTerrain.ter": new_ter}
+    tj_name = f"{lv}/theTerrain.terrain.json"
+    tj = json.loads(zi.read(tj_name))
+    tj["materials"] = names2
+    new[tj_name] = json.dumps(tj, indent=2).encode("utf-8")
+    mats_name = f"{lv}/art/terrains/main.materials.json"
+    mats = json.loads(zi.read(mats_name))
+    have = {v.get("internalName") for v in mats.values() if isinstance(v, dict) and v.get("class") == "TerrainMaterial"}
+    for twin, of in TWIN_OF.items():
+        if twin in have or twin not in names2:
+            continue
+        m = next(v for v in mats.values() if v.get("class") == "TerrainMaterial" and v.get("internalName") == of)
+        tw = dict(m, internalName=twin, persistentId=bng.pid())
+        mats[f"{twin}-{tw['persistentId']}"] = tw
+    new[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
+    return new
 
 
 def objects():
@@ -244,8 +332,10 @@ def objects():
                     t = groundcover._t(layer, [0, 0, 1, 1], p, smin, smax, cmin, cmax, crad, 0.0)
                     t.update(shapeFilename=shape, maxSlope=slope, minElevation=zmin, maxElevation=zmax)
                 else:                                        # a billboard of the material
-                    uvs, p, smin, smax, cmin, cmax, crad = row
+                    uvs, p, smin, smax, cmin, cmax, crad = row[:7]
                     t = groundcover._t(layer, uvs, p, smin, smax, cmin, cmax, crad, 0.15)
+                    if len(row) > 7:
+                        t.update(minElevation=row[7][0], maxElevation=row[7][1])
                 types.append(t)
             o = {"name": f"{name}_{layer}", "class": "GroundCover", "persistentId": bng.pid(),
                  "position": [0, 0, 0], "material": mat, "radius": radius, "dissolveRadius": dissolve,
@@ -267,6 +357,11 @@ def check_light_reach():
             reach = smax * max(abs(lo[0]), abs(lo[1]), hi[0], hi[1]) + crad
             assert reach < clear, (name, shape, reach)
     assert all(r[6] <= 0.4 for r in WOOD_GRASS[8])
+    # the shade begins SHADE_CLEAR_M from them: its looser clumps reach well short of that; the litter two squares
+    assert all(r[6] + r[3] < SHADE_CLEAR_M for r in SHADE_GRASS[8])
+    assert all(r[6] + r[3] < 2 * TER_SQUARE for r in LITTER_GRASS[8])
+    for c in (WOOD_GRASS, SHADE_GRASS, LITTER_GRASS):
+        assert max(density(c, z) for z in (300.0, 1200.0)) <= GRASS_MAX, (c[0], density(c))
 
 
 def skin_cells(zi, lv, n):
@@ -305,43 +400,86 @@ def changes(zi, report=None):
         raise SystemExit("forest_mosaic: the level has the mosaic already")
     if not all(m in names for m in groundcover.LIGHT):
         raise SystemExit("forest_mosaic: run understory first (no light twins in the level)")
-    near = pw.corners_of(understory.face_cells(zi, lv, n)) | skin_cells(zi, lv, n)
-    near = ndi.binary_dilation(near, np.ones((5, 5), bool))       # two squares: the skin's vertices leave gaps
+    near = solid_vertices(zi, lv, n)
     print("forest_mosaic: solid meshes and skin read (%.0f s)" % (time.time() - t0), flush=True)
     H = (Z0 + q.astype(np.float32) / np.float32(65535.0) * np.float32(MAXH))
     new_lay, names2, stats = mosaic(H, lay, names, understory.trunks(zi, lv), near)
     del H, near
     print("forest_mosaic: %s (%.0f s)" % (json.dumps(stats), time.time() - t0), flush=True)
-    tail = struct.pack("<I", len(names2)) + b"".join(struct.pack("<B", len(s.encode())) + s.encode() for s in names2)
-    new_ter = data[:5 + 2 * n * n] + np.ascontiguousarray(new_lay).tobytes() + tail
-    assert new_ter[:5 + 2 * n * n] == data[:5 + 2 * n * n]               # heights as they were
-    new = {ter_name: new_ter}
-    tj_name = f"{lv}/theTerrain.terrain.json"
-    tj = json.loads(zi.read(tj_name))
-    tj["materials"] = names2
-    new[tj_name] = json.dumps(tj, indent=2).encode("utf-8")
-    mats_name = f"{lv}/art/terrains/main.materials.json"
-    mats = json.loads(zi.read(mats_name))
-    for twin, of in TWIN_OF.items():
-        m = next(v for v in mats.values() if v.get("class") == "TerrainMaterial" and v.get("internalName") == of)
-        tw = dict(m, internalName=twin, persistentId=bng.pid())
-        mats[f"{twin}-{tw['persistentId']}"] = tw
-    new[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
-    veg_name = f"{lv}/main/MissionGroup/level_objects/vegetation/items.level.json"
-    veg = understory.read_items(zi, veg_name)
-    ours = {o["name"] for o in objects()}
-    veg = [o for o in veg if o.get("name") not in ours]
-    parent = next((o["__parent"] for o in veg if o.get("class") == "GroundCover"), "vegetation")
-    for o in objects():
-        o["__parent"] = parent
-        veg.append(o)
-    new[veg_name] = understory.write_items(veg)
+    new = terrain_files(zi, lv, data, n, new_lay, names2)
+    veg_name, veg, ours = covers(zi)
+    new[veg_name] = veg
     if report:
         stats["groundcovers"] = sorted(ours)
         stats["terrain_heights_unchanged"] = True
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(stats, open(report, "w"), indent=1)
     return new, stats
+
+
+def covers(zi):
+    """(name, bytes, names) of the vegetation items with the GroundCovers of COVERS put in (replaced where they are,
+    keeping their persistentIds, or added; the other objects as they were)."""
+    veg_name = f"levels/{LEVEL_NAME}/main/MissionGroup/level_objects/vegetation/items.level.json"
+    veg = understory.read_items(zi, veg_name)
+    mine = {o["name"]: o for o in objects()}
+    old = {o.get("name"): o for o in veg if o.get("name") in mine}
+    parent = next((o["__parent"] for o in veg if o.get("class") == "GroundCover"), "vegetation")
+    veg = [o for o in veg if o.get("name") not in mine]
+    for name, o in mine.items():
+        o["__parent"] = old[name].get("__parent", parent) if name in old else parent
+        if name in old and "persistentId" in old[name]:
+            o["persistentId"] = old[name]["persistentId"]
+        veg.append(o)
+    return veg_name, understory.write_items(veg), set(mine)
+
+
+def grass_step(root, report=None):
+    """v3.1.1, finish step forest_grass: on a level that has the mosaic (the twins of forest_mosaic_step), its
+    GroundCovers (COVERS, with the grass of the shade and of the litter) and the grass materials
+    (groundcover.materials()) again, and on a level of v3.1 the litter twins (add_litter: the .ter layers, the
+    terrain json and materials); the heights and everything else stay. In a full build after forest_mosaic it
+    writes the same objects (no change)."""
+    t0 = time.time()
+    check_light_reach()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    names = json.loads(zi.read(f"{lv}/theTerrain.terrain.json"))["materials"]
+    if FOREST_ROCK not in names or not all(m in names for m in groundcover.SHADE + groundcover.LIGHT):
+        raise SystemExit("forest_grass: run forest_mosaic first (no mosaic layers in the level)")
+    new = {}
+    litter = None
+    if not all(t in names for t in LITTER.values()):           # a level of v3.1: the litter apart from the verge
+        data = zi.read(f"{lv}/theTerrain.ter")
+        n, _, lay, names = pw.read_ter(data)
+        new_lay, names2, litter = add_litter(lay, names, solid_vertices(zi, lv, n))
+        new.update(terrain_files(zi, lv, data, n, new_lay, names2))
+        print("forest_grass: %d vertices of bare litter away from the meshes -> %s (%.0f s)"
+              % (litter, sorted(LITTER.values()), time.time() - t0), flush=True)
+    veg_name, veg, ours = covers(zi)
+    mats_name = f"{lv}/art/shapes/groundcover/main.materials.json"
+    mats = json.loads(zi.read(mats_name)) if mats_name in zi.NameToInfo else {}
+    mats.update({m["name"]: m for m in groundcover.materials()})
+    new.update({veg_name: veg, mats_name: json.dumps(mats, indent=1).encode("utf-8")})
+    changed = []
+    for name, data in new.items():                 # only these files: os.replace keeps hard-linked copies intact
+        if name in zi.NameToInfo and zi.read(name) == data:
+            continue
+        p = zi.path(name)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p + ".tmp", "wb") as f:
+            f.write(data)
+        os.replace(p + ".tmp", p)
+        changed.append(name)
+    stats = {"groundcovers": sorted(ours), "changed": changed, "litter_vertices": litter,
+             "tufts_per_m2": {c[0]: {"chestnut": round(density(c, 400.0), 2), "beech": round(density(c, 1100.0), 2)}
+                              for c in (WOOD_GRASS, SHADE_GRASS, LITTER_GRASS)},
+             "max_elements": {c[0]: c[6] for c in COVERS}}
+    print("forest_grass: %s (%.0f s)" % (json.dumps(stats), time.time() - t0), flush=True)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(stats, open(report, "w"), indent=1)
+    return 0
 
 
 def forest_mosaic_step(root, report=None):

@@ -665,6 +665,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   within two squares (forest_mosaic: the verge twins there), outcrops ROCK_CLEAR_M and bank stones BANK_CLEAR squares
   from it and every solid. Check every new GroundCover against the road AND the skin footprint in a render.
 - `/usr/bin/time` is not installed in the cloud container (a background run died at once): use resource.getrusage.
+- "No grass in the wood" (michi, 2026-10-25, v3.1.1): v3.1 had grass only on the light twins; the shade had none, and
+  the verge twins were both "near a mesh" and the mosaic's bare litter, so 75 % of the wood floor 5-10 m from an AI
+  road and 50 % at 25-40 m had no plant at all. Measure the layer shares by distance to the AI roads (what the car
+  sees) before tuning a cover's density. Now the litter twins (forest_mosaic.LITTER, +2 terrain layers) take the
+  bare litter more than two squares from any mesh or skin, and SHADE_GRASS/LITTER_GRASS put grass there; finish step
+  forest_grass does it on a level of v3.1. The ground right beside most woodland roads is the terrain skin (a mesh):
+  no GroundCover can green it, only its own bushes. The first density (1 tuft per m2 in the shade) looked bare in
+  the renders: 2 now. The renders draw each billboard as a 6-blade tuft, thinner than the game's textures: judge the
+  density in the game.
 
 ## Data from the cloud sessions
 
