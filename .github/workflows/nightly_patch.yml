@@ -36,10 +36,10 @@ jobs:
       MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
       MAGLIASO_BEAMNG_GAME: /nonexistent
       ZIP_NAME: magliaso_pura_v3.1.1_nightly
-      STEP: road_sags             # the name in build_level.FINISH; MOD.FN(level root, report=...) runs it
-      MOD: road_seams
-      FN: road_sags_step
-      WHAT: no sag across the lane where a yard or track joins the road from below (the hole after the 90 degree curve above the Magliaso hairpins)
+      STEP: skin_blend            # the name in build_level.FINISH; MOD.FN(level root, report=...) runs it
+      MOD: steep_skin
+      FN: skin_blend_step
+      WHAT: one look for the cut slopes (2048 px textures, earth and rock at one brightness, smoothed projection axes, ragged earth fringe over the rock)
     steps:
       - name: Disk space
         run: |
