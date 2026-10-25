@@ -15,7 +15,7 @@ For BeamNG.drive 0.40. The fixes of the visual check of v3.1 (about 650 in-game 
 - **No teeth at the foot of the cuts** (`steep_skin.foot_line`, #96): the green and brown pyramids along the foot of the rock cuts were the skin copying the terrain's staircase beside diagonal roads.
 - **Ground materials** (`steep_skin`, new finish step `steep_yards`, #97): the pale grey-green banks (the skin's colour, from layers without a colour map), 16.7 ha of asphalt yards on slopes now earth, gravel and setts less white, no green roofs from tree crowns.
 - **Road ends and decks on the ground** (`network_mesh.paved_edges`, `terrain.py`, `railway.py`, #98): road and yard edges more than 0.5 m over the ground 127.8 -> 49.9 km, no grass on the Ponte Tresa deck, the Via Golf rail deck in concrete.
-- **Patched into the nightly zip after the build** (finishing steps the next build runs by itself): `road_seams` (ramps instead of 1.5-30 cm steps between pieces of carriageway, the step after the Magliaso-Pura hairpin that punctured tyres), `forest_grass` (grass on the forest floor) and `skin_grass` (the steep skin on meadow banks as grass, no pale patches).
+- **Patched into the nightly zip after the build** (finishing steps the next build runs by itself): `road_seams` (ramps instead of 1.5-30 cm steps between pieces of carriageway, the step after the Magliaso-Pura hairpin that punctured tyres), `forest_grass` (grass on the forest floor) and `skin_grass` (no skin earth on the meadow banks: the meadow and its grass there, no pale patches).
 
 ## v3.1 (23 October 2026)
 

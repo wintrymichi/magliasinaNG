@@ -7,6 +7,7 @@ first: 263 shapes, 6.2 km of seams, steps over 8 cm left on 222 m.
 2026-10-25 12:45 UTC: then the finishing step forest_grass (c043a2b, thread "Aggiungere erba nel bosco", michi asked for
 it in the nightly): grass in the woods. Tried in the cloud on the unpacked nightly after road_seams: 4.25 M terrain
 vertices of bare litter -> the new litter layers, 5 files changed, 189 s.
-2026-10-25 13:40 UTC: then the finishing step skin_grass (68f2839, thread "Togliere le macchie chiare sul terreno"): the
-steep skin on meadow banks as grass, no pale yellow-green patches. Tried in the cloud on the unpacked nightly after the
-two patches above: 17.7 % of the skin triangles become grass, 14 min.
+2026-10-25 13:40 UTC: skin_grass of 68f2839 (grass texture on the meadow banks) started and CANCELLED before upload: michi
+rejected the look. Instead, skin_grass of ab4a5d7 (thread "Togliere le macchie chiare sul terreno"): no skin earth on
+the meadow banks, the meadow layer and its grass there again; rock stays. Tried in the cloud on the unpacked build:
+917 skin files changed, 41 removed, 15.2 % of the skin triangles gone, 6 min. Not idempotent: once on this zip.

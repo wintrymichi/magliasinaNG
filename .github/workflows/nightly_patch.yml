@@ -39,7 +39,7 @@ jobs:
       STEP: skin_grass            # the name in build_level.FINISH; MOD.FN(level root, report=...) runs it
       MOD: steep_skin
       FN: skin_grass_step
-      WHAT: the steep skin on meadow banks as grass in the meadow's colour, no pale earth patches
+      WHAT: no steep skin earth on the meadow banks (no pale patches), the meadow and its grass there again
     steps:
       - name: Disk space
         run: |
@@ -75,6 +75,11 @@ jobs:
           cat "$RUNNER_TEMP/$STEP.json"
           (cd "$L" && find . -type f -newer "$RUNNER_TEMP/marker" | sed 's|^\./||' | tee "$RUNNER_TEMP/changed.txt" | zip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@)
           echo "$(wc -l < "$RUNNER_TEMP/changed.txt") files put back"
+          # files the step deleted leave the zip too (skin_grass removes whole skin tiles)
+          python -c "import zipfile,os,sys; z=zipfile.ZipFile(sys.argv[1]); print('\n'.join(n for n in z.namelist() if not n.endswith('/') and not os.path.exists(os.path.join(sys.argv[2], n))))" \
+            "$RUNNER_TEMP/z/$ZIP_NAME.zip" "$L" > "$RUNNER_TEMP/gone.txt"
+          echo "$(grep -c . "$RUNNER_TEMP/gone.txt") files deleted"
+          if [ -s "$RUNNER_TEMP/gone.txt" ]; then zip -q -d "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@ < "$RUNNER_TEMP/gone.txt"; fi
           python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
           md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
 
