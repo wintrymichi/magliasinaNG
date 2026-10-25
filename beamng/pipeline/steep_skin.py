@@ -42,6 +42,7 @@ import io, json, os, re, tempfile, time, zipfile
 import numpy as np
 from PIL import Image
 from scipy import ndimage as ndi
+from scipy.spatial import cKDTree
 import bng
 import optimize_level
 from lamps import read_items
@@ -68,10 +69,13 @@ TILE = 128                    # terrain vertices per side of a mesh tile (v3.0: 
 LOD_DIST = (350.0, 1000.0, 3000.0)   # m: round skin, one quad per square, one per 2 x 2 squares, nothing
 LOD_LIFT = (0.0, 0.04, 0.12)  # m over the lattice heights of the level (the coarse planes stay over the terrain)
 PIX_K = 1000.0                # = optimize_level.PIX_K: pixels on screen per (radius / distance)
-TILE_M = 3.0                  # m of slope per repeat of the texture
-TEX_N = 512                   # pixels of the texture
-TEX_MEAN = 205.0              # mean sRGB of the texture: the vertex colours bring it to the terrain's
-ROCK_TEX_MEAN = 150.0         # mean sRGB of the rock texture (v3.1; the vertex colours only shade it)
+TILE_M = 6.0                  # m of slope per repeat of the texture (v3.1.3; 3 m up to v3.1.2)
+TEX_N = 2048                  # pixels of the texture (v3.1.3; 512)
+TEX_MEAN = 180.0              # mean sRGB of the texture: the vertex colours bring it to the terrain's (v3.1.3; 205)
+ROCK_TEX_MEAN = 180.0         # mean sRGB of the rock texture (v3.1.3: = TEX_MEAN; 150 up to v3.1.2: the rock was 27 %
+                              # darker than the earth of the same vertex colour, a hard line where they met)
+TEX_TINT = (1.04, 1.0, 0.95)   # v3.1.3: the earth texture's mean colour over TEX_MEAN (nearly neutral)
+OLD_TEX_MEAN, OLD_ROCK_TEX_MEAN = 205.0, 150.0   # the means up to v3.1.2 (skin_blend_step brings a built level's colours over)
 FOOT_STEP = 0.5               # m between the samples of the shapes' footprints
 D = "art/shapes/terrain_skin"
 MAT = "mp_steep_bank"
@@ -82,9 +86,16 @@ ROCK_DEG = 47.0               # degrees: the faces steeper than this are bare ro
 ROCK_JITTER = 10.0            # degrees, the line between rock and earth made wavy (outcrops on the gentler banks) by a noise of ROCK_JITTER_M m
 ROCK_JITTER_M = 8.0
 ROCK_BLEND = 5.0              # degrees over which the rock colour blends into the earth
+MAT_FRINGE = "mp_steep_fringe"  # v3.1.3: + _1 ... (FRINGE_BANDS): the earth's fringe over the rock (border)
+FRINGE_BANDS = ((0.35, 0.8), (0.7, 0.6), (1.05, 0.42), (1.4, 0.26), (1.8, 0.12))   # (m from the line where earth
+                              # and rock meet, up to; share of the rock the fringe covers there)
+FRINGE_LIFT = 0.035           # m over the rock along its normals
+MOSS_CALM = 0.4              # v3.1.3: share of the moss green left on the rock away from the earth (border)
+AXIS_CELL = 1.5               # m, cells of the face normals the projection axis is taken from (smooth_axes) ...
+AXIS_WIN = 3                  # ... averaged over this many cells
 RW_BLUR = 1.5                 # half squares, blur of the rock weight (G1: no saw along the rock's lower edge)
-ROCK_TILE_M = 4.0             # m of rock per repeat of its texture
-ROCK_TEX_N = 1024             # pixels of the rock texture
+ROCK_TILE_M = 6.0             # m of rock per repeat of its texture (v3.1.3; 4 m)
+ROCK_TEX_N = 2048             # pixels of the rock texture (v3.1.3; 1024)
 RELIEF = 0.55                 # m, the most a rock face stands out of the smooth skin (ribs and knobs)
 ROCK_RIB = 2.6                # m between the ribs and gullies of a rock face (across), ROCK_RIB_V up the face
 ROCK_RIB_V = 7.0
@@ -175,87 +186,130 @@ GRASS_BLUR = 1.5              # terrain squares, blur of the meadow mask: the sk
 # ------------------------------------------------------------------------------------------------ texture
 
 def bank_texture(n=TEX_N, seed=47):
-    """(colour, normal) uint8 images of the bank: earth with stones, small roots and moss patches, tileable,
-    its mean TEX_MEAN (neutral: the vertex colours tint it)."""
+    """(colour, normal) uint8 images of the bank: bare earth, grains, gravel and stones, tileable, its mean TEX_MEAN
+    (neutral: the vertex colours tint it). v3.1.3: 2048 px over 6 m (3 mm a pixel; v3.1: 512 px over 3 m) and no green
+    moss patches nor root lines: bright blobs of a fixed shape every 3 m read as a pattern on every bank (michi's
+    screenshot 2026-10-25); the colour of the place comes from the vertex colours only."""
     from bld_textures import noise, normal_map, to8
     from surface_textures import _domes
     rng = np.random.default_rng(seed)
-    fine, mid, patch = noise(n, n, 1.0, rng), noise(n, n, 8, rng), noise(n, n, 45, rng)
-    hgt = 1.0 * fine + 3.0 * mid + 4.0 * patch
-    col = np.array([0.50, 0.44, 0.36], np.float32) * (1 + 0.10 * fine + 0.10 * mid - 0.10 * np.clip(patch, 0, None))[..., None]
-    # stones 3-12 cm, grey gneiss and brown
     mm = TILE_M * 1000 / n
-    h, sid = _domes(n, rng, 160, (15 / mm, 60 / mm), aspect=(1.0, 1.8))
-    on = sid >= 0
-    tone = np.array([[0.58, 0.56, 0.52], [0.48, 0.47, 0.45], [0.55, 0.49, 0.41]], np.float32)[rng.integers(0, 3, 160)]
-    col[on] = (tone[np.maximum(sid, 0)] * (0.85 + 0.3 * h[..., None]) * (1 + 0.05 * fine[..., None]))[on]
-    hgt = np.where(on, hgt + 8.0 * h, hgt)
-    # moss and grass tufts where the patch noise is high
-    moss = np.clip((noise(n, n, 20, rng) - 0.6) * 1.5, 0, 1) * np.clip(1 - h * 3, 0, 1)
-    col = col * (1 - moss[..., None]) + np.array([0.38, 0.44, 0.24], np.float32) * (1 + 0.15 * fine)[..., None] * moss[..., None]
-    # roots: thin dark curves, mostly across the slope
-    for _ in range(18):
-        p = rng.random(2) * n
-        a = rng.normal(0, 0.5)
-        for _ in range(int(rng.uniform(40, 160))):
-            a += rng.normal(0, 0.12)
-            p = (p + [np.cos(a), np.sin(a)]) % n
-            r, c = int(p[1]), int(p[0])
-            col[r, c] = col[(r + 1) % n, c] = [0.27, 0.20, 0.14]
-            hgt[r, c] += 2.0
-    col = np.clip(col * (TEX_MEAN / 255.0 / col.reshape(-1, 3).mean()), 0, 1)
+    fine, grain, mid, patch = noise(n, n, 0.7, rng), noise(n, n, 2.5, rng), noise(n, n, 14, rng), noise(n, n, 70, rng)
+    hgt = 0.8 * fine + 1.5 * grain + 3.0 * mid + 3.0 * patch
+    lum = 1 + 0.07 * fine + 0.07 * grain + 0.07 * mid + 0.05 * patch
+    warm = np.clip(noise(n, n, 40, rng) * 0.5, -1, 1)           # drier (lighter, yellower) and damper (browner) earth
+    col = np.array([0.50, 0.44, 0.36], np.float32) * lum[..., None]
+    col = col * (1 + 0.03 * warm[..., None] * np.array([1.0, 0.6, -0.6], np.float32))
+    # gravel 5-15 mm and stones 2-8 cm, grey gneiss and brown, sunk in the earth more where the patch noise is low
+    for count, (r0, r1), embed, kk in ((14000, (3.0, 8.0), 0.40, 0.7), (900, (8, 22), 0.35, 0.9), (160, (25, 60), 0.35, 1.0)):
+        h, sid = _domes(n, rng, count, (r0 / mm, r1 / mm), aspect=(1.0, 1.8), embed=embed)
+        on = sid >= 0
+        tone = np.array([[0.50, 0.48, 0.45], [0.40, 0.39, 0.37], [0.47, 0.41, 0.34], [0.34, 0.31, 0.27]],
+                        np.float32)[rng.integers(0, 4, count)] * rng.uniform(0.9, 1.1, count)[:, None]
+        sc = tone[np.maximum(sid, 0)] * (0.80 + 0.35 * h[..., None]) * (1 + 0.05 * fine[..., None])
+        a = (on * np.clip(h * 4, 0, 1) * kk)[..., None]           # soft edges: earth on the stones' feet
+        col = col * (1 - a) + sc * a
+        hgt = np.where(on, hgt + 10.0 * kk * h, hgt)
+    # dark crumbs and shadowed pores, a few dry grass stalks (small, pale, not green)
+    dark = np.clip((noise(n, n, 1.2, rng) - 2.0) * 0.6, 0, 1)
+    col = col * (1 - 0.35 * dark[..., None])
+    hgt = hgt - 2.0 * dark
+    for _ in range(260):
+        p0 = rng.random(2) * n
+        ang = rng.uniform(0, np.pi)
+        ln = rng.uniform(4, 12) / mm
+        t = np.linspace(0, 1, int(ln) + 1)
+        P = (p0[None] + np.outer(t, [np.cos(ang), np.sin(ang)]) * ln).astype(int) % n
+        col[P[:, 1], P[:, 0]] = col[P[:, 1], P[:, 0]] * 0.4 + 0.6 * np.array([0.62, 0.57, 0.42], np.float32)
+        hgt[P[:, 1], P[:, 0]] += 1.5
+    # its mean nearly grey (v3.1.3: 225 212 167 up to v3.1.2, which turned every bank ochre over the terrain's colour)
+    col = np.clip(col * (np.array(TEX_TINT) * TEX_MEAN / 255.0 / col.reshape(-1, 3).mean(0)), 0, 1)
     return to8(col), normal_map(hgt, 1.0 / mm)
+
+
+def fringe_alpha(n=TEX_N, seed=61):
+    """v3.1.3: uint8 alpha of the earth fringe over the rock (FRINGE_BANDS): clumps of earth 5-40 cm with ragged
+    edges, uniform in 0..255 (cut out at alphaRef r it covers 1 - r/255 of the face, and a lower r covers all a
+    higher one does: the bands nest, no edge between them)."""
+    from bld_textures import noise
+    rng = np.random.default_rng(seed)
+    f = 1.0 * noise(n, n, 40, rng) + 0.6 * noise(n, n, 12, rng) + 0.35 * noise(n, n, 3, rng) + 0.15 * noise(n, n, 1, rng)
+    r = np.empty(f.size, np.float64)
+    r[np.argsort(f.ravel(), kind="stable")] = np.arange(f.size)
+    return np.clip(r / (f.size - 1) * 255 + 0.5, 0, 255).astype(np.uint8).reshape(n, n)
 
 
 def rock_texture(n=ROCK_TEX_N, seed=53):
     """(colour, normal) uint8 images of a bare gneiss face, tileable: layers across the image (the texture's v is
-    up the face), joints across them, broken blocks with lighter fresh breaks, dark lichen; its mean ROCK_TEX_MEAN."""
+    up the face), joints across them, broken blocks with lighter fresh breaks, dark lichen, earth in the joints; its
+    mean ROCK_TEX_MEAN. v3.1.3: 2048 px over 6 m (3 mm a pixel; v3.1: 1024 over 4 m, washed out), crystals and
+    sharper joints."""
     from bld_textures import noise, aniso_noise, normal_map, to8
+    from scipy.ndimage import gaussian_filter
     rng = np.random.default_rng(seed)
     mm = ROCK_TILE_M * 1000 / n
-    fine, mid = noise(n, n, 1.0, rng), noise(n, n, 6, rng)
-    layers = aniso_noise(n, n, 6.0, 24.0, rng)                    # rows: up the face; long along it (v3.2: 3 x 60 px,
-                                                                  # fine hairlines across the face that read as a stretched texture)
-    warp = aniso_noise(n, n, 20.0, 40.0, rng)
-    rows = (np.arange(n)[:, None] + 9.0 * warp) % n
-    band = np.sin(rows / n * 2 * np.pi * 9) * 0.5 + 0.5          # nine layers per repeat
-    # blocks: cells of a jittered grid, each a tilted plane (the facets of a blasted face)
+    s = n / 1024.0 * 4.0 / ROCK_TILE_M                            # v3.1's pixel scales at the new size
+    fine, mid = noise(n, n, 1.0, rng), noise(n, n, 6 * s, rng)
+    crystal = noise(n, n, 0.6, rng)
+    layers = aniso_noise(n, n, 6.0 * s, 24.0 * s, rng)
+    warp = aniso_noise(n, n, 20.0 * s, 40.0 * s, rng)
+    rows = (np.arange(n)[:, None] + 9.0 * s * warp) % n
+    band = np.sin(rows / n * 2 * np.pi * 9 * ROCK_TILE_M / 4.0) * 0.5 + 0.5   # a layer every 0.44 m
     from scipy.spatial import cKDTree
-    k = 80
+    k = int(80 * (ROCK_TILE_M / 4.0) ** 2)
     C = rng.random((k, 2)) * [n, n]
     tiles = np.concatenate([C + [dx * n, dy * n] for dx in (-1, 0, 1) for dy in (-1, 0, 1)])
     Y, X = np.mgrid[0:n, 0:n]
-    stretch = np.array([2.4, 1.0])                                  # wider along the layers than up the face
-    wy, wx = noise(n, n, 12, rng), noise(n, n, 12, rng)          # jagged joints, not straight cell edges
-    Yw, Xw = Y + 6.0 * wy + 1.5 * fine, X + 6.0 * wx + 1.5 * fine
+    stretch = np.array([2.4, 1.0])
+    wy, wx = noise(n, n, 12 * s, rng), noise(n, n, 12 * s, rng)
+    jag = noise(n, n, 2.0 * s, rng)
+    Yw, Xw = Y + 6.0 * s * wy + 1.5 * s * jag, X + 6.0 * s * wx + 1.5 * s * jag
     d, i = cKDTree(tiles * stretch).query(np.column_stack([Yw.ravel() % n, Xw.ravel() % n]) * stretch, k=2)
     cid = (i[:, 0] % k).reshape(n, n)
-    edge = np.clip((d[:, 1] - d[:, 0]).reshape(n, n) / 9.0, 0, 1)   # 0 on a joint between two blocks
-    edge = np.maximum(edge, np.clip(noise(n, n, 30, rng) - 0.9, 0, 1))  # joints that fade out (not a mosaic)
+    edge = np.clip((d[:, 1] - d[:, 0]).reshape(n, n) / (11.0 * s), 0, 1)
+    edge = np.maximum(edge, np.clip(noise(n, n, 30 * s, rng) - 0.9, 0, 1))
     tilt = rng.normal(0, 1, (k, 2))
-    dy = (Yw - C[cid, 0] + n / 2) % n - n / 2                     # from the block's centre (wrapped)
+    dy = (Yw - C[cid, 0] + n / 2) % n - n / 2
     dx = (Xw - C[cid, 1] + n / 2) % n - n / 2
     plane = (tilt[cid, 0] * dy + tilt[cid, 1] * dx) / n * 8
     plane = (plane - plane.mean()) / max(plane.std(), 1e-6)
-    hgt = 6.0 * plane + 5.0 * edge + 2.0 * mid + 0.8 * fine + 1.2 * band
-    tone = rng.uniform(-0.06, 0.06, k)[cid]
+    hgt = 6.0 * plane + 6.0 * edge ** 0.5 + 2.0 * mid + 1.2 * fine + 0.8 * crystal + 1.2 * band
+    tone = rng.uniform(-0.07, 0.07, k)[cid]
     base = np.array([0.55, 0.53, 0.50], np.float32)
     col = base * (1 + tone[..., None] + 0.05 * fine[..., None] + 0.06 * mid[..., None] + 0.04 * (band[..., None] - 0.5))
-    # mica sparkle and darker biotite layers
     col = col * (1 - 0.06 * np.clip(layers, 0, None)[..., None])
-    # joints dark
-    col = col * (0.62 + 0.38 * edge[..., None] ** 0.6) * (1 + 0.07 * plane[..., None])
-    # fresh breaks lighter and warmer (rusty) on a few blocks
+    # quartz and feldspar light, biotite dark: the grain of the stone (what makes it read sharp from a car)
+    col = col * (1 + 0.10 * np.clip(crystal - 0.8, 0, None)[..., None] - 0.12 * np.clip(-crystal - 1.2, 0, None)[..., None])
+    col = col * (0.50 + 0.50 * edge[..., None] ** 0.6) * (1 + 0.13 * plane[..., None])
+    # light from above baked in (the facets' tops lit, the undersides of the blocks in shade: relief from afar)
+    hs = gaussian_filter(hgt, 2.0 * s, mode="wrap")
+    up = (np.roll(hs, 1, 0) - np.roll(hs, -1, 0)) * 0.5 / (2 * mm)
+    col = col * np.clip(1 + 0.9 * np.tanh(up)[..., None] * 0.25, 0.7, 1.3)
+    # earth in the open joints (the bank's own colour: the fringe of earth over the rock meets it)
+    soil = np.clip(1 - edge / 0.25, 0, 1) * np.clip(noise(n, n, 8 * s, rng) + 0.3, 0, 1)
+    col = col * (1 - 0.6 * soil[..., None]) + 0.6 * soil[..., None] * np.array([0.45, 0.39, 0.31], np.float32)
     fresh = (rng.random(k) < 0.12)[cid] & (edge > 0.3)
     col = np.where(fresh[..., None], col * [1.07, 1.03, 0.97], col)
-    # lichen: dark grey-green patches
-    lich = np.clip((noise(n, n, 4, rng) - 1.6) * 1.5, 0, 1) * edge
+    lich = np.clip((noise(n, n, 4 * s, rng) - 1.6) * 1.5, 0, 1) * edge
     col = col * (1 - 0.5 * lich[..., None]) + 0.5 * lich[..., None] * np.array([0.34, 0.34, 0.31], np.float32)
-    # dark streaks of water down the face (the texture's rows run down it)
-    wet = np.clip(aniso_noise(n, n, 60.0, 16.0, rng) - 1.0, 0, 1)
-    col = col * (1 - 0.12 * wet[..., None])          # v3.2: 0.25, a grid of dark bars over the tiles
+    wet = np.clip(aniso_noise(n, n, 60.0 * s, 16.0 * s, rng) - 1.0, 0, 1)
+    col = col * (1 - 0.12 * wet[..., None])
     col = np.clip(col * (ROCK_TEX_MEAN / 255.0 / col.reshape(-1, 3).mean()), 0, 1)
-    return to8(col), normal_map(hgt, 1.2 / mm * 0.25)
+    return to8(col), normal_map(hgt, 1.2 / mm * 0.3)
+
+
+def texture_files(lv):
+    """{level path: PNG bytes} of the skin's textures (v3.1.3: and the fringe's, the bank's colour with fringe_alpha)."""
+    col_img, nrm_img = bank_texture()
+    rock_col, rock_nrm = rock_texture()
+    out = {}
+    for name, im in (("t_steep_bank_b.color.png", col_img), ("t_steep_bank_nm.normal.png", nrm_img),
+                     ("t_steep_rock_b.color.png", rock_col), ("t_steep_rock_nm.normal.png", rock_nrm),
+                     ("t_steep_fringe_b.color.png", np.dstack([col_img, fringe_alpha()]))):
+        b = io.BytesIO()
+        Image.fromarray(im).save(b, "PNG", optimize=True)
+        out[f"{lv}/{D}/{name}"] = b.getvalue()
+    return out
 
 
 def vnoise3(P, scale, seed=0):
@@ -322,9 +376,9 @@ def rock(keys, P, N, z, wv, droad=None):
     Pm = P + N * d[:, None]
     # colours: rock grey-brown with big soft patches, moss on the ledges; earth less green; scree at the foot
     big = vnoise3(P, (COLOUR_SCALE,) * 3, 4)
-    rc = np.array(ROCK_TONE) * (0.88 + 0.24 * big)[:, None]
+    rc = np.array(ROCK_TONE) * (0.88 + 0.24 * big)[:, None] * (OLD_ROCK_TEX_MEAN / ROCK_TEX_MEAN)   # v3.1.3: as bright as before
     moss = np.clip((MOSS_DEG - deg) / 6.0, 0, 1) * np.clip((vnoise3(P, (3.0,) * 3, 5) - 0.45) * 3, 0, 1)
-    rc = rc * (1 - moss[:, None]) + np.array(MOSS) * moss[:, None]
+    rc = rc * (1 - moss[:, None]) + np.array(MOSS) * (OLD_ROCK_TEX_MEAN / ROCK_TEX_MEAN) * moss[:, None]
     return Pm, rw, rc, hab, deg, ribs
 
 
@@ -412,7 +466,11 @@ def materials():
                        roughness=0.95, ground_type="DIRT", vert_color=True, extra={"castShadows": False})
     rk = bng.material(MAT_ROCK, f"{t}/t_steep_rock_b.color.png", normal_map=f"{t}/t_steep_rock_nm.normal.png",
                       roughness=0.9, ground_type="ROCK", vert_color=True)
-    return [m, far, rk]
+    fr = [bng.material(f"{MAT_FRINGE}_{j + 1}", f"{t}/t_steep_fringe_b.color.png", normal_map=f"{t}/t_steep_bank_nm.normal.png",
+                       roughness=0.95, ground_type="ROCK", vert_color=True, alpha_test=int(round(255 * (1 - cover))),
+                       extra={"castShadows": False})
+          for j, (_, cover) in enumerate(FRINGE_BANDS)]
+    return [m, far, rk] + fr
 
 
 # ------------------------------------------------------------------------------------------------ terrain
@@ -689,7 +747,8 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=(), droad=N
     # rock and earth cut apart along the line where the rock weight is 1/2 (not along the triangles: teeth)
     n_tri = len(T)
     info = {"P": Pm, "rw": rw, "deg": deg, "hab": hab, "ribs": ribs, "over_road": 0, "over_road_max": -9.0}
-    for mat, sgn, tile in ((MAT, -1.0, TILE_M), (MAT_ROCK, 1.0, ROCK_TILE_M)):
+    parts = {}
+    for mat, sgn in ((MAT, -1.0), (MAT_ROCK, 1.0)):
         Pk, Nk, ck, Tk = clip(P, N, col, T, sgn * (col[:, 4] - 0.5) + 1e-6)
         if RS is not None and len(Tk):
             # v3.1: no point of the skin over a road surface (its foot is under it, ROAD_DIVE). The lattice is
@@ -703,7 +762,8 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=(), droad=N
                 info["over_road_max"] = max(info["over_road_max"], float(dz[ok].max()))
                 low = ok & (dz > -ROAD_DIVE) & (dz < ROAD_LIFT_MAX)    # not a road far under it (tunnel, gallery)
                 Pk[used[low], 2] = hr[low] - ROAD_DIVE
-        add_projected(mb, mat, Pk, Nk, ck[:, :4], Tk, tile)
+        parts[mat] = [Pk, Nk, ck[:, :4], Tk]
+    add_parts(mb, border(parts, RS))
     return n_tri, info
 
 
@@ -729,12 +789,14 @@ def plants(info, wv, hr, droad, rng):
     return out
 
 
-def add_projected(mb, mat, P, N, col, T, tile_m=TILE_M):
-    """The triangles T into mb, one add per projection axis (each face takes the axis it is turned to)."""
+def add_projected(mb, mat, P, N, col, T, tile_m=TILE_M, axis=None):
+    """The triangles T into mb, one add per projection axis (each face takes the axis it is turned to, or axis:
+    (k,) 0 x, 1 y, 2 z per triangle)."""
     if not len(T):
         return
-    fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
-    axis = np.argmax(np.abs(fn), axis=1)                 # 0: x (u = y, v = z), 1: y (u = x, v = z), 2: z (u = x, v = y)
+    if axis is None:
+        fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])
+        axis = np.argmax(np.abs(fn), axis=1)             # 0: x (u = y, v = z), 1: y (u = x, v = z), 2: z (u = x, v = y)
     for ax, (ui, vi) in enumerate(((1, 2), (0, 2), (0, 1))):
         Ta = T[axis == ax]
         if not len(Ta):
@@ -742,6 +804,94 @@ def add_projected(mb, mat, P, N, col, T, tile_m=TILE_M):
         used, inv = np.unique(Ta.ravel(), return_inverse=True)
         uv = np.column_stack([P[used, ui], P[used, vi]]) / tile_m
         mb.add(mat, P[used], uvs=uv, normals=N[used], tris=inv.reshape(-1, 3), colors=col[used])
+
+
+def smooth_axes(P, T):
+    """v3.1.3: the projection axis of every triangle (P, T: all the near triangles of a tile, earth, rock and fringe)
+    from the face normals averaged over AXIS_CELL x AXIS_WIN m round it. Up to v3.1.2 each face took the axis it is
+    turned to itself: on a rock face standing about 45 degrees to x and y its ribs and knobs flipped the axis from
+    one triangle to the next, a patchwork of texture seams (michi's screenshot 2026-10-25, the renders of 0039)."""
+    fn = np.cross(P[T[:, 1]] - P[T[:, 0]], P[T[:, 2]] - P[T[:, 0]])      # area weighted
+    c = P[T].mean(1)
+    k = np.floor((c - c.min(0)) / AXIS_CELL).astype(np.int64)
+    shape = tuple(k.max(0) + 1)
+    out = np.empty((len(T), 3))
+    for j in range(3):
+        g = np.zeros(shape)
+        np.add.at(g, (k[:, 0], k[:, 1], k[:, 2]), fn[:, j])
+        out[:, j] = ndi.uniform_filter(g, AXIS_WIN, mode="constant")[k[:, 0], k[:, 1], k[:, 2]]
+    return np.argmax(np.abs(out), axis=1)
+
+
+def calm_moss(C, d):
+    """v3.1.3: the moss green of the rock's vertex colours C (k, 4), in place, down to MOSS_CALM of it at d >= 1 m from
+    the line where it meets the earth (at the line it is the earth's colour): one lattice step (0.75 m) sharp, the
+    green smeared over the faces read as a blurred texture (michi's screenshot 2026-10-25)."""
+    lum = (C[:, :3] @ np.array([0.2126, 0.7152, 0.0722]))[:, None]
+    k = (np.clip((C[:, 1] - C[:, 0]) / 0.05, 0, 1) * np.clip(d / 1.0, 0, 1) * (1 - MOSS_CALM))[:, None]
+    C[:, :3] = C[:, :3] * (1 - k) + lum * k
+
+
+def border(parts, RS=None):
+    """v3.1.3: where the earth meets the rock, a fringe of earth over the rock (FRINGE_BANDS: less of it further from
+    the line, cut out by the clumps of fringe_alpha), FRINGE_LIFT m out along the normals, in the colour of the earth
+    at the line: the hard line where one texture stopped and the other began (michi 2026-10-25) becomes a ragged
+    passage of earth patches over rock. parts {material: [P, N, col (k, 4), T]} (world coordinates); adds the
+    fringe materials. RS: no fringe point over a road surface (the skin's foot is under it)."""
+    if MAT_ROCK not in parts:
+        return parts
+    Pr, Nr, Cr, Tr = parts[MAT_ROCK]
+    if MAT not in parts or not len(parts[MAT][3]) or not len(Tr):
+        calm_moss(Cr, np.full(len(Cr), np.inf))
+        return parts
+    Pe, Ne, Ce, Te = parts[MAT]
+    # the line: rock corners at an earth corner (the two clips of tile_mesh cut the same edges at the same points)
+    ue, ur = np.unique(Te), np.unique(Tr)
+    de, ie = cKDTree(Pe[ue]).query(Pr[ur], distance_upper_bound=5e-3)
+    on = np.isfinite(de)
+    if not on.any():
+        calm_moss(Cr, np.full(len(Cr), np.inf))
+        return parts
+    line, line_col = Pr[ur[on]], Ce[ue[ie[on]]]
+    d, il = cKDTree(line).query(Pr, distance_upper_bound=FRINGE_BANDS[-1][0] + 1.0)
+    far = ~np.isfinite(d)
+    d[far], il[far] = 1e9, 0
+    calm_moss(Cr, d)
+    dt = d[Tr].mean(1)
+    lo = 0.0
+    for j, (hi, cover) in enumerate(FRINGE_BANDS):
+        sel = (dt >= lo) & (dt < hi)
+        lo = hi
+        if not sel.any():
+            continue
+        T = Tr[sel]
+        used, inv = np.unique(T.ravel(), return_inverse=True)
+        P = Pr[used] + Nr[used] * FRINGE_LIFT
+        C = line_col[il[used]].copy()
+        C[:, 3] = 1.0
+        T = inv.reshape(-1, 3)
+        if RS is not None:
+            hr = RS.height(P[:, 0], P[:, 1], "near", P[:, 2])
+            bad = np.isfinite(hr) & (P[:, 2] > hr - ROAD_DIVE) & (P[:, 2] < hr + ROAD_LIFT_MAX)
+            T = T[~bad[T].any(1)]
+        if len(T):
+            parts[f"{MAT_FRINGE}_{j + 1}"] = [P, Nr[used], C, T]
+    return parts
+
+
+def add_parts(mb, parts):
+    """v3.1.3: the near triangles of a tile into mb, projected along the smoothed axes (smooth_axes) of all of them."""
+    mats = [m for m in parts if len(parts[m][3])]
+    if not mats:
+        return
+    off = np.cumsum([0] + [len(parts[m][0]) for m in mats])
+    P = np.concatenate([parts[m][0] for m in mats])
+    ax = smooth_axes(P, np.concatenate([parts[m][3] + o for m, o in zip(mats, off)]))
+    k0 = 0
+    for m in mats:
+        Pm, Nm, Cm, Tm = parts[m]
+        add_projected(mb, m, Pm, Nm, Cm, Tm, ROCK_TILE_M if m == MAT_ROCK else TILE_M, ax[k0:k0 + len(Tm)])
+        k0 += len(Tm)
 
 
 def coarse_mesh(mb, keys, P, N, col, rr, cc, wv, k, lift):
@@ -1001,13 +1151,7 @@ def steep_skin_step(root, report=None):
         files[mdn] = json.dumps(managed, indent=1).encode("utf-8")
     print("steep skin: %s" % rep, flush=True)
     if objs:
-        col_img, nrm_img = bank_texture()
-        rock_col, rock_nrm = rock_texture()
-        for name, im in (("t_steep_bank_b.color.png", col_img), ("t_steep_bank_nm.normal.png", nrm_img),
-                         ("t_steep_rock_b.color.png", rock_col), ("t_steep_rock_nm.normal.png", rock_nrm)):
-            b = io.BytesIO()
-            Image.fromarray(im).save(b, "PNG", optimize=True)
-            files[f"{lv}/{D}/{name}"] = b.getvalue()
+        files.update(texture_files(lv))
         files[f"{lv}/{D}/terrain_skin.materials.json"] = json.dumps({mm["name"]: mm for mm in materials()},
                                                                      indent=1).encode("utf-8")
         files[f"{lv}/main/MissionGroup/level_objects/terrain_skin/items.level.json"] = \
@@ -1341,6 +1485,104 @@ def skin_grass_step(root, report=None):
     rep["removed_share"] = round(rep["removed_triangles"] / max(tot, 1), 3)
     rep["seconds"] = round(time.time() - t0)
     print("skin grass: %s" % rep, flush=True)
+    if report:
+        os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+        json.dump(rep, open(report, "w"), indent=1)
+    return rep
+
+
+# ------------------------------------------------------------------------------------------------ one look for the banks
+
+def read_skin_dae(txt):
+    """[(node name, {material: [P (local), N, col (k, 4), T]})] of the detail levels of a skin DAE (write_dae with
+    weld=False: every corner one index into all the arrays)."""
+    out = []
+    for nm, gid in re.findall(r'<node id="([^"]+)" name="[^"]+" type="NODE"><instance_geometry url="#([^"]+)"', txt):
+        g0 = txt.find(f'<geometry id="{gid}"')
+        geom = txt[g0:txt.find("</geometry>", g0)]
+        arr = lambda k, w: np.array(re.search(_ARR % f"{gid}-{k}a", geom).group(2).split(), np.float64).reshape(-1, w)
+        V, N, C = arr("p", 3), arr("n", 3), arr("c", 4)
+        parts = {}
+        for m in _TRI.finditer(geom):
+            nin = m.group(3).count("<input")
+            I = np.array(m.group(4).split(), np.int64).reshape(-1, nin)[:, 0]
+            used, inv = np.unique(I, return_inverse=True)
+            parts[m.group(1)] = [V[used], N[used], C[used].copy(), inv.reshape(-1, 3)]
+        out.append((nm, parts))
+    return out
+
+
+def skin_blend_step(root, report=None):
+    """v3.1.3 (finishing step after skin_grass): a level whose skin was built before v3.1.3 brought to its look: the
+    new textures (2048 px over 6 m, the earth without green patches, both of one mean brightness), the vertex colours
+    to the new means, the projection along smoothed axes (smooth_axes), the earth's fringe over the rock (border).
+    The same as a build of this version gives; nothing to do on a level that has the fringe already (a build). The
+    steep yards (mp_hard_bank, on the road shapes) keep the old bank texture, copied to t_hard_bank_*."""
+    import network_mesh, road_mesh
+    t0 = time.time()
+    zi = bng.LevelFiles(root)
+    lv = f"levels/{LEVEL_NAME}"
+    mf = f"{lv}/{D}/terrain_skin.materials.json"
+    rep = {"files": 0, "fringe_triangles": 0, "triangles": 0}
+    if mf not in zi.NameToInfo or f"{MAT_FRINGE}_1" in json.loads(zi.read(mf)):
+        rep["seconds"] = round(time.time() - t0)
+        print("skin blend: nothing to do (no skin, or its fringe is there)", flush=True)
+        return rep
+    _, rtop = network_mesh.top_faces(zi, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
+    RS = road_mesh.TriSurface(rtop)
+    gain = {MAT: OLD_TEX_MEAN / TEX_MEAN, MAT_FAR: OLD_TEX_MEAN / TEX_MEAN, MAT_ROCK: OLD_ROCK_TEX_MEAN / ROCK_TEX_MEAN}
+    files = {}
+    items = f"{lv}/main/MissionGroup/level_objects/terrain_skin/items.level.json"
+    for o in read_items(zi, items):
+        f = o.get("shapeName", "").lstrip("/")
+        if not f or f not in zi.NameToInfo:
+            continue
+        origin = np.asarray(o["position"], np.float64)
+        levels = read_skin_dae(zi.read(f).decode("utf-8"))
+        mbs = []
+        for k, (node, parts) in enumerate(levels):
+            for m, pt in parts.items():
+                pt[0] = pt[0] + origin
+                pt[2][:, :3] = np.clip(pt[2][:, :3] * gain.get(m, 1.0), 0, 1)
+            if k == 0:
+                parts = border(parts, RS)
+                rep["fringe_triangles"] += sum(len(pt[3]) for m, pt in parts.items() if m.startswith(MAT_FRINGE))
+                rep["triangles"] += sum(len(pt[3]) for pt in parts.values())
+            mb = bng.MeshBuilder()
+            add_parts(mb, parts)
+            base, detail = re.match(r"(.*)_a(\d+)$", node).groups()
+            mbs.append((int(detail), mb))
+        if not mbs or mbs[0][1].empty():
+            continue
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "s.dae")
+            mbs[0][1].write_dae(path, name=base, origin=origin, detail=mbs[0][0], weld=False,
+                                lods=[(d, mb) for d, mb in mbs[1:] if not mb.empty()])
+            files[f] = open(path, "rb").read()
+        rep["files"] += 1
+    # the yards keep the bank as it was (their uvs and colours are for it)
+    for a, b in (("t_steep_bank_b.color.png", "t_hard_bank_b.color.png"), ("t_steep_bank_nm.normal.png", "t_hard_bank_nm.normal.png")):
+        if f"{lv}/{D}/{a}" in zi.NameToInfo:
+            files[f"{lv}/{D}/{b}"] = zi.read(f"{lv}/{D}/{a}")
+    rmf = f"{lv}/art/shapes/roads/main.materials.json"
+    if rmf in zi.NameToInfo:
+        rm = json.loads(zi.read(rmf))
+        if YARD_MAT in rm:
+            st = rm[YARD_MAT]["Stages"][0]
+            st["baseColorMap"] = st["baseColorMap"].replace("t_steep_bank_b", "t_hard_bank_b")
+            st["normalMap"] = st["normalMap"].replace("t_steep_bank_nm", "t_hard_bank_nm")
+            files[rmf] = json.dumps(rm, indent=1).encode("utf-8")
+    files.update(texture_files(lv))
+    files[mf] = json.dumps({mm["name"]: mm for mm in materials()}, indent=1).encode("utf-8")
+    with zi.writer() as zo:
+        for i in zi.infolist():
+            nm = i.filename
+            zo.writestr(i, files.pop(nm) if nm in files else zi.read(i), compress_type=i.compress_type)
+        for nm, b in files.items():
+            zo.writestr(zipfile.ZipInfo(nm, time.localtime()[:6]), b, compress_type=zipfile.ZIP_DEFLATED)
+    rep["fringe_share"] = round(rep["fringe_triangles"] / max(rep["triangles"], 1), 3)
+    rep["seconds"] = round(time.time() - t0)
+    print("skin blend: %s" % rep, flush=True)
     if report:
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(rep, open(report, "w"), indent=1)
