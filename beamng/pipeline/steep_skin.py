@@ -162,17 +162,14 @@ YARD_MIN_M2 = 6.0             # m2: smaller pieces of steep faces stay as they a
 # v3.1.2: the banks of the meadows. The skin's earth (light earth with stones, roots and bright moss patches) was laid on
 # every bank under ROCK_DEG, also on the grass slopes between the hairpins and beside the vineyards of the Magliaso-Pura
 # road, where the terrain round it is meadow with the game's grass: pale yellow-green patches with sharp edges seen from
-# the road and from above (michi, 2026-10-25). The skin faces whose ground is meadow (MEADOW_LAYERS; the Bank layer of
-# the terrain under them, the steep vertices, takes the layer of the nearest other vertex) take a grass of their own
-# (MAT_GRASS, grass_texture: blades and a little soil, neutral on average) in the colour of the terrain there, without
-# the earth's mix and lift: the bank reads as the meadow round it. Finishing step skin_grass, after steep_skin, on the
-# skin meshes as they are (so it also runs on a built level).
-MAT_GRASS = "mp_steep_grass"
-MAT_GRASS_FAR = "mp_steep_grass_far"
+# the road and from above (michi, 2026-10-25). A grass texture of the skin's own in the meadow's colour still showed
+# (michi: "non si deve vedere differenza"): no mesh looks like the terrain with its GroundCover grass. So the earth of the
+# skin on meadow ground (MEADOW_LAYERS; the Bank layer of the steep vertices under it takes the layer of the nearest other
+# vertex) goes, and the terrain there is the meadow again, Bank -> that meadow layer, with its grass. Rock stays (outcrops).
+# Finishing step skin_grass, after steep_skin, on the skin meshes as they are (so it also runs on a built level).
 MEADOW_LAYERS = ("Grass", "GardenGrass", "GrassVerge", "GardenGrassVerge")
 NEAREST_OF = ("Bank",)        # layers that take the layer of the nearest other vertex (with PAVED_LAYERS)
-GRASS_BLUR = 1.5              # terrain squares, blur of the meadow mask: the grass ends along a round line
-GRASS_TEX_MEAN = 205.0        # mean sRGB of each channel of the grass texture (neutral: the vertex colours give the hue)
+GRASS_BLUR = 1.5              # terrain squares, blur of the meadow mask: the skin ends along a round line
 
 
 # ------------------------------------------------------------------------------------------------ texture
@@ -208,38 +205,6 @@ def bank_texture(n=TEX_N, seed=47):
             hgt[r, c] += 2.0
     col = np.clip(col * (TEX_MEAN / 255.0 / col.reshape(-1, 3).mean()), 0, 1)
     return to8(col), normal_map(hgt, 1.0 / mm)
-
-
-def grass_texture(n=TEX_N, seed=61):
-    """v3.1.2: (colour, normal) uint8 images of the grass on the meadow banks: short blades, light and dark, a few
-    dry ones and a little soil between them, tileable, every channel's mean GRASS_TEX_MEAN (the vertex colours, the
-    terrain's base colour, give it the meadow's hue) and a low contrast (no pattern seen from afar)."""
-    from bld_textures import noise, normal_map, to8
-    rng = np.random.default_rng(seed)
-    fine, mid, patch = noise(n, n, 1.0, rng), noise(n, n, 6, rng), noise(n, n, 40, rng)
-    lum = 1 + 0.06 * fine + 0.08 * mid + 0.06 * patch
-    col = np.repeat(lum[..., None], 3, 2).astype(np.float32)
-    hgt = 0.5 * fine + 1.5 * mid
-    # blades: thin strokes 4-18 px (2-10 cm at TILE_M), leaning every way (the texture is projected on any axis)
-    for _ in range(9000):
-        p = rng.random(2) * n
-        a = rng.uniform(0, 2 * np.pi)
-        ln = int(rng.uniform(4, 18))
-        k = rng.random()
-        tone = (np.array([1.16, 1.12, 0.95]) if k < 0.12 else          # dry blade, yellowish
-                np.array([0.72, 0.78, 0.76]) if k < 0.55 else          # in the shade of the others
-                np.array([1.08, 1.10, 1.04]))                          # lit
-        for j in range(ln):
-            r, c = int(p[1]) % n, int(p[0]) % n
-            col[r, c] = col[r, c] * 0.4 + tone * lum[r, c] * 0.6
-            hgt[r, c] += 1.0 + 0.1 * j
-            p = p + [np.cos(a), np.sin(a)]
-            a += rng.normal(0, 0.08)
-    # a little soil where the patch noise is low, brownish and darker
-    soil = np.clip((-noise(n, n, 10, rng) - 1.6) * 1.2, 0, 0.35)
-    col = col * (1 - soil[..., None]) + np.array([0.80, 0.66, 0.52], np.float32) * lum[..., None] * soil[..., None]
-    col = col * (GRASS_TEX_MEAN / 255.0 / col.reshape(-1, 3).mean(0))[None, None, :]
-    return to8(np.clip(col, 0, 1)), normal_map(hgt, 0.8 / (TILE_M * 1000 / n))
 
 
 def rock_texture(n=ROCK_TEX_N, seed=53):
@@ -447,11 +412,7 @@ def materials():
                        roughness=0.95, ground_type="DIRT", vert_color=True, extra={"castShadows": False})
     rk = bng.material(MAT_ROCK, f"{t}/t_steep_rock_b.color.png", normal_map=f"{t}/t_steep_rock_nm.normal.png",
                       roughness=0.9, ground_type="ROCK", vert_color=True)
-    gr = bng.material(MAT_GRASS, f"{t}/t_steep_grass_b.color.png", normal_map=f"{t}/t_steep_grass_nm.normal.png",
-                      roughness=0.95, ground_type="GRASS", vert_color=True)
-    gf = bng.material(MAT_GRASS_FAR, f"{t}/t_steep_grass_b.color.png", normal_map=f"{t}/t_steep_grass_nm.normal.png",
-                      roughness=0.95, ground_type="GRASS", vert_color=True, extra={"castShadows": False})
-    return [m, far, rk, gr, gf]
+    return [m, far, rk]
 
 
 # ------------------------------------------------------------------------------------------------ terrain
@@ -869,17 +830,14 @@ class BaseColours:
         return cg
 
 
-    def meadow(self, lay, r0, c0):
-        """v3.1.2: ((h, w, 3) colours, (h, w) 1.0 on meadow) of the window lay: the vertices of a road or yard layer and of
-        the Bank layer (the steep vertices of any natural ground) take the layer of the nearest vertex of another."""
-        h, w = lay.shape
-        gr, gc = np.mgrid[0:h, 0:w]
+    def meadow(self, lay):
+        """v3.1.2: ((h, w) layer, (h, w) 1.0 on meadow) of the window lay: the vertices of a road or yard layer and of the
+        Bank layer (the steep vertices of any natural ground) take the layer of the nearest vertex of another."""
         src = self.nearest[lay]
         if src.any() and not src.all():
             _, (ir, ic) = ndi.distance_transform_edt(src, return_indices=True)
             lay = lay[ir, ic]
-        cg = self(lay.ravel(), (gr + r0).ravel(), (gc + c0).ravel()).reshape(h, w, 3)
-        return cg, self.meadow_ids[lay].astype(np.float64)
+        return lay, self.meadow_ids[lay].astype(np.float64)
 
 
 # ------------------------------------------------------------------------------------------------ step
@@ -1191,145 +1149,196 @@ def steep_yards_step(root, report=None):
 # ------------------------------------------------------------------------------------------------ meadow banks
 
 _ARR = r'<float_array id="%s" count="(\d+)">([^<]*)</float_array>'
+_TRI = re.compile(r'<triangles material="([^"]+)-mat" count="(\d+)">((?:<input[^>]*/>)+)<p>([^<]*)</p></triangles>')
 
 
 def _fmt(a, d):
     return re.sub(r"\.?0+(?= |$)", "", " ".join(f"{v:.{d}f}" for v in np.asarray(a).ravel()))
 
 
-def regrass_dae(txt, origin, colours, lay, X0, Y0, sq):
-    """v3.1.2: the earth triangles of one skin DAE (txt) on meadow ground as grass (MAT_GRASS / MAT_GRASS_FAR): (new
-    text or None, {counts}). The vertex colours of the earth go towards the terrain's own colour where the ground is
-    meadow (not those the rock uses too)."""
-    rep = {"grass_triangles": 0, "earth_triangles": 0}
-    out = txt
-    for gid, mat, gmat in (("g", MAT, MAT_GRASS), ("g1", MAT_FAR, MAT_GRASS_FAR), ("g2", MAT_FAR, MAT_GRASS_FAR)):
+def meadow_cut(txt, origin, colours, lay, Hter, X0, Y0, sq):
+    """v3.1.2: one skin DAE (txt, at origin) without its earth triangles on meadow ground, in every detail level.
+    (new text, or None when nothing changed, or "" when nothing is left; (k, 2) terrain vertices (row, col) under the
+    removed near triangles; counts). The kept earth's corners on the cut go down onto the terrain (no lip)."""
+    rep = {"removed_triangles": 0, "kept_triangles": 0}
+    out, removed = txt, np.zeros((0, 2), np.int64)
+    origin = np.asarray(origin, np.float64)
+    n = lay.shape[0]
+    for gid, mat in (("g", MAT), ("g1", MAT_FAR), ("g2", MAT_FAR)):
         mp = re.search(_ARR % f"{gid}-pa", out)
-        mc = re.search(_ARR % f"{gid}-ca", out)
-        if not mp or not mc:
-            continue
-        V = np.array(mp.group(2).split(), np.float64).reshape(-1, 3) + np.asarray(origin, np.float64)[None]
-        C = np.array(mc.group(2).split(), np.float64).reshape(-1, 4)
         g0 = out.find(f'<geometry id="{gid}"')
+        if not mp or g0 < 0:
+            continue
         g1 = out.find("</geometry>", g0)
         geom = out[g0:g1]
-        tri = re.compile(r'<triangles material="([^"]+)-mat" count="(\d+)">((?:<input[^>]*/>)+)<p>([^<]*)</p></triangles>')
-        lists = {m.group(1): m for m in tri.finditer(geom)}
-        if mat not in lists or gmat in lists:
+        lists = {m.group(1): m for m in _TRI.finditer(geom)}
+        if mat not in lists:
             continue
+        V = np.array(mp.group(2).split(), np.float64).reshape(-1, 3) + origin[None]
         m = lists[mat]
         nin = m.group(3).count("<input")
         I = np.array(m.group(4).split(), np.int64).reshape(-1, nin)[:, 0].reshape(-1, 3)
-        rock_v = np.zeros(len(V), bool)
-        for other, mo in lists.items():
-            if other != mat:
-                rock_v[np.array(mo.group(4).split(), np.int64).reshape(-1, mo.group(3).count("<input"))[:, 0]] = True
-        # the terrain window under the mesh, its meadow mask and colours blurred, at the vertices
-        C_ = (V[:, 0] - X0) / sq
-        R_ = (V[:, 1] - Y0) / sq
-        pad = int(4 * max(GRASS_BLUR, COLOUR_BLUR)) + 2
-        n = lay.shape[0]
+        R_, C_ = (V[:, 1] - Y0) / sq, (V[:, 0] - X0) / sq
+        pad = int(4 * GRASS_BLUR) + 2
         r0, r1 = max(int(R_.min()) - pad, 0), min(int(R_.max()) + pad + 2, n)
         c0, c1 = max(int(C_.min()) - pad, 0), min(int(C_.max()) + pad + 2, n)
-        cg, mw = colours.meadow(lay[r0:r1, c0:c1], r0, c0)
-        rc = [R_ - r0, C_ - c0]
-        gw = ndi.map_coordinates(ndi.gaussian_filter(mw, GRASS_BLUR), rc, order=1)
-        gcol = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), rc, order=1)
-                                for k in range(3)])
-        grass = gw[I].mean(1) >= 0.5
-        rep["grass_triangles"] += int(grass.sum())
-        rep["earth_triangles"] += int((~grass).sum())
-        if not grass.any():
+        _, mw = colours.meadow(lay[r0:r1, c0:c1])
+        gw = ndi.map_coordinates(ndi.gaussian_filter(mw, GRASS_BLUR), [R_ - r0, C_ - c0], order=1)
+        cut = gw[I].mean(1) >= 0.5
+        if gid == "g":
+            rep["removed_triangles"] += int(cut.sum())
+            rep["kept_triangles"] += int((~cut).sum()) + sum(int(o.group(2)) for k, o in lists.items() if k != mat)
+        if not cut.any():
             continue
-        # colours: the earth's towards the terrain's own over the edge of the meadow (not at the rock's vertices)
-        wv = np.clip((gw - 0.25) / 0.5, 0, 1)
-        wv[rock_v] = 0.0
-        used = np.zeros(len(V), bool)
-        used[I.ravel()] = True
-        wv[~used] = 0.0
-        C2 = C.copy()
-        C2[:, :3] = C[:, :3] * (1 - wv[:, None]) + np.clip(gcol, 0, 1) * wv[:, None]
-
-        def lst(name, T):
-            idx = np.repeat(T.ravel()[:, None], nin, 1).ravel()
-            return (f'<triangles material="{name}-mat" count="{len(T)}">{m.group(3)}'
-                    f'<p>{" ".join(map(str, idx))}</p></triangles>')
-        new = (lst(mat, I[~grass]) if (~grass).any() else "") + lst(gmat, I[grass])
-        geom2 = geom[:m.start()] + new + geom[m.end():]
-        geom2 = geom2.replace(mc.group(0), f'<float_array id="{gid}-ca" count="{C2.size}">{_fmt(C2, 3)}</float_array>')
-        out = out[:g0] + geom2 + out[g1:]
-        # the material bound in the node of this geometry, and in the libraries
-        bind = (f'<instance_material symbol="{gmat}-mat" target="#{gmat}-mat"><bind_vertex_input semantic="UVMap" '
-                f'input_semantic="TEXCOORD" input_set="0"/></instance_material>')
-        k = out.find(f'<instance_geometry url="#{gid}"')
-        k = out.find("</technique_common>", k)
-        out = out[:k] + bind + out[k:]
-        if f'id="{gmat}-mat"' not in out:
-            out = out.replace("</library_effects>", f'<effect id="{gmat}-fx"><profile_COMMON><technique sid="common"><lambert>'
-                              f'<diffuse><color>0.8 0.8 0.8 1</color></diffuse></lambert></technique></profile_COMMON>'
-                              f'</effect></library_effects>')
-            out = out.replace("</library_materials>", f'<material id="{gmat}-mat" name="{gmat}"><instance_effect '
-                              f'url="#{gmat}-fx"/></material></library_materials>')
-        if not (~grass).any():                         # no earth left in this geometry: its binding goes too
+        if gid == "g":
+            vr = np.unique(I[cut].ravel())
+            removed = np.column_stack([np.rint(R_[vr]), np.rint(C_[vr])]).astype(np.int64)
+            # the corners the kept triangles share with the removed ones: down onto the terrain (EPS over its higher split)
+            keep_v = np.zeros(len(V), bool)
+            keep_v[I[~cut].ravel()] = True
+            for k, o in lists.items():
+                if k != mat:
+                    keep_v[np.array(o.group(4).split(), np.int64).reshape(-1, o.group(3).count("<input"))[:, 0]] = True
+            edge = np.zeros(len(V), bool)
+            edge[I[cut].ravel()] = True
+            edge &= keep_v
+            if edge.any():
+                Vl = V - origin[None]
+                zt = split_max(Hter[r0:r1, c0:c1], R_[edge] - r0, C_[edge] - c0) + EPS
+                Vl[edge, 2] = np.minimum(Vl[edge, 2], zt - origin[2])
+                geom = geom.replace(mp.group(0), f'<float_array id="{gid}-pa" count="{Vl.size}">{_fmt(Vl, 3)}</float_array>')
+        idx = np.repeat(I[~cut].ravel()[:, None], nin, 1).ravel()
+        new = (f'<triangles material="{mat}-mat" count="{int((~cut).sum())}">{m.group(3)}'
+               f'<p>{" ".join(map(str, idx))}</p></triangles>') if (~cut).any() else ""
+        k0 = geom.find(m.group(0))
+        geom = geom[:k0] + new + geom[k0 + len(m.group(0)):]
+        out = out[:g0] + geom + out[g1:]
+        if not (~cut).any():                           # no earth left in this level: its binding goes too
             k = out.find(f'<instance_geometry url="#{gid}"')
             e = out.find("</instance_geometry>", k)
             ob = re.search(r'<instance_material symbol="%s-mat".*?</instance_material>' % mat, out[k:e])
             if ob:
                 out = out[:k + ob.start()] + out[k + ob.end():]
-    return (out if out != txt else None), rep
+    if out == txt:
+        return None, removed, rep
+    # a detail level with no triangles left: its node and geometry go; the whole shape when the near one is empty
+    for gid in ("g2", "g1", "g"):
+        g0 = out.find(f'<geometry id="{gid}"')
+        if g0 < 0:
+            continue
+        g1 = out.find("</geometry>", g0) + len("</geometry>")
+        if "<triangles" in out[g0:g1]:
+            continue
+        if gid == "g":
+            return "", removed, rep
+        out = out[:g0] + out[g1:].lstrip("\n")
+        k = out.find(f'<instance_geometry url="#{gid}"')
+        a = out.rfind("<node ", 0, k)
+        b = out.find("</node>", k) + len("</node>")
+        out = out[:a] + out[b:]
+    return out, removed, rep
 
 
 def skin_grass_step(root, report=None):
-    """v3.1.2 (finishing step after steep_skin): the skin of the meadow banks as grass in the meadow's colour (MAT_GRASS)."""
+    """v3.1.2 (finishing step after steep_skin): no skin earth on the meadow banks; the terrain there meadow again."""
     import walls as pw
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
                if o.get("class") == "TerrainBlock")
+    Z0, MAXH = float(blk["position"][2]), float(blk["maxHeight"])
     X0, Y0, sq = float(blk["position"][0]), float(blk["position"][1]), float(blk.get("squareSize", 1.0))
-    n, _, lay, names = pw.read_ter(zi.read(f"{lv}/theTerrain.ter"))
+    ter_name = f"{lv}/theTerrain.ter"
+    data = zi.read(ter_name)
+    n, q, lay, names = pw.read_ter(data)
+    Hter = Z0 + q.astype(np.float32) / 65535.0 * MAXH
     colours = BaseColours(zi, lv, names, n)
-    rep = {"files": 0, "changed_files": 0, "grass_triangles": 0, "earth_triangles": 0}
-    files = {}
+    rep = {"files": 0, "changed_files": 0, "removed_files": 0, "removed_triangles": 0, "kept_triangles": 0}
+    files, gone = {}, set()
+    under = np.zeros((n, n), bool)
     items = f"{lv}/main/MissionGroup/level_objects/terrain_skin/items.level.json"
     objs = read_items(zi, items) if items in zi.NameToInfo else []
+    keep_objs = []
     for o in objs:
         f = o.get("shapeName", "").lstrip("/")
         if not f or f not in zi.NameToInfo:
+            keep_objs.append(o)
             continue
         rep["files"] += 1
-        new, r = regrass_dae(zi.read(f).decode("utf-8"), o["position"], colours, lay, X0, Y0, sq)
-        for k in ("grass_triangles", "earth_triangles"):
+        new, rem, r = meadow_cut(zi.read(f).decode("utf-8"), o["position"], colours, lay, Hter, X0, Y0, sq)
+        for k in ("removed_triangles", "kept_triangles"):
             rep[k] += r[k]
+        if len(rem):
+            ok = (rem >= 0).all(1) & (rem < n).all(1)
+            under[rem[ok, 0], rem[ok, 1]] = True
+        if new == "":
+            gone.add(f)
+            rep["removed_files"] += 1
+            continue
+        keep_objs.append(o)
         if new is not None:
             files[f] = new.encode("utf-8")
             rep["changed_files"] += 1
-    if files:
-        col_img, nrm_img = grass_texture()
-        for name, im in (("t_steep_grass_b.color.png", col_img), ("t_steep_grass_nm.normal.png", nrm_img)):
-            b = io.BytesIO()
-            Image.fromarray(im).save(b, "PNG", optimize=True)
-            files[f"{lv}/{D}/{name}"] = b.getvalue()
-        mf = f"{lv}/{D}/terrain_skin.materials.json"
-        mats = json.loads(zi.read(mf)) if mf in zi.NameToInfo else {}
-        for mm in materials():
-            mats.setdefault(mm["name"], mm)
-        files[mf] = json.dumps(mats, indent=1).encode("utf-8")
-        with zi.writer() as zo:
-            now = time.localtime()[:6]
-            for i in zi.infolist():
-                nm = i.filename
-                if nm in files:
-                    ni = zipfile.ZipInfo(nm, now)
-                    ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
-                    zo.writestr(ni, files.pop(nm))
-                else:
-                    zo.writestr(i, zi.read(i), compress_type=i.compress_type)
-            for nm, b in files.items():
-                zo.writestr(zipfile.ZipInfo(nm, now), b, compress_type=zipfile.ZIP_DEFLATED)
-    tot = rep["grass_triangles"] + rep["earth_triangles"]
-    rep["grass_share"] = round(rep["grass_triangles"] / max(tot, 1), 3)
+    if not (files or gone):
+        rep["seconds"] = round(time.time() - t0)
+        print("skin grass: nothing to do %s" % rep, flush=True)
+        return rep
+    # the terrain under the removed skin: its Bank vertices take the meadow layer beside them (the game's grass grows there)
+    under = ndi.binary_dilation(under, iterations=1)
+    bank = np.isin(lay, [i for i, nm in enumerate(names) if nm in NEAREST_OF])
+    ch = under & bank
+    lay2 = lay.copy()
+    if ch.any():
+        rr, cc = np.nonzero(ch)
+        c0, c1 = cc.min(), cc.max() + 1
+        B, M = 1024, 64                                 # in bands (the nearest-layer transform of the whole block is big)
+        for a in range(rr.min(), rr.max() + 1, B):
+            a1 = min(a + B, rr.max() + 1)
+            b0, b1 = max(a - M, 0), min(a1 + M, n)
+            near, mw = colours.meadow(lay[b0:b1, c0:c1])
+            near, mw = near[a - b0:a1 - b0], mw[a - b0:a1 - b0]
+            sel = ch[a:a1, c0:c1] & (mw > 0.5)
+            lay2[a:a1, c0:c1] = np.where(sel, near, lay2[a:a1, c0:c1])
+    rep["relayered_vertices"] = int((lay2 != lay).sum())
+    files[ter_name] = data[:5 + 2 * n * n] + lay2.astype(np.uint8).tobytes() + data[5 + 3 * n * n:]
+    assert len(files[ter_name]) == len(data)
+    # the skin's bushes on what was removed go (they stood on the skin; the meadow has its own shrubs)
+    rm_plants = 0
+    for t in PLANTS:
+        ff = f"{lv}/forest/{t}.forest4.json"
+        if ff not in zi.NameToInfo:
+            continue
+        rows = [ln for ln in zi.read(ff).decode("utf-8").splitlines() if ln.strip()]
+        kept = []
+        for ln in rows:
+            x, y = json.loads(ln)["pos"][:2]
+            r, c = int(round((y - Y0) / sq)), int(round((x - X0) / sq))
+            if 0 <= r < n and 0 <= c < n and under[r, c] and colours.meadow_ids[lay2[r, c]]:
+                rm_plants += 1
+                continue
+            kept.append(ln)
+        if len(kept) != len(rows):
+            files[ff] = ("\n".join(kept) + "\n").encode("utf-8") if kept else b""
+    rep["removed_plants"] = rm_plants
+    if gone:
+        files[items] = ("\n".join(json.dumps(o, separators=(",", ":")) for o in keep_objs) + "\n").encode("utf-8")
+    with zi.writer() as zo:
+        now = time.localtime()[:6]
+        for i in zi.infolist():
+            nm = i.filename
+            if nm in gone:
+                continue
+            if nm in files:
+                ni = zipfile.ZipInfo(nm, now)          # a new date: the game converts the terrain again
+                ni.compress_type, ni.external_attr = i.compress_type, i.external_attr
+                zo.writestr(ni, files.pop(nm))
+            else:
+                zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+        for nm, b in files.items():
+            zo.writestr(zipfile.ZipInfo(nm, now), b, compress_type=zipfile.ZIP_DEFLATED)
+    tot = rep["removed_triangles"] + rep["kept_triangles"]
+    rep["removed_share"] = round(rep["removed_triangles"] / max(tot, 1), 3)
     rep["seconds"] = round(time.time() - t0)
     print("skin grass: %s" % rep, flush=True)
     if report:
