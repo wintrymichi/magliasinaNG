@@ -963,6 +963,7 @@ FINISH = [
     ("stop_paint", "stop_paint", "stop_paint_step", {"report": True}),   # v3.1: yellow paint of the bus stops, as photographed
     ("sidewalks", "sidewalks", "sidewalks_step", {"report": True}),   # v3.1: pavements on kerbs, what stands on them up
     ("roundabouts", "roundabouts", "roundabouts_step", {"report": True}),   # v3.1: green middles on kerbs, rings of setts
+    ("road_seams", "road_seams", "road_seams_step", {"report": True}),   # v3.1.1: ramps, not steps, between road pieces
     ("steep_skin", "steep_skin", "steep_skin_step", {"report": True}),   # v3.0: the steep banks round, not faceted
     ("steep_yards", "steep_skin", "steep_yards_step", {"report": True}),   # v3.1.1: no asphalt on the steep yard faces
     ("forest_mosaic", "forest_mosaic", "forest_mosaic_step", {"report": True}),   # v3.1: the forest floor as a mosaic
