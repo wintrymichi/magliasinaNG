@@ -4,3 +4,6 @@ Nightly patch (writing this file starts .github/workflows/nightly_patch.yml on t
 2026-10-25 12:30 UTC: v3.1.1 nightly (run 40170633614) patched with the finishing step road_seams (0db867c, thread
 "Gomme bucate"): ramps instead of steps between two pieces of carriageway. Tried on the unpacked zip in the cloud
 first: 263 shapes, 6.2 km of seams, steps over 8 cm left on 222 m.
+2026-10-25 12:45 UTC: then the finishing step forest_grass (c043a2b, thread "Aggiungere erba nel bosco", michi asked for
+it in the nightly): grass in the woods. Tried in the cloud on the unpacked nightly after road_seams: 4.25 M terrain
+vertices of bare litter -> the new litter layers, 5 files changed, 189 s.

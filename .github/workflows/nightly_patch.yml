@@ -2,7 +2,7 @@
 # build on the unpacked level, put back only the files the step wrote, upload it again under the same name and add a
 # line about it to the notes. v3.0.40: the far tree imposters (patch_far_imposters.py, gone). v3.1.1 (2026-10-25):
 # the finishing step road_seams (ramps instead of steps between two pieces of carriageway), which a build from this
-# branch runs by itself. The step is not idempotent: run it once on a zip.
+# branch runs by itself (road_seams is not idempotent: run it once on a zip). Then forest_grass (grass in the woods).
 #
 # It runs when beamng/nightly/patch_stamp.txt changes on the integration branch, or on demand. Never while
 # nightly_build.yml runs (that one replaces the whole pre-release at its end).
@@ -36,7 +36,10 @@ jobs:
       MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
       MAGLIASO_BEAMNG_GAME: /nonexistent
       ZIP_NAME: magliaso_pura_v3.1.1_nightly
-      STEP: road_seams
+      STEP: forest_grass            # the name in build_level.FINISH; MOD.FN(level root, report=...) runs it
+      MOD: forest_mosaic
+      FN: grass_step
+      WHAT: grass in the woods, on the bare leaf litter away from the roads and meshes
     steps:
       - name: Disk space
         run: |
@@ -50,7 +53,7 @@ jobs:
           python-version: "3.11"
 
       - name: Dependencies
-        run: pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 rasterio==1.4.4 pillow==12.3.0 opencv-python-headless==5.0.0.93
+        run: pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 rasterio==1.4.4 pillow==12.3.0 opencv-python-headless==5.0.0.93 scikit-image==0.26.0
 
       - name: Download the nightly zip
         run: |
@@ -67,7 +70,8 @@ jobs:
           unzip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -d "$L"
           touch "$RUNNER_TEMP/marker"
           sleep 2
-          python "$STEP.py" "$L" "$RUNNER_TEMP/$STEP.json" | tee "$RUNNER_TEMP/patch.log"
+          python -c "import importlib, sys; getattr(importlib.import_module(sys.argv[1]), sys.argv[2])(sys.argv[3], report=sys.argv[4])" \
+            "$MOD" "$FN" "$L" "$RUNNER_TEMP/$STEP.json" | tee "$RUNNER_TEMP/patch.log"
           cat "$RUNNER_TEMP/$STEP.json"
           (cd "$L" && find . -type f -newer "$RUNNER_TEMP/marker" | sed 's|^\./||' | tee "$RUNNER_TEMP/changed.txt" | zip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@)
           echo "$(wc -l < "$RUNNER_TEMP/changed.txt") files put back"
@@ -80,6 +84,6 @@ jobs:
           gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
           {
             echo
-            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the finishing step \`$STEP\` run on this zip (ramps instead of steps of 1.5-30 cm between two pieces of carriageway, e.g. the 22-26 cm step after the Magliaso-Pura hairpin)."
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the finishing step \`$STEP\` run on this zip ($WHAT)."
           } >> "$RUNNER_TEMP/notes.md"
           gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"
