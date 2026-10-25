@@ -27,6 +27,10 @@ MATERIALS = {
     "mp_gc_grass_long": (f"{F}/grass/t_grass_green_long_03/t_grass_green_long_03",
                          f"{F}/grass/t_grass_green_long_01/t_grass_green_long_01", 25),
     "mp_gc_flowers": (f"{F}/groundcover/t_flowers_01/t_flowers_01", f"{F}/groundcover/t_flowers_01/t_flowers_01", 5),
+    # v3.1.1 (forest_mosaic.SHADE_GRASS): the long grass under the crowns, duller and more olive than on the meadows
+    # (the sedges and wood-rushes of a chestnut wood): the same maps, a colour factor (linear)
+    "mp_gc_grass_wood": (f"{F}/grass/t_grass_green_long_03/t_grass_green_long_03",
+                         f"{F}/grass/t_grass_green_long_01/t_grass_green_long_01", 25, [0.80, 0.82, 0.62, 1.0]),
 }
 SHORT_TOP, SHORT_BOTTOM = [0, 0.0078125, 1, 0.464844], [0, 0.505125, 1, 0.472656]
 SHORT_HALF_L, SHORT_HALF_R = [0, 0.515625, 0.5, 0.476563], [0.496094, 0.515625, 0.503906, 0.484375]
@@ -280,13 +284,15 @@ def meadow_object():
 
 def materials():
     out = []
-    for name, (color, maps, alpha_ref) in MATERIALS.items():
+    for name, (color, maps, alpha_ref, *factor) in MATERIALS.items():
         out.append({"name": name, "mapTo": name, "class": "Material", "version": 1.5,
                     "Stages": [{"baseColorMap": f"{color}_b.color.png", "opacityMap": f"{maps}_o.data.png",
                                 "normalMap": f"{maps}_nm.normal.png", "roughnessMap": f"{maps}_r.data.png",
                                 "ambientOcclusionMap": f"{maps}_ao.data.png"}, {}, {}, {}],
                     "alphaTest": True, "alphaRef": alpha_ref, "doubleSided": True, "dynamicCubemap": True,
                     "subSurface": True, "subSurfaceIntensity": 1, "invertBackFaceNormals": name == "mp_gc_flowers"})
+        if factor:
+            out[-1]["Stages"][0]["baseColorFactor"] = list(factor[0])
     return out
 
 
