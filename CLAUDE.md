@@ -160,6 +160,28 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   the whole step again would ramp the seams a second time (stacked ramps up to 78 cm): road_sags_step (steps=False) lifts
   the sags alone. Ask whether a step is idempotent before patching a new version of it onto a zip that has the old one.
 
+## v3.1.1 game test and release (DESKTOP-OUPOLOA, 2026-10-25)
+
+- Numbers (0.40.3, Win11, RTX 4070, 2560x1440 Ultra): load 152/157 s, RAM working set peak 20.0 GB (13.4 GB once
+  loaded), commit 25.5 GB, VRAM 6.5 GB for the game / 8.0 GB on the GPU, 61-89 fps. The island material errors of v3.1
+  are gone; a new warning: t_island_bollard_b.color.png is not a power of two and is not imported.
+- Placing a car "N m back" along a road by straight extrapolation from the nearest AI link put it in the wrong lane on
+  bends: step back along the road in 5 m hops (lane.lua).
+- One AI car with ai.driveUsingPath and no ai.setSpeedMode('limit') drove at 155 km/h; it looped at the Magliaso
+  roundabout (783,-1100) and crashed into a wall near (26,-676) on the route 600,-985 -> -300,-60. AI traffic is still
+  broken (#83).
+- The etk800 config vehicles/etk800/854t_A.pc is not recognised in 0.40.3: the default ETK 800 spawns.
+- gdigrab at 2560x1440 and 15 fps drops about 8 % of the frames, and retiming by frame index made the clips about 25 %
+  fast with stutter. The 2048x1152 virtual display was captured with no drops.
+- About an hour in, the GPU had a TDR while michi used Chrome/YouTube on the main monitor during an NVENC capture, and
+  then the bridge timed out. Filming on the main monitor also captured private windows when the game lost topmost:
+  film only on the virtual display with the game topmost, and check every capture. A minimized BeamNG stops executing
+  commands.
+- PowerShell 5.1 reads a UTF-8 .ps1 without BOM as ANSI (mojibake in drawtext): save scripts with a BOM. Curly quotes
+  end PowerShell strings.
+- Release v3.1.1 published (latest) from the nightly, PR #99 merged; README, CHANGELOG, notes and 20 in-game
+  screenshots on main (33dc6d2).
+
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 
 Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), level coordinates:
