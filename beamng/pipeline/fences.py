@@ -49,7 +49,7 @@ def crest_lines():
             P = np.column_stack([ring[idx], zt[idx]])
             if np.linalg.norm(np.diff(P[:, :2], axis=0), axis=1).sum() >= 2.0:
                 out.append(P)
-    for r in json.load(open(os.path.join(WORK, "roadside_walls.json"))):
+    for r in walls.roadside_runs():                 # v3.1 review: the smoothed, joined runs the walls are built from
         P = np.array(r["pts"])
         if len(P) > 1:
             out.append(np.column_stack([P[:, :2], P[:, 3]]))

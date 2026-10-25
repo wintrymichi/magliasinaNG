@@ -569,6 +569,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   lines behind, bank 4 m higher): taking the nearest cap only moved the teeth. walls.caps_at takes the highest cap
   within the wall's thickness. Never look up per-vertex data by rounded coordinates when the vertices can change.
   Found by a column check on the released zip (top of each xy column vs its mesh neighbours, ±0.6 m).
+- The caps_at fix above did NOT reach the Cantonale: there (24 of 58 points with saw tops in the v3.1 screenshots,
+  2026-10-25) the walls are the ROADSIDE walls (rwalls_*, walls.build_roadside from dati/roadside_walls.json), not the
+  survey walls. roadside_walls.py smooths a run's height over 8 m but takes its foot station by station (where the DTM
+  scan finds the steep rise, 0.25 m steps): the foot jumped 0.3 m every 0.5 m, up to 1.5 m, and the top (foot +
+  height) with it. walls.roadside_runs smooths foot and plan line, joins runs < RUN_JOIN apart and drops runs under
+  RUN_MIN (the 4-7 m stubs). Before fixing a wall, find WHICH builder made it (shape name: rwalls_ / walls_).
+  The survey walls took each top rule per vertex (caps or none, near the road or not, paving or ground under a flush
+  top): walls.ring_smooth now smooths the final top along the outline (2 m median + 1 m mean); stubs under CUT_MIN_LEN
+  left by the drive-free cut are dropped. Neither builder can run in the cloud (no WORK data): both were checked by
+  emulation on the released level (build_roadside with the road mesh as road surface reproduced the released rwalls to
+  the mm; ring_smooth applied to the top rings of the released DAEs) and render3d before/after.
+- render3d draws grey terrain rising in front of the roadside walls of the Cantonale that the game does not show
+  (seen in every view of them, before and after): do not read it as a wall fault.
 
 ## Buildings closer to the real ones (edifici_veri.py, v3.1)
 
