@@ -203,6 +203,25 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   keep the relief small within 2 m of a road (RELIEF_NEAR). The report counts the points before the clamp.
 - road_obstacles (check_level) cannot run on a released folder in the cloud: it needs network.load() data in WORK. The
   steep_skin report's skin_points_over_road stands in for it for the skin.
+- The green and brown "teeth" along the foot of the rock cuts (G1 of the v3.1 visual check, ~45 points, e.g. 0277 at
+  2290,5649) were the SKIN, not terrain poking through it: sampled every 25 cm the terrain was under the skin
+  everywhere (max 7 cm). Within ROAD_CLAMP (1.5 m) of a road the skin was clamped to split_max of the terrain + EPS
+  (against the issue #15 lip), and where a road runs across the terrain grid its carve leaves the foot of a cut as a
+  staircase (road level, then 2-3 m up one square further): the higher split of those squares is a row of pyramids
+  one square apart, and the skin copied them. First tries that failed: blurring the normals the rock/earth line is
+  told by (the teeth stayed, the narrow faces lost their rock), blurring the rock weight alone (teeth stayed: they
+  were geometry). Now steep_skin.foot_line draws a line up from the TRUE road edge (a FOOT_FINE raster of the road
+  surface; the terrain-vertex footprint steps across the road too) and lower_under lowers the terrain under the
+  whole skin until no split of a square stands over it, the road's own vertices outside its surface included. The
+  first version of that left the terrain up to 3 m over the skin 25 cm outside the road edge: the line went on down
+  under every road, also where the bank falls away from the road (the skin comes up to its edge from below) and
+  under the terrain under the road. Check a skin change with the dense terrain-vs-skin sampling outside the road
+  surfaces (both splits, 25 cm), not only in renders. Preview harness: run steep_skin_step on a cp -al copy with
+  the tile loop limited to the tiles of the view (one tile 3 min, the whole map 13-16 min).
+- G1 points NOT from the skin: 0570 (2134,3110) is a ridge of 2-3 terrain vertices 2.4 m over the road at the edge of
+  an embankment with no mesh over it, the same in v3.0.40 (likely a DTM wall smear of a wall the level does not
+  build); 0328 and 0091 are teeth at the foot or top of walls (walls.carve_terrain lets a terrain square rise across a
+  wall "as a short bank of earth at its foot", which along a diagonal wall is a saw). Not fixed in the G1 thread.
 - The skin's 90,000 bushes made check_level forest_floating jump 3,751 -> 31,847 (build test v2, 2026-10-23): canopy.check
   measured items against the terrain and mp_fill only, and the skin stands up to metres over the terrain. On the v2 zip
   every bush was 8 cm into the skin (PLANT_SINK), none over it. canopy.skin_height now reads the skin as ground (one

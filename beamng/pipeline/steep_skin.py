@@ -34,7 +34,7 @@ a wall, a building, the railway or the lake) take a skin:
 - v3.2 (visual review of v3.1, group 3: steep, faceted cuts with a stretched texture): the cuts right beside a road
   (steep vertices only in the ring of the road, STEEP_ROAD) take the skin too; the rock edges that climb more than
   SUB_DZ m are halved, with their own relief; beside a road the relief is small and the skin flat on the terrain only
-  at the foot of the face (RELIEF_HAB, CLAMP_HAB); the rock texture without the fine streaks across it.
+  at the foot of the face (RELIEF_HAB; the clamp is G1's foot_line); the rock texture without the fine streaks across it.
 
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish steep_skin
 """
@@ -82,6 +82,7 @@ ROCK_DEG = 47.0               # degrees: the faces steeper than this are bare ro
 ROCK_JITTER = 10.0            # degrees, the line between rock and earth made wavy (outcrops on the gentler banks) by a noise of ROCK_JITTER_M m
 ROCK_JITTER_M = 8.0
 ROCK_BLEND = 5.0              # degrees over which the rock colour blends into the earth
+RW_BLUR = 1.5                 # half squares, blur of the rock weight (G1: no saw along the rock's lower edge)
 ROCK_TILE_M = 4.0             # m of rock per repeat of its texture
 ROCK_TEX_N = 1024             # pixels of the rock texture
 RELIEF = 0.55                 # m, the most a rock face stands out of the smooth skin (ribs and knobs)
@@ -105,10 +106,20 @@ HARD = ("walls", "buildings", "railway")   # v3.1: the skin never on these; it g
 FOOT = 2                      # v3.1: terrain squares the skin goes on from a steep bank into the road beside it
 ROAD_DIVE = 0.06              # m: ... there under the road surface (hidden by it), never over it
 ROAD_LIFT_MAX = 1.0           # m: skin points up to this over a road surface go under it (more: a road below)
-ROAD_CLAMP = 1.5              # m: within this of a road the skin no higher than the terrain (EPS): the smoothed
-                              # lattice lifted the low side of a 5-7 m step into a lip at the road edge (issue #15)
-CLAMP_HAB = 2.0               # v3.2: m over the foot of the face: the clamp of ROAD_CLAMP only up to this, released over
-CLAMP_RAMP = 1.0              # CLAMP_RAMP m above it
+# (v3.1 ROAD_CLAMP, 1.5 m: within it of a road the skin no higher than the terrain, against a lip at the road edge
+# where the smoothed lattice lifted the low side of a 5-7 m step, issue #15; replaced by FOOT_TAN below, G1)
+# v3.1 visual check G1: within ROAD_CLAMP of a road the skin took the terrain's own facets (EPS over them), and where
+# a road runs across the terrain grid its carve leaves the foot of a cut as a staircase of vertices (road level, then
+# 2-3 m up one square further), which the higher split of the squares turns into a row of pyramids one square apart
+# (green and brown "teeth" along the foot of the rock cuts, about 45 points of the check). Now the skin there keeps
+# under a line drawn from the true edge of the road surface (FOOT_FINE m raster): FOOT_TAN m up per m out, up to
+# FOOT_REACH m; and the terrain vertices under the skin that stand over it are lowered under it (FOOT_LOWER_MAX m
+# at most, only inside the skin), never the road's, a wall's or a building's.
+FOOT_TAN = 1.5
+FOOT_REACH = 4.0
+FOOT_FINE = 0.375             # m (a quarter of a terrain square)
+FOOT_LOWER_MAX = 3.0
+FOOT_DIVE = 0.5               # m inside the road edge over which the line goes on down (then flat under the road)
 RELIEF_NEAR = 0.12            # m, the most relief within RELIEF_ROAD m (horizontal) of a road: a rib 55 cm out of a
 RELIEF_ROAD = 2.0             # vertical cut at the road edge would overhang the lane at mirror height
 RELIEF_RAMP = 1.5             # m beyond RELIEF_ROAD in which the relief grows to RELIEF
@@ -271,6 +282,13 @@ def rock(keys, P, N, z, wv, droad=None):
     rw = np.clip((deg + jit - ROCK_DEG) / ROCK_BLEND + 0.5, 0, 1)
     k0 = keys.min(0)
     kk = keys - k0
+    # G1: the rock weight blurred over the lattice before the rock and the earth are cut apart at 1/2: the slope of
+    # neighbouring points differs by a few degrees, and where it stays near ROCK_DEG the cut drew a saw of rock teeth
+    M = np.zeros(kk.max(0) + 1)
+    M[kk[:, 0], kk[:, 1]] = 1.0
+    g = np.zeros_like(M)
+    g[kk[:, 0], kk[:, 1]] = rw
+    rw = (ndi.gaussian_filter(g, RW_BLUR) / np.maximum(ndi.gaussian_filter(M, RW_BLUR), 1e-9))[kk[:, 0], kk[:, 1]]
     G = np.full(kk.max(0) + 1, np.inf)
     G[kk[:, 0], kk[:, 1]] = z
     toe = ndi.minimum_filter(G, size=TOE_WIN, mode="nearest")[kk[:, 0], kk[:, 1]]
@@ -440,6 +458,76 @@ def foot(S, road, hard):
     near = ndi.binary_dilation(S, np.ones((3, 3)), iterations=FOOT + 1)
     roadish = ndi.binary_dilation(road, np.ones((3, 3)), iterations=1)
     return near & roadish & ~hard & ~S
+
+
+def foot_line(RS, road, ox, oy, sq, keys, reach=FOOT_REACH):
+    """v3.1 (G1): per lattice point (keys in half squares of the block whose vertex (0, 0) is at ox, oy): (the height
+    the skin keeps under beside a road: the road surface at its nearest edge point + FOOT_TAN times the distance to
+    it, nan farther than reach or with no road; the distance of the points on the road from its edge). The
+    distances are measured on a FOOT_FINE raster of the road surface (RS), not on the terrain vertices the road
+    footprint marks: those step across the road one square at a time and the line would step with them."""
+    out, din = np.full(len(keys), np.nan), np.zeros(len(keys))
+    if not road.any():
+        return out, din
+    f = int(round(sq / FOOT_FINE))
+    edge = ndi.binary_dilation(road, np.ones((3, 3))) & ~ndi.binary_erosion(road, np.ones((3, 3)))
+    near = ndi.distance_transform_edt(~road) * sq <= reach + sq
+    rows, cols = road.shape
+    R, C = np.mgrid[0:rows * f, 0:cols * f]
+    vr, vc = R // f, C // f
+    ask = edge[vr, vc] & near[vr, vc]
+    fy, fx = (R + 0.5) / f - 0.5, (C + 0.5) / f - 0.5            # fine cell centres in terrain vertex units
+    hf = np.full(R.shape, np.nan)
+    hf[ask] = RS.height(ox + fx[ask] * sq, oy + fy[ask] * sq, "low")
+    on = np.isfinite(hf) | (road[vr, vc] & ~edge[vr, vc])          # inside the footprint: road (its height unused)
+    if not on.any():
+        return out, din
+    d, (ir, ic) = ndi.distance_transform_edt(~on, return_indices=True)
+    kr = np.clip(np.rint((keys[:, 0] / 2.0 + 0.5) * f - 0.5).astype(np.int64), 0, rows * f - 1)
+    kc = np.clip(np.rint((keys[:, 1] / 2.0 + 0.5) * f - 0.5).astype(np.int64), 0, cols * f - 1)
+    dk = d[kr, kc] * FOOT_FINE
+    hk = hf[ir[kr, kc], ic[kr, kc]]
+    ok = (dk <= reach) & np.isfinite(hk)
+    out[ok] = hk[ok] + FOOT_TAN * dk[ok]
+    din = ndi.distance_transform_edt(on)[kr, kc] * FOOT_FINE
+    return out, din
+
+
+def lower_under(Hq, keys, z, wv, hr, free):
+    """v3.1 (G1): the terrain vertices (free: those that may move) lowered until the higher split of every terrain
+    square stays EPS under the skin (z at the lattice points keys, in half squares) where the skin is whole (wv) and
+    not under a road (hr: there the road hides both). (new heights, the lattice z raised over what could not move)."""
+    Hn = Hq.copy()
+    whole = (wv >= EDGE_ISO + EDGE_FADE) & ~np.isfinite(hr)
+    R, C = keys[:, 0] / 2.0, keys[:, 1] / 2.0
+    r0 = np.clip(np.floor(R).astype(np.int64), 0, Hq.shape[0] - 2)
+    c0 = np.clip(np.floor(C).astype(np.int64), 0, Hq.shape[1] - 2)
+    corners = [(r0 + a, c0 + b) for a in (0, 1) for b in (0, 1)]
+    on_vertex = (keys[:, 0] % 2 == 0) & (keys[:, 1] % 2 == 0)
+    # a vertex may move only if every lattice point round it is whole skin (nothing of it seen beside the skin)
+    span = int(keys[:, 1].max()) + 3
+    have = set((keys[whole, 0] * span + keys[whole, 1]).tolist())
+    vk = keys[on_vertex]
+    sur = np.ones(len(vk), bool)
+    for dr in (-1, 0, 1):
+        for dc in (-1, 0, 1):
+            sur &= np.array([int(k) in have for k in (vk[:, 0] + dr) * span + vk[:, 1] + dc], bool)
+    mov = np.zeros_like(free)
+    mov[vk[sur, 0] // 2, vk[sur, 1] // 2] = True
+    mov &= free
+    floor = Hq - FOOT_LOWER_MAX
+    for _ in range(6):
+        viol = split_max(Hn, R, C) + EPS - z
+        bad = whole & (viol > 0.002)
+        if not bad.any():
+            break
+        need = np.zeros_like(Hn)
+        k = np.where(on_vertex, 1.0, 2.0)[bad] * viol[bad]          # one corner of a diagonal may be fixed
+        for rr, cc in corners:
+            np.maximum.at(need, (rr[bad], cc[bad]), k)
+        Hn = np.where(mov, np.maximum(Hn - need, floor), Hn)
+    zr = np.where(np.isfinite(hr), z, np.maximum(z, split_max(Hn, R, C) + EPS))   # nothing of the terrain over it
+    return Hn, zr
 
 
 def tile_skin(H, S, sq, core, sol):
@@ -709,6 +797,7 @@ def steep_skin_step(root, report=None):
             b0, b1 = max(tc - m, 0), min(tc + TILE + m + 1, n)
             H = Z0 + q[a0:a1, b0:b1].astype(np.float64) / 65535.0 * MAXH
             sol = solid[a0:a1, b0:b1] | (H < lake_z + 0.3)
+            sol_hard = hard[a0:a1, b0:b1]
             hl = hard[a0:a1, b0:b1] | (H < lake_z + 0.3)
             S, steep, seeds = skin_mask(H, road[a0:a1, b0:b1], sol, sq, hl)
             if (S | seeds).any():
@@ -735,27 +824,50 @@ def steep_skin_step(root, report=None):
             z = fl + np.clip((wv - EDGE_ISO) / EDGE_FADE, 0.0, 1.0) * (z - fl)
             # v3.1: under a road surface the skin is under it (its foot): hidden by the road, never over it
             hr = RS.height(X0 + (b0 + C) * sq, Y0 + (a0 + R) * sq, "low")
+            cut = np.isfinite(hr) & (z > hr)                # G1: the bank over the road here (a cut, not a fill)
             z = np.where(np.isfinite(hr), np.minimum(z, hr - ROAD_DIVE), z)
             # v3.1: m from the nearest road vertex (less half a square: about the edge of its surface); beside a road
             # the skin no higher than the terrain (EPS): no lip at the road edge
             dv = ndi.distance_transform_edt(~road[a0:a1, b0:b1]) * sq
             droad = np.maximum(ndi.map_coordinates(dv, [R, C], order=1) - sq / 2, 0.0)
-            clamp = (droad <= ROAD_CLAMP) & ~np.isfinite(hr)
-            rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > fl + 1e-6)).sum())
-            # v3.2: only the foot of the face (the lip is at its low side): higher up the face beside the road keeps the
-            # round surface, not the plane of one terrain square (a 5-7 m cut at the road edge was one flat facet)
-            kk = keys - keys.min(0)
-            G = np.full(kk.max(0) + 1, np.inf)
-            G[kk[:, 0], kk[:, 1]] = fl
-            up = fl - ndi.minimum_filter(G, size=TOE_WIN, mode="nearest")[kk[:, 0], kk[:, 1]]
-            z = np.where(clamp, fl + np.clip((up - CLAMP_HAB) / CLAMP_RAMP, 0, 1) * np.maximum(z - fl, 0), z)
+            # v3.1 (G1): under a line from the true road edge, not the terrain's facets (ROAD_CLAMP: teeth), and the
+            # terrain under the skin lowered under it
+            ox, oy = X0 + b0 * sq, Y0 + a0 * sq
+            F, din = foot_line(RS, road[a0:a1, b0:b1], ox, oy, sq, keys)
+            clamp = np.isfinite(F) & ~np.isfinite(hr)
+            rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > F + 1e-6)).sum())
+            z = np.where(clamp, np.minimum(z, F), z)
+            # ... and on the road under a cut the same line on down under it: the skin comes out of the asphalt along
+            # its edge, not between the lattice points that happen to lie on the road (a saw edge along a diagonal
+            # road). Not where the bank falls away from the road (a fill): the skin comes up to the edge from below
+            # there, and going on down it left the ground at the road edge over it. Never under the terrain under the
+            # road either: from there to the road edge the terrain stood over the skin
+            dive = np.maximum(hr - FOOT_TAN * np.minimum(din, FOOT_DIVE), np.minimum(split_max(Hq, R, C) + EPS, hr - ROAD_DIVE))
+            z = np.where(cut, np.minimum(z, dive), z)
+            own = np.zeros_like(S)
+            own[cr, ccs] = True
+            # the road footprint holds the vertices nearest to the road's faces, up to half a square beyond its edge:
+            # those outside the road surface (not under it) may go down too, under a cut they hold its foot
+            rv = road[a0:a1, b0:b1] & own & S
+            if rv.any():
+                vr, vc = np.nonzero(rv)
+                rv[vr, vc] = np.isfinite(RS.height(X0 + (b0 + vc) * sq, Y0 + (a0 + vr) * sq, "low"))
+            free = own & S & ~sol_hard & ~rv & (H >= lake_z + 0.3)
+            Hq2, z = lower_under(Hq, keys, z, wv, hr, free)
+            moved = Hq2 < Hq - 1e-4
+            rep["foot_lowered_vertices"] = rep.get("foot_lowered_vertices", 0) + int(moved[cr, ccs].sum())
+            rep["foot_lowered_max_m"] = round(max(rep.get("foot_lowered_max_m", 0.0),
+                                                  float((Hq - Hq2)[cr, ccs].max())), 3)
+            Hn = np.where(moved, Hq2, Hn)
+            low = low | moved
+            lo = low[cr, ccs]
+            qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
             gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
             cg = colours(lay[a0:a1, b0:b1].ravel(), (gr + a0).ravel(), (gc + b0).ravel()).reshape(a1 - a0, b1 - b0, 3)
             col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
                                    for k in range(3)])
             mb = bng.MeshBuilder()
             far = [(1, LOD_LIFT[1], bng.MeshBuilder()), (2, LOD_LIFT[2], bng.MeshBuilder())]
-            ox, oy = X0 + b0 * sq, Y0 + a0 * sq
             ntri, info = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far, droad, RS)
             rep["skin_points_over_road"] = rep.get("skin_points_over_road", 0) + info["over_road"]
             rep["skin_over_road_max_m"] = round(max(rep.get("skin_over_road_max_m", -9.0), info["over_road_max"]), 3)
