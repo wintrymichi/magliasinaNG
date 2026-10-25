@@ -121,9 +121,10 @@ def route_line(graph, route, places):
     """(n, 4) x, y, z, width along the route."""
     if isinstance(route, str):
         # the road and the pieces it is cut into: "<name>_<n>" where its speed limit changes (ai_roads.speed_limits),
-        # "<name>_g<n>" before a give-way point (markings_rules); each starts on the end node of the one before,
-        # so they are chained by their ends, from the piece with the plain name
-        piece = re.compile(re.escape(route) + r"(_g?\d+)*$")
+        # "<name>_g<n>" before a give-way point (markings_rules), "<name>_i<n>" (the way on past an island, the
+        # other direction is "<name>_j<n>") and "<name>_i<n>_0" after it (islands.island_lanes); each starts on
+        # the end node of the one before, so they are chained by their ends, from the piece with the plain name
+        piece = re.compile(re.escape(route) + r"(_[gi]?\d+)*$")
         ks = [i for i, r in enumerate(graph.roads) if piece.match(r.get("name", ""))]
         first = [i for i in ks if graph.roads[i]["name"] == route]
         if not first:

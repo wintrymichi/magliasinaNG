@@ -136,13 +136,19 @@ Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), le
 Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test_report.md), causes not yet looked at:
 - saw-tooth wall tops still on the Magliaso-Pura Cantonale (the hairpin, the cut near node 58 above Magliaso), after
   the v3.1 saw-top fix: the renders of the fix did not show them;
-- missing materials `mp_island_reflector` and `mp_island_beacon` (30 errors each in beamng.log): the traffic island
-  posts added by a nightly patch. Grep beamng.log for missing materials after every patch;
+- missing materials `mp_island_reflector` and `mp_island_beacon` (30 errors each in beamng.log). Looked at 2026-10-25:
+  NO file of the released v3.1 zip names them (every entry grepped); the bollards patch removed the beacon and its
+  two materials, and the 30 errors = the 30 island tiles with poles. The game used shapes compiled from an EARLIER
+  version (its .cdae cache), which is kept while it is newer than the .dae, and the patched .dae carried the date of
+  the patch run. Fixed in the pipeline: the two materials stay defined (islands.materials) and package.py dates every
+  zip entry at packaging time. Before an in-game test of a new zip, clear the level's compiled shapes in the user
+  folder; and grep the zip itself for a material name before chasing a NO-MATERIAL in the code;
 - the Via Golf underpass deck renders as a flat grey slab with no texture;
 - grass tufts on the asphalt of the Ponte Tresa bridge at its Italian end (the bridge was widened in v3.1);
 - large angular wall blocks beside strada_cantonale_1 near (-222, -60);
 - AI traffic (#83) still broken: 13 cars queued behind the player's car parked on the Magliaso bridge, then crashed
-  into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes.
+  into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes. The island part is fixed in
+  islands.island_lanes (2026-10-25, see Traffic and AI), not tested in game.
 
 ## Terrain fixes
 
@@ -619,6 +625,24 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - fuel_stations.LIGHT (the canopy lights) is defined but never placed: the v3.0.40 zip has no light but the lamps'.
 
 ## Traffic and AI
+
+- Splitter islands stood in the AI lanes (v3.1 visual check, spot 1102: a car set mid lane at the Magliaso
+  roundabout exit stood on the island, where the traffic crashed): swissTLM3D draws most roundabout arms and many
+  roads with a refuge as ONE line down the middle of the island, the AI road follows it and its two lanes (a quarter
+  of the width either side) run along the kerbs or over the island. 85 lane lines crossed 45 of the 124 islands.
+  islands.island_lanes (in the islands finish step, which knows the raised islands) splits such a road there into
+  two one-way roads, one each side in the middle of the free carriageway, or moves it to the side with room.
+  Measured on the released v3.1: 51 lane lines on 23 islands left (mostly the Agno junctions), network pieces and
+  dead ends unchanged (34 / 647). Three things it took:
+  - _ease must never move a road's end node (np.interp with the end both pinned at 0 and in the measured keys
+    took the measured value): the first try cut 19 pieces off the network (pieces 34 -> 53, dead ends +76).
+    Check ai_roads.graph_report before/after any change to AI road geometry.
+  - two roads meeting end to end in the middle of a long median each converged on their common node: the lanes
+    crossed the island in an X. Such ends (exactly two two-way roads, both with an island near) stay open and the
+    pieces are joined at the midpoint of their ends.
+  - races.route_line chains a named road by "<name>(_g?<n>)*": the pieces past an island are "<name>_i<n>"
+    (the way on), "<name>_j<n>" (the other direction, not chained) and "<name>_i<n>_0" (after it); the regex
+    now takes _i too. A new piece naming must be checked against every reader of the AI road names.
 
 - Started a full build on GitHub Actions for one thread while the other v3.0.40 threads were still working;
   michi stopped it. In a combined round, build only once, when every thread is ready (traffic_build.yml is manual).
