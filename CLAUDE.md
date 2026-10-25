@@ -144,6 +144,28 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - AI traffic (#83) still broken: 13 cars queued behind the player's car parked on the Magliaso bridge, then crashed
   into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes.
 
+## Props and buildings placed wrong (v3.1 visual check, group 8, 2026-10-25)
+
+- street_life kept its props off the carriageway MESH only: 432 props (156 pallets, benches, drums, skips, bags) stood
+  inside the AI roads' width where a road crosses a yard, square or junction with no carriageway mesh (the yards are
+  `mp_hard_asphalt`, not `mp_road_*`). Site.free now also keeps off the AI road lines (half width + LANE_CLEAR 0.1 m):
+  0 left. A clear of 0.5 m threw out half the hydrants, letter boxes and mirrors, which stand on purpose 0.35-0.4 m
+  beyond the carriageway edge: measure a new clearance on the roadside props before choosing it.
+- props_osm put a bench of OSM on the rock face of a road cut (-3921, 2303; ground 656.4 to 661.9 m within 1 m): no
+  slope test. Furniture now skips a footprint (0.8 m round) that rises more than 0.8 m. props_osm runs in the main
+  build, so it cannot be rerun on a released level: check it by evaluating `props_osm.steep` on the final ground.
+- Not bugs of the data, checked before changing code (keep them out of the next visual check list):
+  "canopies on posts without a roof" are canopies whose roof and underside are there (render3d and the DAE): seen
+  from a road 1-2 m under their eaves the slab is edge-on and only the posts and roof_details fascias show.
+  "Trees on the road edge" (0304, 0321, 1040): no forest item stands within half width + 0.5 m of an AI road
+  (1 on the whole map); the shots had trees between the camera and the car. Buildings "on the carriageway" are
+  swissBUILDINGS3D houses at the edge of village lanes whose AI road is as wide as the lane (3,802 wall vertices
+  inside the AI widths): moving houses is wrong, the AI width would be the thing to narrow. "Sunk" buildings checked
+  (0341, 0403) are low sheds and houses built into the slope; telling a raised terrain from a hillside house needs the
+  DTM, which the cloud cannot download.
+- Render the in-game check points with render3d at the plan.csv pose (driver: eye 1.3 m; ext: 16 m back, 7 m to the
+  right, 6 m up) before reading anything from a shot: the ext camera often stands in a tree or a roof.
+
 ## Terrain fixes
 
 - Terrain heights are written in several places, in this order: the road carve override (`terrain_override`,
