@@ -1,0 +1,21 @@
+{
+ "sidewalk_faces": 176690,
+ "sidewalk_m2": 81209,
+ "kerb_m": {
+  "none": 36543,
+  "carriage": 49356,
+  "hard": 11799,
+  "path": 110
+ },
+ "lowered_m": 32185,
+ "kerb_lowered_m": 16145,
+ "crossings": 89,
+ "objects_raised": 502,
+ "forest_raised": 26,
+ "walled_yard_m": 2615,
+ "flush_vertices": 4299,
+ "parking_flush_vertices": 370,
+ "merged_pieces_raised": 3737,
+ "shapes_rewritten": 107,
+ "seconds": 198
+}

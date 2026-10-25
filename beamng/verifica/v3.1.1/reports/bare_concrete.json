@@ -1,0 +1,20 @@
+{
+ "concrete_vertices": 1001011,
+ "bare_vertices": 162595,
+ "bare_ha": 36.6,
+ "left_concrete": 838416,
+ "became": {
+  "Grass": 8672,
+  "GardenGrass": 56603,
+  "ForestFloor": 2054,
+  "ForestFloor2": 94,
+  "Asphalt": 93153,
+  "Gravel": 151,
+  "Rock": 116,
+  "Mud": 166,
+  "Bank": 935,
+  "GrassVerge": 39,
+  "GardenGrassVerge": 612
+ },
+ "seconds": 88
+}

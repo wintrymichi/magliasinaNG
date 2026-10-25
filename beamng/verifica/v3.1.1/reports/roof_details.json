@@ -1,0 +1,14 @@
+{
+ "shapes": 366,
+ "shapes_rewritten": 366,
+ "triangles_before": 2706167,
+ "triangles_added": 931566,
+ "by_material": {
+  "bld_roof_metal": 229257,
+  "bld_roof_coppi": 64970,
+  "bld_plaster": 272318,
+  "bld_roof_tegole": 302406,
+  "bld_roof_piode": 62615
+ },
+ "seconds": 209
+}

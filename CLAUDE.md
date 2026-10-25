@@ -140,6 +140,23 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - The night of 25.10 the clocks go back (03:00 -> 02:00 CEST -> CET): log timestamps run backwards for an hour.
 - michi (2026-10-24): in in-game tests that do not measure FPS, cap the frame rate at 30 fps.
 
+## Nightly v3.1.1 (merging the visual check, 2026-10-25)
+
+- Nine group PRs were opened from main at once (#90-#98): three of them changed steep_skin.py (#95, #96, #97) and the
+  merge had two real conflicts (the ROAD_CLAMP block, colours vs colours.ground). Run every merged finishing step on a
+  `cp -al` copy of the released level before starting a 4-5 h build: islands, bare_concrete, yard_wear, steep_skin
+  and steep_yards took 40 min together and caught nothing, but a crash at hour 4 costs the day.
+- The release "nightly" was gone (turned into v3.1) with its tag left: `gh release create` on an existing tag keeps the
+  tag's old commit. nightly_build.yml now deletes the tag first.
+- steep_yards (#97) gives a road_m shape vertex colours for all its faces as soon as one yard face in it turns
+  mp_hard_bank: the road meshes grew 1.15 -> 1.40 GB (+22 %) for the same triangles (the level +0.36 GB, the zip only
+  +16 MB). Writing the colours only into the mp_hard_bank part would save it.
+- check_level's network_holes (1,623) has no v3.1 value to compare with (the v3.1 checks were never kept): compare the
+  road coverage instead (2 m cells of the roads/surfaces up faces): identical to v3.1 but 7 cells. Keep
+  `nightly_reports.zip` of every release build in the repo's verifica folder from now on.
+- nightly_patch.yml runs any finishing step on the nightly zip (MOD.FN): unzip, run, `find -newer marker | zip -@`,
+  upload with --clobber (only a workflow can upload assets; the cloud gets 415).
+
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 
 Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), level coordinates:
