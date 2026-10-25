@@ -1063,7 +1063,7 @@ def block(args):
     if not ch.any():
         return None
     rr, cc = np.nonzero(ch)
-    return r0 + rr, c0 + cc, Z[core][rr, cc], D[core][rr, cc]
+    return r0 + rr, c0 + cc, Z[core][rr, cc], D[core][rr, cc], R[core][rr, cc]
 
 
 def terrain_top(Zt, x, y):
@@ -1198,12 +1198,30 @@ def in_cells(cells, x, y):
     return (cells[i] == c) if len(cells) else np.zeros(len(c), bool)
 
 
-def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_lift=0.0):
+def pits(q0, road_z, rr, cc):
+    """v3.1 review: the vertices (rr, cc) that lie in a trench: ground higher than the road face they rise to (road_z,
+    m) by PIT_UP m within PIT_N terrain steps, not under a road face (the road carve dug the trench between the road
+    and the slope it climbs into, review point 0576: 1.7 m deep beside a wall). Filled up to the road, the ground
+    there stays under the ground around it: no wall or house beside it is buried deeper than the slope buries it.
+    Beyond a wall that holds a road the ground within reach is the road's own height or lower: no trench."""
+    n = q0.shape[0]
+    offs = [(a, b) for a in range(-PIT_N, PIT_N + 1) for b in range(-PIT_N, PIT_N + 1) if a or b]
+    R = np.clip(rr[:, None] + np.array([a for a, _ in offs]), 0, n - 1)
+    C = np.clip(cc[:, None] + np.array([b for _, b in offs]), 0, n - 1)
+    lin, inv = np.unique(R * n + C, return_inverse=True)
+    road = np.isfinite(ALL.height(TER_X0 + (lin % n) * TER_SQUARE, TER_Y0 + (lin // n) * TER_SQUARE, "low"))
+    h = np.where(road, -np.inf, Z0 + q0.ravel()[lin] / 65535.0 * MAXH)[inv.reshape(R.shape)]
+    return h.max(1) >= road_z[rr, cc] + PIT_UP
+
+
+def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_lift=0.0, hold=None):
     """mats: the materials whose surroundings are raised and whose outer edges go down (default UNPAVED);
     edge_drop: the deepest an edge goes down (0: the faces stay as they are, only the terrain is raised);
     keep_out: sorted 1 m cell ids (cell_ids) whose faces raise no terrain and whose terrain vertices stay as they
     were (v2.8, network_mesh.paved_edges_step); keep_out_lift > 0 (v3.0 fix round): there the faces raise the
-    vertices within SHOULDER m of them by up to this much (m), the others stay as they were."""
+    vertices within SHOULDER m of them by up to this much (m), the others stay as they were. hold(x, y, d) (v3.1
+    review): True for the keep-out vertices (x, y, d m from the faces) that rise as anywhere else (nothing marks the
+    edge between them and the faces); with it, the keep-out vertices in a trench (pits) rise too."""
     global UN, ALL, Z0, MAXH, QT
     mats = UNPAVED if mats is None else tuple(mats)
     zi = bng.LevelFiles(root)
@@ -1228,6 +1246,7 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
     keys = sorted(set(zip(cr.tolist(), cc.tolist())))
     q0 = q.copy()
     dist = np.full(q.shape, np.inf, np.float32) if keep_out is not None else None    # m from the faces, raised vertices
+    road_z = np.full(q.shape, np.nan, np.float32) if keep_out is not None else None  # the height of those faces
     tmp = tempfile.mkdtemp(prefix="unpaved_")
 
     ex = pool(tmp, un, al)
@@ -1243,12 +1262,14 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
         out = q0.copy()
         for res in ex.map(block, jobs, chunksize=2):
             if res is not None:
-                rr, cc, z, dd = res
+                rr, cc, z, dd, rz = res
                 qn = np.floor((z - Z0) / MAXH * 65535.0).astype(np.int64)    # down: never over a face
                 up = qn > q0[rr, cc]
                 out[rr[up], cc[up]] = qn[up].astype(np.uint16)
                 if keep_out is not None:
-                    dist[rr[up], cc[up]] = np.minimum(dist[rr[up], cc[up]], dd[up])
+                    near = dd[up] < dist[rr[up], cc[up]]
+                    dist[rr[up][near], cc[up][near]] = dd[up][near]
+                    road_z[rr[up][near], cc[up][near]] = rz[up][near]
         return out
     print("%d blocks with unpaved faces" % len(keys))
     q = run(None)
@@ -1265,6 +1286,14 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
             ok = (dist[rr, cc] <= SHOULDER) & (lift <= keep_out_lift)
             print("terrain vertices in the keep-out raised to the edge of the road beside them: %d" % (back & ok).sum())
             back &= ~ok
+        if hold is not None and back.any():
+            free = hold(TER_X0 + cc[back] * TER_SQUARE, TER_Y0 + rr[back] * TER_SQUARE, dist[rr[back], cc[back]])
+            print("terrain vertices in the keep-out with nothing between them and the road: %d" % free.sum())
+            back[np.flatnonzero(back)[free]] = False
+        if hold is not None and back.any():
+            free = pits(q0, road_z, rr[back], cc[back])
+            print("terrain vertices in the keep-out in a trench between the road and higher ground: %d" % free.sum())
+            back[np.flatnonzero(back)[free]] = False
         q[rr[back], cc[back]] = q0[rr[back], cc[back]]
         print("terrain vertices in the keep-out left as they were: %d" % back.sum())
     ch = q != q0
@@ -1339,6 +1368,20 @@ KEEP_OUT = 2.0              # m around guard rails, fences, walls, buildings, ra
 # walls and fences on both sides of the narrow roads of Vezio, Arosio, Mugena ...), kept the v2.7 slab with a trench
 # beside it, median 0.21 m, and a wheel leaving the asphalt dropped off and hit the edge coming back.
 KEEP_OUT_LIFT = 0.35
+# v3.1 review (the visual check of every road, group 6): the keep-out is a 2 m band of 1 m cells around anything that
+# could mark an edge, and 124 of the 128 km of paved edges standing more than 0.5 m over the ground lay in it: yards
+# and road ends beside a house, a fence or a wall that does not hold them stood as slabs with vertical sides of
+# asphalt (review points 0373, 0479, 0576 among them). In the keep-out a vertex rises as elsewhere (the embankment of a yard
+# 1-3 m over the ground) where every such thing is at least HOLD m farther from it than the road faces are: no wall
+# stands between it and the road, nor along the edge. The things are the outline samples of the keep-out groups,
+# every HOLD_GRID m.
+HOLD = 1.0
+HOLD_GRID = 0.25
+# ... and (network_mesh.pits) where it lies in a trench the carve dug between the road and higher ground: most of those
+# edges were such trenches, up to 1.7 m deep beside a road climbing into a slope (point 0576). On the v3.1 level the two
+# rules raise 227,040 vertices more (hold alone 43,446) and the edges over 0.5 m go from 127.8 to 49.9 km.
+PIT_N = 2
+PIT_UP = 0.3
 SAMPLE = 0.5                # m between the samples along the edges of their faces
 KEEP_GROUPS = ("roads/guardrails", "roads/fences", "walls", "buildings", "railway", "level_objects/Water")
 PARAPET = ("mp_bridge_parapet",)
@@ -1358,9 +1401,15 @@ def outline_samples(t):
     return np.concatenate(pts)
 
 
-def keep_out_cells(zi, lv):
-    """Sorted 1 m cell ids (network_mesh.cell_ids) within KEEP_OUT m of what marks a road's edge."""
+def keep_out_cells(zi, lv, points=None):
+    """Sorted 1 m cell ids (network_mesh.cell_ids) within KEEP_OUT m of what marks a road's edge. points: a dict
+    that gets the outline samples of those things, every HOLD_GRID m (xy, "buildings" and "other")."""
     ids = []
+
+    def keep_points(g, P):
+        if points is not None:
+            k = "buildings" if g == "buildings" else "other"
+            points.setdefault(k, []).append(np.unique(np.round(P[:, :2] / HOLD_GRID).astype(np.int64), axis=0))
     for g in KEEP_GROUPS:
         f = f"{lv}/main/MissionGroup/{g}/items.level.json"
         if f not in zi.NameToInfo:
@@ -1374,16 +1423,22 @@ def keep_out_cells(zi, lv):
             t = W[np.concatenate([idx[:, 0] for _, idx in parts])].reshape(-1, 3, 3)
             P = outline_samples(t)
             ids.append(np.unique(pu.cell_ids(P[:, 0], P[:, 1])))
+            keep_points(g, P)
     import guardrail_mesh
     gr = guardrail_mesh.module_faces(zi)                # v2.8: the guard rails are forest items
     if len(gr):
         P = outline_samples(gr)
         ids.append(np.unique(pu.cell_ids(P[:, 0], P[:, 1])))
+        keep_points("guardrails", P)
     for m, t in pl.faces(zi, lv, ["roads/surfaces"]).items():
         if m in PARAPET:
             P = outline_samples(t)
             ids.append(np.unique(pu.cell_ids(P[:, 0], P[:, 1])))
+            keep_points("parapets", P)
     base = np.unique(np.concatenate(ids))
+    if points is not None:
+        for k in list(points):
+            points[k] = np.unique(np.concatenate(points[k]), axis=0) * HOLD_GRID
     from config import TER_SIZE, TER_SQUARE
     w = int(np.ceil(TER_SIZE * TER_SQUARE))
     r = int(np.ceil(KEEP_OUT))
@@ -1444,13 +1499,20 @@ def raised_vertices(q0, zi, keep_out):
 def paved_edges_step(root, report=None):
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
-    keep = keep_out_cells(zi, lv)
+    pts = {}
+    keep = keep_out_cells(zi, lv, pts)
     print("keep-out: %.1f km2 around guard rails, fences, walls, buildings, railway, parapets" % (len(keep) / 1e6),
           flush=True)
+    from scipy.spatial import cKDTree
+    things = cKDTree(np.concatenate(list(pts.values())))
+
+    def hold(x, y, d):
+        s = things.query(np.column_stack([x, y]), distance_upper_bound=KEEP_OUT + BLEND + HOLD)[0]
+        return s > np.maximum(d, 0.0) + HOLD
     before = measure(zi, keep)
     print("before:", before, flush=True)
     q0 = pw.read_ter(zi.read(f"{lv}/theTerrain.ter"))[1].copy()
-    pu.unpaved_step(root, mats=PAVED, edge_drop=PAVED_EDGE_DROP, keep_out=keep, keep_out_lift=KEEP_OUT_LIFT)
+    pu.unpaved_step(root, mats=PAVED, edge_drop=PAVED_EDGE_DROP, keep_out=keep, keep_out_lift=KEEP_OUT_LIFT, hold=hold)
     zi = bng.LevelFiles(root)
     after = measure(zi, keep)
     print("after:", after, flush=True)
