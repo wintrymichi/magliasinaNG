@@ -143,8 +143,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the patch run. Fixed in the pipeline: the two materials stay defined (islands.materials) and package.py dates every
   zip entry at packaging time. Before an in-game test of a new zip, clear the level's compiled shapes in the user
   folder; and grep the zip itself for a material name before chasing a NO-MATERIAL in the code;
-- the Via Golf underpass deck renders as a flat grey slab with no texture;
-- grass tufts on the asphalt of the Ponte Tresa bridge at its Italian end (the bridge was widened in v3.1);
+- the Via Golf underpass deck renders as a flat grey slab with no texture (fixed in railway.py, 2026-10-25, not built yet);
+- grass tufts on the asphalt of the Ponte Tresa bridge at its Italian end (the bridge was widened in v3.1) (fixed in
+  terrain.py, 2026-10-25, not built yet);
 - large angular wall blocks beside strada_cantonale_1 near (-222, -60);
 - AI traffic (#83) still broken: 13 cars queued behind the player's car parked on the Magliaso bridge, then crashed
   into the island at the roundabout exit (783, -1143), 8 of 12 damaged within 2 minutes. The island part is fixed in
@@ -293,6 +294,34 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   swapped into the extracted test build (roads/surfaces items + DAEs) they gave before/after renders and measures.
   First try of the road join took any road surface within 1 m: a path beside the bank pulled a deck corner 0.8 m
   down; within 0.5 m, and a surface further off is a drop (no join to the ground there either).
+
+- Grass on the Ponte Tresa deck (v3.1 test, visual check group 6, 2026-10-25): the deck, 11 m wide since v3.1, lies on
+  its Italian bank (Copernicus meadow, no survey) and paved_edges raised that ground to 5 cm under the asphalt; the
+  layer stayed Grass because no_cover (no GroundCover) is made from the road carve, and the decks are not carved, only
+  capped. 22 grass vertices there, 45 under all the decks. terrain.build_terrain now gives the verge twins (no cover)
+  to the ground under a deck within DECK_COVER m of its slab. render3d draws no GroundCover: check grass by the layer
+  under the road faces (Grass/GardenGrass vertices less than 1 m under a top face), not in a render.
+- The Via Golf rail deck was a flat grey slab in the game: mp_rail_deck was a plain colour (railway.build) and its uvs
+  the (x + z, y + z) of the track parts. Now Italy's m_concrete_old with box uvs, as the road decks.
+- The "road ends on a raised slab" points of the visual check (0055, 0352, 0373, 0440, 0479, 0576, 0577): 124 of the
+  128 km of paved outer edges more than 0.5 m over the ground were in the paved_edges keep-out (2 m of 1 m cells round
+  walls, buildings, fences, guard rails, railway, water, parapets), where nothing over KEEP_OUT_LIFT is raised. Most
+  of it was not a slab but a TRENCH: the road carve lowers the ground to 0.1 m under the lowest face within one
+  terrain step, so beside (and under) a road that climbs into a slope it dug up to 1.7 m (0576), and near a wall it
+  stayed. A first rule "raise where no wall is closer than the road + HOLD" (hold()) changed only 43,446 vertices and
+  no render showed it; the second rule (pits(): ground higher than the road by PIT_UP within PIT_N steps, not under a
+  road) does the work. Its first version compared with the vertex's NEW height and took the ground between the road
+  and a wall as "higher ground": 327,373 vertices, also beyond retaining walls. Compare with the road height
+  (block() now returns it). Together: 227,040 vertices, edges over 0.5 m 127.8 -> 49.9 km. 0448 and 0561 are flush
+  (the line just ends), 0352 is the lake (water kept out), 0577's yard stands 6 m over the ground (over EMB_MAX).
+  A rerun of paved_edges on a released level is no preview of a change: later steps moved things and the rerun alone
+  raised 321,241 vertices. Run it twice (with and without the change) and take only the vertices that differ into
+  the released terrain (about 15 min a run, PATCH_WORKERS=3). render3d cameras 9 m out from an uphill edge end up
+  under the ground: put them on the road looking out. Do not truncate a log a running process still writes (nohup
+  restarted on the same file left NULs and the old run's last lines in it).
+- The Ponte Tresa road ends at the border on the Italian meadow (no Italian roads in the level): the deck end is flush
+  with the ground (checked along the axis and 6.5 / 9 m to the sides); the "slab" of the shots is the deck's side over
+  the bank. Not changed.
 
 ## Checking a finish step in the cloud container
 

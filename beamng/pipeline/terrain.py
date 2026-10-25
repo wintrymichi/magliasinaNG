@@ -43,6 +43,7 @@ COLOR_OF = {"Bank": "ForestFloor2"}      # the measured colour a material withou
 # v2.4: the meadows and lawns within a terrain square of the roads and paths: the same look, another
 # layer, so the grass of groundcover.py (on Grass and GardenGrass) does not stand through the road meshes
 VERGE = {"Grass": "GrassVerge", "GardenGrass": "GardenGrassVerge"}
+DECK_COVER = 1.5       # m under the slab of a bridge deck: no grass there either (build_terrain)
 for _m, _v in VERGE.items():
     TERRAIN_MATS[_v] = TERRAIN_MATS[_m]
 VERGE_OF = {v: m for m, v in VERGE.items()}
@@ -336,6 +337,15 @@ def build_terrain(level_dir, override=None, override_mask=None, layer_override=N
     if layer_override is not None:
         m = layer_override >= 0
         layers[m] = layer_override[m]
+    if cap is not None:
+        # v3.1 review: and the ground under a bridge deck within DECK_COVER m of its slab (the end of a deck on its bank):
+        # the Ponte Tresa deck, 11 m wide since v3.1, lies on the meadow of its Italian bank, and the grass of that
+        # layer stood through the asphalt (the road carve that makes no_cover leaves the decks out)
+        under = np.isfinite(cap) & (H > cap - DECK_COVER)
+        if under.any():
+            from scipy.ndimage import binary_dilation
+            under = binary_dilation(under, iterations=1)
+            no_cover = under if no_cover is None else (no_cover | under)
     if no_cover is not None:                             # v2.4: the verges of the roads (VERGE)
         for a, b in VERGE.items():
             layers[no_cover & (layers == MAT_ID[a])] = MAT_ID[b]

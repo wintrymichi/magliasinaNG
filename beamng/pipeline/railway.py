@@ -24,6 +24,7 @@ import numpy as np
 import shapely
 from scipy.ndimage import distance_transform_edt, gaussian_filter1d
 import bng
+import italy_mats
 from config import DATA, LEVEL_NAME, lv95_to_local
 import area
 import network
@@ -257,18 +258,20 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
         bng.material("mp_ballast", f"{L}/art/shapes/roads/t_road_gravel_b.color.png",
                      f"{L}/art/shapes/roads/t_road_gravel_nm.normal.png", base_color=[0.68, 0.69, 0.71, 1],
                      roughness=0.95, ground_type="GRAVEL"),
-        bng.material("mp_rail_deck", base_color=[0.70, 0.69, 0.66, 1], roughness=0.8, ground_type="CONCRETE")])
+        # v3.1 review: the concrete of the road bridges' parapets (Italy's m_concrete_old); a plain colour up to v3.1, the
+        # deck over the Via Golf underpass was a flat grey slab with no texture in the game
+        italy_mats.material("mp_rail_deck", "m_concrete_old", "CONCRETE", base_color=[0.86, 0.85, 0.82, 1])])
     tiles = {}
     stats = {"tracks": 0, "km": 0.0, "level_crossing_m": 0.0, "bridge_m": 0.0, "covered_m": 0.0, "sleepers": 0}
 
-    def add(mat, T, uvs=None):
+    def add(mat, T, uvs=None, box=None):
         c = T.mean(1)
         keys = np.floor(c[:, :2] / TILE).astype(int)
         for key in {tuple(k) for k in keys.tolist()}:
             m = (keys[:, 0] == key[0]) & (keys[:, 1] == key[1])
             V = T[m].reshape(-1, 3)
-            tiles.setdefault(key, bng.MeshBuilder()).add(mat, V, uvs=V[:, :2] + V[:, 2:3] if uvs is None else uvs,
-                                                         normals=bng.flat_normals_soup(V))
+            uv = bng.box_uvs_soup(V, box) if box else (V[:, :2] + V[:, 2:3] if uvs is None else uvs)
+            tiles.setdefault(key, bng.MeshBuilder()).add(mat, V, uvs=uv, normals=bng.flat_normals_soup(V))
     for props, Q in lines:
         kind = props["OBJEKTART"]
         gauge, sl_len = GAUGE[kind], SLEEPER_LEN[kind]
@@ -288,7 +291,7 @@ def build(level_dir, scene, terrain_top, road_surface, ground):
                                                            under_bridge(road_surface, P, DECK_HW[kind]))
             for part in (top, sides, par, piers):
                 if len(part):
-                    add("mp_rail_deck", part)
+                    add("mp_rail_deck", part, box=1.6)       # projected face by face, as the road decks (on_deck)
             stats["bridge_m"] += s[-1]
             crossing = np.zeros(len(P), bool)
             covered = np.zeros(len(P), bool)
