@@ -15,3 +15,4 @@ the meadow banks, the meadow layer and its grass there again; rock stays. Tried 
 down by yards and tracks joining from below lifted (545,-968: edge 1.13 -> 0.43 m under the middle, the lane within 0.2 m).
 The steps pass is skipped: this zip has the road_seams ramps already. Tried in the cloud on the current zip: 28,407
 corners, max 96 cm, 174 shapes, 409 s.
+2026-10-25 15:15 UTC: road_sags again: the first run (40205173203) lifted the sags but stopped before the upload (zip -d on an empty list, a blank line made gone.txt non-empty); zip unchanged.

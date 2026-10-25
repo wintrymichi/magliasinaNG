@@ -79,7 +79,7 @@ jobs:
           python -c "import zipfile,os,sys; z=zipfile.ZipFile(sys.argv[1]); print('\n'.join(n for n in z.namelist() if not n.endswith('/') and not os.path.exists(os.path.join(sys.argv[2], n))))" \
             "$RUNNER_TEMP/z/$ZIP_NAME.zip" "$L" > "$RUNNER_TEMP/gone.txt"
           echo "$(grep -c . "$RUNNER_TEMP/gone.txt") files deleted"
-          if [ -s "$RUNNER_TEMP/gone.txt" ]; then zip -q -d "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@ < "$RUNNER_TEMP/gone.txt"; fi
+          if grep -q . "$RUNNER_TEMP/gone.txt"; then grep . "$RUNNER_TEMP/gone.txt" | zip -q -d "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@; fi
           python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
           md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
 
