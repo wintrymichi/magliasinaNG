@@ -91,9 +91,9 @@ MOSS_DEG = 63.0               # degrees: rock gentler than this (ledges) may tak
 ROCK_TONE = (0.98, 0.96, 0.92)          # colour multiplier of the rock texture (gneiss grey-brown)
 MOSS = (0.70, 0.84, 0.50)               # ... where moss grows on it
 EARTH = (1.00, 0.93, 0.84)              # the earth texture's own colour, mixed into the terrain colour by EARTH_MIX
-EARTH_MIX = 0.45
-EARTH_LIFT = 1.35             # v3.1.1: the earth of a bank this much brighter than the terrain's colour beside it (bare
-                              # earth is lighter than the leaf litter; the terrain's detail textures are lighter up close)
+EARTH_MIX = 0.25              # v3.1.1: 0.45 up to v3.1 (with the brightness of EARTH: pale, grey-beige banks)
+EARTH_LIFT = 0.08             # v3.1.1: luminance added to the terrain's for the earth of a bank (bare earth is a little
+                              # lighter than the leaf litter, and the terrain's detail textures are lighter up close)
 PAVED_LAYERS = ("Asphalt", "Concrete", "Gravel")   # v3.1.1: terrain layers of roads and yards, never the skin's colour
 SCREE = (0.95, 0.93, 0.90)
 ROADS = ("roads",)
@@ -274,12 +274,13 @@ def rock(keys, P, N, z, wv, droad=None):
 
 def earth_colour(colour):
     """The skin's earth: the terrain colour (k, 3) pulled towards the hue of EARTH by EARTH_MIX, at the terrain's own
-    brightness (times EARTH_LIFT). v3.1.1: up to v3.1 it was pulled towards EARTH itself (a light colour): every bank was about twice as
+    brightness (plus EARTH_LIFT). v3.1.1: up to v3.1 it was pulled towards EARTH itself (a light colour): every bank was about twice as
     bright as the forest floor or meadow round it, a pale patch with a sharp edge (visual review 0192, 0509, 0519)."""
     colour = np.asarray(colour, np.float64)
     lum = lambda c: c @ np.array([0.2126, 0.7152, 0.0722])
     e = np.array(EARTH)[None] * (lum(colour) / lum(np.array(EARTH)))[:, None]
-    return np.clip(((1 - EARTH_MIX) * colour + EARTH_MIX * e) * EARTH_LIFT, 0, 1)
+    lc = np.maximum(lum(colour), 1e-3)
+    return np.clip(((1 - EARTH_MIX) * colour + EARTH_MIX * e) * ((lc + EARTH_LIFT) / lc)[:, None], 0, 1)
 
 
 def face_normals(P, T, N0):

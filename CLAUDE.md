@@ -231,10 +231,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - The skin runs into the road (FOOT) and its colours are blurred over 3 squares: the light Asphalt/Concrete layer under
   the road meshes greyed the foot of every bank. The skin takes the nearest natural layer's colour (BaseColours.ground).
 - With the colours right the skin was still about twice as bright as the forest floor round it (pale patches with a
-  sharp edge, 0192/0509/0519): EARTH_MIX pulled every colour towards EARTH, a light colour. It now pulls the hue only,
-  at the terrain's own brightness times EARTH_LIFT (steep_skin.earth_colour): plain terrain brightness made the banks
-  as dark as the forest floor's macro colour (62 sRGB), darker than the detail-textured terrain beside them up close.
-  Check a tint against the ground beside it, not alone.
+  sharp edge, 0192/0509/0519): EARTH_MIX 0.45 pulled every colour towards EARTH, a light beige. Three rounds of renders
+  to settle it: the terrain's brightness alone (as dark as the forest floor's macro colour, 62 sRGB, darker than the
+  detail-textured terrain beside it), times 1.35 (meadow banks still pale beige: the desaturation, not the brightness,
+  made the edge), then EARTH_MIX 0.25 at the terrain's luminance + EARTH_LIFT 0.08 (steep_skin.earth_colour). A full
+  steep_skin rerun + renders is about 40 min in the cloud: try a tint on a few lattice colours against the ground
+  colours of the review points first, and check it against the ground beside it, not alone.
 - `pkill -f "[s]hots.py /home/..."` in a command that also named that path later killed the shell again (exit 144).
 - The "asphalt on slopes" (0030, 0160, 0161, 0399) were survey yards (altro_rivestimento_duro) meshed on the DTM, which
   smears walls and terrace edges into slopes: 14 ha of mp_hard_asphalt at 20-60 degrees in v3.1. Finish step
