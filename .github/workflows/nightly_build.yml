@@ -1,4 +1,4 @@
-# Nightly build of v3.0.40: the complete level built from scratch on the integration branch (every thread of
+# Nightly build (v3.0.40, then v3.1.1 from 2026-10-25): the complete level built from scratch on the integration branch (every thread of
 # v3.0.40 merged into claude/chiazze-chiare-strada-eci3wc), as fix_build.yml of the v3.0 fixes: downloads, rasters,
 # road network, build_level.py with every finishing step inside, the automatic checks (check_level.py,
 # drive_test.py) and the package. The zip goes to GitHub as the pre-release "nightly" (michi 2026-10-20: "mettila
@@ -7,13 +7,15 @@
 # nightly_reports.zip of the pre-release.
 #
 # It runs when beamng/nightly/stamp.txt changes on the integration branch (write the date and what is in it there to
-# start a build), or on demand.
-name: nightly build (v3.0.40)
+# start a build), or on demand. v3.1.1 (the fixes of the v3.1 visual check, PRs #90-#98): integration branch
+# claude/project-thread-l0wmg8. The release "nightly" was turned into v3.1 on 2026-10-23 and only its git tag was left:
+# the tag is deleted before the pre-release is made again, or the release would point at the old commit.
+name: nightly build
 
 on:
   workflow_dispatch:
   push:
-    branches: [claude/chiazze-chiare-strada-eci3wc]
+    branches: [claude/project-thread-l0wmg8]
     paths: [beamng/nightly/stamp.txt]
 
 concurrency:
@@ -43,7 +45,8 @@ jobs:
       PYTHONHASHSEED: "0"
       PATCH_WORKERS: "2"
       PYTHONUNBUFFERED: "1"
-      ZIP_NAME: magliaso_pura_v3.0.40_nightly
+      ZIP_NAME: magliaso_pura_v3.1.1_nightly
+      VERSION: v3.1.1
     steps:
       - name: Disk space
         run: |
@@ -141,17 +144,18 @@ jobs:
         run: |
           N="$RUNNER_TEMP/notes.md"
           {
-            echo "**Nightly build of v3.0.40: UNTESTED, built to be tested in the game. Not the release.** Built $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\` of \`$GITHUB_REF_NAME\`."
+            echo "**Nightly build of $VERSION: UNTESTED, built to be tested in the game. Not the release.** Built $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\` of \`$GITHUB_REF_NAME\`."
             echo
-            echo "For BeamNG.drive 0.40. Before installing: remove or disable \`magliaso_pura_v3.0.zip\` in the mods folder (both are the same level). After updating the game to 0.40, BeamNG disables every mod: enable this one in the mod manager."
+            echo "For BeamNG.drive 0.40. Before installing: remove or disable any other \`magliaso_pura_*.zip\` in the mods folder (they are the same level). After updating the game to 0.40, BeamNG disables every mod: enable this one in the mod manager."
             echo
-            echo "What is in it (CHANGELOG, v3.0.40):"
+            echo "What is in it (CHANGELOG, $VERSION):"
             echo
-            awk '/^## v3.0.40/{on=1; next} /^## /{on=0} on' CHANGELOG.md
+            awk -v v="## $VERSION " 'index($0, v) == 1 {on=1; next} /^## /{on=0} on' CHANGELOG.md
             echo
             echo "Automatic checks, reports and the build log: \`nightly_reports.zip\` below (also the artifact \"nightly-build-reports\" of run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
           } > "$N"
           gh release delete nightly --yes --cleanup-tag || true
+          gh api -X DELETE "repos/$GH_REPO/git/refs/tags/nightly" || true
           gh release create nightly "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip" "$GITHUB_WORKSPACE/zip/nightly_reports.zip" \
             --prerelease --latest=false \
-            --target "$GITHUB_SHA" --title "Nightly builds: v3.0.40 ($(date -u '+%Y-%m-%d'))" --notes-file "$N"
+            --target "$GITHUB_SHA" --title "Nightly builds: $VERSION ($(date -u '+%Y-%m-%d'))" --notes-file "$N"

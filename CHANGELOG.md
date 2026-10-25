@@ -2,6 +2,20 @@
 
 What changed in each version of the map, newest first. The release notes that go with each zip are in [`beamng/`](beamng) (`RELEASE_vX.Y.md`); the technical notes for each version (which script does what) are in [`beamng/README.md`](beamng/README.md).
 
+## v3.1.1 (nightly, 25 October 2026, not released)
+
+For BeamNG.drive 0.40. The fixes of the visual check of v3.1 (about 650 in-game shots along every road, 24-25 October 2026), built from scratch on the integration branch: PRs #90 to #98. Not tested in the game (the PC was off): every change was checked on cloud renders of the released v3.1 level only.
+
+- **Bus stop paint without blobs** (`stop_paint.py`, #90): the traced BUS letters and crosses came out as yellow blobs and stars, and a bus front, a motorcyclist and a shadow edge passed as paint. No traced letters any more; zigzags must swing three times and are redrawn as straight legs, strips need 2 m and a zigzag or crossing within 15 m (626 pieces on v3.1 -> 107).
+- **Straight wall tops on the Cantonale** (`walls.py`, #91): the roadside walls took their foot station by station (jumps of 0.3-1.5 m): foot and plan line are smoothed, runs closer than 6.5 m joined, runs under 8 m and stubs under 1.5 m dropped; the survey walls' tops are smoothed along their outline.
+- **AI lanes round the traffic islands** (`islands.island_lanes`, #92): where an island stood in an AI lane (the swissTLM3D line runs down its middle) the road is split into two one-way roads beside it (lane lines over an island: 85 on 45 islands -> 51 on 23). The materials `mp_island_beacon`/`mp_island_reflector` stay defined and the zip entries are dated at packaging time, so the game does not keep shapes compiled from an older zip.
+- **Props off the roads** (`street_life.py`, `props_osm.py`, #93): 432 props (pallets, benches, drums, skips) stood inside the AI roads' width on yards and junctions with no carriageway mesh: 0 left. OSM furniture no longer stands on steep ground (a bench on a rock cut).
+- **Yards, bare concrete and the Tresa** (`bare_concrete.py`, `yard_wear.py`, `rivers.osm_channels`, #94): the grey-blue flat patches were the bare Concrete terrain layer (36.6 ha) coloured like pool water: it takes the nearest other layer; the big yards get blotches, dusty edges, patches and cracks; the Tresa where the border leaves it gets its channel from OSM.
+- **Skin on the cuts beside the roads** (`steep_skin.py`, #95): about 50 steep, faceted cuts with a stretched texture had no skin (their steep vertices lay only beside the road); they have it now, with finer rock faces and a rock texture without streaks (skin triangles 19.4 -> 21.6 M).
+- **No teeth at the foot of the cuts** (`steep_skin.foot_line`, #96): the green and brown pyramids along the foot of the rock cuts were the skin copying the terrain's staircase beside diagonal roads.
+- **Ground materials** (`steep_skin`, new finish step `steep_yards`, #97): the pale grey-green banks (the skin's colour, from layers without a colour map), 16.7 ha of asphalt yards on slopes now earth, gravel and setts less white, no green roofs from tree crowns.
+- **Road ends and decks on the ground** (`network_mesh.paved_edges`, `terrain.py`, `railway.py`, #98): road and yard edges more than 0.5 m over the ground 127.8 -> 49.9 km, no grass on the Ponte Tresa deck, the Via Golf rail deck in concrete.
+
 ## v3.1 (23 October 2026)
 
 For BeamNG.drive 0.40. The zip is the nightly test build of the integration branch (built from `21ff47b`, run 39915080591) with nine patches applied to the zip in place on 23 October 2026: the Via Golf wing walls out of the asphalt, pavements on kerbs, 19 buildings closer to the real ones, the asphalt age from the orthophoto, roundabouts and parking spots off the kerbs, the forest floor mosaic, the bus stop paint, the island posts and the bus shelters off the carriageway. Published before the in-game test. The fix of the Via Golf footways (`7a9530c`) is in the code but not in this zip.
