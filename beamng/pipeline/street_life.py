@@ -26,7 +26,8 @@ them, by rules, on the built level:
   edges, by what is around (benches, planters, bins on the village squares; pallets, drums, skips beside
   the sheds and workshops), the middle left free for the cars.
 A village road point: VILLAGE_N buildings of the Federal Register within VILLAGE_R m (as lamps.py).
-Nothing stands on a carriageway, a railway, in or under a building (its roof outline and CLEAR m), on a
+Nothing stands on a carriageway, on the line of an AI road (its half width and LANE_CLEAR m: v3.1 had 432 props,
+156 of them pallets, inside it, on yards, squares and junctions the road crosses with no carriageway mesh), a railway, in or under a building (its roof outline and CLEAR m), on a
 wall, within CLEAR m of the other props, guard rails, fences and trunks, or on ground steeper than
 MAX_STEP m over its footprint; what does not find such ground is left out. Every choice is drawn from a
 seeded generator, so a build gives the same street life every time.
@@ -88,6 +89,8 @@ CLEAR = 0.8                     # m from the other props, guard rails, fences, t
 ROOF_CLEAR = 0.4                # m from the outline of a roof
 MAX_STEP = 0.35                 # m of height over an object's footprint, and from the road edge
 JUNCTION = 9.0                  # m from the axis of another road: no roadside object there
+LANE_CLEAR = 0.1                # m beyond the half width of an AI road: the cars drive there, mesh or not (the
+                                # hydrants and letter boxes at the edge of the carriageway stand just outside it)
 TERRACE_R = (2.5, 14.0)         # m from the place's point to its terrace
 TERRACE_TABLES = (2, 4)
 TERRACE_PITCH = 2.4             # m between two tables
@@ -132,6 +135,7 @@ class Site:
         self.obst = cKDTree(obstacle_points(zi, lv))
         self.placed = np.zeros((0, 2))
         self.placed_r = np.zeros(0)
+        self.lanes = None                   # Roads, once read: the lines the AI cars drive
         self.why = {}
 
     def terrain(self, x, y):
@@ -156,6 +160,8 @@ class Site:
         P = p + max(r, 0.15) * RING
         if not carriage_ok and self.on_carriageway(P[:, 0], P[:, 1]).any():
             return self._no("carriageway")
+        if not carriage_ok and self.lanes is not None and self.lanes.in_lane(P, LANE_CLEAR).any():
+            return self._no("lane")
         E = p + (max(r, 0.15) + ROOF_CLEAR) * RING
         if np.isfinite(self.roof.height(E[:, 0], E[:, 1], "high")).any():
             return self._no("building")
@@ -204,6 +210,14 @@ class Roads:
     def nearest(self, p):
         _, k = self.tree.query(p[:2])
         return k
+
+    def in_lane(self, P, clear):
+        """For each point (k, 2): within the half width + clear of the axis of an AI road (the yards, squares and
+        junctions it crosses have no carriageway mesh, the cars drive there all the same)."""
+        P = np.atleast_2d(P)[:, :2]
+        near = self.tree.query_ball_point(P, float(self.W.max()) / 2 + clear)
+        return np.array([bool(k) and bool(np.any(np.hypot(*(self.P[k, :2] - p).T) < self.W[k] / 2 + clear))
+                         for p, k in zip(P, near)])
 
 
 def roadside(site, roads, c, t, w, side, r, lateral=LATERAL):
@@ -603,6 +617,7 @@ def street_life_step(root, report=None):
     gwr = [b for b in json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz")))["buildings"] if b.get("gstat") == 1004]
     houses = np.array([[b["x"], b["y"]] for b in gwr if (b.get("garea") or MIN_AREA) >= MIN_AREA])
     roads = Roads(zi, lv, houses)
+    site.lanes = roads
     out = Out(site, rng)
     ways, nodes = osm.load()
     inside = lambda p: len(roads.tree.query_ball_point(p, 60.0)) > 0     # on the map's network, not beyond it
