@@ -124,6 +124,22 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - v3.1 was published before its game test, with README captions written from cloud renders: the test (2026-10-24)
   found the hairpin caption "a straight top" false. Write captions of in-game screenshots only after the test.
 
+- Automatic in-game runs on Windows (v3.1 visual check, DESKTOP-OUPOLOA, 2026-10-24/25): start
+  `Bin64\BeamNG.drive.x64.exe` from the game folder. `BeamNG.drive.exe` opens the launcher, and with `-gfx dx12` the
+  game said "There is no valid rendering device".
+- `[System.Windows.Forms.Screen]::AllScreens` is cached inside a long-running PowerShell process: when the monitor went
+  to standby the virtual screen moved to 0,0 and gdigrab failed for 40 minutes with the old offset. Compute the offset
+  in a NEW process for every shot, and check the picture file exists after each one.
+- A command started in the background by the PowerShell tool is not found by Get-CimInstance on its CommandLine: two
+  shot runners ran at once and stole each other's teleports. Stop them with TaskStop and redo those points.
+- PowerShell variables ignore case (again): a script parameter `[string]$Plan` was overwritten by `$plan = Import-Csv`.
+- A test mod in `mods/unpacked` is added to `mods/db.json` by the game by itself: after removing it, restore the
+  db.json saved before the test.
+- The external camera behind the car ends inside trees and buildings in about 90 of 650 shots: the static raycast
+  does not see the forest's vegetation (forest items are not in the static collision it tests).
+- The night of 25.10 the clocks go back (03:00 -> 02:00 CEST -> CET): log timestamps run backwards for an hour.
+- michi (2026-10-24): in in-game tests that do not measure FPS, cap the frame rate at 30 fps.
+
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 
 Found by the AI driving in lane during the piano video (v3.0.40, 2026-10-21), level coordinates:
