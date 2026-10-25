@@ -1,1 +1,6 @@
+Nightly patch (writing this file starts .github/workflows/nightly_patch.yml on the integration branch)
+
 2026-10-20 18:05 UTC: nightly #2 patched with the baked imposters of the far trees (white squares in BeamNG 0.40)
+2026-10-25 12:30 UTC: v3.1.1 nightly (run 40170633614) patched with the finishing step road_seams (0db867c, thread
+"Gomme bucate"): ramps instead of steps between two pieces of carriageway. Tried on the unpacked zip in the cloud
+first: 263 shapes, 6.2 km of seams, steps over 8 cm left on 222 m.

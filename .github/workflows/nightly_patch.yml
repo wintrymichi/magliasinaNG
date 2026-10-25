@@ -1,15 +1,17 @@
-# Patch the zip of the pre-release "nightly" without building it again (v3.0.40): download it, add the baked
-# imposters of the far trees (patch_far_imposters.py: BeamNG 0.40 drew far trees as white squares when it baked
-# them itself), upload it again under the same name and add a line about it to the notes.
+# Patch the zip of the pre-release "nightly" without building it again: download it, run one finishing step of the
+# build on the unpacked level, put back only the files the step wrote, upload it again under the same name and add a
+# line about it to the notes. v3.0.40: the far tree imposters (patch_far_imposters.py, gone). v3.1.1 (2026-10-25):
+# the finishing step road_seams (ramps instead of steps between two pieces of carriageway), which a build from this
+# branch runs by itself. The step is not idempotent: run it once on a zip.
 #
 # It runs when beamng/nightly/patch_stamp.txt changes on the integration branch, or on demand. Never while
 # nightly_build.yml runs (that one replaces the whole pre-release at its end).
-name: nightly patch (v3.0.40)
+name: nightly patch
 
 on:
   workflow_dispatch:
   push:
-    branches: [claude/chiazze-chiare-strada-eci3wc]
+    branches: [claude/project-thread-l0wmg8]
     paths: [beamng/nightly/patch_stamp.txt]
 
 concurrency:
@@ -22,7 +24,7 @@ permissions:
 jobs:
   nightly-patch:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         shell: bash
@@ -33,8 +35,14 @@ jobs:
       MAGLIASO_DATASET: ${{ github.workspace }}
       MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
       MAGLIASO_BEAMNG_GAME: /nonexistent
-      ZIP_NAME: magliaso_pura_v3.0.40_nightly
+      ZIP_NAME: magliaso_pura_v3.1.1_nightly
+      STEP: road_seams
     steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -42,19 +50,27 @@ jobs:
           python-version: "3.11"
 
       - name: Dependencies
-        run: pip install --progress-bar off numpy scipy shapely pyproj rasterio pillow opencv-python-headless
+        run: pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 pyproj==3.7.2 rasterio==1.4.4 pillow==12.3.0 opencv-python-headless==5.0.0.93
 
       - name: Download the nightly zip
         run: |
           mkdir -p "$RUNNER_TEMP/z"
           gh release download nightly --pattern "$ZIP_NAME.zip" --dir "$RUNNER_TEMP/z"
           ls -l "$RUNNER_TEMP/z"
+          md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
 
-      - name: Add the far tree imposters
+      - name: Run the step on the unpacked level, put back the files it wrote
         working-directory: beamng/pipeline
         run: |
-          python patch_far_imposters.py "$RUNNER_TEMP/z/$ZIP_NAME.zip" | tee "$RUNNER_TEMP/patch.log"
-          grep -q "files added beside 9 of 9" "$RUNNER_TEMP/patch.log"
+          L="$RUNNER_TEMP/level"
+          mkdir -p "$L"
+          unzip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -d "$L"
+          touch "$RUNNER_TEMP/marker"
+          sleep 2
+          python "$STEP.py" "$L" "$RUNNER_TEMP/$STEP.json" | tee "$RUNNER_TEMP/patch.log"
+          cat "$RUNNER_TEMP/$STEP.json"
+          (cd "$L" && find . -type f -newer "$RUNNER_TEMP/marker" | sed 's|^\./||' | tee "$RUNNER_TEMP/changed.txt" | zip -q "$RUNNER_TEMP/z/$ZIP_NAME.zip" -@)
+          echo "$(wc -l < "$RUNNER_TEMP/changed.txt") files put back"
           python -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(z.testzip() or 'zip ok', len(z.namelist()), 'entries')" "$RUNNER_TEMP/z/$ZIP_NAME.zip"
           md5sum "$RUNNER_TEMP/z/$ZIP_NAME.zip"
 
@@ -64,6 +80,6 @@ jobs:
           gh release view nightly --json body -q .body > "$RUNNER_TEMP/notes.md"
           {
             echo
-            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the far trees carry their imposters baked (BeamNG 0.40 drew about one far tree in ten as a white square when it baked them itself)."
+            echo "**Patched $(date -u '+%Y-%m-%d %H:%M UTC') from \`${GITHUB_SHA::7}\`:** the finishing step \`$STEP\` run on this zip (ramps instead of steps of 1.5-30 cm between two pieces of carriageway, e.g. the 22-26 cm step after the Magliaso-Pura hairpin)."
           } >> "$RUNNER_TEMP/notes.md"
           gh release edit nightly --notes-file "$RUNNER_TEMP/notes.md"
