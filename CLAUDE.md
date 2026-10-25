@@ -232,7 +232,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the road meshes greyed the foot of every bank. The skin takes the nearest natural layer's colour (BaseColours.ground).
 - With the colours right the skin was still about twice as bright as the forest floor round it (pale patches with a
   sharp edge, 0192/0509/0519): EARTH_MIX pulled every colour towards EARTH, a light colour. It now pulls the hue only,
-  at the terrain's own brightness (steep_skin.earth_colour). Check a tint against the ground beside it, not alone.
+  at the terrain's own brightness times EARTH_LIFT (steep_skin.earth_colour): plain terrain brightness made the banks
+  as dark as the forest floor's macro colour (62 sRGB), darker than the detail-textured terrain beside them up close.
+  Check a tint against the ground beside it, not alone.
+- `pkill -f "[s]hots.py /home/..."` in a command that also named that path later killed the shell again (exit 144).
 - The "asphalt on slopes" (0030, 0160, 0161, 0399) were survey yards (altro_rivestimento_duro) meshed on the DTM, which
   smears walls and terrace edges into slopes: 14 ha of mp_hard_asphalt at 20-60 degrees in v3.1. Finish step
   steep_yards (after steep_skin) gives yard faces over 18 degrees (32 %) the skin's earth (mp_hard_bank, same geometry);
