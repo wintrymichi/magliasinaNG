@@ -189,6 +189,28 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Render the in-game check points with render3d at the plan.csv pose (driver: eye 1.3 m; ext: 16 m back, 7 m to the
   right, 6 m up) before reading anything from a shot: the ext camera often stands in a tree or a roof.
 
+## Tyre punctures and steps between road pieces (road_seams.py, v3.1.1)
+
+- In BeamNG 0.40 a puncture is a tyre beam breaking (vehicle/beamstate.lua, beamBroken: `beam.wheelID` -> deflateTire):
+  a sharp impact on an edge, never a ground model. Look for vertical edges the wheels can hit, not for materials.
+- The "hole on the right before Pura" (michi, 2026-10-25: uphill, right side, after the third main curve) was a 22-26 cm
+  step along 40 m between two asphalt pieces of road_m3_-01_-01 at about (-176,-122)..(-194,-104), just after the
+  hairpin: the uphill lane's outer strip was meshed lower than the rest. The whole map had 6.2 km of such seams
+  (1.1 km over 8 cm, max 30 cm), each a vertical skirt with collision. Finish step `road_seams` (after `roundabouts`)
+  raises the lower piece into a ramp (12 m per m of step, 0.75-3 m) with its paint/wear/islands/pavements: 1.9 km
+  left, 215 m over 8 cm (corners where three pieces meet; a second pass stacked ramps up to 78 cm, not done).
+- First version told the two sides of a seam by connected component: the two strips were one welded component
+  (joined elsewhere) and both went up 20 cm, step kept. A corner is on the low side only if it lies behind the seam
+  edge (outward normal) and more than half the step under the higher face's plane.
+- patch_release.read_dae reads the g-pa array of the first geometry but the triangles of all of them: on the terrain
+  skin DAEs (three LODs) it made garbage triangles up to 80 cm over the road. A scan reads only up to the first
+  `</geometry>` (patch_release left as it is: rewrite_dae writes back what read_dae reads).
+- Not changed, also puncture candidates (checked with a 0.1 m scan across the Magliaso-Pura route): low walls 10-30 cm
+  standing up to 0.7 m inside the asphalt edge (walls.drive_free skips the cantonale and keeps walls under FREE_OVER
+  0.3 m: s 247-307 at (646,-972) is a stone kerb under the guard rail, (-252,85) a slab by a lamp); the 5-6 cm skirt lip
+  at every outer road edge; the 12 cm traffic islands. Real kerbs puncture too: left as they are.
+- Writing DAE numbers with "%.4f" grew every array by trailing zeros: strip them (road_seams._set_z).
+
 ## Terrain fixes
 
 - Terrain heights are written in several places, in this order: the road carve override (`terrain_override`,
