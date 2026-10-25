@@ -257,7 +257,8 @@ def _joined(S, A, B, n=24):
     return ok & (np.abs(z - B[:, 2]) <= 0.1)
 
 
-def road_seams_step(root, report=None):
+def road_seams_step(root, report=None, steps=True):
+    """steps=False lifts the sags alone: for a zip whose steps were ramped already (a second pass stacks ramps)."""
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -302,7 +303,7 @@ def road_seams_step(root, report=None):
         res["step_cm_p50"], res["step_cm_max"] = round(float(np.median(sdz)) * 100, 1), round(float(sdz.max()) * 100, 1)
     # one pass: a second one (seams left at corners where three pieces meet) took 217 -> 121 m of steps over 8 cm
     # and stacked ramps up to 78 cm high
-    lift_cw = lifts(P, sx, snrm, sdz, sR, splane)
+    lift_cw = lifts(P, sx, snrm, sdz, sR, splane) if steps else np.zeros(len(P))
     # what is left (corners, a ramp ending on a third piece), for the report
     Pi = P + np.column_stack([np.zeros((len(P), 2)), lift_cw])
     left = seams(Pi.reshape(-1, 3, 3), root_, Faces(Pi.reshape(-1, 3, 3)))[2]
@@ -363,6 +364,10 @@ def road_seams_step(root, report=None):
         os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
         json.dump(res, open(report, "w"), indent=1)
     return res
+
+
+def road_sags_step(root, report=None):
+    return road_seams_step(root, report, steps=False)
 
 
 if __name__ == "__main__":

@@ -156,6 +156,9 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   `nightly_reports.zip` of every release build in the repo's verifica folder from now on.
 - nightly_patch.yml runs any finishing step on the nightly zip (MOD.FN): unzip, run, `find -newer marker | zip -@`,
   upload with --clobber (only a workflow can upload assets; the cloud gets 415).
+- road_seams got a second part (sags, 1c09ad3) after its first version was already patched into the nightly zip. Running
+  the whole step again would ramp the seams a second time (stacked ramps up to 78 cm): road_sags_step (steps=False) lifts
+  the sags alone. Ask whether a step is idempotent before patching a new version of it onto a zip that has the old one.
 
 ## Known issues of the map (found in game, no GitHub issue yet: ask michi before opening one)
 

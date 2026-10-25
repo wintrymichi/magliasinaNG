@@ -11,3 +11,7 @@ vertices of bare litter -> the new litter layers, 5 files changed, 189 s.
 rejected the look. Instead, skin_grass of ab4a5d7 (thread "Togliere le macchie chiare sul terreno"): no skin earth on
 the meadow banks, the meadow layer and its grass there again; rock stays. Tried in the cloud on the unpacked build:
 917 skin files changed, 41 removed, 15.2 % of the skin triangles gone, 6 min. Not idempotent: once on this zip.
+2026-10-25 15:10 UTC: road_sags (road_seams.road_sags_step of 1c09ad3, thread "gomme bucate"): the lane edges pulled
+down by yards and tracks joining from below lifted (545,-968: edge 1.13 -> 0.43 m under the middle, the lane within 0.2 m).
+The steps pass is skipped: this zip has the road_seams ramps already. Tried in the cloud on the current zip: 28,407
+corners, max 96 cm, 174 shapes, 409 s.
