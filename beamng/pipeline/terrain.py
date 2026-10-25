@@ -115,7 +115,8 @@ BASE_TEX = 1024
 # The forest floors (under the crowns, never seen in the orthophoto) keep the measured colour and noise.
 BASE_SIZE_M = TER_SIZE * TER_SQUARE
 BASE_FLIP = True               # image row 0 at the north edge of the block (terrain row TER_SIZE - 1)
-ORTHO_MATS = ("Grass", "GardenGrass", "Gravel", "Rock", "Moss", "Mud", "Concrete", "Asphalt")
+# v3.1 review: not Concrete: on its cells the orthophoto shows the roofs and the water of the pools (grey-blue)
+ORTHO_MATS = ("Grass", "GardenGrass", "Gravel", "Rock", "Moss", "Mud", "Asphalt")
 ORTHO_SHARE = 0.75             # of the orthophoto colour against the measured one
 ORTHO_MAX_DEV = 0.28           # largest relative departure of a pixel from the measured colour, each channel
 CANOPY_V = 92                  # orthophoto pixels darker than this and green are crowns or shadows

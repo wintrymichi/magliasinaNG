@@ -248,6 +248,31 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
   Cut only the low patches that touch the surveyed lake (MU specchio_acqua), and check a lake cut by the area it removes.
 
+## Yards, bare Concrete and river gaps (v3.1 visual review, group 5)
+
+- The "grey-blue flat surfaces without texture" of the review (0205, 0207, 0410, 0473, 0485, 0493; two were reported as
+  water planes) were no mesh at all: the terrain layer Concrete (classes edificio and bacino_idrico) where no building
+  stands. terrain_colors.py measured Concrete on the open ground of those cells, which is the water of pools and basins:
+  151,165,165, grey-blue, and the orthophoto base map made it bluer still. 36.6 ha of it lay bare (houses built into a
+  slope, buildings missing from swissBUILDINGS3D, basins). Before calling a flat surface "water" in a screenshot, look
+  for a water mesh there (level_objects/Water) and read the terrain layer: neither showed water at five of the six.
+  Fixed by the finish step bare_concrete (nearest non-Concrete layer where no solid mesh touches it), a fixed Concrete
+  colour in dati/terrain_colors.json (terrain_colors.FIXED) and no orthophoto base map for Concrete.
+- The big yards (mp_hard_asphalt, 172 ha) had none of road_wear's dressing: it works along AI roads only. yard_wear (after
+  road_wear, it needs its overlay materials) lays the blotches, dusty edges, patches and cracks on yards of 600 m2 or
+  more (452 yards, +754k overlay triangles, mostly the blotch layer). Random patch angles looked scattered: lay
+  rectangles along or across a yard's long axis.
+- The Swiss survey stops at the border, which runs along the Tresa: where the river is all in Italy the water ended
+  in a point (0391) and the bed went on dry under forest floor. rivers.osm_channels adds the channel along OSM
+  waterway=river outside the survey (lowest ground of each cross-section + CHANNEL_DZ). Tested in the cloud only by
+  emulation on the released level (the .ter as the DTM, the existing water as the survey): with CHANNEL_DZ 0.6 and no
+  opening it also took ragged patches of the flat ground beside the Tresa below Ponte Tresa; 0.45 and an opening of
+  2 cells left one small low patch. Check the build log's osm_channels / ha_osm_channels and the river near
+  (-2250, -1060) in the first build with it.
+- The render tool render.py of the thread was run on a `cp -al` copy; the .ter was replaced as a new file (os.remove,
+  then write) so the hard-linked original stayed as it was. Cameras placed by hand at (x, y, z) without reading the
+  terrain ended under the ground twice: take z from the .ter.
+
 ## Bridges
 
 - On a bridge the survey draws the bridge (SOSF ponte_passerella), not the carriageway (LCSF strada_sentiero), so
