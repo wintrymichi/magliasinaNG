@@ -310,6 +310,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   projection add vertices (0.59 -> 0.72 per triangle), and write_dae repeats every corner index 4 times in <p> (56 % of
   a skin file). One index per corner (all inputs at offset 0, valid COLLADA) measured -42 % on 80 tiles: not applied,
   it needs a load test in the game first (it would change every mesh of the map).
+- Cut slopes patchy and low-res (michi's v3.1.1 screenshot, 2026-10-25, "rendi più omogeneo e alta risoluzione"): three
+  causes in steep_skin. (1) The earth texture was 512 px over 3 m with bright green moss blobs and root lines: the
+  same blobs every 3 m on every bank. (2) Each face took the projection axis it is turned to: on a rock face about 45
+  degrees to x and y the relief flipped the axis from one triangle to the next, a patchwork of seams. (3) The rock
+  texture's mean was 150 and the earth's 205 (and yellow, 225/212/167) for the SAME vertex colour at the line where
+  they meet: a 27 % brightness and hue step along it. v3.1.3: textures 2048 px over 6 m, one mean (180, the earth
+  nearly grey), axes from normals averaged over 4.5 m (smooth_axes), a cut-out fringe of earth over the rock in 5
+  bands that nest (one alpha texture, alphaRef per band: border), the rock's moss calmer away from the line. A
+  built level gets it from the finish step skin_blend (6 min, no-op after a build; the steep yards keep the old
+  texture as t_hard_bank_*). +9 % skin triangles (the fringe), FPS not measured in game.
+- render3d views of cuts were covered by big flat grey planes: the coarse far terrain (one vertex every 12 squares
+  at far=2500, lowered only 1 m) spans the cut and stands over the skin inside the near region. It is not in the
+  game; for views of cut slopes lower the coarse terrain (scratch monkeypatch of Renderer._terrain, cast=False).
 - render3d draws every forest tree as a big cone or crown: views of slopes in woods show only trees. Render from a copy of
   the level without its `forest` folder (cp -al, then rm the folder: the hard links keep the original).
 - Visual review of v3.1, group 3 ("scarpate stirate", 2026-10-25): most of the ~50 stretched cuts had NO skin at all
