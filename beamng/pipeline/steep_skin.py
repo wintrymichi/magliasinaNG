@@ -31,6 +31,11 @@ a wall, a building, the railway or the lake) take a skin:
   moss only on the ledges (under MOSS_DEG). The gentler banks keep the earth, their colour pulled towards EARTH
   (less meadow green) and blurred over COLOUR_BLUR squares; the foot of a cut (TOE_SCREE m) greyer, as scree.
 
+- v3.2 (visual review of v3.1, group 3: steep, faceted cuts with a stretched texture): the cuts right beside a road
+  (steep vertices only in the ring of the road, STEEP_ROAD) take the skin too; the rock edges that climb more than
+  SUB_DZ m are halved, with their own relief; beside a road the relief is small and the skin flat on the terrain only
+  at the foot of the face (RELIEF_HAB, CLAMP_HAB); the rock texture without the fine streaks across it.
+
 A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish steep_skin
 """
 import io, json, os, tempfile, time, zipfile
@@ -43,6 +48,7 @@ from lamps import read_items
 from config import LEVEL_NAME
 
 STEEP = 38.0                  # degrees, terrain vertices this steep (and more) take the skin
+STEEP_ROAD = 45.0             # v3.2: degrees, the same in the ring beside a road (skin_mask: seeds)
 REACH = 30.0                  # m from a road or path surface
 DILATE = 3                    # terrain squares of skin around the steep vertices
 MIN_VERTS = 12                # smaller patches of steep vertices are left as they are
@@ -101,9 +107,16 @@ ROAD_DIVE = 0.06              # m: ... there under the road surface (hidden by i
 ROAD_LIFT_MAX = 1.0           # m: skin points up to this over a road surface go under it (more: a road below)
 ROAD_CLAMP = 1.5              # m: within this of a road the skin no higher than the terrain (EPS): the smoothed
                               # lattice lifted the low side of a 5-7 m step into a lip at the road edge (issue #15)
+CLAMP_HAB = 2.0               # v3.2: m over the foot of the face: the clamp of ROAD_CLAMP only up to this, released over
+CLAMP_RAMP = 1.0              # CLAMP_RAMP m above it
 RELIEF_NEAR = 0.12            # m, the most relief within RELIEF_ROAD m (horizontal) of a road: a rib 55 cm out of a
 RELIEF_ROAD = 2.0             # vertical cut at the road edge would overhang the lane at mirror height
 RELIEF_RAMP = 1.5             # m beyond RELIEF_ROAD in which the relief grows to RELIEF
+RELIEF_HAB = 3.2              # v3.2: m over the foot of the cut from which the face beside a road has its full relief
+                              # too (over RELIEF_RAMP m; a bus is 3.2 m high)
+SUB_DZ = 1.5                  # v3.2: m, skin edges on the rock that climb more than this are halved (up to SUB_PASSES
+SUB_PASSES = 2                # times): on a face of 70-80 degrees one lattice step of 0.75 m is 2-4 m of height, and the
+SUB_RW = 0.2                  # relief (knobs of ROCK_KNOB m) had one point per step: big flat facets (group 3)
 # v3.1: plants on the skin (michi's reference: shrubs, ivy-like bushes in the gullies of the rock) as forest items at
 # the skin's surface (a groundcover on the terrain would stand on the ground lowered under the skin); vanilla bushes
 # that ship their imposters (no bake in the session: white squares), no collision
@@ -164,7 +177,8 @@ def rock_texture(n=ROCK_TEX_N, seed=53):
     rng = np.random.default_rng(seed)
     mm = ROCK_TILE_M * 1000 / n
     fine, mid = noise(n, n, 1.0, rng), noise(n, n, 6, rng)
-    layers = aniso_noise(n, n, 3.0, 60.0, rng)                    # rows: up the face; long along it
+    layers = aniso_noise(n, n, 6.0, 24.0, rng)                    # rows: up the face; long along it (v3.2: 3 x 60 px,
+                                                                  # fine hairlines across the face that read as a stretched texture)
     warp = aniso_noise(n, n, 20.0, 40.0, rng)
     rows = (np.arange(n)[:, None] + 9.0 * warp) % n
     band = np.sin(rows / n * 2 * np.pi * 9) * 0.5 + 0.5          # nine layers per repeat
@@ -186,12 +200,12 @@ def rock_texture(n=ROCK_TEX_N, seed=53):
     dx = (Xw - C[cid, 1] + n / 2) % n - n / 2
     plane = (tilt[cid, 0] * dy + tilt[cid, 1] * dx) / n * 8
     plane = (plane - plane.mean()) / max(plane.std(), 1e-6)
-    hgt = 6.0 * plane + 5.0 * edge + 2.0 * mid + 0.8 * fine + 2.5 * band
+    hgt = 6.0 * plane + 5.0 * edge + 2.0 * mid + 0.8 * fine + 1.2 * band
     tone = rng.uniform(-0.06, 0.06, k)[cid]
     base = np.array([0.55, 0.53, 0.50], np.float32)
-    col = base * (1 + tone[..., None] + 0.05 * fine[..., None] + 0.06 * mid[..., None] + 0.08 * (band[..., None] - 0.5))
+    col = base * (1 + tone[..., None] + 0.05 * fine[..., None] + 0.06 * mid[..., None] + 0.04 * (band[..., None] - 0.5))
     # mica sparkle and darker biotite layers
-    col = col * (1 - 0.12 * np.clip(layers, 0, None)[..., None])
+    col = col * (1 - 0.06 * np.clip(layers, 0, None)[..., None])
     # joints dark
     col = col * (0.62 + 0.38 * edge[..., None] ** 0.6) * (1 + 0.07 * plane[..., None])
     # fresh breaks lighter and warmer (rusty) on a few blocks
@@ -201,8 +215,8 @@ def rock_texture(n=ROCK_TEX_N, seed=53):
     lich = np.clip((noise(n, n, 4, rng) - 1.6) * 1.5, 0, 1) * edge
     col = col * (1 - 0.5 * lich[..., None]) + 0.5 * lich[..., None] * np.array([0.34, 0.34, 0.31], np.float32)
     # dark streaks of water down the face (the texture's rows run down it)
-    wet = np.clip(aniso_noise(n, n, 90.0, 12.0, rng) - 1.0, 0, 1)
-    col = col * (1 - 0.25 * wet[..., None])
+    wet = np.clip(aniso_noise(n, n, 60.0, 16.0, rng) - 1.0, 0, 1)
+    col = col * (1 - 0.12 * wet[..., None])          # v3.2: 0.25, a grid of dark bars over the tiles
     col = np.clip(col * (ROCK_TEX_MEAN / 255.0 / col.reshape(-1, 3).mean()), 0, 1)
     return to8(col), normal_map(hgt, 1.2 / mm * 0.25)
 
@@ -227,6 +241,25 @@ def vnoise3(P, scale, seed=0):
     return out
 
 
+def relief(P, rw, hab, wv=None, droad=None):
+    """(m out of the face along its normal, rib noise) of points P of a rock face: ribs and gullies down the face,
+    knobs on them; only out of the face, none at its foot or edge. rw the rock weight, hab m over the foot of the
+    cut, wv the cut values, droad m from the road."""
+    ribs = vnoise3(P, (ROCK_RIB, ROCK_RIB, ROCK_RIB_V), 2)
+    knobs = vnoise3(P, (ROCK_KNOB,) * 3, 3)
+    d = RELIEF * np.clip(0.75 * ribs + 0.45 * knobs - 0.15, 0, 1)
+    d *= np.clip((rw - 0.3) / 0.5, 0, 1) * np.clip((hab - TOE_CLEAR) / TOE_RAMP, 0, 1)
+    if droad is not None:                               # little relief beside a road: nothing over the lane
+        # v3.2: only up to RELIEF_HAB m over the foot (the height of a vehicle): above it the face beside the road
+        # has its ribs too (a cut right at the road edge was one smooth plane up to the top)
+        far = np.maximum(np.clip((droad - RELIEF_ROAD) / RELIEF_RAMP, 0, 1),
+                         np.clip((hab - RELIEF_HAB) / RELIEF_RAMP, 0, 1))
+        d = np.minimum(d, RELIEF_NEAR + (RELIEF - RELIEF_NEAR) * far)
+    if wv is not None:
+        d *= np.clip((wv - EDGE_ISO) / EDGE_FADE - 0.5, 0, 1)
+    return d, ribs
+
+
 def rock(keys, P, N, z, wv, droad=None):
     """v3.1: rock on the steep faces. (P moved out along N by the relief, N of the moved faces, rock weight 0..1,
     colour (k, 3)) of the lattice points; z their heights (the foot of the cut from them), wv the cut values."""
@@ -239,16 +272,7 @@ def rock(keys, P, N, z, wv, droad=None):
     G[kk[:, 0], kk[:, 1]] = z
     toe = ndi.minimum_filter(G, size=TOE_WIN, mode="nearest")[kk[:, 0], kk[:, 1]]
     hab = z - toe
-    # relief: ribs and gullies down the face, knobs on them; only out of the face, none at its foot or edge
-    ribs = vnoise3(P, (ROCK_RIB, ROCK_RIB, ROCK_RIB_V), 2)
-    knobs = vnoise3(P, (ROCK_KNOB,) * 3, 3)
-    d = RELIEF * np.clip(0.75 * ribs + 0.45 * knobs - 0.15, 0, 1)
-    d *= np.clip((rw - 0.3) / 0.5, 0, 1) * np.clip((hab - TOE_CLEAR) / TOE_RAMP, 0, 1)
-    if droad is not None:                               # little relief beside a road: nothing over the lane
-        near = RELIEF_NEAR + (RELIEF - RELIEF_NEAR) * np.clip((droad - RELIEF_ROAD) / RELIEF_RAMP, 0, 1)
-        d = np.minimum(d, near)
-    if wv is not None:
-        d *= np.clip((wv - EDGE_ISO) / EDGE_FADE - 0.5, 0, 1)
+    d, ribs = relief(P, rw, hab, wv, droad)
     Pm = P + N * d[:, None]
     # colours: rock grey-brown with big soft patches, moss on the ledges; earth less green; scree at the foot
     big = vnoise3(P, (COLOUR_SCALE,) * 3, 4)
@@ -256,6 +280,55 @@ def rock(keys, P, N, z, wv, droad=None):
     moss = np.clip((MOSS_DEG - deg) / 6.0, 0, 1) * np.clip((vnoise3(P, (3.0,) * 3, 5) - 0.45) * 3, 0, 1)
     rc = rc * (1 - moss[:, None]) + np.array(MOSS) * moss[:, None]
     return Pm, rw, rc, hab, deg, ribs
+
+
+def subdivide(P, Pm, N, col, rw, hab, wv, droad, T):
+    """v3.2: the triangles T halved along their edges on the rock (rock weight over SUB_RW at an end) that climb more
+    than SUB_DZ m, SUB_PASSES times (an edge is halved in both its triangles: no cracks). P the lattice points, Pm
+    the same moved out by their relief; the new points take the mean of the two ends (on the face before the
+    relief), and their own relief. (moved points, normals, colours, rock weights, cut values, triangles)."""
+    A = {"P": P, "N": N, "col": col, "rw": rw, "hab": hab}
+    if wv is not None:
+        A["wv"] = wv
+    if droad is not None:
+        A["droad"] = droad
+    Pm = Pm.copy()
+    for _ in range(SUB_PASSES):
+        E = np.sort(T[:, [0, 1, 1, 2, 2, 0]].reshape(-1, 2), axis=1)
+        Q = A["P"]
+        cut = (np.abs(Q[E[:, 0], 2] - Q[E[:, 1], 2]) > SUB_DZ) & (np.maximum(A["rw"][E[:, 0]], A["rw"][E[:, 1]]) > SUB_RW)
+        if not cut.any():
+            break
+        ue, inv = np.unique(E[cut], axis=0, return_inverse=True)
+        m0 = len(Q)
+        mid = np.full(len(E), -1, np.int64)
+        mid[np.flatnonzero(cut)] = m0 + inv.ravel()
+        mid = mid.reshape(-1, 3)                        # per triangle: the new point on its edge (v0 v1, v1 v2, v2 v0)
+        for k, v in list(A.items()):
+            A[k] = np.concatenate([v, 0.5 * (v[ue[:, 0]] + v[ue[:, 1]])])
+        nn = A["N"][m0:]
+        A["N"][m0:] = nn / np.maximum(np.linalg.norm(nn, axis=1, keepdims=True), 1e-9)
+        d, _ = relief(A["P"][m0:], A["rw"][m0:], A["hab"][m0:], A["wv"][m0:] if "wv" in A else None,
+                      A["droad"][m0:] if "droad" in A else None)
+        Pm = np.concatenate([Pm, A["P"][m0:] + A["N"][m0:] * d[:, None]])
+        cnt = (mid >= 0).sum(1)
+        out = [T[cnt == 0]]
+        for r in range(3):                              # rotate so that the cut edges come first
+            Tr, Mr = np.roll(T, -r, axis=1), np.roll(mid, -r, axis=1)
+            a, b, c = Tr[:, 0], Tr[:, 1], Tr[:, 2]
+            m_ab, m_bc, m_ca = Mr[:, 0], Mr[:, 1], Mr[:, 2]
+            one = (cnt == 1) & (m_ab >= 0)
+            out += [np.column_stack([a, m_ab, c])[one], np.column_stack([m_ab, b, c])[one]]
+            two = (cnt == 2) & (m_ab < 0)               # a b kept, b c and c a halved
+            out += [np.column_stack([a, b, m_bc])[two], np.column_stack([a, m_bc, m_ca])[two],
+                    np.column_stack([m_ca, m_bc, c])[two]]
+        three = cnt == 3
+        a, b, c = T[:, 0], T[:, 1], T[:, 2]
+        m_ab, m_bc, m_ca = mid[:, 0], mid[:, 1], mid[:, 2]
+        out += [np.column_stack([a, m_ab, m_ca])[three], np.column_stack([m_ab, b, m_bc])[three],
+                np.column_stack([m_ca, m_bc, c])[three], np.column_stack([m_ab, m_bc, m_ca])[three]]
+        T = np.concatenate(out)
+    return Pm, A["N"], A["col"], A["rw"], A.get("wv"), T
 
 
 def face_normals(P, T, N0):
@@ -336,19 +409,25 @@ def split_max(Hn, R, C):
     return np.maximum(za, zb)
 
 
-def skin_mask(H, road, solid, sq):
-    """(skin vertices, steep vertices) of a block of terrain heights H: steep near a road, grown by DILATE,
-    never on solid."""
+def skin_mask(H, road, solid, sq, hard=None):
+    """(skin vertices, steep vertices, seeds) of a block of terrain heights H: steep near a road, grown by DILATE,
+    never on solid. v3.2: with hard (the walls, buildings, railway and lake of the block) the steep vertices in the
+    ring of solid beside a road seed the skin too (seeds: skin themselves, and foot() runs on from them): a cut of
+    5-7 m in one or two squares right beside the road had no steep vertex outside that ring, never took a skin and
+    stayed bare terrain, its material projected from above in vertical streaks (visual review of v3.1, group 3)."""
     gy, gx = np.gradient(H, sq)
     steep = np.degrees(np.arctan(np.hypot(gx, gy))) > STEEP
     near = ndi.distance_transform_edt(~road) * sq <= REACH if road.any() else np.zeros_like(steep)
     S = steep & near & ~solid
+    if hard is not None:
+        S |= (np.degrees(np.arctan(np.hypot(gx, gy))) > STEEP_ROAD) & near & solid & ~(hard | road)
     lab, k = ndi.label(S, np.ones((3, 3)))
     if k:
         size = np.bincount(lab.ravel())
         S = (size >= MIN_VERTS)[lab] & S
+    seeds = S
     S = ndi.binary_dilation(S, np.ones((3, 3)), iterations=DILATE) & ~solid
-    return S, steep
+    return S, steep, seeds
 
 
 def foot(S, road, hard):
@@ -468,11 +547,12 @@ def tile_mesh(mb, keys, z, rr, cc, x0, y0, sq, colour, wv=None, lods=(), droad=N
     col = np.column_stack([colour, np.ones(len(z))])
     for k, lift, mbk in lods:
         coarse_mesh(mbk, keys, P, N, col, rr, cc, wv if wv is not None else np.ones(len(z)), k, lift)
-    N = face_normals(Pm, T, N)
-    P = Pm
-    col = np.column_stack([col, rw])                   # the rock weight carried through the cut as a fifth column
-    if wv is not None:
-        P, N, col, T = clip(P, N, col, T, wv - EDGE_ISO)
+    # v3.2: the edges on the rock that climb steeply halved, the relief also at the new points
+    P, N, col, rws, wvs, T = subdivide(P, Pm, N, col, rw, hab, wv, droad, T)
+    N = face_normals(P, T, N)
+    col = np.column_stack([col, rws])                  # the rock weight carried through the cut as a fifth column
+    if wvs is not None:
+        P, N, col, T = clip(P, N, col, T, wvs - EDGE_ISO)
     # rock and earth cut apart along the line where the rock weight is 1/2 (not along the triangles: teeth)
     n_tri = len(T)
     info = {"P": Pm, "rw": rw, "deg": deg, "hab": hab, "ribs": ribs, "over_road": 0, "over_road_max": -9.0}
@@ -626,9 +706,10 @@ def steep_skin_step(root, report=None):
             b0, b1 = max(tc - m, 0), min(tc + TILE + m + 1, n)
             H = Z0 + q[a0:a1, b0:b1].astype(np.float64) / 65535.0 * MAXH
             sol = solid[a0:a1, b0:b1] | (H < lake_z + 0.3)
-            S, steep = skin_mask(H, road[a0:a1, b0:b1], sol, sq)
-            if S.any():
-                S = S | foot(S, road[a0:a1, b0:b1], hard[a0:a1, b0:b1] | (H < lake_z + 0.3))
+            hl = hard[a0:a1, b0:b1] | (H < lake_z + 0.3)
+            S, steep, seeds = skin_mask(H, road[a0:a1, b0:b1], sol, sq, hl)
+            if (S | seeds).any():
+                S = S | seeds | foot(S | seeds, road[a0:a1, b0:b1], hl)
             core = (tr - a0, min(tr + TILE, n - 1) - a0, tc - b0, min(tc + TILE, n - 1) - b0)
             if not S[core[0]:core[1] + 1, core[2]:core[3] + 1].any():
                 continue
@@ -658,7 +739,13 @@ def steep_skin_step(root, report=None):
             droad = np.maximum(ndi.map_coordinates(dv, [R, C], order=1) - sq / 2, 0.0)
             clamp = (droad <= ROAD_CLAMP) & ~np.isfinite(hr)
             rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > fl + 1e-6)).sum())
-            z = np.where(clamp, np.minimum(z, fl), z)
+            # v3.2: only the foot of the face (the lip is at its low side): higher up the face beside the road keeps the
+            # round surface, not the plane of one terrain square (a 5-7 m cut at the road edge was one flat facet)
+            kk = keys - keys.min(0)
+            G = np.full(kk.max(0) + 1, np.inf)
+            G[kk[:, 0], kk[:, 1]] = fl
+            up = fl - ndi.minimum_filter(G, size=TOE_WIN, mode="nearest")[kk[:, 0], kk[:, 1]]
+            z = np.where(clamp, fl + np.clip((up - CLAMP_HAB) / CLAMP_RAMP, 0, 1) * np.maximum(z - fl, 0), z)
             gr, gc = np.mgrid[0:a1 - a0, 0:b1 - b0]
             cg = colours(lay[a0:a1, b0:b1].ravel(), (gr + a0).ravel(), (gc + b0).ravel()).reshape(a1 - a0, b1 - b0, 3)
             col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
