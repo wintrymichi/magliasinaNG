@@ -220,6 +220,34 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   yards and roads (about 1,800 4 m cells, network_holes 418 -> 1417 in the bridge thread's test build, 2026-10-21).
   Cut only the low patches that touch the surveyed lake (MU specchio_acqua), and check a lake cut by the area it removes.
 
+## Ground materials (visual review of v3.1, group G4)
+
+- The pale grey-green banks all over the map (whole hairpins, every cut in the woods, 0456 at -3872,119) were the
+  terrain skin's colour, not its rock: steep_skin.BaseColours looked a layer's colour map up as
+  `t_base_<layer>_b.png`, and the twins added later (understory: ForestFloorVerge/Light, forest_mosaic: ForestRock,
+  BankWood) have no such file: their vertices took a flat 0.55 grey, which EARTH_MIX made pale. Read the map from the
+  level's terrain materials (baseColorBaseTex). A step that adds terrain layers must check every reader of layer names
+  (BaseColours, render3d._layer_colors, groundcover lists), not only its own.
+- The skin runs into the road (FOOT) and its colours are blurred over 3 squares: the light Asphalt/Concrete layer under
+  the road meshes greyed the foot of every bank. The skin takes the nearest natural layer's colour (BaseColours.ground).
+- With the colours right the skin was still about twice as bright as the forest floor round it (pale patches with a
+  sharp edge, 0192/0509/0519): EARTH_MIX pulled every colour towards EARTH, a light colour. It now pulls the hue only,
+  at the terrain's own brightness (steep_skin.earth_colour). Check a tint against the ground beside it, not alone.
+- The "asphalt on slopes" (0030, 0160, 0161, 0399) were survey yards (altro_rivestimento_duro) meshed on the DTM, which
+  smears walls and terrace edges into slopes: 14 ha of mp_hard_asphalt at 20-60 degrees in v3.1. Finish step
+  steep_yards (after steep_skin) gives yard faces over 18 degrees (32 %) the skin's earth (mp_hard_bank, same geometry);
+  24 degrees missed the light ramp of 0399, mostly 10-20 degrees.
+  The skirts (over 72 degrees) are left alone. Mean slopes per material lie: area per slope band is the useful probe.
+- Gravel at 150 sRGB (surface_textures.BRIGHTNESS) read near white with a blue cast in the game's light (0280); now 124.
+  Italy's setts and cobbles at 1.0 were the brightest thing in a meadow (0367): STONE_TINT.
+- Roof colours were the orthophoto median over the roof: tree crowns over a roof made 5-14 % of the roof area green
+  (0165, a shed with a "grass" roof). buildings_mesh.roof_colors drops the green pixels; a roof is never green.
+- Checking these in the cloud: probe the level for terrain layers and mesh materials near a point (layer counts +
+  mesh area per slope band) before guessing; render3d (no orthophoto) draws the terrain in the layer colours and the
+  skin with its vertex colours, so it reproduces the pale skin. Rerunning steep_skin on a released level lowers the
+  terrain under the old skin a second time (changed_max_m 4 m): fine for renders, never for a release.
+- PIL `save` onto a path that is a hard link (cp -al copy) writes into the original too: remove the file first.
+
 ## Bridges
 
 - On a bridge the survey draws the bridge (SOSF ponte_passerella), not the carriageway (LCSF strada_sentiero), so

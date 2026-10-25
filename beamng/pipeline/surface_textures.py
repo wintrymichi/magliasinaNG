@@ -29,7 +29,9 @@ SEED = 31
 # (crushed stone about 0.3 albedo, dry earth 0.15-0.2, granite 0.25)
 MEASURED = {"gravel": (177.2, 176.4, 164.1), "dirt": (153.3, 149.6, 131.2), "sett": (174.8, 167.6, 160.2),
             "cobble": (173.3, 159.1, 148.7)}
-BRIGHTNESS = {"gravel": 150.0, "dirt": 112.0, "sett": 138.0, "cobble": 140.0}
+BRIGHTNESS = {"gravel": 124.0, "dirt": 112.0, "sett": 138.0, "cobble": 140.0}
+# v3.1.1: gravel 150 up to v3.1 (crushed stone, 0.3 albedo): in the game's sun and sky light the forest roads and
+# gravel tracks came out near white with a blue cast, brighter than the asphalt (visual review of v3.1: 0280, 0456)
 
 
 def target(surface):

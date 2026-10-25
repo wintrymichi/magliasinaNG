@@ -223,6 +223,9 @@ def level_faces(lv):
                 solid.append(t)
                 sgrp.append(np.full(len(t), 0, np.int8))
                 continue
+            if mat == "mp_hard_bank":                   # v3.1.1: the steep yard faces are ground (steep_skin.YARD_MAT)
+                fill.append(t)
+                continue
             if mat not in SURFACE_CLASS:
                 continue
             n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
