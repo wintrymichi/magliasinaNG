@@ -24,6 +24,16 @@ local PLAN = {
     {name = 'ponte_tresa', at = {-2250, -1060}},
     {name = 'magliaso', at = {783, -1143}},
   },
+  tunnel = {                    -- tunnels.py's tube of the Galleria del Vallone d'Agno (render_tunnel poses)
+    floor = {2077.7, -26.3, 274.05}, dir = {0.446, 0.895},
+    views = {
+      {name = 's_front', cam = {2057.5, -66.7, 277.0}, at = {2067.4, -47.0, 276.5}},
+      {name = 's_high', cam = {2054.0, -73.9, 286.0}, at = {2067.4, -47.0, 276.5}},
+      {name = 'n_front', cam = {2097.0, 12.4, 277.1}, at = {2087.1, -7.3, 276.6}},
+      {name = 'n_high', cam = {2100.5, 19.6, 286.1}, at = {2087.1, -7.3, 276.6}},
+      {name = 'inside', cam = {2072.5, -36.7, 276.1}, at = {2081.2, -19.3, 276.1}},
+    },
+  },
 }
 
 local function note(s)
@@ -92,7 +102,14 @@ local function placeOnRoad(x, y)
   end
   local a, b = nodes[n1].pos, nodes[n2].pos
   local d = vec3(b.x - a.x, b.y - a.y, 0):normalized()
-  local p = vec3(a.x, a.y, a.z + 0.5)
+  -- the node's z can be 0 outside the window the AI map was built in (laptop run 2: every jump put the car at z 0.5,
+  -- under the ground): take the highest of the node, the terrain and a ray down onto the road meshes
+  local zz = a.z
+  local tz = terrainZ(a.x, a.y)
+  if tz and tz > zz then zz = tz end
+  local okR, hit = pcall(function() return castRayStatic(vec3(a.x, a.y, zz + 6), vec3(0, 0, -1), 12) end)
+  if okR and type(hit) == 'number' and hit < 12 and zz + 6 - hit > zz then zz = zz + 6 - hit end
+  local p = vec3(a.x, a.y, zz + 0.5)
   local q = quatFromDir(-d, vec3(0, 0, 1))          -- the car's front is its -Y
   veh:setPositionRotation(p.x, p.y, p.z, q.x, q.y, q.z, q.w)
   return p
@@ -114,6 +131,24 @@ local function mapNodes()
   local n = 0
   if ok and m and m.nodes then for _ in pairs(m.nodes) do n = n + 1 end end
   return n
+end
+
+-- AI map nodes with z under 1 m, all of them and those within r of (x, y): in laptop run 2 the nodes far from the
+-- start had z 0 (the AI roads clip to the terrain, which exists only in the streamed window)
+local function mapZeroNodes(x, y, r)
+  local ok, m = pcall(function() return map.getMap() end)
+  local all, near, nearAll = 0, 0, 0
+  if ok and m and m.nodes then
+    for _, nd in pairs(m.nodes) do
+      local low = nd.pos.z < 1
+      if low then all = all + 1 end
+      if x and (nd.pos.x - x) ^ 2 + (nd.pos.y - y) ^ 2 < r * r then
+        nearAll = nearAll + 1
+        if low then near = near + 1 end
+      end
+    end
+  end
+  return all, near, nearAll
 end
 
 -- the route of make_route.py for scriptai (no AI road graph needed): points {x, y, z, t}
@@ -262,7 +297,22 @@ local function run()
     -- the jumps
     for _, j in ipairs(PLAN.jumps) do
       worst = 0
+      -- the window there first (the terrain and the AI roads' heights come with it), then the car on the road
+      local veh0 = player()
+      local sta = rawget(_G, 'simTimeAuthority')
+      if sta and sta.pause then sta.pause(true) end    -- the car waits up there until it is put on the road
+      if veh0 then veh0:setPositionRotation(j.at[1], j.at[2], 2000, 0, 0, 0, 1) end
+      if ticino_stream and ticino_stream.setFocus then ticino_stream.setFocus(j.at[1], j.at[2]) end
+      job.sleep(10)
+      local z0all, z0near, near = mapZeroNodes(j.at[1], j.at[2], 300)
+      pcall(function() map.reset() end)
+      job.sleep(3)
+      local z1all, z1near = mapZeroNodes(j.at[1], j.at[2], 300)
+      note(string.format('jump %s: AI nodes with z < 1: %d (%d of %d within 300 m), after map.reset() %d (%d)',
+        j.name, z0all, z0near, near, z1all, z1near))
+      if ticino_stream and ticino_stream.setFocus then ticino_stream.setFocus(nil) end
       local p, err = placeOnRoad(j.at[1], j.at[2])
+      if sta and sta.pause then sta.pause(false) end
       local rec = {name = j.name, at = j.at, placed = p and {p.x, p.y, p.z} or err}
       job.sleep(15)                          -- the window, the objects near, the textures
       local veh = player()
@@ -281,6 +331,54 @@ local function run()
       note(string.format('jump %s: worst frame %d ms, fell %s', j.name, rec.worst_ms, tostring(rec.fell)))
       save()
     end
+    -- the FLP tunnel at the Vallone d'Agno (tunnels.py): free camera views of both portals and the inside (poses of
+    -- the render check, from the tube's stations), then the car on the track inside: the floor is a collision cell
+    -- and the terrain over it has holes only at the portals
+    if PLAN.tunnel then
+      local T = PLAN.tunnel
+      if ticino_stream and ticino_stream.setFocus then ticino_stream.setFocus(T.floor[1], T.floor[2]) end
+      local veh = player()
+      local sta = rawget(_G, 'simTimeAuthority')
+      if sta and sta.pause then sta.pause(true) end
+      if veh then veh:setPositionRotation(T.floor[1], T.floor[2], T.floor[3] + 40, 0, 0, 0, 1) end
+      job.sleep(15)
+      pcall(function() commands.setFreeCamera() end)
+      for _, v in ipairs(T.views) do
+        local dx, dy, dz = v.at[1] - v.cam[1], v.at[2] - v.cam[2], v.at[3] - v.cam[3]
+        local yaw = math.deg(math.atan2(dx, dy)) % 360
+        local pitch = math.deg(math.atan2(dz, math.sqrt(dx * dx + dy * dy)))
+        pcall(function()
+          core_camera.setPosition(0, vec3(v.cam[1], v.cam[2], v.cam[3]))
+          core_camera.setFreeCameraYawPitchRollDeg(yaw, -pitch, 0)
+          core_camera.setFOV(0, 65)
+        end)
+        job.sleep(4)
+        res.shots[#res.shots + 1] = {name = 'tunnel_' .. v.name, method = shoot('tunnel_' .. v.name)}
+      end
+      local rec = {name = 'tunnel_floor', at = T.floor}
+      if veh then
+        local d = vec3(T.dir[1], T.dir[2], 0):normalized()
+        local q = quatFromDir(-d, vec3(0, 0, 1))
+        veh:setPositionRotation(T.floor[1], T.floor[2], T.floor[3] + 0.5, q.x, q.y, q.z, q.w)
+      end
+      if sta and sta.pause then sta.pause(false) end
+      job.sleep(10)
+      if veh then
+        local q = veh:getPosition()
+        rec.car = {q.x, q.y, q.z}
+        rec.fell = q.z < T.floor[3] - 2
+        rec.stream = streamStatus()
+      end
+      pcall(function() core_camera.setByName(0, 'orbit'); core_camera.resetCamera(0) end)
+      job.sleep(4)
+      rec.shot = shoot('tunnel_car_inside')
+      res.jumps[#res.jumps + 1] = rec
+      note(string.format('tunnel: car on the floor at z %.2f (floor %.2f), fell %s', rec.car and rec.car[3] or -1,
+        T.floor[3], tostring(rec.fell)))
+      if ticino_stream and ticino_stream.setFocus then ticino_stream.setFocus(nil) end
+      save()
+    end
+
     frameLog = nil
     if extensions.ui_visibility then pcall(extensions.ui_visibility.setCef, true) end
     writeFile(OUT .. 'done.txt', 'done')

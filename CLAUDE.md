@@ -1058,6 +1058,17 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   in the graph: query near the ground (and the test falls back to the nearest node by hand, noting it).
   colPiece's ffi.cast of the Lua string raised "arithmetic on a string value" for one cell (10 times, the pos not
   advanced): the piece is now copied into an ffi buffer, and any failure turns ffi off for the session.
+- Laptop run 2 (2026-10-26): that fix made it worse: `ffi.new('uint16_t[?]')` is an array, and `u + 3 * nv` on it
+  raises "bad argument #1 to '__add' (invalid C type)" for EVERY piece (colTris 0, 2,126 failures, no cell had any
+  collision; the car fell through the tunnel floor). The fallback never ran: the error came after the pcall'd copy.
+  Index the array (u[3 * nv + k]); a failed piece now drops the rest of its cell (the read position is lost). Run any
+  decoder change against a real cell file in luajit with stubs before a game test (the ffi and byte paths agree).
+  The AI drove this time (2.3 km in 14 min, 9 stops, "moved 30 m on" worked). Every jump put the car at z 0.5: the
+  AI map's nodes far from the start had z 0 (the AI DecalRoads clip to the terrain, which exists only in the
+  streamed window; the json nodes have their heights). The test now takes the ground under the node and counts the
+  z < 1 nodes before and after a map.reset() at each jump; the 3,124 core_trafficSignals "Map node could not be set"
+  likely have the same cause. Also logged: material cbv array exhausted (8192 slots) at 113 s, a 16x448 bollard
+  texture that is not a power of two (TextureCooker refuses it).
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold

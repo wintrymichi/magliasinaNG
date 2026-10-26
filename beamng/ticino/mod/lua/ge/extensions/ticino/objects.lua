@@ -325,8 +325,10 @@ local function colPiece(C, job)
       verts[k + 1] = { x = (u[3 * k] - off) * 0.01, y = (u[3 * k + 1] - off) * 0.01, z = u[3 * k + 2] * 0.01 }
       fv[k + 1] = { v = k, n = 0, u = 0 }
     end
-    local w = u + 3 * nv
-    for k = 0, nt * 3 - 1 do faces[k + 1] = fv[w[k] + 1] end
+    -- indexed, not u + 3 * nv: a uint16_t[?] array is no pointer ("bad argument #1 to '__add' (invalid C type)" for
+    -- every piece in laptop run 2, so no cell had any collision)
+    local w = 3 * nv
+    for k = 0, nt * 3 - 1 do faces[k + 1] = fv[u[w + k] + 1] end
     i = i + 6 * nv + 6 * nt
   else
     for k = 1, nv do
@@ -387,6 +389,7 @@ function M.stepCols(clock, budgetMs)
         job.left = job.left - 1
         if ok and id then job.ids[#job.ids + 1] = id
         else
+          job.left = 0                 -- the read position is lost: the rest of the cell would be garbage
           C.failed = (C.failed or 0) + 1
           if C.failed <= 10 or C.failed % 100 == 0 then
             log('W', 'ticino', 'collision piece not made (' .. C.failed .. ' so far): ' .. job.key .. ' ' .. tostring(id))
