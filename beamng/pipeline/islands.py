@@ -107,11 +107,13 @@ def bollard_png():
     """The sleeve's texture: BANDS bands up a 1 x 8 strip, black at the bottom and the top."""
     from PIL import Image
     import io
-    h = 64 * BANDS
+    # 16 x 512: the game's TextureCooker refuses a side that is not a power of two (16 x 448 with 7 bands of 64,
+    # "Size must be a power of two", laptop run 2 of the Ticino test, 2026-10-26)
+    h = 512
     img = Image.new("RGB", (16, h))
     for k in range(BANDS):
         col = (18, 18, 18) if k % 2 == 0 else (238, 190, 22)
-        img.paste(col, (0, h - (k + 1) * 64, 16, h - k * 64))
+        img.paste(col, (0, h - round((k + 1) * h / BANDS), 16, h - round(k * h / BANDS)))
     b = io.BytesIO()
     img.save(b, "PNG")
     return b.getvalue()
