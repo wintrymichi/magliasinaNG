@@ -45,6 +45,7 @@ jobs:
       - name: Dependencies
         run: |
           pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0 fast_simplification==0.2.0
+          pip install --progress-bar off pyproj shapely opencv-python-headless rasterio   # the tunnel step's imports
           sudo apt-get install -y -q luajit
 
       - name: Released v3.1.1
@@ -54,6 +55,13 @@ jobs:
           unzip -q "$W/magliaso_pura_v3.1.1.zip" -d "$W/src"
           rm "$W/magliaso_pura_v3.1.1.zip"
           df -h "$W"
+
+      - name: Tunnels (finish step, on the released level)
+        working-directory: beamng/pipeline
+        run: |
+          export MAGLIASO_ROOT="$W/mroot"
+          mkdir -p "$MAGLIASO_ROOT"
+          python tunnels.py "$W/src" "$W/tunnels.json"
 
       - name: Blocks, checks, zip
         working-directory: beamng/ticino
@@ -70,6 +78,6 @@ jobs:
       - name: Draft release "ticino-test" (not public)
         run: |
           gh release delete ticino-test --yes --cleanup-tag || true
-          gh release create ticino-test "$W/ticino_test.zip" "$W/ticino_test.sha256" "$W/blocks.log" \
+          gh release create ticino-test "$W/ticino_test.zip" "$W/ticino_test.sha256" "$W/blocks.log" "$W/tunnels.json" \
             --draft --target "$GITHUB_SHA" --title "Ticino a blocchi: test mod (draft, not a release)" \
             --notes "Test mod of branch $GITHUB_REF_NAME at ${GITHUB_SHA::7} (level ticino, cut from v3.1.1). Not a release."
