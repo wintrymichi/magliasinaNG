@@ -1,0 +1,59 @@
+{
+  "name": "malcantone",
+  "comment": "Phase 1: the released Malcantone level (magliaso_pura) cut into blocks, nothing rebuilt. The grid is the level's own terrain grid: vertex (0, 0) at (origin_x, origin_y), 1.5 m apart.",
+  "source_level": "magliaso_pura",
+  "origin_x": -7230.0,
+  "origin_y": -4731.0,
+  "square": 1.5,
+  "block_samples": 1280,
+  "cell_samples": 256,
+  "window_samples": 2048,
+  "base_samples_per_px": 4,
+  "base_size_unit": "samples",
+  "base_size_unit_comment": "TerrainMaterial *BaseTexSize in heightmap samples, as BeamNG.Earth measured in game (terrain.lua); the Malcantone pipeline wrote metres (12288). To check in phase 0: 'metres' if the colours come out 1.5x too big.",
+  "groups": {
+    "props/street_life": {
+      "radius": 2
+    },
+    "props": {
+      "radius": 2
+    },
+    "roads/markings": {
+      "radius": 3
+    },
+    "roads": {
+      "radius": 5
+    },
+    "walls": {
+      "radius": 5
+    },
+    "railway": {
+      "radius": 5
+    },
+    "level_objects/terrain_skin": {
+      "radius": 5
+    },
+    "level_objects/vegetation/vineyards": {
+      "radius": 4
+    },
+    "level_objects/Water": {
+      "radius": 6
+    },
+    "buildings/details": {
+      "radius": 3
+    },
+    "buildings/extras": {
+      "radius": 3
+    },
+    "buildings": {
+      "radius": 6
+    }
+  },
+  "static_groups": [
+    "level_objects/backdrop",
+    "landmarks"
+  ],
+  "collision_radius": 1,
+  "far_radius": 16,
+  "far_step_samples": 8
+}

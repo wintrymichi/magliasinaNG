@@ -1,0 +1,294 @@
+-- Ticino streaming: the objects of the 384 m tiles (tiles/o_<cx>_<cy>.json, blocks.py) around the car.
+-- An object is in the scene while its tile is within its radius (Chebyshev, in tiles) of the car's tile, and
+-- collides only within cfg.collisionRadius: collision is rebuilt from scratch by every be:reloadCollision
+-- (BeamNG.Earth, docs/research/2026-10-12-engine-limits-and-worldgen.md 1.1), so only the objects next to the car
+-- may collide. An object whose collision changes is made again (a warm shape costs ~0.02-0.07 ms).
+-- The far ground tiles (far/f_<cx>_<cy>.dae) are objects too: shown outside the terrain window, within farRadius.
+
+local M = {}
+
+M.CACHE_TILES = 400
+M.FAR_SHAPE = '/levels/%s/far/f_%d_%d.dae'
+M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
+
+-- keys of an entry that are not engine fields
+local SKIP = { class = true, p = true, q = true, s = true, g = true, r = true, name = true }
+
+local function fieldStr(v)
+  local t = type(v)
+  if t == 'table' then
+    local parts = {}
+    for i, x in ipairs(v) do parts[i] = tostring(x) end
+    return table.concat(parts, ' ')
+  elseif t == 'boolean' then
+    return v and '1' or '0'
+  end
+  return tostring(v)
+end
+M.fieldStr = fieldStr
+
+local S = nil     -- state: cfg, level, group, tiles (cache), live, farLive, queue, stats
+
+function M.init(cfg, level, group)
+  S = { cfg = cfg, level = level, group = group, tiles = {}, tileOrder = {}, live = {}, farLive = {},
+        queue = {}, qpos = 1, colDirty = false, maxR = 0,
+        stats = { created = 0, deleted = 0, failed = 0, tilesRead = 0 } }
+  S.maxR = cfg.maxRadius or 6
+  S.has = cfg.tiles or {}
+  S.farHas = {}
+  for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
+end
+
+local function tile(cx, cy)
+  local key = cx .. '_' .. cy
+  local t = S.tiles[key]
+  if t ~= nil then return t or nil end
+  if not S.has[key] then
+    S.tiles[key] = false
+    return nil
+  end
+  local ok, data = pcall(jsonDecode, readFile(string.format(M.TILE_FILE, S.level, cx, cy)) or '')
+  t = (ok and type(data) == 'table') and data or false
+  S.tiles[key] = t
+  S.tileOrder[#S.tileOrder + 1] = key
+  S.stats.tilesRead = S.stats.tilesRead + 1
+  while #S.tileOrder > M.CACHE_TILES do
+    S.tiles[table.remove(S.tileOrder, 1)] = nil
+  end
+  return t or nil
+end
+
+local function spawn(e, col)
+  local o = createObject(e.class)
+  if not o then return nil end
+  for k, v in pairs(e) do
+    if not SKIP[k] then o:setField(k, 0, fieldStr(v)) end
+  end
+  if e.class == 'TSStatic' then
+    o:setField('collisionType', 0, col and (e.collisionType or 'Visible Mesh Final') or 'None')
+    -- dynamic: an added static object redraws the sun's cached shadow map (BeamNG.Earth farfield.lua)
+    o:setField('dynamic', 0, 'true')
+  end
+  o.canSave = false
+  local p = e.p
+  o:setPosition(vec3(p[1], p[2], p[3]))
+  o:registerObject(e.name or '')
+  if e.q then o:setPosRot(p[1], p[2], p[3], e.q[1], e.q[2], e.q[3], e.q[4]) end
+  if e.s then o:setScale(vec3(e.s[1], e.s[2], e.s[3])) end
+  S.group:addObject(o)
+  return o:getID()
+end
+
+local function delete(id)
+  local o = scenetree.findObjectById(id)
+  if o then o:delete() end
+end
+
+-- Distance (Chebyshev, tiles) of tile (tx, ty) from (cx, cy); nil when there is no centre yet
+local function dist(tx, ty, c)
+  if not c then return math.huge end
+  return math.max(math.abs(tx - c[1]), math.abs(ty - c[2]))
+end
+
+-- the radii an object of the tile can change state at (its r values and the collision radius), sorted
+local function thresholds(t)
+  if t.th then return t.th end
+  local seen, th = { [S.cfg.collisionRadius or 1] = true }, { S.cfg.collisionRadius or 1 }
+  for _, e in ipairs(t) do
+    local r = e.r or 0
+    if not seen[r] then seen[r] = true; th[#th + 1] = r end
+  end
+  table.sort(th)
+  t.th = th
+  return th
+end
+
+-- The car is in tile (cx, cy): queue the changes of every tile whose distance crossed one of its thresholds.
+-- Returns the number of operations queued.
+function M.retarget(cx, cy)
+  local old, new = S.cell, { cx, cy }
+  local colR = S.cfg.collisionRadius or 1
+  local R = S.maxR
+  local dels, cols, adds = {}, {}, {}
+  local seen = {}
+  local function visit(tx, ty)
+    local tk = tx .. '_' .. ty
+    if seen[tk] then return end
+    seen[tk] = true
+    local d0, d1 = dist(tx, ty, old), dist(tx, ty, new)
+    if d0 == d1 or not S.has[tk] then return end
+    local t = tile(tx, ty)
+    if not t then return end
+    local lo, hi = math.min(d0, d1), math.max(d0, d1)
+    local cross = false
+    for _, r in ipairs(thresholds(t)) do
+      if lo <= r and r < hi then cross = true; break end
+    end
+    if not cross then return end
+    for i, e in ipairs(t) do
+      local r = e.r or 0
+      local w0, w1 = d0 <= r, d1 <= r
+      local canCol = e.class == 'TSStatic' and e.collisionType ~= 'None'
+      local c1 = w1 and canCol and d1 <= colR
+      local key = tk .. '#' .. i
+      local l = S.live[key]
+      if not w1 then
+        if l then dels[#dels + 1] = { key, e, tx, ty } end
+      elseif not l then
+        local op = { key, e, tx, ty }
+        if c1 then cols[#cols + 1] = op else adds[#adds + 1] = op end
+      elseif l.col ~= c1 then
+        cols[#cols + 1] = { key, e, tx, ty }
+      end
+    end
+  end
+  for ty = cy - R, cy + R do
+    for tx = cx - R, cx + R do visit(tx, ty) end
+  end
+  if old then
+    for ty = old[2] - R, old[2] + R do
+      for tx = old[1] - R, old[1] + R do visit(tx, ty) end
+    end
+  end
+  -- deletions first, then the colliders, then everything else; what was still queued stays queued after them
+  local q = {}
+  for _, list in ipairs({ dels, cols, adds }) do
+    for _, op in ipairs(list) do q[#q + 1] = op end
+  end
+  for i = S.qpos, #S.queue do q[#q + 1] = S.queue[i] end
+  S.queue, S.qpos = q, 1
+  S.cell = new
+  return #q
+end
+
+-- Work through the queue for at most budgetMs (clock: ms function; nil: all of it). Each entry brings one object
+-- to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing left to do).
+-- Returns true when the queue is empty.
+function M.step(clock, budgetMs)
+  local t0 = clock()
+  local q = S.queue
+  local colR = S.cfg.collisionRadius or 1
+  while S.qpos <= #q do
+    local op = q[S.qpos]
+    S.qpos = S.qpos + 1
+    local key, e = op[1], op[2]
+    local d = dist(op[3], op[4], S.cell)
+    local want = d <= (e.r or 0)
+    local col = want and e.class == 'TSStatic' and e.collisionType ~= 'None' and d <= colR
+    local l = S.live[key]
+    if l and (not want or l.col ~= col) then
+      delete(l.id)
+      if l.col then S.colDirty = true end
+      S.live[key] = nil
+      S.stats.deleted = S.stats.deleted + 1
+      l = nil
+    end
+    if want and not l then
+      local ok, id = pcall(spawn, e, col)
+      if ok and id then
+        S.live[key] = { id = id, col = col }
+        if col then S.colDirty = true end
+        S.stats.created = S.stats.created + 1
+      else
+        S.stats.failed = S.stats.failed + 1
+        if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
+      end
+    end
+    if budgetMs and clock() - t0 > budgetMs then break end
+  end
+  return S.qpos > #q
+end
+
+-- Read (at most n) tile files the next move may need, one ring beyond the largest radius, so that retarget finds them
+-- read. Returns the number read.
+function M.prefetch(n)
+  local c = S.cell
+  if not c then return 0 end
+  local R = S.maxR + 1
+  local done = 0
+  for ty = c[2] - R, c[2] + R do
+    for tx = c[1] - R, c[1] + R do
+      local key = tx .. '_' .. ty
+      if S.has[key] and S.tiles[key] == nil then
+        tile(tx, ty)
+        done = done + 1
+        if done >= n then return done end
+      end
+    end
+  end
+  return done
+end
+
+-- Rebuild collision if a collider came or went; returns ms spent (0 when nothing to do).
+function M.reloadCollisionIfDirty(clock)
+  if not S.colDirty then return 0 end
+  local t0 = clock()
+  be:reloadCollision()
+  S.colDirty = false
+  return clock() - t0
+end
+
+-- Far ground: spawn the tiles within farRadius of (cx, cy) that are not there, delete the ones 2 beyond it,
+-- and hide the ones inside the terrain window (window origin wcx, wcy in tiles, n tiles a side).
+function M.updateFar(cx, cy, wcx, wcy, n)
+  local R = S.cfg.farRadius or 16
+  local made = 0
+  for key, f in pairs(S.farLive) do
+    if math.max(math.abs(f.cx - cx), math.abs(f.cy - cy)) > R + 2 then
+      delete(f.id)
+      S.farLive[key] = nil
+    end
+  end
+  for ty = cy - R, cy + R do
+    for tx = cx - R, cx + R do
+      local key = tx .. '_' .. ty
+      if S.farHas[key] and not S.farLive[key] then
+        local o = createObject('TSStatic')
+        o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
+        o:setField('collisionType', 0, 'None')
+        o:setField('decalType', 0, 'None')
+        o:setField('dynamic', 0, 'true')
+        o.canSave = false
+        local cfg = S.cfg
+        o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
+        o:registerObject('')
+        S.group:addObject(o)
+        S.farLive[key] = { id = o:getID(), cx = tx, cy = ty, hidden = false }
+        made = made + 1
+      end
+    end
+  end
+  for _, f in pairs(S.farLive) do
+    local inside = f.cx >= wcx and f.cx < wcx + n and f.cy >= wcy and f.cy < wcy + n
+    if inside ~= f.hidden then
+      local o = scenetree.findObjectById(f.id)
+      if o then o:setHidden(inside) end
+      f.hidden = inside
+    end
+  end
+  return made
+end
+
+function M.clear()
+  if not S then return end
+  for _, l in pairs(S.live) do delete(l.id) end
+  for _, f in pairs(S.farLive) do delete(f.id) end
+  S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
+end
+
+function M.stats()
+  if not S then return nil end
+  local live, col = 0, 0
+  for _, l in pairs(S.live) do
+    live = live + 1
+    if l.col then col = col + 1 end
+  end
+  local far = 0
+  for _ in pairs(S.farLive) do far = far + 1 end
+  return { live = live, colliders = col, far = far, queued = #S.queue - S.qpos + 1, created = S.stats.created,
+           deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead }
+end
+
+function M.pending() return S and S.qpos <= #S.queue end
+
+return M

@@ -980,3 +980,22 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Untested builds for michi go to the GitHub pre-release "nightly" (`nightly_build.yml`, started by changing
   `beamng/nightly/stamp.txt`), never the latest release; michi tests them on the main PC.
 - Document every error and failed attempt in this file, under its topic (michi, 2026-10-20: "sempre").
+
+## Ticino a blocchi (beamng/ticino, 2026-10-26)
+
+- A second map in the same repo: level `ticino`, its own mod zip, never `levels/magliaso_pura` (michi: "devono convivere
+  le due versioni"). Phase 1 cuts the released v3.1.1 into blocks (blocks.py) instead of building; on the PC all data
+  goes on the 6 TB disk (pc_prepare.sh <disk>).
+- The scene objects kept in the level (backdrop, landmarks) still pointed at /levels/magliaso_pura/ after the first cut:
+  copy_level rewrote the files it copied but write_scene wrote the kept objects as read. Grep the cut level for the old
+  level name after any change to blocks.py.
+- A coroutine keeps the arguments of its FIRST resume: the yield function made in runJob read the first frame's start
+  time forever, so every later call yielded at once and a window took 461 frames (7.7 s) instead of ~17. Read the frame
+  start from a table the caller updates (job.t0).
+- Writing the 12 MB window .ter in one f:write took ~40 ms (one frame): write it row by row with yields (writeParts).
+  The PNG writer also never joins its 800 kB IDAT (CRC computed over the parts).
+- `blocks.py --no-far` first deleted the far/ folder with the other outputs (a quick rerun lost the far tiles).
+- Unknown until the game test: the terrain materials' *BaseTexSize unit. The pipeline writes metres (12288 = 8192 x 1.5),
+  BeamNG.Earth measured samples in game; the window's maps assume samples (zone `base_size_unit`).
+- BeamNG.Earth (github.com/TecnaGamer/BeamNG.Earth, MIT, cloned fine from the cloud) has in-game measurements of every
+  engine limit the streaming needs (docs/research/2026-10-12-engine-limits-and-worldgen.md): read it before guessing.
