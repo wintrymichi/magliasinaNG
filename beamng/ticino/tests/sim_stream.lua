@@ -73,6 +73,14 @@ function Obj:getID() return self.id end
 function Obj:delete() objs[self.id] = nil; counts.deleted = counts.deleted + 1 end
 function Obj:setHidden(h) self.hidden = h end
 function Obj:addObject() end
+function Obj:setRenderEnabled(v) self.render = v end
+function Obj:createMesh(meshes)
+  local m = meshes[1][1]
+  assert(#m.faces % 3 == 0 and #m.faces > 0, 'empty mesh')
+  for _, f in ipairs(m.faces) do assert(m.verts[f.v + 1], 'face index out of range') end
+  counts.colTris = (counts.colTris or 0) + #m.faces / 3
+  self.mesh = m
+end
 function Obj:postApply() counts.swaps = counts.swaps + 1 end
 function createObject(cls) local o = setmetatable({ id = nextId, cls = cls, f = {} }, Obj); objs[nextId] = o; nextId = nextId + 1; counts.made = counts.made + 1; return o end
 local tb = createObject('TerrainBlock')
@@ -107,13 +115,15 @@ while t < seconds do
   local ms = (os.clock() - c0) * 1000
   frames = frames + 1
   if frames > 3 then worstLua = math.max(worstLua, ms) end
-  if os.getenv("PROF") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
+  if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
   if not paused then car.x, car.y = car.x + dir[1] * v * dt, car.y + dir[2] * v * dt; t = t + dt end
 end
 local s = stream.status()
+if os.getenv("SLOW") then print(string.format("car at %.0f, %.0f", car.x, car.y)) end
 local live = 0
 for _ in pairs(objs) do live = live + 1 end
 print(string.format('drove %.1f km in %.0f s: %d window swaps, %d collision rebuilds, objects made %d deleted %d, in scene %d (%d colliders, %d far)',
   v * seconds / 1000, seconds, counts.swaps, counts.reload, counts.made, counts.deleted, live, s.objects.colliders, s.objects.far))
+print(string.format('collision pieces made: %d triangles, cells live %d', counts.colTris or 0, s.objects.colCells or -1))
 print(string.format('worst Lua frame after the start %.1f ms (luajit CPU; budget %d + %d ms); window now at tile (%d, %d), car tile (%d, %d)',
   worstLua, stream.BUDGET_MS, stream.OBJ_BUDGET_MS, s.window[1] / 256, s.window[2] / 256, s.cell[1], s.cell[2]))

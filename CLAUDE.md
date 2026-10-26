@@ -1025,3 +1025,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   railway stay exact; only the skin (to 7 %), houses, walls and props are simplified. A sim run whose clock is CPU
   time (tests/sim_stream.lua) never let a "150 ms after the swap" wait expire: count such waits in dtReal.
   Collision .cdae with real normals and tangents were 1.1 GB (563 MB zipped); with constant normals 228 MB zipped.
+- Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
+  is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
+  ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
+  triangles by their centre, so a piece reaches up to ~70 m outside its cell (long road triangles): a range check of
+  a cell file must allow that (XY_OFF_CM). Not known until the game test: whether setRenderEnabled exists on
+  ProceduralMesh in 0.40 (pcall; the materials are alpha 0 anyway) and whether the winding (clockwise) lets the car
+  stand on it.

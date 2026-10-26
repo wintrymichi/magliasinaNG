@@ -5,16 +5,18 @@
 -- may collide. An object whose collision changes is made again (a warm shape costs ~0.02-0.07 ms).
 -- The far ground tiles (far/f_<cx>_<cy>.cdae) are objects too: shown outside the terrain window, within farRadius.
 -- The level's own shapes do not collide with their drawn meshes: their collision is in collision cells of cfg.colCell
--- m (col/c_<i>_<j>.cdae, collision.py: welded, the terrain skin and houses simplified), and only the cells within
--- cfg.colRadius of the car's cell collide (a rebuild costs ~3 us per unique triangle: 1.12 M in the 3 x 3 tiles of
--- 384 m were 3.4 s of frozen physics at every tile, in-game test 2026-10-26).
+-- m (col/c_<i>_<j>.bin, collision.py: welded, the terrain skin and houses simplified, one piece per ground type),
+-- made as ProceduralMesh pieces that are not drawn, only within cfg.colRadius of the car's cell (our TSStatic shapes
+-- cost ~3 us per unique triangle in a rebuild: 1.12 M in the 3 x 3 tiles of 384 m were 3.4 s of frozen physics at
+-- every tile, in-game test 2026-10-26; EarthNG measured a ProceduralMesh at 0.27 us).
 
 local M = {}
 
 M.CACHE_TILES = 400
 M.FAR_SHAPE = '/levels/%s/far/f_%d_%d.cdae'
 M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
-M.COL_SHAPE = '/levels/%s/col/c_%d_%d.cdae'
+M.COL_FILE = '/levels/%s/col/c_%d_%d.bin'
+M.COL_XY_OFF_CM = 16384     -- collision.XY_OFF_CM
 M.COL_HYST_M = 16          -- the car's collision cell changes only this far past its edge
 
 -- keys of an entry that are not engine fields
@@ -45,7 +47,8 @@ function M.init(cfg, level, group)
   S.has = cfg.tiles or {}
   S.farHas = {}
   for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
-  S.col = { size = cfg.colCell, R = cfg.colRadius or 1, has = {}, live = {}, cell = nil }
+  S.col = { size = cfg.colCell, R = cfg.colRadius or 1, has = {}, live = {}, cell = nil, queue = {},
+            types = cfg.colGroundTypes or {} }
   for _, k in ipairs(cfg.colCells or {}) do S.col.has[k] = true end
 end
 
@@ -243,8 +246,8 @@ function M.reloadCollisionIfDirty(clock)
   return clock() - t0
 end
 
--- Collision cells: the car at (x, y); makes and deletes the cells within colRadius of its cell (with COL_HYST_M of
--- hysteresis). Returns true when the set changed (colDirty is set: the caller rebuilds collision when it may).
+-- Collision cells: the car at (x, y). Deletes the cells beyond colRadius of its cell (with COL_HYST_M of hysteresis)
+-- and queues the missing ones for stepCols. Returns true when the set changed.
 function M.updateCols(x, y, force)
   local C = S.col
   if not C.size then return false end
@@ -269,30 +272,123 @@ function M.updateCols(x, y, force)
     end
   end
   local changed = false
-  for k, id in pairs(C.live) do
+  for k, ids in pairs(C.live) do
     if not want[k] then
-      delete(id)
+      for _, id in ipairs(ids) do delete(id) end
       C.live[k] = nil
       changed = true
     end
   end
+  -- the queue: the wanted cells not made yet, the car's own cell first; a cell half made stays where it is
+  local q = {}
+  if C.job and want[C.job.key] then q[1] = C.job.key else C.job = nil end
+  local order = {}
   for k, ab in pairs(want) do
-    if not C.live[k] then
-      local o = createObject('TSStatic')
-      o:setField('shapeName', 0, string.format(M.COL_SHAPE, S.level, ab[1], ab[2]))
-      o:setField('collisionType', 0, 'Collision Mesh')
-      o:setField('decalType', 0, 'None')
-      o:setField('dynamic', 0, 'true')
-      o.canSave = false
-      o:setPosition(vec3(cfg.origin[1] + ab[1] * C.size, cfg.origin[2] + ab[2] * C.size, 0))
-      o:registerObject('')
-      S.group:addObject(o)
-      C.live[k] = o:getID()
-      changed = true
+    if not C.live[k] and not (C.job and C.job.key == k) then
+      order[#order + 1] = { k, math.max(math.abs(ab[1] - i), math.abs(ab[2] - j)) }
     end
   end
+  table.sort(order, function(a, b) return a[2] < b[2] end)
+  for _, o in ipairs(order) do q[#q + 1] = o[1] end
+  C.queue, C.want = q, want
+  if #order > 0 then changed = true end
   if changed then S.colDirty = true end
   return changed
+end
+
+-- One collision piece of a cell file (collision.py: TCC1) as a ProceduralMesh, not drawn
+local hasFfi, ffi = pcall(require, 'ffi')
+local function colPiece(C, job)
+  local s, i = job.data, job.pos
+  local gt, nv, nt = s:byte(i), s:byte(i + 1) + 256 * s:byte(i + 2), s:byte(i + 3) + 256 * s:byte(i + 4)
+  i = i + 5
+  local off, verts, fv, faces = M.COL_XY_OFF_CM, {}, {}, {}
+  if hasFfi then
+    -- the u16 numbers read straight from the string (little endian, as on every PC the game runs on)
+    local u = ffi.cast('const uint16_t *', ffi.cast('const char *', s) + (i - 1))
+    for k = 0, nv - 1 do
+      verts[k + 1] = { x = (u[3 * k] - off) * 0.01, y = (u[3 * k + 1] - off) * 0.01, z = u[3 * k + 2] * 0.01 }
+      fv[k + 1] = { v = k, n = 0, u = 0 }
+    end
+    local w = u + 3 * nv
+    for k = 0, nt * 3 - 1 do faces[k + 1] = fv[w[k] + 1] end
+    i = i + 6 * nv + 6 * nt
+  else
+    for k = 1, nv do
+      local a, b, c2, d, e, f = s:byte(i, i + 5)
+      verts[k] = { x = (a + 256 * b - off) * 0.01, y = (c2 + 256 * d - off) * 0.01, z = (e + 256 * f) * 0.01 }
+      fv[k] = { v = k - 1, n = 0, u = 0 }
+      i = i + 6
+    end
+    for k = 1, nt * 3 do
+      local a, b = s:byte(i, i + 1)
+      faces[k] = fv[a + 256 * b + 1]
+      i = i + 2
+    end
+  end
+  job.pos = i
+  local o = createObject('ProceduralMesh')
+  if not o then return nil end
+  job.n = job.n + 1
+  o:registerObject('tc_col_' .. job.key .. '_' .. job.n)
+  o.canSave = false
+  S.group:addObject(o.obj or o)
+  o:createMesh({ { { verts = verts, normals = { { x = 0, y = 0, z = 1 } }, uvs = { { u = 0, v = 0 } }, faces = faces,
+                     material = 'tc_col_' .. string.lower(C.types[gt + 1] or 'default') } } })
+  o:setPosition(vec3(job.x0, job.y0, job.z0))
+  -- not drawn: collision only (EarthNG: setRenderEnabled(false) keeps the collision, setHidden drops it)
+  if not pcall(function() o:setRenderEnabled(false) end) then C.noRenderOff = true end
+  C.tris = (C.tris or 0) + nt
+  return o:getID()
+end
+
+-- Make queued collision cells for at most budgetMs (nil: all); one ProceduralMesh piece at a time. A finished cell
+-- marks the collision dirty. Returns true when nothing is queued any more.
+function M.stepCols(clock, budgetMs)
+  local C = S.col
+  local t0 = clock()
+  while true do
+    local job = C.job
+    if not job then
+      local k = table.remove(C.queue or {}, 1)
+      if not k then return true end
+      local ab = C.want and C.want[k]
+      local data = ab and readFile(string.format(M.COL_FILE, S.level, ab[1], ab[2]))
+      if data and data:sub(1, 4) == 'TCC1' then
+        local b1, b2, b3, b4 = data:byte(5, 8)
+        local z0 = b1 + 256 * b2 + 65536 * b3 + 16777216 * b4
+        if z0 >= 2147483648 then z0 = z0 - 4294967296 end
+        local cfg = S.cfg
+        job = { key = k, data = data, pos = 11, left = data:byte(9) + 256 * data:byte(10), n = 0, ids = {},
+                x0 = cfg.origin[1] + ab[1] * C.size, y0 = cfg.origin[2] + ab[2] * C.size, z0 = z0 * 0.01 }
+        C.job = job
+      elseif ab then
+        log('W', 'ticino', 'collision cell not readable: ' .. k)
+      end
+    end
+    if job then
+      if job.left > 0 then
+        local ok, id = pcall(colPiece, C, job)
+        job.left = job.left - 1
+        if ok and id then job.ids[#job.ids + 1] = id
+        else
+          C.failed = (C.failed or 0) + 1
+          if C.failed <= 10 then log('W', 'ticino', 'collision piece not made: ' .. job.key .. ' ' .. tostring(id)) end
+        end
+      end
+      if job.left <= 0 then
+        C.live[job.key] = job.ids
+        C.job = nil
+        S.colDirty = true
+      end
+    end
+    if budgetMs and clock() - t0 > budgetMs then return C.job == nil and #(C.queue or {}) == 0 end
+  end
+end
+
+function M.colsPending()
+  local C = S and S.col
+  return C and (C.job ~= nil or #(C.queue or {}) > 0) or false
 end
 
 -- Collision cells round the car: radius in cells (-1: none), for tests.
@@ -397,8 +493,9 @@ function M.clear()
   if not S then return end
   for _, l in pairs(S.live) do delete(l.id) end
   for _, f in pairs(S.farLive) do delete(f.id) end
-  for _, id in pairs(S.col.live) do delete(id) end
-  S.col.live, S.col.cell = {}, nil
+  for _, ids in pairs(S.col.live) do for _, id in ipairs(ids) do delete(id) end end
+  if S.col.job then for _, id in ipairs(S.col.job.ids) do delete(id) end end
+  S.col.live, S.col.cell, S.col.job, S.col.queue = {}, nil, nil, {}
   S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
   S.farQueue, S.farPos = {}, 1
 end

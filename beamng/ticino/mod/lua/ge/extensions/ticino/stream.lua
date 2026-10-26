@@ -31,6 +31,7 @@ M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
+M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
@@ -229,6 +230,7 @@ local function jump(x, y)
   objects.retarget(cx, cy)
   objects.step(clock, nil)
   objects.updateCols(x, y, true)
+  objects.stepCols(clock, nil)
   -- the collision rebuild waits for the swapped terrain (SWAP_QUIET_FRAMES), the game stays paused till after it
   st.jumpReload = true
   st.resumeIn = M.SWAP_QUIET_FRAMES + 2
@@ -371,9 +373,14 @@ local function onUpdate(dtReal)
     objects.updateFar(cx, cy, wcx, wcy, n)
     return            -- the window work waits for the next frame
   end
-  -- the collision rebuild first, as soon as the colliders of the queue (it starts with them) are made and no terrain
-  -- swap is too recent: the window's files and the drawn objects wait a frame
-  if objects.colDirty() and not objects.collidersPending() and tryReload(st.objRec) then
+  -- the collision cells round the car (ProceduralMesh pieces, a few ms a frame)
+  if objects.colsPending() then
+    objects.stepCols(clock, M.COL_BUDGET_MS)
+    if objects.colsPending() then return end
+  end
+  -- the collision rebuild first, as soon as the cells and the colliders of the queue (it starts with them) are made
+  -- and no terrain swap is too recent: the window's files and the drawn objects wait a frame
+  if objects.colDirty() and not objects.colsPending() and not objects.collidersPending() and tryReload(st.objRec) then
     st.objRec = nil
     return
   end

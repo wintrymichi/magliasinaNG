@@ -277,7 +277,7 @@ def is_static(zone, rel):
 def stream_objects(zone, scene, level_dir, src_level, out_dir, col_dir=None, workers=4):
     """Splits the scene: streamed objects go into tiles/<cx>_<cy>.json, the others stay. col_dir: the level's own
     shapes collide through the collision cells written there (collision.py). Returns the scene without them,
-    {tile key: object count} and (cell keys, stats) of the collision cells (None without col_dir)."""
+    {tile key: object count} and (cell keys, ground types, stats) of the collision cells (None without col_dir)."""
     os.makedirs(out_dir, exist_ok=True)
     tiles, kept, cache = {}, {}, {}
     prefix = f"/levels/{src_level}/"
@@ -523,6 +523,11 @@ def collision_cell_m():
     return collision.CELL_M
 
 
+def collision_piece_tris():
+    import collision
+    return collision.PIECE_TRIS
+
+
 # ------------------------------------------------------------------ main
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -565,7 +570,7 @@ def main():
                                         None if a.no_collision_cells else os.path.join(dst, "col"), a.workers)
     if cells:
         with wopen(os.path.join(dst, "col", "stats.json")) as f:
-            json.dump(cells[1], f, indent=1)
+            json.dump(cells[2], f, indent=1)
     far_dir = os.path.join(dst, "far")
     far = sorted(os.path.splitext(f)[0][2:] for f in os.listdir(far_dir) if f.startswith("f_")) if a.no_far and os.path.isdir(far_dir) \
         else [] if a.no_far else write_far(zone, H, L, z0, maxh, materials, src, src_mats, src_level,
@@ -610,6 +615,7 @@ def main():
         "collisionRadius": int(zone.cfg.get("collision_radius", 1)),
         # the collision cells (collision.py): cell size in m, the cells that exist, how many round the car's collide
         "colCell": collision_cell_m() if cells else None, "colCells": cells[0] if cells else [],
+        "colGroundTypes": cells[1] if cells else [], "colPieceTris": collision_piece_tris(),
         "colRadius": int(zone.cfg.get("col_radius", 1)),
         "maxRadius": max(int(v["radius"]) for v in zone.cfg["groups"].values()),
         "start": [wx, wy],
