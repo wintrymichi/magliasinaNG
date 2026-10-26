@@ -16,11 +16,8 @@ local worst = 0
 local PLAN = {
   start_wait = 60,              -- textures of the first view
   fps_cap = 30,                 -- michi: 30 fps in tests that do not measure FPS (a hitch shows at any cap)
-  drive_minutes = 4,            -- the AI drives the player's car through the traffic network, per variant
-  variants = {                  -- collision settings of the streaming (level ticino only), one drive each
-    {name = 'all_collide', radius = 1, off = {}},
-    {name = 'skin_no_collision', radius = 1, off = {'level_objects/terrain_skin'}},
-  },
+  drive_minutes = 14,           -- the AI (or the scripted route, ticino_test_route.json) drives the player's car
+  variants = {{name = 'cells'}},  -- one drive with the collision cells round the car
   jumps = {                     -- teleports far away: the streaming pauses and builds the window at once
     {name = 'nord', at = {2290, 5649}},
     {name = 'ovest', at = {-3921, 2303}},
@@ -95,6 +92,38 @@ local function aiDrive(on, mode)
   end
 end
 
+local function mapNodes()
+  local ok, m = pcall(function() return map.getMap() end)
+  local n = 0
+  if ok and m and m.nodes then for _ in pairs(m.nodes) do n = n + 1 end end
+  return n
+end
+
+-- the route of make_route.py for scriptai (no AI road graph needed): points {x, y, z, t}
+local route = nil
+local function loadRoute()
+  local s = readFile('ticino_test_route.json')
+  local ok, r = pcall(jsonDecode, s or '')
+  if ok and r and r.points and #r.points > 1 then route = r.points end
+  return route and #route or 0
+end
+
+local function followRoute()
+  local veh = player()
+  if not veh or not route then return false end
+  local p = route[1]
+  local q = route[2]
+  local d = vec3(q.x - p.x, q.y - p.y, 0):normalized()
+  local rot = quatFromDir(-d, vec3(0, 0, 1))
+  veh:setPositionRotation(p.x, p.y, p.z + 0.5, rot.x, rot.y, rot.z, rot.w)
+  local parts = {}
+  for i, r in ipairs(route) do
+    parts[i] = string.format('{x=%.2f,y=%.2f,z=%.2f,t=%.2f}', r.x, r.y, r.z, r.t + 3)
+  end
+  veh:queueLuaCommand('ai.startFollowing({path={' .. table.concat(parts, ',') .. '}})')
+  return true
+end
+
 local function sample(t)
   local veh = player()
   if not veh then return end
@@ -137,28 +166,38 @@ local function run()
     res.shots[#res.shots + 1] = {name = 'spawn', method = shoot('spawn')}
     save()
 
-    -- collision rebuild standing still: all, skin off, all again (warm), skin off again; ticino_perf.csv has each
-    if ticino_stream and ticino_stream.setCollision then
-      for k, off in ipairs({{}, {'level_objects/terrain_skin'}, {}, {'level_objects/terrain_skin'}}) do
-        local q = ticino_stream.setCollision(1, off)
-        note(string.format('reload test %d (%s) at %s: %s objects requeued', k, #off > 0 and 'skin off' or 'all',
-          os.date('%H:%M:%S'), tostring(q)))
+    -- the AI road graph: built by the game from the AI roads at the level's load; rebuilt once to see whether it
+    -- comes after the streaming's first window
+    local n0 = mapNodes()
+    pcall(function() map.reset() end)
+    job.sleep(3)
+    note(string.format('AI map nodes: %d at the start, %d after map.reset()', n0, mapNodes()))
+    note('route points: ' .. loadRoute())
+
+    -- collision rebuild standing still: no cells, the 3 x 3 cells, none, again; ticino_perf.csv has each
+    if ticino_stream and ticino_stream.setColRadius then
+      for k, r in ipairs({-1, 1, -1, 1}) do
+        local q = ticino_stream.setColRadius(r)
+        note(string.format('reload test %d (cells radius %d) at %s: %s', k, r, os.date('%H:%M:%S'), tostring(q)))
         job.sleep(12)
       end
     end
 
     -- the drives: the AI takes the car through the network, one sample a second, once per collision variant
     frameLog = true
-    local variants = (ticino_stream and ticino_stream.setCollision) and PLAN.variants or {{name = 'level'}}
+    local variants = PLAN.variants
     local t = 0
     for _, v in ipairs(variants) do
-      if v.radius then
-        local q = ticino_stream.setCollision(v.radius, v.off)
-        note(string.format('variant %s from %s (os %s): %s objects requeued', v.name, os.date('%H:%M:%S'), os.clock(), tostring(q)))
+      local scripted = mapNodes() < 100 and route ~= nil
+      res.drive[#res.drive + 1] = {variant = v.name, time = os.date('%H:%M:%S'), scripted = scripted}
+      if scripted then
+        note('no AI road graph: the car follows the scripted route')
+        followRoute()
+        job.sleep(10)
+      else
+        job.sleep(10)
+        aiDrive(true)
       end
-      res.drive[#res.drive + 1] = {variant = v.name, time = os.date('%H:%M:%S')}
-      job.sleep(10)
-      aiDrive(true)
       local still, modes, m = 0, {'span', 'random', 'span'}, 1
       for i = 1, PLAN.drive_minutes * 60 do
         job.sleep(1)
@@ -167,6 +206,7 @@ local function run()
         -- a stuck AI: give it the next mode, then put the car on the road 30 m on
         local last = res.drive[#res.drive]
         still = (last and last.v and last.v < 1) and still + 1 or 0
+        if scripted then still = 0 end
         if still == 15 then
           m = m % #modes + 1
           note('AI stuck at ' .. t .. ' s: mode ' .. modes[m])

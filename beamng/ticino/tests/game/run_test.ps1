@@ -1,7 +1,8 @@
 # One run of the Ticino phase 0 in-game test on Windows (autotest.lua): installs the test extension, starts the game
 # into a level with it, samples the game's memory every 2 s, waits until the test is done (the extension quits the
 # game), copies what it wrote to -Out and removes the test extension again. Run it once with -Level ticino (the test
-# mod ticino_test.zip in mods\) and once with -Level magliaso_pura (v3.1.1, for the comparison).
+# mod ticino_test.zip in mods\) and once with -Level magliaso_pura (v3.1.1, for the comparison). route.json
+# (make_route.py) is the drive when the level has no AI road graph.
 #   powershell -ExecutionPolicy Bypass -File run_test.ps1 -Level ticino -Out E:\ticino\results\ticino
 param([Parameter(Mandatory = $true)][string]$Level, [Parameter(Mandatory = $true)][string]$Out,
       [int]$TimeoutMin = 40,
@@ -15,6 +16,8 @@ $extDir = Join-Path $User "lua\ge\extensions\ticino"
 New-Item -ItemType Directory -Force $extDir | Out-Null
 $extFile = Join-Path $extDir "autotest.lua"
 Copy-Item (Join-Path $here "autotest.lua") $extFile -Force
+$routeFile = Join-Path $User "ticino_test_route.json"
+Copy-Item (Join-Path $here "route.json") $routeFile -Force
 $work = Join-Path $User "ticino_test"
 if (Test-Path $work) { Remove-Item $work -Recurse -Force -Confirm:$false }
 $perf = Join-Path $User "ticino_perf.csv"
@@ -46,6 +49,7 @@ try {
 } finally {
     if (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue) { Stop-Process -Id $proc.Id -Force -Confirm:$false; Start-Sleep 5 }
     Remove-Item $extFile -Force -Confirm:$false -ErrorAction SilentlyContinue
+    Remove-Item $routeFile -Force -Confirm:$false -ErrorAction SilentlyContinue
 }
 "run took {0:N0} s" -f ((Get-Date) - $t0).TotalSeconds | Set-Content (Join-Path $Out "run.txt")
 if (Test-Path $work) { Copy-Item (Join-Path $work "*") $Out -Recurse -Force; Remove-Item $work -Recurse -Force -Confirm:$false }
