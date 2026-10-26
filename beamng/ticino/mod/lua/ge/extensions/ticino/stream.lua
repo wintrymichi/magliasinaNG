@@ -30,6 +30,7 @@ local M = {}
 M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
+M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.TEMP = '/temp/ticino/'
 M.PERF_FILE = '/ticino_perf.csv'
 M.TERRAIN_NAME = 'theTerrain'
@@ -98,7 +99,7 @@ end
 local function perfLine(t)
   st.perf[#st.perf + 1] = t
   local cols = { 'time', 'kind', 'wx', 'wy', 'buildMs', 'buildFrames', 'applyMs', 'grassMs', 'farMs', 'worstFrameMs',
-                 'objsQueued', 'reloadMs', 'live', 'colliders' }
+                 'objsQueued', 'reloadMs', 'live', 'colliders', 'afterReloadWorstMs', 'afterReloadSlowFrames' }
   local lines = { table.concat(cols, ',') }
   for _, r in ipairs(st.perf) do
     local v = {}
@@ -275,6 +276,18 @@ local function onUpdate(dtReal)
     end
     return
   end
+  if st.rwatch then
+    local w = st.rwatch
+    local ms = (dtReal or 0) * 1000
+    w.worst = math.max(w.worst, ms)
+    if ms > 100 then w.slow = w.slow + 1 end
+    w.frames = w.frames - 1
+    if w.frames <= 0 then
+      w.rec.afterReloadWorstMs, w.rec.afterReloadSlowFrames = w.worst, w.slow
+      perfLine(w.rec)
+      st.rwatch = nil
+    end
+  end
   if st.watch then
     local w = st.watch
     w.worst = math.max(w.worst, (dtReal or 0) * 1000)
@@ -323,19 +336,22 @@ local function onUpdate(dtReal)
     return            -- the objects wait for a frame without window work
   end
   -- the objects
-  if not objects.pending() then
+  if not objects.pending() and not objects.farPending() then
     objects.prefetch(1)
-  else
+  elseif objects.pending() then
     if objects.step(clock, M.OBJ_BUDGET_MS) then
       local ms = objects.reloadCollisionIfDirty(clock)
       if st.objRec then
         st.objRec.reloadMs = ms
         local s = objects.stats()
         st.objRec.live, st.objRec.colliders = s.live, s.colliders
-        perfLine(st.objRec)
+        if ms > 0 then st.rwatch = { frames = 90, worst = 0, slow = 0, rec = st.objRec }
+        else perfLine(st.objRec) end
         st.objRec = nil
       end
     end
+  elseif objects.farPending() then
+    objects.stepFar(clock, M.FAR_BUDGET_MS)
   end
 end
 
@@ -354,6 +370,14 @@ function M.status()
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
            objects = s, last = st.perf[#st.perf], tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+end
+
+-- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).
+function M.setCollision(radius, groupsOff)
+  if not st then return 'off' end
+  local q = objects.setCollision(radius, groupsOff)
+  st.objRec = { time = os.date('%H:%M:%S'), kind = 'collision', objsQueued = q }
+  return q
 end
 
 function M.setFocus(x, y)

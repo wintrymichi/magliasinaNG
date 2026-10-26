@@ -16,7 +16,11 @@ local worst = 0
 local PLAN = {
   start_wait = 60,              -- textures of the first view
   fps_cap = 30,                 -- michi: 30 fps in tests that do not measure FPS (a hitch shows at any cap)
-  drive_minutes = 10,           -- the AI drives the player's car through the traffic network
+  drive_minutes = 4,            -- the AI drives the player's car through the traffic network, per variant
+  variants = {                  -- collision settings of the streaming (level ticino only), one drive each
+    {name = 'all_collide', radius = 1, off = {}},
+    {name = 'skin_no_collision', radius = 1, off = {'level_objects/terrain_skin'}},
+  },
   jumps = {                     -- teleports far away: the streaming pauses and builds the window at once
     {name = 'nord', at = {2290, 5649}},
     {name = 'ovest', at = {-3921, 2303}},
@@ -132,18 +136,29 @@ local function run()
     res.shots[#res.shots + 1] = {name = 'spawn', method = shoot('spawn')}
     save()
 
-    -- the drive: the AI takes the car through the network, one sample a second
+    -- the drives: the AI takes the car through the network, one sample a second, once per collision variant
     frameLog = true
-    aiDrive(true)
-    for t = 1, PLAN.drive_minutes * 60 do
-      job.sleep(1)
-      sample(t)
-      if t % 30 == 0 then save() end
-      if t % 120 == 0 then res.shots[#res.shots + 1] = {name = 'drive_' .. t, method = shoot('drive_' .. t)} end
+    local variants = (ticino_stream and ticino_stream.setCollision) and PLAN.variants or {{name = 'level'}}
+    local t = 0
+    for _, v in ipairs(variants) do
+      if v.radius then
+        local q = ticino_stream.setCollision(v.radius, v.off)
+        note(string.format('variant %s from %s (os %s): %s objects requeued', v.name, os.date('%H:%M:%S'), os.clock(), tostring(q)))
+      end
+      res.drive[#res.drive + 1] = {variant = v.name, time = os.date('%H:%M:%S')}
+      job.sleep(10)
+      aiDrive(true)
+      for i = 1, PLAN.drive_minutes * 60 do
+        job.sleep(1)
+        t = t + 1
+        sample(t)
+        if i % 30 == 0 then save() end
+        if i % 120 == 0 then res.shots[#res.shots + 1] = {name = v.name .. '_' .. i, method = shoot(v.name .. '_' .. i)} end
+      end
+      aiDrive(false)
+      note('drive ' .. v.name .. ' done')
+      save()
     end
-    aiDrive(false)
-    note('drive done')
-    save()
 
     -- the jumps
     for _, j in ipairs(PLAN.jumps) do

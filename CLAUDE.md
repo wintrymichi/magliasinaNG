@@ -1005,3 +1005,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - michi tests the Ticino mod on the Windows PC DESKTOP-OUPOLOA (2026-10-26, "questo qua è un pc windows usa questo"),
   not on the Linux PC: no Python there, so ticino_test.yml cuts and packs on GitHub (draft release ticino-test) and
   tests/game/run_test.ps1 runs the test (autotest.lua, as the v3.0.40 runner did).
+- First in-game look (2026-10-26, DESKTOP-OUPOLOA, 0.40.3): level ticino loads in 9 s, no missing material, streaming
+  runs. Hitches: every tile change ended in be:reloadCollision and the physics rebuilt ALL static collision ("Loaded
+  Static Collision" 0.3-1.5 s, 7.4 M triangles) once per 384 m; the window swap itself is 0.16-0.2 s. The first jump
+  made all ~1,000 far tiles at once (7.8 s: the game converts every new DAE). Now far tiles come a few a frame, a
+  deleted collider no longer forces a rebuild, and ticino_stream.setCollision(radius, groupsOff) switches groups (the
+  skin is 26 of the 46 M collidable triangles) for measuring. michi drove east past Agno, out of the built zone (the
+  airport runway is bare terrain there in v3.1.1 too): "no objects" at the zone edge is not a streaming bug.

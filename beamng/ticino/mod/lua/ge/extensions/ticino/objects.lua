@@ -34,6 +34,8 @@ function M.init(cfg, level, group)
         queue = {}, qpos = 1, colDirty = false, maxR = 0,
         stats = { created = 0, deleted = 0, failed = 0, tilesRead = 0 } }
   S.maxR = cfg.maxRadius or 6
+  S.noCol = {}                      -- groups that never collide (setCollision)
+  S.farQueue, S.farPos = {}, 1
   S.has = cfg.tiles or {}
   S.farHas = {}
   for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
@@ -84,6 +86,11 @@ local function delete(id)
   if o then o:delete() end
 end
 
+-- Can this entry collide at all (its own collisionType, the groups switched off by setCollision)?
+local function canCollide(e)
+  return e.class == 'TSStatic' and e.collisionType ~= 'None' and not S.noCol[e.g or '']
+end
+
 -- Distance (Chebyshev, tiles) of tile (tx, ty) from (cx, cy); nil when there is no centre yet
 local function dist(tx, ty, c)
   if not c then return math.huge end
@@ -128,8 +135,7 @@ function M.retarget(cx, cy)
     for i, e in ipairs(t) do
       local r = e.r or 0
       local w0, w1 = d0 <= r, d1 <= r
-      local canCol = e.class == 'TSStatic' and e.collisionType ~= 'None'
-      local c1 = w1 and canCol and d1 <= colR
+      local c1 = w1 and canCollide(e) and d1 <= colR
       local key = tk .. '#' .. i
       local l = S.live[key]
       if not w1 then
@@ -174,11 +180,10 @@ function M.step(clock, budgetMs)
     local key, e = op[1], op[2]
     local d = dist(op[3], op[4], S.cell)
     local want = d <= (e.r or 0)
-    local col = want and e.class == 'TSStatic' and e.collisionType ~= 'None' and d <= colR
+    local col = want and canCollide(e) and d <= colR
     local l = S.live[key]
     if l and (not want or l.col ~= col) then
       delete(l.id)
-      if l.col then S.colDirty = true end
       S.live[key] = nil
       S.stats.deleted = S.stats.deleted + 1
       l = nil
@@ -232,41 +237,86 @@ end
 -- and hide the ones inside the terrain window (window origin wcx, wcy in tiles, n tiles a side).
 function M.updateFar(cx, cy, wcx, wcy, n)
   local R = S.cfg.farRadius or 16
-  local made = 0
+  local deleted = 0
   for key, f in pairs(S.farLive) do
     if math.max(math.abs(f.cx - cx), math.abs(f.cy - cy)) > R + 2 then
       delete(f.id)
       S.farLive[key] = nil
+      deleted = deleted + 1
     end
   end
+  -- the missing tiles, nearest first; made a few a frame by stepFar (a first-time far shape is converted by the game:
+  -- making all 1,000 at once took 7.8 s at the first jump)
+  local want = {}
   for ty = cy - R, cy + R do
     for tx = cx - R, cx + R do
       local key = tx .. '_' .. ty
       if S.farHas[key] and not S.farLive[key] then
-        local o = createObject('TSStatic')
-        o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
-        o:setField('collisionType', 0, 'None')
-        o:setField('decalType', 0, 'None')
-        o:setField('dynamic', 0, 'true')
-        o.canSave = false
-        local cfg = S.cfg
-        o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
-        o:registerObject('')
-        S.group:addObject(o)
-        S.farLive[key] = { id = o:getID(), cx = tx, cy = ty, hidden = false }
-        made = made + 1
+        want[#want + 1] = { key, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) }
       end
     end
   end
-  for _, f in pairs(S.farLive) do
-    local inside = f.cx >= wcx and f.cx < wcx + n and f.cy >= wcy and f.cy < wcy + n
-    if inside ~= f.hidden then
-      local o = scenetree.findObjectById(f.id)
-      if o then o:setHidden(inside) end
-      f.hidden = inside
+  table.sort(want, function(a, b) return a[4] < b[4] end)
+  S.farQueue, S.farPos = want, 1
+  S.farWin = { wcx, wcy, n }
+  for _, f in pairs(S.farLive) do M._farHide(f) end
+  return deleted
+end
+
+function M._farHide(f)
+  local w = S.farWin
+  if not w then return end
+  local inside = f.cx >= w[1] and f.cx < w[1] + w[3] and f.cy >= w[2] and f.cy < w[2] + w[3]
+  if inside ~= f.hidden then
+    local o = scenetree.findObjectById(f.id)
+    if o then o:setHidden(inside) end
+    f.hidden = inside
+  end
+end
+
+-- Make queued far tiles for at most budgetMs; returns the number made.
+function M.stepFar(clock, budgetMs)
+  local t0, made = clock(), 0
+  local q = S.farQueue
+  while S.farPos <= #q do
+    local w = q[S.farPos]
+    S.farPos = S.farPos + 1
+    local key, tx, ty = w[1], w[2], w[3]
+    if not S.farLive[key] then
+      local o = createObject('TSStatic')
+      o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
+      o:setField('collisionType', 0, 'None')
+      o:setField('decalType', 0, 'None')
+      o:setField('dynamic', 0, 'true')
+      o.canSave = false
+      local cfg = S.cfg
+      o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
+      o:registerObject('')
+      S.group:addObject(o)
+      local f = { id = o:getID(), cx = tx, cy = ty, hidden = false }
+      S.farLive[key] = f
+      M._farHide(f)
+      made = made + 1
     end
+    if budgetMs and clock() - t0 > budgetMs then break end
   end
   return made
+end
+
+function M.farPending() return S and S.farPos <= #S.farQueue end
+
+-- Collision settings at run time (tests): the collision radius in tiles and the groups that never collide. Every
+-- object of the tiles around is checked again through the queue.
+function M.setCollision(radius, groupsOff)
+  if radius then S.cfg.collisionRadius = radius end
+  S.noCol = {}
+  for _, g in ipairs(groupsOff or {}) do S.noCol[g] = true end
+  for _, t in pairs(S.tiles) do if t then t.th = nil end end
+  local c = S.cell
+  if not c then return 0 end
+  S.cell = nil
+  S.colDirty = true            -- a collider switched off must go from the collision too
+  return M.retarget(c[1], c[2])
 end
 
 function M.clear()
@@ -274,6 +324,7 @@ function M.clear()
   for _, l in pairs(S.live) do delete(l.id) end
   for _, f in pairs(S.farLive) do delete(f.id) end
   S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
+  S.farQueue, S.farPos = {}, 1
 end
 
 function M.stats()
