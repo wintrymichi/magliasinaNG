@@ -751,6 +751,32 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the renders: 2 now. The renders draw each billboard as a 6-blade tuft, thinner than the game's textures: judge the
   density in the game.
 
+## Tunnels (tunnels.py, finish step `tunnels`, 2026-10-26)
+
+- The swissTLM3D tunnel lines of all of Ticino come from tunnels_ref.yml (beamng/ticino/dati/tunnels_tlm.json.gz): 436
+  lines, 346 km. In the Malcantone level only the FLP Galleria del Vallone d'Agno (60 m, 2064,-54 -> 2091,0) joins
+  the built meshes: Crespera has no track near it, the other road tunnels are in Italy or outside the network.
+- A portal is "live" if a road or track mesh is there. Rail heads are 7 cm wide: a point-in-triangle test at the
+  portal never hit one and the first run found no live portal. Tops.height takes the median rail-head z within 2.5 m.
+- Holes are terrain layer 255 (no render, no collision). Anything that indexes a lookup table by layer crashes on it
+  (render3d's layer colours did: IndexError 255). So the step runs last among the steps that touch the ground
+  (after vineyards_ground). Steps that read layers (steep_skin, forest_mosaic, understory) must never run after it
+  without handling 255. The assumed square convention (sample (r,c) owns [c..c+1] x [r..r+1]) is NOT checked in the
+  game yet.
+- The first tube had no straight walls: the inner sweep took ring[1:-1], so the vault started at the wall top and
+  one saw the lake under it from inside. Sweep the whole ring.
+- A yard of the roads group (mp_hard_bank of steep_yards, meshed on the DTM over the tube) stood inside the tube as a
+  big curved grey sheet: the roads are cut too (in_volume only, so a road on top of the tube stays). Check the inside
+  with a probe (points of every group inside the inner profile), not only with renders.
+- In render3d the coarse far terrain (step > 1) spans the holes and draws a grey sheet through the tube that the game
+  does not have. Lower it in the render script, as for the cut slopes.
+- The camera "25 m out on the tangent" stood inside the bank: the track curves before the portal. Place cameras from
+  the Tube's own stations.
+- cut_meshes read every shape of the groups across the whole level (76 s for one tunnel). Skipping shapes whose
+  position is more than SHAPE_REACH from a tube: 12 s.
+- Importing config without MAGLIASO_ROOT made a folder "D:\beamng_magliaso" in beamng/pipeline (Windows paths taken as
+  relative): export MAGLIASO_ROOT before any scratch import.
+
 ## Data from the cloud sessions
 
 - swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
