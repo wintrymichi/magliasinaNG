@@ -303,9 +303,24 @@ local function colPiece(C, job)
   local gt, nv, nt = s:byte(i), s:byte(i + 1) + 256 * s:byte(i + 2), s:byte(i + 3) + 256 * s:byte(i + 4)
   i = i + 5
   local off, verts, fv, faces = M.COL_XY_OFF_CM, {}, {}, {}
-  if hasFfi then
-    -- the u16 numbers read straight from the string (little endian, as on every PC the game runs on)
-    local u = ffi.cast('const uint16_t *', ffi.cast('const char *', s) + (i - 1))
+  local u = nil
+  if hasFfi and not C.noFfi then
+    -- the u16 numbers of the piece copied into a buffer (little endian, as on every PC the game runs on). Casting the
+    -- Lua string itself failed in game for one cell ("arithmetic on a string value", laptop run 1, 2026-10-26):
+    -- any failure here falls back to the byte path for the rest of the session.
+    local okF, buf = pcall(function()
+      local n = 6 * nv + 6 * nt
+      local b = ffi.new('uint16_t[?]', 3 * nv + 3 * nt)
+      ffi.copy(b, s:sub(i, i + n - 1), n)
+      return b
+    end)
+    if okF then u = buf
+    else
+      C.noFfi = true
+      log('W', 'ticino', 'collision cells: ffi decode off (' .. tostring(buf) .. '), type of data ' .. type(s))
+    end
+  end
+  if u then
     for k = 0, nv - 1 do
       verts[k + 1] = { x = (u[3 * k] - off) * 0.01, y = (u[3 * k + 1] - off) * 0.01, z = u[3 * k + 2] * 0.01 }
       fv[k + 1] = { v = k, n = 0, u = 0 }
@@ -373,7 +388,9 @@ function M.stepCols(clock, budgetMs)
         if ok and id then job.ids[#job.ids + 1] = id
         else
           C.failed = (C.failed or 0) + 1
-          if C.failed <= 10 then log('W', 'ticino', 'collision piece not made: ' .. job.key .. ' ' .. tostring(id)) end
+          if C.failed <= 10 or C.failed % 100 == 0 then
+            log('W', 'ticino', 'collision piece not made (' .. C.failed .. ' so far): ' .. job.key .. ' ' .. tostring(id))
+          end
         end
       end
       if job.left <= 0 then
@@ -512,7 +529,8 @@ function M.stats()
   local cells = 0
   for _ in pairs(S.col.live) do cells = cells + 1 end
   return { live = live, colliders = col, far = far, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
-           deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead }
+           deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead,
+           colFailed = S.col.failed or 0, colTris = S.col.tris or 0, colFfi = hasFfi and not S.col.noFfi }
 end
 
 function M.pending() return S and S.qpos <= #S.queue end

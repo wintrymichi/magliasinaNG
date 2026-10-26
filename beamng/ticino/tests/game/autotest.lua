@@ -70,9 +70,26 @@ local function placeOnRoad(x, y)
   local veh = player()
   if not veh then return nil, 'no car' end
   pcall(function() map.assureLoad() end)
-  local n1, n2 = map.findClosestRoad(vec3(x, y, 1000))
-  if not n1 then return nil, 'no road' end
+  -- near the ground: findClosestRoad(vec3(x, y, 1000)) found no road at all in the laptop run 1 (20,810 nodes)
+  local z = terrainZ(x, y) or 0
+  local n1, n2 = map.findClosestRoad(vec3(x, y, z + 1))
   local nodes = map.getMap().nodes
+  if not n1 then
+    -- the nearest node with a link, by hand (and noted once, to see why the game's search fails)
+    local best, bd = nil, math.huge
+    for id, nd in pairs(nodes) do
+      local d = (nd.pos.x - x) ^ 2 + (nd.pos.y - y) ^ 2
+      if d < bd and nd.links and next(nd.links) then best, bd = id, d end
+    end
+    if not best then return nil, 'no road' end
+    n1, n2 = best, next(nodes[best].links)
+    if not res.closestRoadNote then
+      res.closestRoadNote = true
+      local p = nodes[best].pos
+      note(string.format('findClosestRoad found nothing near %.0f,%.0f (ground %.1f); nearest node by hand %s at %.0f,%.0f,%.1f, %.1f m',
+        x, y, z, tostring(best), p.x, p.y, p.z, math.sqrt(bd)))
+    end
+  end
   local a, b = nodes[n1].pos, nodes[n2].pos
   local d = vec3(b.x - a.x, b.y - a.y, 0):normalized()
   local p = vec3(a.x, a.y, a.z + 0.5)
@@ -175,12 +192,23 @@ local function run()
     note('route points: ' .. loadRoute())
 
     -- collision rebuild standing still: no cells, the 3 x 3 cells, none, again; ticino_perf.csv has each
+    -- with the physics paused and the car put back after it: with no cells the car falls through the road (laptop
+    -- run 1: it dropped 1.6 m into the yard beside the road and stayed stuck there for the whole drive)
     if ticino_stream and ticino_stream.setColRadius then
+      local v0 = player()
+      local p0, r0 = v0 and v0:getPosition(), v0 and quat(v0:getRotation())
+      local sta = rawget(_G, 'simTimeAuthority')
+      if sta and sta.pause then sta.pause(true) end
       for k, r in ipairs({-1, 1, -1, 1}) do
         local q = ticino_stream.setColRadius(r)
         note(string.format('reload test %d (cells radius %d) at %s: %s', k, r, os.date('%H:%M:%S'), tostring(q)))
         job.sleep(12)
       end
+      if v0 and p0 then v0:setPositionRotation(p0.x, p0.y, p0.z + 0.2, r0.x, r0.y, r0.z, r0.w) end
+      if sta and sta.pause then sta.pause(false) end
+      job.sleep(3)
+      local p = v0 and v0:getPosition()
+      if p then note(string.format('after the reload test the car is at %.1f,%.1f,%.2f (before %.2f)', p.x, p.y, p.z, p0.z)) end
     end
 
     -- the drives: the AI takes the car through the network, one sample a second, once per collision variant

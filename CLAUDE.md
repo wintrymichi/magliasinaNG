@@ -1051,6 +1051,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   railway stay exact; only the skin (to 7 %), houses, walls and props are simplified. A sim run whose clock is CPU
   time (tests/sim_stream.lua) never let a "150 ms after the swap" wait expire: count such waits in dtReal.
   Collision .cdae with real normals and tangents were 1.1 GB (563 MB zipped); with constant normals 228 MB zipped.
+- Laptop run 1 (2026-10-26, DESKTOP-EKDTIGL, 0.40.1, iGPU 512 MB): no crash, no Out of VRAM, load 48 s, peak 9.5 GB
+  private, ~10 fps. The car fell through the road during autotest's own reload test (cells radius -1 for 12 s with
+  the physics running: no road collision under it) into a yard 1.6 m lower and was stuck for the whole drive. The test
+  now pauses the physics and puts the car back. map.findClosestRoad(vec3(x, y, 1000)) found nothing with 20,810 nodes
+  in the graph: query near the ground (and the test falls back to the nearest node by hand, noting it).
+  colPiece's ffi.cast of the Lua string raised "arithmetic on a string value" for one cell (10 times, the pos not
+  advanced): the piece is now copied into an ffi buffer, and any failure turns ffi off for the session.
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
