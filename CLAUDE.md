@@ -999,3 +999,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   BeamNG.Earth measured samples in game; the window's maps assume samples (zone `base_size_unit`).
 - BeamNG.Earth (github.com/TecnaGamer/BeamNG.Earth, MIT, cloned fine from the cloud) has in-game measurements of every
   engine limit the streaming needs (docs/research/2026-10-12-engine-limits-and-worldgen.md): read it before guessing.
+- blocks.py hard-links the source level into the output and then wrote info.json over the linked file: the SOURCE
+  v3.1.1 info.json got "Streaming test of the Ticino level:" once more per run (seen 4 times). Every write into the
+  output goes through blocks.wopen (removes the path first). After a run, `find <src> -newer <zip>` must list nothing.
+- michi tests the Ticino mod on the Windows PC DESKTOP-OUPOLOA (2026-10-26, "questo qua è un pc windows usa questo"),
+  not on the Linux PC: no Python there, so ticino_test.yml cuts and packs on GitHub (draft release ticino-test) and
+  tests/game/run_test.ps1 runs the test (autotest.lua, as the v3.0.40 runner did).

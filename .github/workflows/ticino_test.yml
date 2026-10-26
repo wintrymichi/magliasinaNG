@@ -1,0 +1,74 @@
+# Ticino a blocchi, phase 0 test mod (beamng/ticino): cuts the released v3.1.1 into blocks (blocks.py), checks them and
+# packs levels/ticino + the streaming Lua into ticino_test.zip, attached to the DRAFT release "ticino-test" (not public).
+# The PC downloads it with gh (gh api .../releases/assets/<id>, Accept: application/octet-stream). The cloud session
+# cannot upload release assets (415) nor dispatch a workflow off the default branch: it runs when
+# beamng/ticino/test_stamp.txt changes on a push.
+name: ticino test mod
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/test_stamp.txt
+
+concurrency:
+  group: ticino-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  ticino-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PYTHONUNBUFFERED: "1"
+      W: ${{ github.workspace }}/../tw
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0
+          sudo apt-get install -y -q luajit
+
+      - name: Released v3.1.1
+        run: |
+          mkdir -p "$W/src" "$W/out"
+          gh release download v3.1.1 --pattern magliaso_pura_v3.1.1.zip --dir "$W"
+          unzip -q "$W/magliaso_pura_v3.1.1.zip" -d "$W/src"
+          rm "$W/magliaso_pura_v3.1.1.zip"
+          df -h "$W"
+
+      - name: Blocks, checks, zip
+        working-directory: beamng/ticino
+        run: |
+          python blocks.py --zone zones/malcantone.json --src "$W/src" --out "$W/out" | tee "$W/blocks.log"
+          python tests/check_blocks.py --zone zones/malcantone.json --src "$W/src" --out "$W/out" --n 6
+          python tests/test_lua.py --out "$W/out"
+          rm -rf "$W/src"
+          python package.py --out "$W/out" --zip "$W/ticino_test.zip" --level 6
+          ls -la "$W/ticino_test.zip"
+          sha256sum "$W/ticino_test.zip" | tee "$W/ticino_test.sha256"
+
+      - name: Draft release "ticino-test" (not public)
+        run: |
+          gh release delete ticino-test --yes --cleanup-tag || true
+          gh release create ticino-test "$W/ticino_test.zip" "$W/ticino_test.sha256" "$W/blocks.log" \
+            --draft --target "$GITHUB_SHA" --title "Ticino a blocchi: test mod (draft, not a release)" \
+            --notes "Test mod of branch $GITHUB_REF_NAME at ${GITHUB_SHA::7} (level ticino, cut from v3.1.1). Not a release."

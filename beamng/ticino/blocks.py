@@ -119,7 +119,7 @@ def write_blocks(zone, H, L, out_dir):
             c = np.clip(np.arange(bx * zone.B, (bx + 1) * zone.B), 0, n - 1)
             h = np.ascontiguousarray(H[r][:, c]).astype("<u2")
             lay = np.ascontiguousarray(L[r][:, c]).astype("u1")
-            with open(os.path.join(out_dir, f"t_{bx}_{by}.bin"), "wb") as f:
+            with wopen(os.path.join(out_dir, f"t_{bx}_{by}.bin"), "wb") as f:
                 f.write(h.tobytes())
                 f.write(lay.tobytes())
             blocks[f"{bx}_{by}"] = [bx, by]
@@ -312,7 +312,7 @@ def stream_objects(zone, scene, level_dir, src_level, out_dir):
             n_obj += 1
         kept[path] = keep
     for (cx, cy), objs in tiles.items():
-        with open(os.path.join(out_dir, f"o_{cx}_{cy}.json"), "w") as f:
+        with wopen(os.path.join(out_dir, f"o_{cx}_{cy}.json"), "w") as f:
             json.dump(objs, f, separators=(",", ":"))
     log("streamed objects:", n_obj, "in", len(tiles), "tiles;", len(cache), "shape bounds read")
     return kept, {f"{cx}_{cy}": len(v) for (cx, cy), v in tiles.items()}
@@ -393,6 +393,15 @@ def write_far(zone, H, L, z0, maxh, materials, level_dir, src_mats, src_level, o
 
 
 # ------------------------------------------------------------------ level copy
+def wopen(path, mode="w", **kw):
+    """open() for writing a NEW file: the output level is mostly hard links to the source level, and writing into a
+    linked path changes the source too (info.json of v3.1.1 got the "Streaming test" prefix once per run)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.lexists(path):
+        os.remove(path)
+    return open(path, mode, **kw)
+
+
 def link_or_copy(src, dst):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     if os.path.exists(dst):
@@ -421,7 +430,7 @@ def copy_level(src_dir, dst_dir, src_level, skip):
                 if old in data or old2 in data:
                     data = data.replace(old, new).replace(old2, new2)
                     os.makedirs(os.path.dirname(q), exist_ok=True)
-                    with open(q, "wb") as f:
+                    with wopen(q, "wb") as f:
                         f.write(data)
                     n_txt += 1
                     continue
@@ -439,7 +448,7 @@ def write_scene(kept, dst_dir, tb_new, src_level):
             objs = [tb_new if o.get("class") == "TerrainBlock" else o for o in objs]
         d = os.path.join(main, *path.split("/")) if path != "." else main
         os.makedirs(d, exist_ok=True)
-        with open(os.path.join(d, "items.level.json"), "w", encoding="utf-8") as f:
+        with wopen(os.path.join(d, "items.level.json"), "w", encoding="utf-8") as f:
             for o in objs:
                 f.write(json.dumps(o, separators=(",", ":")).replace(f"/levels/{src_level}/", f"/levels/{LEVEL}/")
                         + "\n")
@@ -497,7 +506,8 @@ def resized_textures(level_dir, src_mats, base_keys, zone, src_level, dst):
                 img = Image.new("RGB", (px, px), tuple(int(v) for v in np.asarray(img.convert("RGB")).reshape(-1, 3).mean(0)))
             else:
                 img = img.resize((px, px), Image.LANCZOS)
-            img.save(os.path.join(dst, os.path.splitext(os.path.basename(tex))[0] + ".png"))
+            with wopen(os.path.join(dst, os.path.splitext(os.path.basename(tex))[0] + ".png"), "wb") as f:
+                img.save(f, "PNG")
     log("terrain base textures at", px, "px:", len(done))
 
 
@@ -543,7 +553,8 @@ def main():
                                         os.path.join(dst, "far"))
 
     mats = terrain_materials(src_mats, base_keys, zone, src_level)
-    json.dump(mats, open(os.path.join(dst, "art", "terrains", "main.materials.json"), "w"), indent=1)
+    with wopen(os.path.join(dst, "art", "terrains", "main.materials.json")) as f:
+        json.dump(mats, f, indent=1)
     resized_textures(src, src_mats, base_keys, zone, src_level, os.path.join(dst, "art", "terrains", "w"))
 
     # the start window: around the default spawn point (the mod moves it to the real spawn before physics runs)
@@ -552,7 +563,7 @@ def main():
                if o.get("class") == "SpawnSphere" and o.get("name") == info.get("defaultSpawnPointName")), None)
     sx, sy = (sp["position"][0], sp["position"][1]) if sp else (0.0, 0.0)
     wx, wy = zone.window_for(sx, sy)
-    with open(os.path.join(dst, "start.ter"), "wb") as f:
+    with wopen(os.path.join(dst, "start.ter"), "wb") as f:
         f.write(window_ter(zone, os.path.join(dst, "blocks", "terrain"), nb, wx, wy, materials))
     tb_new = dict(tb)
     tb_new["position"] = [zone.x0 + wx * zone.sq, zone.y0 + wy * zone.sq, z0]
@@ -563,7 +574,8 @@ def main():
     info["title"] = "Ticino (" + zone.name + ")"
     info["description"] = "Streaming test of the Ticino level: " + info.get("description", "")
     info["size"] = [zone.W, zone.W]
-    json.dump(info, open(os.path.join(dst, "info.json"), "w"), indent=2)
+    with wopen(os.path.join(dst, "info.json")) as f:
+        json.dump(info, f, indent=2)
 
     stream = {
         "version": 1, "zone": zone.name, "level": LEVEL,
@@ -580,7 +592,8 @@ def main():
         "maxRadius": max(int(v["radius"]) for v in zone.cfg["groups"].values()),
         "start": [wx, wy],
     }
-    json.dump(stream, open(os.path.join(dst, "stream.json"), "w"), indent=1)
+    with wopen(os.path.join(dst, "stream.json")) as f:
+        json.dump(stream, f, indent=1)
     log("done in %.0f s ->" % (time.time() - t0), dst)
 
 
