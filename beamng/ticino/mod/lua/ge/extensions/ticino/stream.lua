@@ -31,6 +31,8 @@ M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
+M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
+                           -- window and the collision went back and forth along a tile edge)
 M.TEMP = '/temp/ticino/'
 M.PERF_FILE = '/ticino_perf.csv'
 M.TERRAIN_NAME = 'theTerrain'
@@ -86,6 +88,19 @@ local function cellOf(x, y)
   local c = st.cfg
   local m = c.cell * c.square
   return math.floor((x - c.origin[1]) / m), math.floor((y - c.origin[2]) / m)
+end
+
+-- the car's tile, kept until the car is HYST_M past its edge
+local function cellHyst(x, y)
+  local cx, cy = cellOf(x, y)
+  local c = st.cell
+  if not c then return cx, cy end
+  local cfg = st.cfg
+  local m = cfg.cell * cfg.square
+  local x0, y0 = cfg.origin[1] + c[1] * m, cfg.origin[2] + c[2] * m
+  local h = M.HYST_M
+  if x >= x0 - h and x < x0 + m + h and y >= y0 - h and y < y0 + m + h then return c[1], c[2] end
+  return cx, cy
 end
 
 -- the window's tile origin that keeps tile c the 4th or 5th of n (0-based 3 or 4) from wc
@@ -312,6 +327,7 @@ local function onUpdate(dtReal)
     jump(x, y)
     return
   end
+  cx, cy = cellHyst(x, y)
   if not st.cell or st.cell[1] ~= cx or st.cell[2] ~= cy then
     st.cell = { cx, cy }
     local q = objects.retarget(cx, cy)
