@@ -34,6 +34,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "pipeline"))
 import bng  # noqa: E402  (writers only: bng imports nothing of the pipeline's config)
+import cdae  # noqa: E402
 
 LEVEL = "ticino"
 FAR_MAT = "tc_far_ground"
@@ -273,9 +274,10 @@ def is_static(zone, rel):
     return any(rel == g or rel.startswith(g + "/") for g in zone.cfg.get("static_groups", []))
 
 
-def stream_objects(zone, scene, level_dir, src_level, out_dir):
-    """Splits the scene: streamed objects go into tiles/<cx>_<cy>.json, the others stay. Returns the scene
-    without them and {tile key: object count}."""
+def stream_objects(zone, scene, level_dir, src_level, out_dir, col_dir=None, workers=4):
+    """Splits the scene: streamed objects go into tiles/<cx>_<cy>.json, the others stay. col_dir: the level's own
+    shapes collide through the collision cells written there (collision.py). Returns the scene without them,
+    {tile key: object count} and (cell keys, stats) of the collision cells (None without col_dir)."""
     os.makedirs(out_dir, exist_ok=True)
     tiles, kept, cache = {}, {}, {}
     prefix = f"/levels/{src_level}/"
@@ -311,11 +313,15 @@ def stream_objects(zone, scene, level_dir, src_level, out_dir):
             tiles.setdefault((cx, cy), []).append(e)
             n_obj += 1
         kept[path] = keep
+    cells = None
+    if col_dir:
+        import collision
+        cells = collision.build(zone, tiles, level_dir, src_level, col_dir, workers=workers)
     for (cx, cy), objs in tiles.items():
         with wopen(os.path.join(out_dir, f"o_{cx}_{cy}.json"), "w") as f:
             json.dump(objs, f, separators=(",", ":"))
     log("streamed objects:", n_obj, "in", len(tiles), "tiles;", len(cache), "shape bounds read")
-    return kept, {f"{cx}_{cy}": len(v) for (cx, cy), v in tiles.items()}
+    return kept, {f"{cx}_{cy}": len(v) for (cx, cy), v in tiles.items()}, cells
 
 
 # ------------------------------------------------------------------ far ground
@@ -332,7 +338,7 @@ def layer_colors(level_dir, src_mats, src_level):
 
 
 def write_far(zone, H, L, z0, maxh, materials, level_dir, src_mats, src_level, out_dir):
-    """One coarse ground mesh per 384 m cell (every far_step samples, a 4 m skirt down along its edges), coloured by
+    """One coarse ground mesh per 384 m cell (.cdae) (every far_step samples, a 4 m skirt down along its edges), coloured by
     the layer under each vertex (the global base map where the layer has one). Returns the cell keys."""
     step = int(zone.cfg.get("far_step_samples", 8))
     n = H.shape[0]
@@ -380,10 +386,11 @@ def write_far(zone, H, L, z0, maxh, materials, level_dir, src_mats, src_level, o
             A, Bn = ring[j], ring[(j + 1) % nr]
             As, Bs = base + j, base + (j + 1) % nr
             Ts = np.concatenate([np.stack([A, As, Bs], 1), np.stack([A, Bs, Bn], 1)])
-            mb = bng.MeshBuilder()
-            mb.add(FAR_MAT, np.concatenate([V, Vs]), uvs=np.zeros((base + nr, 2)),
-                   tris=np.concatenate([T, Ts]), colors=np.concatenate([cols, cols[ring]]))
-            mb.write_dae(os.path.join(out_dir, f"f_{cx}_{cy}.dae"), name="farground", weld=False)
+            # written compiled (.cdae, as BeamNG.Earth writes its far tiles): the game converted every far .dae the
+            # first time it was shown, part of the 40 s of a quick travel into a new zone (2026-10-26)
+            C8 = np.clip(np.round(np.concatenate([cols, cols[ring]]) * 255), 0, 255).astype(np.uint8)
+            cdae.write(os.path.join(out_dir, f"f_{cx}_{cy}.cdae"), np.concatenate([V, Vs]), np.concatenate([T, Ts]),
+                       uvs=np.zeros((base + nr, 2)), material=FAR_MAT, colors=C8, object_name="farground")
             keys.append(f"{cx}_{cy}")
     mats = [bng.material(FAR_MAT, base_color=[1, 1, 1, 1], vert_color=True, roughness=0.95,
                          extra={"castShadows": False})]
@@ -511,6 +518,11 @@ def resized_textures(level_dir, src_mats, base_keys, zone, src_level, dst):
     log("terrain base textures at", px, "px:", len(done))
 
 
+def collision_cell_m():
+    import collision
+    return collision.CELL_M
+
+
 # ------------------------------------------------------------------ main
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -518,6 +530,9 @@ def main():
     ap.add_argument("--src", required=True, help="folder that holds levels/<source_level>/ (an unpacked release)")
     ap.add_argument("--out", required=True, help="folder that gets levels/ticino/ (on the PC: the 6 TB disk)")
     ap.add_argument("--no-far", action="store_true", help="skip the far ground meshes (quick tests)")
+    ap.add_argument("--no-collision-cells", action="store_true",
+                    help="the level's shapes collide with their drawn meshes, as in the first test (comparisons)")
+    ap.add_argument("--workers", type=int, default=4, help="processes reading the shapes for the collision cells")
     a = ap.parse_args()
     zone = Zone(json.load(open(a.zone)))
     src_level = zone.cfg["source_level"]
@@ -534,7 +549,7 @@ def main():
     src_mats = json.load(open(os.path.join(src, "art", "terrains", "main.materials.json")))
 
     # the level copy first (it clears what blocks.py writes below on a rerun)
-    stream_dirs = ("blocks/", "tiles/", "art/terrains/w/", "main/") + (() if a.no_far else ("far/",))
+    stream_dirs = ("blocks/", "tiles/", "col/", "art/terrains/w/", "main/") + (() if a.no_far else ("far/",))
     skip = lambda rel: rel.startswith(stream_dirs) or rel in ("theTerrain.ter", "theTerrain.terrain.json") \
         or rel.endswith(".terrainheightmap.png")
     for d in stream_dirs:
@@ -546,9 +561,13 @@ def main():
 
     blocks, nb = write_blocks(zone, H, L, os.path.join(dst, "blocks", "terrain"))
     base_keys = base_maps(zone, src, src_mats, n, nb, os.path.join(dst, "blocks", "base"), src_level)
-    kept, tiles = stream_objects(zone, scene, src, src_level, os.path.join(dst, "tiles"))
+    kept, tiles, cells = stream_objects(zone, scene, src, src_level, os.path.join(dst, "tiles"),
+                                        None if a.no_collision_cells else os.path.join(dst, "col"), a.workers)
+    if cells:
+        with wopen(os.path.join(dst, "col", "stats.json")) as f:
+            json.dump(cells[1], f, indent=1)
     far_dir = os.path.join(dst, "far")
-    far = sorted(f[2:-4] for f in os.listdir(far_dir) if f.startswith("f_")) if a.no_far and os.path.isdir(far_dir) \
+    far = sorted(os.path.splitext(f)[0][2:] for f in os.listdir(far_dir) if f.startswith("f_")) if a.no_far and os.path.isdir(far_dir) \
         else [] if a.no_far else write_far(zone, H, L, z0, maxh, materials, src, src_mats, src_level,
                                         os.path.join(dst, "far"))
 
@@ -589,6 +608,9 @@ def main():
         "baseSizeUnit": zone.cfg.get("base_size_unit", "samples"),
         "tiles": tiles, "far": far, "farRadius": int(zone.cfg.get("far_radius", 16)),
         "collisionRadius": int(zone.cfg.get("collision_radius", 1)),
+        # the collision cells (collision.py): cell size in m, the cells that exist, how many round the car's collide
+        "colCell": collision_cell_m() if cells else None, "colCells": cells[0] if cells else [],
+        "colRadius": int(zone.cfg.get("col_radius", 1)),
         "maxRadius": max(int(v["radius"]) for v in zone.cfg["groups"].values()),
         "start": [wx, wy],
     }

@@ -31,6 +31,8 @@ M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
+M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
+M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
 M.TEMP = '/temp/ticino/'
@@ -114,7 +116,7 @@ end
 local function perfLine(t)
   st.perf[#st.perf + 1] = t
   local cols = { 'time', 'kind', 'wx', 'wy', 'buildMs', 'buildFrames', 'applyMs', 'grassMs', 'farMs', 'worstFrameMs',
-                 'objsQueued', 'reloadMs', 'live', 'colliders', 'afterReloadWorstMs', 'afterReloadSlowFrames' }
+                 'objsQueued', 'reloadMs', 'live', 'colliders', 'colCells', 'afterReloadWorstMs', 'afterReloadSlowFrames' }
   local lines = { table.concat(cols, ',') }
   for _, r in ipairs(st.perf) do
     local v = {}
@@ -205,6 +207,7 @@ local function apply(job, kind)
   st.prevJob = st.curJob
   st.curJob = job
   st.moves = st.moves + 1
+  st.quiet = { frames = M.SWAP_QUIET_FRAMES, ms = M.SWAP_QUIET_MS }
   st.watch = { frames = 10, worst = 0, rec = { time = os.date('%H:%M:%S'), kind = kind, wx = job.wx, wy = job.wy,
     buildMs = job.ms, buildFrames = job.frames, applyMs = tApply, grassMs = tGrass, farMs = tFar } }
   log('I', 'ticino', string.format('%s: window at (%d, %d): files %.0f ms in %d frames, swap %.1f ms, grass %.1f ms',
@@ -225,9 +228,28 @@ local function jump(x, y)
   if not job.failed then apply(job, 'jump') end
   objects.retarget(cx, cy)
   objects.step(clock, nil)
+  objects.updateCols(x, y, true)
+  -- the collision rebuild waits for the swapped terrain (SWAP_QUIET_FRAMES), the game stays paused till after it
+  st.jumpReload = true
+  st.resumeIn = M.SWAP_QUIET_FRAMES + 2
+end
+
+-- Rebuild collision if something collides anew or no more, unless a terrain swap is too recent; rec gets reloadMs
+-- and is logged (with the frames after it). Returns true when no rebuild is pending any more.
+local function tryReload(rec)
+  local q = st.quiet
+  if q then
+    if q.frames > 0 or q.ms > 0 then return false end
+    st.quiet = nil
+  end
   local ms = objects.reloadCollisionIfDirty(clock)
-  if st.watch then st.watch.rec.reloadMs = ms end
-  st.resumeIn = 2
+  if rec then
+    rec.reloadMs = ms
+    local s = objects.stats()
+    rec.live, rec.colliders, rec.colCells = s.live, s.colliders, s.colCells
+    st.rwatch = { frames = 90, worst = 0, slow = 0, rec = rec }
+  end
+  return true
 end
 
 -- ------------------------------------------------------------------ hooks
@@ -283,7 +305,17 @@ end
 
 local function onUpdate(dtReal)
   if not st then return end
+  if st.quiet then                    -- frames and real time since the last terrain swap
+    st.quiet.frames = st.quiet.frames - 1
+    st.quiet.ms = st.quiet.ms - (dtReal or 0) * 1000
+  end
   if st.resumeIn then
+    if st.resumeIn == 2 and st.jumpReload then
+      st.jumpReload = nil
+      st.quiet = nil
+      local ms = objects.reloadCollisionIfDirty(clock)
+      if st.watch then st.watch.rec.reloadMs = ms end
+    end
     st.resumeIn = st.resumeIn - 1
     if st.resumeIn <= 0 then
       st.resumeIn = nil
@@ -328,12 +360,22 @@ local function onUpdate(dtReal)
     return
   end
   cx, cy = cellHyst(x, y)
+  if objects.updateCols(x, y) and not st.objRec then
+    local c = objects.colCell and objects.colCell()
+    st.objRec = { time = os.date('%H:%M:%S'), kind = 'colcell', wx = c and c[1], wy = c and c[2], objsQueued = 0 }
+  end
   if not st.cell or st.cell[1] ~= cx or st.cell[2] ~= cy then
     st.cell = { cx, cy }
     local q = objects.retarget(cx, cy)
     st.objRec = { time = os.date('%H:%M:%S'), kind = 'tile', wx = cx, wy = cy, objsQueued = q }
     objects.updateFar(cx, cy, wcx, wcy, n)
     return            -- the window work waits for the next frame
+  end
+  -- the collision rebuild first, as soon as the colliders of the queue (it starts with them) are made and no terrain
+  -- swap is too recent: the window's files and the drawn objects wait a frame
+  if objects.colDirty() and not objects.collidersPending() and tryReload(st.objRec) then
+    st.objRec = nil
+    return
   end
   -- the window
   local tx, ty = follow(cx, wcx, n), follow(cy, wcy, n)
@@ -352,21 +394,14 @@ local function onUpdate(dtReal)
     return            -- the objects wait for a frame without window work
   end
   -- the objects
-  if not objects.pending() and not objects.farPending() then
+  if objects.pending() then
+    objects.step(clock, M.OBJ_BUDGET_MS)
+  elseif st.objRec then
+    perfLine(st.objRec)
+    st.objRec = nil
+  elseif not objects.farPending() then
     objects.prefetch(1)
-  elseif objects.pending() then
-    if objects.step(clock, M.OBJ_BUDGET_MS) then
-      local ms = objects.reloadCollisionIfDirty(clock)
-      if st.objRec then
-        st.objRec.reloadMs = ms
-        local s = objects.stats()
-        st.objRec.live, st.objRec.colliders = s.live, s.colliders
-        if ms > 0 then st.rwatch = { frames = 90, worst = 0, slow = 0, rec = st.objRec }
-        else perfLine(st.objRec) end
-        st.objRec = nil
-      end
-    end
-  elseif objects.farPending() then
+  else
     objects.stepFar(clock, M.FAR_BUDGET_MS)
   end
 end
@@ -394,6 +429,14 @@ function M.setCollision(radius, groupsOff)
   local q = objects.setCollision(radius, groupsOff)
   st.objRec = { time = os.date('%H:%M:%S'), kind = 'collision', objsQueued = q }
   return q
+end
+
+-- Collision cells within r of the car's cell (-1: none), for tests; the rebuild follows as for a cell change.
+function M.setColRadius(r)
+  if not st then return 'off' end
+  local ch = objects.setColRadius(r)
+  st.objRec = { time = os.date('%H:%M:%S'), kind = 'colradius', wx = r, objsQueued = 0 }
+  return ch
 end
 
 function M.setFocus(x, y)

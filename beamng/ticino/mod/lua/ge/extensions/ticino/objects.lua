@@ -3,13 +3,19 @@
 -- collides only within cfg.collisionRadius: collision is rebuilt from scratch by every be:reloadCollision
 -- (BeamNG.Earth, docs/research/2026-10-12-engine-limits-and-worldgen.md 1.1), so only the objects next to the car
 -- may collide. An object whose collision changes is made again (a warm shape costs ~0.02-0.07 ms).
--- The far ground tiles (far/f_<cx>_<cy>.dae) are objects too: shown outside the terrain window, within farRadius.
+-- The far ground tiles (far/f_<cx>_<cy>.cdae) are objects too: shown outside the terrain window, within farRadius.
+-- The level's own shapes do not collide with their drawn meshes: their collision is in collision cells of cfg.colCell
+-- m (col/c_<i>_<j>.cdae, collision.py: welded, the terrain skin and houses simplified), and only the cells within
+-- cfg.colRadius of the car's cell collide (a rebuild costs ~3 us per unique triangle: 1.12 M in the 3 x 3 tiles of
+-- 384 m were 3.4 s of frozen physics at every tile, in-game test 2026-10-26).
 
 local M = {}
 
 M.CACHE_TILES = 400
-M.FAR_SHAPE = '/levels/%s/far/f_%d_%d.dae'
+M.FAR_SHAPE = '/levels/%s/far/f_%d_%d.cdae'
 M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
+M.COL_SHAPE = '/levels/%s/col/c_%d_%d.cdae'
+M.COL_HYST_M = 16          -- the car's collision cell changes only this far past its edge
 
 -- keys of an entry that are not engine fields
 local SKIP = { class = true, p = true, q = true, s = true, g = true, r = true, name = true }
@@ -39,6 +45,8 @@ function M.init(cfg, level, group)
   S.has = cfg.tiles or {}
   S.farHas = {}
   for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
+  S.col = { size = cfg.colCell, R = cfg.colRadius or 1, has = {}, live = {}, cell = nil }
+  for _, k in ipairs(cfg.colCells or {}) do S.col.has[k] = true end
 end
 
 local function tile(cx, cy)
@@ -161,8 +169,10 @@ function M.retarget(cx, cy)
   for _, list in ipairs({ dels, cols, adds }) do
     for _, op in ipairs(list) do q[#q + 1] = op end
   end
+  local nCol = #dels + #cols
   for i = S.qpos, #S.queue do q[#q + 1] = S.queue[i] end
   S.queue, S.qpos = q, 1
+  S.colQEnd = nCol
   S.cell = new
   return #q
 end
@@ -232,6 +242,70 @@ function M.reloadCollisionIfDirty(clock)
   S.colDirty = false
   return clock() - t0
 end
+
+-- Collision cells: the car at (x, y); makes and deletes the cells within colRadius of its cell (with COL_HYST_M of
+-- hysteresis). Returns true when the set changed (colDirty is set: the caller rebuilds collision when it may).
+function M.updateCols(x, y, force)
+  local C = S.col
+  if not C.size then return false end
+  local cfg = S.cfg
+  local i, j = math.floor((x - cfg.origin[1]) / C.size), math.floor((y - cfg.origin[2]) / C.size)
+  local c = C.cell
+  if c and not force then
+    if c[1] == i and c[2] == j then return false end
+    local x0, y0 = cfg.origin[1] + c[1] * C.size, cfg.origin[2] + c[2] * C.size
+    local h = M.COL_HYST_M
+    if x >= x0 - h and x < x0 + C.size + h and y >= y0 - h and y < y0 + C.size + h then return false end
+  end
+  C.cell = { i, j }
+  local R = C.R
+  local want = {}
+  if R >= 0 then
+    for b = j - R, j + R do
+      for a = i - R, i + R do
+        local k = a .. '_' .. b
+        if C.has[k] then want[k] = { a, b } end
+      end
+    end
+  end
+  local changed = false
+  for k, id in pairs(C.live) do
+    if not want[k] then
+      delete(id)
+      C.live[k] = nil
+      changed = true
+    end
+  end
+  for k, ab in pairs(want) do
+    if not C.live[k] then
+      local o = createObject('TSStatic')
+      o:setField('shapeName', 0, string.format(M.COL_SHAPE, S.level, ab[1], ab[2]))
+      o:setField('collisionType', 0, 'Collision Mesh')
+      o:setField('decalType', 0, 'None')
+      o:setField('dynamic', 0, 'true')
+      o.canSave = false
+      o:setPosition(vec3(cfg.origin[1] + ab[1] * C.size, cfg.origin[2] + ab[2] * C.size, 0))
+      o:registerObject('')
+      S.group:addObject(o)
+      C.live[k] = o:getID()
+      changed = true
+    end
+  end
+  if changed then S.colDirty = true end
+  return changed
+end
+
+-- Collision cells round the car: radius in cells (-1: none), for tests.
+function M.setColRadius(r)
+  S.col.R = r
+  local c = S.col.cell
+  if not c then return false end
+  local cfg = S.cfg
+  return M.updateCols(cfg.origin[1] + (c[1] + 0.5) * S.col.size, cfg.origin[2] + (c[2] + 0.5) * S.col.size, true)
+end
+
+function M.colDirty() return S and S.colDirty end
+function M.colCell() return S and S.col.cell end
 
 -- Far ground: spawn the tiles within farRadius of (cx, cy) that are not there, delete the ones 2 beyond it,
 -- and hide the ones inside the terrain window (window origin wcx, wcy in tiles, n tiles a side).
@@ -323,6 +397,8 @@ function M.clear()
   if not S then return end
   for _, l in pairs(S.live) do delete(l.id) end
   for _, f in pairs(S.farLive) do delete(f.id) end
+  for _, id in pairs(S.col.live) do delete(id) end
+  S.col.live, S.col.cell = {}, nil
   S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
   S.farQueue, S.farPos = {}, 1
 end
@@ -336,10 +412,14 @@ function M.stats()
   end
   local far = 0
   for _ in pairs(S.farLive) do far = far + 1 end
-  return { live = live, colliders = col, far = far, queued = #S.queue - S.qpos + 1, created = S.stats.created,
+  local cells = 0
+  for _ in pairs(S.col.live) do cells = cells + 1 end
+  return { live = live, colliders = col, far = far, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
            deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead }
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+-- Are colliders (and deletions) of the last retarget still queued? (they come first in the queue)
+function M.collidersPending() return S and S.qpos <= (S.colQEnd or 0) end
 
 return M

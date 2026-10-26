@@ -44,7 +44,7 @@ jobs:
 
       - name: Dependencies
         run: |
-          pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0
+          pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0 fast_simplification==0.2.0
           sudo apt-get install -y -q luajit
 
       - name: Released v3.1.1
@@ -58,6 +58,7 @@ jobs:
       - name: Blocks, checks, zip
         working-directory: beamng/ticino
         run: |
+          python tests/test_cdae.py
           python blocks.py --zone zones/malcantone.json --src "$W/src" --out "$W/out" | tee "$W/blocks.log"
           python tests/check_blocks.py --zone zones/malcantone.json --src "$W/src" --out "$W/out" --n 6
           python tests/test_lua.py --out "$W/out"

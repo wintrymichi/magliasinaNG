@@ -15,14 +15,21 @@ cut into blocks and streamed, must look and drive like v3.1.1.
 | Tile (objects, window step) | 256 samples = 384 m | `tiles/o_<cx>_<cy>.json` |
 | Terrain window in the game | one TerrainBlock of 2,048 x 2,048 samples (3.07 km) | written to `<user>/temp/ticino/` |
 | Base colour of the open ground | 4 samples a pixel (6 m), 512 px over the window | `blocks/base/<texture>_<bx>_<by>.rgb` |
-| Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, no collision | `far/f_<cx>_<cy>.dae` |
+| Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, no collision | `far/f_<cx>_<cy>.cdae` |
+| Collision cell | 128 m, one collision-only shape of the level's own meshes (roads exact, skin and houses simplified) | `col/c_<i>_<j>.cdae` |
 
 - The window keeps the car's tile the 4th or 5th of its 8, so the car is always at least 1,152 m from its edge. When
   the car crosses a tile, the next window is written over about 15-20 frames (4 ms of Lua a frame) and swapped in by
   `terrainFile` + `postApply`, the way BeamNG.Earth moves its block (92 ms for 2048^2 measured there).
 - Objects are shown within a radius per group (`zones/malcantone.json`: street props 2 tiles, roads and walls 5,
-  buildings 6) and collide only in the 3 x 3 tiles around the car (`collision_radius`): every `be:reloadCollision`
-  rebuilds all collision, and the whole map collides with about 46 M triangles today.
+  buildings 6). Every `be:reloadCollision` rebuilds all collision, at about 3 us per unique triangle (in game: the
+  3 x 3 tiles round the car, 1.12 M triangles, froze the physics 3.4 s at every tile). So the level's own shapes do
+  not collide with what is drawn: `collision.py` puts their triangles, welded, the terrain skin cut to 7 % and the
+  houses to 40 % (roads, sidewalks and railway exact), into collision cells of 128 m written as `.cdae` (the game
+  loads them without converting a Collada file; writer from BeamNG.Earth, `cdae.py`), and only the 3 x 3 cells round
+  the car collide (`col_radius`; `ticino_stream.setColRadius(r)` in the console). The game's own props (lamps,
+  poles) are instanced and keep their own collision within `collision_radius` tiles. No rebuild runs within 3
+  frames and 150 ms of a terrain swap (BeamNG.Earth: a car fell through the block taken before its heights).
 - The forest, ground cover, water planes, AI roads, spawn points, sky and sounds stay in the level as today.
 - A spawn or teleport far away is a jump: the game pauses, the window and the near objects are made at once, then it
   goes on.
@@ -35,7 +42,8 @@ cut into blocks and streamed, must look and drive like v3.1.1.
 - `pc_prepare.sh <disk>`: on the Linux PC, all of the above on the data disk.
 - `mod/lua/ge/extensions/ticino/`: `stream.lua` (the extension `ticino_stream`), `terwin.lua` (window and base maps
   from the blocks), `png.lua`, `objects.lua`. `mod/scripts/ticino/modScript.lua` keeps the extension loaded.
-- `tests/check_blocks.py`, `tests/test_lua.py` (needs `luajit`), `tests/sim_stream.lua` (the mod driven at 120 km/h
+- `collision.py`, `cdae.py`: the collision cells (needs `fast_simplification`).
+- `tests/test_cdae.py` (the writer against shapes the game compiled), `tests/check_blocks.py`, `tests/test_lua.py` (needs `luajit`), `tests/sim_stream.lua` (the mod driven at 120 km/h
   outside the game, with the game API stubbed).
 
 ## Checked in the cloud (2026-10-26, v3.1.1 zip)

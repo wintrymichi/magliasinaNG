@@ -1020,3 +1020,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   log stopped being written after it (the game went on).
 - Quick travel into a zone never seen: about 40 s, nearly all "Importing COLLADA" of 551 shapes (the game converts
   each .dae once, cached afterwards) + 4 s of collision.
+- Collision cells (collision.py, 2026-10-26): fast_simplification (quadric) on a road mesh left holes (1.2 % of the
+  surface samples at 50 % reduction, 4 % at 70 %) and moved edges by up to 0.5 m (the skirts): roads, sidewalks and
+  railway stay exact; only the skin (to 7 %), houses, walls and props are simplified. A sim run whose clock is CPU
+  time (tests/sim_stream.lua) never let a "150 ms after the swap" wait expire: count such waits in dtReal.
+  Collision .cdae with real normals and tangents were 1.1 GB (563 MB zipped); with constant normals 228 MB zipped.
