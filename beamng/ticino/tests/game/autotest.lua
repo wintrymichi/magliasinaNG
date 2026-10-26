@@ -84,11 +84,12 @@ local function placeOnRoad(x, y)
   return p
 end
 
-local function aiDrive(on)
+-- 'span' drives on through the whole road network; 'traffic' stopped for good after 90 m in the first test (2026-10-26)
+local function aiDrive(on, mode)
   local veh = player()
   if not veh then return end
   if on then
-    veh:queueLuaCommand('ai.setMode("traffic") ai.setSpeedMode("legal") ai.setAggression(0.3) ai.driveInLane("on")')
+    veh:queueLuaCommand('ai.setMode("' .. (mode or 'span') .. '") ai.setSpeedMode("legal") ai.setAggression(0.4) ai.driveInLane("on")')
   else
     veh:queueLuaCommand('ai.setMode("disabled")')
   end
@@ -136,6 +137,16 @@ local function run()
     res.shots[#res.shots + 1] = {name = 'spawn', method = shoot('spawn')}
     save()
 
+    -- collision rebuild standing still: all, skin off, all again (warm), skin off again; ticino_perf.csv has each
+    if ticino_stream and ticino_stream.setCollision then
+      for k, off in ipairs({{}, {'level_objects/terrain_skin'}, {}, {'level_objects/terrain_skin'}}) do
+        local q = ticino_stream.setCollision(1, off)
+        note(string.format('reload test %d (%s) at %s: %s objects requeued', k, #off > 0 and 'skin off' or 'all',
+          os.date('%H:%M:%S'), tostring(q)))
+        job.sleep(12)
+      end
+    end
+
     -- the drives: the AI takes the car through the network, one sample a second, once per collision variant
     frameLog = true
     local variants = (ticino_stream and ticino_stream.setCollision) and PLAN.variants or {{name = 'level'}}
@@ -148,10 +159,30 @@ local function run()
       res.drive[#res.drive + 1] = {variant = v.name, time = os.date('%H:%M:%S')}
       job.sleep(10)
       aiDrive(true)
+      local still, modes, m = 0, {'span', 'random', 'span'}, 1
       for i = 1, PLAN.drive_minutes * 60 do
         job.sleep(1)
         t = t + 1
         sample(t)
+        -- a stuck AI: give it the next mode, then put the car on the road 30 m on
+        local last = res.drive[#res.drive]
+        still = (last and last.v and last.v < 1) and still + 1 or 0
+        if still == 15 then
+          m = m % #modes + 1
+          note('AI stuck at ' .. t .. ' s: mode ' .. modes[m])
+          aiDrive(true, modes[m])
+        elseif still == 30 then
+          local veh = player()
+          if veh then
+            local p = veh:getPosition()
+            local d = veh:getDirectionVector()
+            note('AI still stuck: car moved 30 m on')
+            placeOnRoad(p.x + d.x * 30, p.y + d.y * 30)
+            job.sleep(3)
+            aiDrive(true, modes[m])
+          end
+          still = 0
+        end
         if i % 30 == 0 then save() end
         if i % 120 == 0 then res.shots[#res.shots + 1] = {name = v.name .. '_' .. i, method = shoot(v.name .. '_' .. i)} end
       end
