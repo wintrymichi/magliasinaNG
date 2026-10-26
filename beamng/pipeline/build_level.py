@@ -971,6 +971,7 @@ FINISH = [
     ("forest_mosaic", "forest_mosaic", "forest_mosaic_step", {"report": True}),   # v3.1: the forest floor as a mosaic
     ("forest_grass", "forest_mosaic", "grass_step", {"report": True}),   # v3.1.1: grass under the crowns too
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
+    ("tunnels", "tunnels", "tunnels_step", {"report": True}),   # v3.2: tunnels and galleries, holes in the final terrain
     ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: rivers, streams, the lake
     ("races", "races", "races_step", {"report": True}),          # v3.0.40: time trials over the AI roads
     ("same_textures", "same_textures", "same_textures_step", {"report": True}),   # v3.0.40: one file per texture

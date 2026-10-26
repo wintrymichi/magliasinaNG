@@ -47,6 +47,9 @@
     },
     "buildings": {
       "radius": 6
+    },
+    "tunnels": {
+      "radius": 5
     }
   },
   "static_groups": [
