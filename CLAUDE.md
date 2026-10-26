@@ -1012,3 +1012,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   deleted collider no longer forces a rebuild, and ticino_stream.setCollision(radius, groupsOff) switches groups (the
   skin is 26 of the 46 M collidable triangles) for measuring. michi drove east past Agno, out of the built zone (the
   airport runway is bare terrain there in v3.1.1 too): "no objects" at the zone edge is not a streaming bug.
+- What a collision rebuild costs (console, standing still in ticino, 2026-10-26): the whole static collision 7.12 M
+  triangles 3.40 s; without the Forest 1.12 M and STILL 3.40 s (274k tree instances share ~30 meshes: free); only
+  the car's tile 156 k, 0.54 s; no streamed object at all 4.8 k, 0.002 s (the terrain costs nothing). The time is
+  "Loaded Static Collision" after "Physics collision reloaded" (0.05-0.12 s): about 3 us per unique triangle, skin
+  the worst (57 % of the collidable triangles, most of the time). Do not delete the Forest object to test: the game
+  log stopped being written after it (the game went on).
+- Quick travel into a zone never seen: about 40 s, nearly all "Importing COLLADA" of 551 shapes (the game converts
+  each .dae once, cached afterwards) + 4 s of collision.
