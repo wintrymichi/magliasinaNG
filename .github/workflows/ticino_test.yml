@@ -62,6 +62,7 @@ jobs:
           export MAGLIASO_ROOT="$W/mroot"
           mkdir -p "$MAGLIASO_ROOT"
           python tunnels.py "$W/src" "$W/tunnels.json"
+          python ai_lanes.py "$W/src" "$W/ai_lanes.json"
 
       - name: Blocks, checks, zip
         working-directory: beamng/ticino

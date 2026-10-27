@@ -1134,6 +1134,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   weights the path by drivability ** 4, drives at most 40 km/h and slower in bends (A_LAT). The AI drive after it went
   1.16 km west through Pura with 6 short stops. The jump check 1 s after stream.lua's reset log still saw the old
   heights; 5 s later all were right (the reset lands a few frames after its log line).
+- Laptop run 10: the slower route (A_LAT, 40 km/h) flipped at the same place, 684,-1040, at 3-7 m/s: not speed. The AI
+  road strada_cantonale_i1_0 there lies on the EAST EDGE of the cantonale, and its 7.7-9 m width covers the lane
+  tlm_1052 1.2-1.6 m lower beside it: every car on that AI line (scriptai, span AI) goes over the edge. Making the route
+  graph directed for one-way roads gave a 33.8 km detour (reverted). New finish step ai_lanes (pipeline/ai_lanes.py, in
+  ticino_test.yml after tunnels): every AI node walks the road surfaces across its width, and a step over 0.5 m inside
+  it moves the node away and narrows the width (lane 0.3 m from the drop, never under 3 m), spread over 2 nodes each
+  side, faded out 6 m from the ends. On v3.1.1: 9 of 3,451 roads, 48 nodes, at most 3.2 m (the cantonale 2.9 m west).
+  route.json regenerated from the fixed roads. Not run in the main build yet (only on the Ticino test level).
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
