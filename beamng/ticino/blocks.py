@@ -35,7 +35,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "pipeline"))
 import bng  # noqa: E402  (writers only: bng imports nothing of the pipeline's config)
 import cdae  # noqa: E402
-import aimap_check  # noqa: E402
 
 LEVEL = "ticino"
 FAR_MAT = "tc_far_ground"
@@ -447,52 +446,22 @@ def copy_level(src_dir, dst_dir, src_level, skip):
     log("level copy:", n_txt, "text files rewritten,", n_link, "linked")
 
 
-AI_WIDTH_STEP = 2e-6       # m of width added per AI road (3,451 roads: at most +7 mm; float32 keeps 2 ulp at 8 m)
-
-
-def ai_roads(objs, n_ai):
-    """The AI DecalRoads of a scene file as the streamed level needs them: useSubdivisions off and a width of their
-    own. Without subdivisions two roads that join the same two nodes (the two one-way halves round a splitter
-    island) tie in every field map.lua's edgeCompare reads before `lanes`, and its node reduction compares them with
-    a new edge that has no lanes: "attempt to compare nil with string", the level load crashed (laptop runs 5, 6).
-    A node width that differs by AI_WIDTH_STEP per road ends the compare at the radii (aimap_check.py emulates it).
-    Not the speed limit: 0.40.1 does not read a DecalRoad's speedLimit from the scene file (run 6 probe), and not
-    the drivability: a lower drivability makes the AI give way at the joint."""
-    out = []
-    for o in objs:
-        if o.get("class") == "DecalRoad":
-            n_ai[0] += 1
-            o = dict(o, useSubdivisions=False)
-            o["nodes"] = [list(n[:3]) + [round(float(n[3]) + n_ai[0] * AI_WIDTH_STEP, 6)] + list(n[4:])
-                          for n in o["nodes"]]
-        out.append(o)
-    return out
-
-
 def write_scene(kept, dst_dir, tb_new, src_level):
     main = os.path.join(dst_dir, "main")
     if os.path.isdir(main):
         shutil.rmtree(main)
-    n_ai, roads = [0], []
     for path, objs in kept.items():
         if path.endswith("level_objects/terrain"):
             objs = [tb_new if o.get("class") == "TerrainBlock" else o for o in objs]
-        # the AI roads: map.lua builds the AI graph from a DecalRoad's subdivided edges when useSubdivisions is on,
-        # and those are clipped to the terrain, which exists only in the streamed window: 14-19 k of the 20,810
-        # nodes lay at z 0 (laptop runs 2-4). Off, it takes the control points with their own heights. (A
-        # map.reset() after every window move fixed the nodes near the car but froze the laptop 2-2.5 s each time.)
-        objs = ai_roads(objs, n_ai)
-        roads += [o for o in objs if o.get("class") == "DecalRoad"]
+        # the AI roads stay as they are (subdivided). Without subdivisions (runs 5-7) map.lua crashed on the tied
+        # one-way halves round the islands (aimap_check.py emulates it), and with that fixed the node heights were
+        # still 0 outside the window and the AI drove a third as far: stream.lua reads the map again at a jump.
         d = os.path.join(main, *path.split("/")) if path != "." else main
         os.makedirs(d, exist_ok=True)
         with wopen(os.path.join(d, "items.level.json"), "w", encoding="utf-8") as f:
             for o in objs:
                 f.write(json.dumps(o, separators=(",", ":")).replace(f"/levels/{src_level}/", f"/levels/{LEVEL}/")
                         + "\n")
-    crashes = aimap_check.check(roads, seeds=2)
-    print(f"  AI map check (map.lua emulated, 2 node orders): {len(roads)} roads, {len(crashes)} crashing compares")
-    if crashes:
-        raise SystemExit(f"AI roads would crash the game's map.lua: {crashes[:5]}")
 
 
 def terrain_materials(src_mats, base_keys, zone, src_level):

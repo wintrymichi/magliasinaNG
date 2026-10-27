@@ -48,6 +48,7 @@ MOUND_W = 8.0           # m beside the shell over which the mound falls back to 
 HEAD = 1.0              # m, thickness of a headwall
 HEAD_W = 1.6            # m of headwall beside the shell
 HEAD_UP = 1.4           # m of headwall over the shell
+APRON = 1.6            # m of floor in front of a headwall's face (one terrain square and a bit)
 FOOT = 0.4              # m a headwall's side goes under the lowest ground at its edge
 PORTAL_OUT = 1.5        # m: the headwall stands this far out of the swissTLM3D portal (one terrain square)
 CLEAR = 0.25            # m: ground this far over the floor is in the way
@@ -442,6 +443,13 @@ def build_tube(tb, mats, ter=None):
     for a, b in ((0, i0), (i1, m - 1)):
         add("mp_ballast" if tb.kind != "road" else "mp_road_asphalt",
             up(tb.sweep([(tb.hw, -0.03), (-tb.hw, -0.03)], a, b, False)))
+    # an apron APRON m out in front of each face, as wide as the headwall: the hole squares straddle the face and
+    # beside the level's narrower track bed one saw the lake through them at the jamb feet (laptop run 7)
+    W = tb.hw_out + HEAD_W
+    for st, way in ((0, -1), (m - 1, 1)):
+        d = np.r_[tb.T[st] * way * APRON, 0.0]
+        a0, a1 = tb.frame(st, W, -0.03), tb.frame(st, -W, -0.03)
+        add("mp_ballast" if tb.kind != "road" else "mp_road_asphalt", up(np.array([[a0, a1, a1 + d], [a0, a1 + d, a0 + d]])))
     # lamp strips along both sides of the vault
     a = math.radians(55)
     for sg in (1, -1):

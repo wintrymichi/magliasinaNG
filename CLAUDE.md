@@ -1110,6 +1110,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   3 orders before, 0 in 8 after, with the speed emulated as one auto value and the nodes as float32. Not drivability:
   a lower drivability makes the AI give way at the joint. (The probe also read useSubdivisions as nil, yet runs 1-4
   without the key had subdivided z 0 nodes and no crash, and 5-6 with false crashed: the key is read.)
+- Laptop run 7: the width offsets loaded (47.9 s, no crash) but the control-point graph did not help: far nodes kept
+  z 0 all the same (the control points' z is also clipped where no terrain is loaded) and the AI drove 762 m against
+  2,383 m in run 2 (more stops, it hung at joints the subdivided graph had smooth). Reverted: the ticino AI roads are
+  written as the source has them (subdivided, no width offsets, aimap_check.py kept as a tool), and stream.lua calls
+  map.reset() once at each jump, while the game is paused for the reload (MAP_RESET_ON_JUMP), never on the fly.
+  Between jumps the far nodes stay at z 0 (only the window's are right). Also seen: 4,857 core_trafficSignals errors,
+  hitches up to 260 ms at jumps. The S tunnel portal showed the lake through two small gaps at the jamb feet: an
+  apron (tunnels.APRON, 1.6 m of ballast/asphalt 3 cm under the floor) now runs out in front of each face.
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold

@@ -36,6 +36,7 @@ M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
+M.MAP_RESET_ON_JUMP = true -- read the AI map again at a jump, while the game is paused (1.9-2.5 s on the laptop)
 M.MAP_RESET_FRAMES = nil  -- frames after a terrain swap to read the AI map again (nil: never). A map.reset() fixed
                            -- the z 0 nodes near the car but froze the laptop 2-2.5 s every move (run 4); the AI roads
                            -- now have useSubdivisions off (blocks.py), so the graph takes their own heights
@@ -321,6 +322,16 @@ local function onUpdate(dtReal)
       st.quiet = nil
       local ms = objects.reloadCollisionIfDirty(clock)
       if st.watch then st.watch.rec.reloadMs = ms end
+      -- the AI DecalRoads are clipped to the terrain, which exists only in the window: the AI map's nodes outside
+      -- the window it was read with lie at z 0. Read it again here, hidden in the jump's pause (never on the fly:
+      -- 2 s frozen at every window move, laptop run 4; control points instead of subdivisions crashed map.lua or,
+      -- with that fixed, kept z 0 too and drove the AI a third as far, runs 5-7)
+      if M.MAP_RESET_ON_JUMP then
+        local t0 = clock()
+        local ok = pcall(function() map.reset() end)
+        if st.watch then st.watch.rec.mapResetMs = clock() - t0 end
+        log('I', 'ticino', string.format('AI map read again at the jump: %.1f ms%s', clock() - t0, ok and '' or ' (failed)'))
+      end
     end
     st.resumeIn = st.resumeIn - 1
     if st.resumeIn <= 0 then

@@ -1,1 +1,2 @@
-2026-10-27T01:49:49Z
+Tue Oct 27 02:39:05 UTC 2026
+run 8: subdivided AI roads, map.reset at jumps, tunnel apron
