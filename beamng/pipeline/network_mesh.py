@@ -24,6 +24,7 @@ steps and the terrain carve are the ones of v1.1 (road_mesh.py). Tiles of TILE m
 chunks) with MARGIN m of context.
 """
 import os, pickle
+import multiprocessing
 import numpy as np
 import shapely
 import scipy.sparse as sp
@@ -1232,7 +1233,10 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
         c = un.mean(1)
         un = un[~in_cells(keep_out, c[:, 0], c[:, 1])]
     print("top faces: %d of %s, %d in all" % (len(un), "the unpaved" if mats == UNPAVED else "these", len(al)))
-    UN, ALL = road_mesh.TriSurface(un), road_mesh.TriSurface(al)
+    # the workers build their own surfaces unless they are forks of this process (Python 3.14 starts them from a
+    # forkserver): two more copies here cost 3 GB on a Ticino zone and the server ran out of memory
+    fork = multiprocessing.get_start_method() == "fork"
+    UN, ALL = (road_mesh.TriSurface(un), road_mesh.TriSurface(al)) if fork else (None, None)
     blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
                if o.get("class") == "TerrainBlock")
     Z0, MAXH = float(blk["position"][2]), float(blk["maxHeight"])
@@ -1250,6 +1254,7 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
     tmp = tempfile.mkdtemp(prefix="unpaved_")
 
     ex = pool(tmp, un, al)
+    del un, al
 
     def run(qa):
         jobs = []
