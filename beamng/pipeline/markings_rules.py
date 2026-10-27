@@ -789,7 +789,7 @@ def transverse(junc, roads, paint, stats):
             if ctl in ("stop", "give_way") and r.drive >= 0.3:
                 signal_point(a, s0, ctl, paint)
             if lit:
-                light_point(a, s0, id(J), paint)
+                light_point(a, s0, tuple(np.round(np.asarray(J["c"], float)[:2], 2)), paint)
             r.cut.append(tuple(sorted((a.s, s0 + a.d * (depth + 0.3)))))
             r.jcut.append(tuple(sorted((a.s, s0 + a.d * (depth + 0.3)))))
             if line_ok and depth > 0 and not r.oneway and W >= R["long_w"]:
@@ -1994,6 +1994,7 @@ LIGHT_STATES = ({"state": "greenTrafficLight", "duration": 15}, {"state": "yello
 LIGHT_SHAPE = "/art/shapes/objects/s_trafficlight_boom_sn.dae"
 LIGHT_BACK = 1.0           # m from the stop line back along the approach
 LIGHT_OUT = 0.8            # m beyond the carriageway's edge
+LIGHT_JOIN = 35.0          # m between junction centres of one intersection
 
 
 def snap_ring_signals(paint, roads):
@@ -2117,10 +2118,23 @@ def signals_json(points, stats=None, lights=()):
     if stats is not None:
         stats["signals"] = {k: sum(1 for _, _, q in kept if q == k) for k in SIGNAL_TYPES}
     heads = []
+    # junctions closer than LIGHT_JOIN (the two halves of a crossing of divided roads, a junction the AI roads
+    # draw as two) are one intersection: one sequence, so their ways in are never green against each other
+    keys = sorted({L[2] for L in lights})
+    root = {k: k for k in keys}
+
+    def find(k):
+        while root[k] != k:
+            k = root[k]
+        return k
+    if keys:
+        kd = cKDTree(np.array(keys))
+        for i, j in kd.query_pairs(LIGHT_JOIN):
+            root[find(keys[i])] = find(keys[j])
     by_j = {}
     for L in lights:
-        by_j.setdefault(L[2], []).append(L)
-    cid, sid = max([c["id"] for c in out["controllers"]], default=0), 0
+        by_j.setdefault(find(L[2]), []).append(L)
+    sid = 0                                          # controllers and instances share one id count (as above)
     for J in by_j.values():
         sid += 1
         a0 = np.arctan2(J[0][1][1], J[0][1][0])
@@ -2128,9 +2142,9 @@ def signals_json(points, stats=None, lights=()):
                  for L in J]
         ph_ids = []
         for ph in sorted(set(phase)):
-            cid += 1
-            ph_ids.append((ph, cid))
-            out["controllers"].append({"id": cid, "name": "lights_%d_%d" % (sid, ph), "type": LIGHT_TYPE,
+            nid += 1
+            ph_ids.append((ph, nid))
+            out["controllers"].append({"id": nid, "name": "lights_%d_%d" % (sid, ph), "type": LIGHT_TYPE,
                                        "defaultIndex": 3, "states": [dict(st) for st in LIGHT_STATES]})
         seq = {"id": sid, "name": "lights_%d" % sid, "startTime": 0,
                "phases": [{"controllerIds": [c]} for _, c in ph_ids]}
