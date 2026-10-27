@@ -1226,3 +1226,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   config.py wraps it for every caller (retry on the cleaned polygon, else no triangles and a log line).
 - zone_build.yml: zone_retry_stamp.txt builds only zone_retry.txt (failed zones after a fix) in its own concurrency
   group, so it does not cancel the run of the whole list (a push of zone_stamp.txt would: cancel-in-progress).
+  A retry commit must have "[zone retry]" in its message: the first test (head_commit.modified/added holding the
+  stamp's name) came out false in the workflow and the retry started all 71 zones (cancelled at once). Check the
+  setup job's zone list of a new run before leaving it.
