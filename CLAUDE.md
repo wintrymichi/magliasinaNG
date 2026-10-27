@@ -1229,3 +1229,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   A retry commit must have "[zone retry]" in its message: the first test (head_commit.modified/added holding the
   stamp's name) came out false in the workflow and the retry started all 71 zones (cancelled at once). Check the
   setup job's zone list of a new run before leaving it.
+- GEOS union_all stopped on "TopologyException: found non-noded intersection" (zone ti_1_3, clearance._tile in the
+  vegetation stage, 22 min in). config.py wraps shapely.union_all/unary_union like the CDT: on a GEOSException it
+  retries snapped to a 1 mm, then 1 cm grid (shapely.ops.unary_union goes through shapely.union_all, so it is covered).
