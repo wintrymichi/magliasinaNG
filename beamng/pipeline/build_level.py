@@ -198,6 +198,23 @@ def ground_fn():
     return smoothed_sampler(Grid.load(os.path.join(WORK, "dtm05.npz")), 0.6)
 
 
+_NET_JOB = None
+
+
+def _mesh_tile_job(k):
+    """One network tile of stage_roads (in a forked worker or in the main process): (triangles, [(tx, ty,
+    MeshBuilder parts)], [(cx, cy, top triangles)])."""
+    import network_mesh
+    net, dtm, xs, ys, surface_parts, tiles = _NET_JOB
+    X0, Y0 = tiles[k]
+    ops, tops = [], []
+
+    def on_mesh(tx, ty, mat, uvt, V, T, S_, ground_):
+        ops.append((tx, ty, surface_parts(mat, uvt, V, T, S_, ground_)))
+    n = network_mesh.mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, lambda cx, cy, tri: tops.append((cx, cy, tri)))
+    return n, ops, tops
+
+
 def carve_corridor(meshed, tops, xs, ys, sq, ov):
     """The terrain carve under the corridor meshes (stage_roads): ov gets the carve heights."""
     import shapely
@@ -299,17 +316,28 @@ def stage_roads(scene, ctx):
     import railway
     bed = railway.bed_fn() if "railway" in ctx.get("stages", STAGES) else None
 
-    def add_surface(tx, ty, mat, uvt, V, T, S_, ground_, tops=None):
-        mb = builders.setdefault((tx, ty), bng.MeshBuilder())
-        mb.add(mat, V, uvs=V[:, :2] / uvt, tris=T)
-        if tops is not None:
-            tops.append(V[T])
+    def surface_parts(mat, uvt, V, T, S_, ground_):
+        """The MeshBuilder.add calls of one surface with its skirts: [(material, verts, kwargs)]."""
+        parts = [(mat, V, {"uvs": V[:, :2] / uvt, "tris": T})]
         gr = ground_ if bed is None else (lambda x, y: np.minimum(ground_(x, y), bed(x, y)))
         kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S_, gr))
-        mb.add(mat, kerb, uvs=bng.box_uvs_soup(kerb, uvt), normals=bng.flat_normals_soup(kerb))
+        parts.append((mat, kerb, {"uvs": bng.box_uvs_soup(kerb, uvt), "normals": bng.flat_normals_soup(kerb)}))
         if len(wall):
-            mb.add("mp_road_wall", wall, uvs=bng.box_uvs_soup(wall, 1.6), normals=bng.flat_normals_soup(wall))
-            stats["stone faces"] += len(wall) // 6
+            parts.append(("mp_road_wall", wall, {"uvs": bng.box_uvs_soup(wall, 1.6),
+                                                 "normals": bng.flat_normals_soup(wall)}))
+        return parts
+
+    def add_parts(tx, ty, parts):
+        mb = builders.setdefault((tx, ty), bng.MeshBuilder())
+        for mat_, V_, kw in parts:
+            mb.add(mat_, V_, **kw)
+            if mat_ == "mp_road_wall":
+                stats["stone faces"] += len(V_) // 6
+
+    def add_surface(tx, ty, mat, uvt, V, T, S_, ground_, tops=None):
+        if tops is not None:
+            tops.append(V[T])
+        add_parts(tx, ty, surface_parts(mat, uvt, V, T, S_, ground_))
 
     tops = []
     for gi, mat, cell, uvt, pid in items:
@@ -360,10 +388,28 @@ def stage_roads(scene, ctx):
 
     def on_tops(cx, cy, tri):
         chunk_tops.setdefault((cx, cy), []).append(tri)
-    for k, (X0, Y0) in enumerate(tiles):
-        ntri += network_mesh.mesh_tile(net, dtm, X0, Y0, xs, ys, add_surface, on_tops)
+    # NET_WORKERS > 1 (the Ticino zones): the tiles in forked processes, their meshes added here in tile order,
+    # so the level is the same as with one process
+    global _NET_JOB
+    _NET_JOB = (net, dtm, xs, ys, surface_parts, tiles)
+    nw = int(os.environ.get("NET_WORKERS", "1"))
+    if nw > 1:
+        import multiprocessing as mp
+        pool = mp.get_context("fork").Pool(nw)
+        results = pool.imap(_mesh_tile_job, range(len(tiles)))
+    else:
+        pool, results = None, map(_mesh_tile_job, range(len(tiles)))
+    for k, (n, ops, tt) in enumerate(results):
+        ntri += n
+        for tx, ty, parts in ops:
+            add_parts(tx, ty, parts)
+        for cx, cy, tri in tt:
+            on_tops(cx, cy, tri)
         if k % 25 == 0:
             print("  network tiles %d/%d, %d triangles, %.0f s" % (k + 1, len(tiles), ntri, time.time() - t0), flush=True)
+    if pool is not None:
+        pool.close(); pool.join()
+    _NET_JOB = None
     # the carve once all the meshes exist (a vertex at a tile edge sees the meshes on both sides)
     per = int(round(network_mesh.TILE / CHUNK))
     for X0, Y0 in tiles:
@@ -811,12 +857,37 @@ def stage_groundcover(scene, ctx):
     print("groundcover:", ctx["groundcover"], flush=True)
 
 
+def zone_route(ctx):
+    """A Ticino zone (config.ZONE) has no Street View route: the three first spawns go on the main roads nearest
+    to the middle of its core and halfway to two of its corners, as [{'pos': (x, y)}] pairs along the road."""
+    from config import ZONE
+    net = ctx.get("network")
+    x0, y0, x1, y1 = ZONE["core_local"]
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    big = {"10m Strasse", "8m Strasse", "6m Strasse"}
+    ok = np.array([net.segs[k]["class"] in big and not net.segs[k]["bridge"] for k in net.seg])
+    idx = np.flatnonzero(ok)
+    out = []
+    for tx, ty in ((cx, cy), ((cx + x0) / 2, (cy + y0) / 2), ((cx + x1) / 2, (cy + y1) / 2)):
+        i = idx[np.argmin(np.hypot(net.x[idx] - tx, net.y[idx] - ty))]
+        a, n = net.segs[net.seg[i]]["first"], net.segs[net.seg[i]]["n"]
+        i = min(max(i, a), a + n - 2)
+        out += [{"pos": (float(net.x[i]), float(net.y[i]))}, {"pos": (float(net.x[i + 1]), float(net.y[i + 1]))}]
+    return out
+
+
 def stage_spawns(scene, ctx):
-    poses = json.load(open(os.path.join(WORK, "poses.json")))
-    main = [p for p in poses if p.get("main_run", True)]
+    from config import ZONE
+    if ZONE:
+        main = zone_route(ctx)                       # pairs: indices 0, 2, 4 with the next point
+        picks = [0, 2, 4]
+    else:
+        poses = json.load(open(os.path.join(WORK, "poses.json")))
+        main = [p for p in poses if p.get("main_run", True)]
+        picks = [2, len(main) // 2, len(main) - 3]
     g = "MissionGroup/PlayerDropPoints"
     hfn = road_height_fn()
-    for k, idx in enumerate([2, len(main) // 2, len(main) - 3]):
+    for k, idx in enumerate(picks):
         p, q = main[idx], main[idx + 1]
         x, y = p["pos"][0], p["pos"][1]
         z = float(hfn([x], [y])[0]) + 0.8                          # 0.8 m above the road surface
@@ -991,6 +1062,10 @@ FINISH = [
 ]
 
 
+# not in a Ticino zone (config.ZONE): the time trials follow the Malcantone's named roads
+ZONE_SKIP = {"races"}
+
+
 def finish(names=None):
     """The FINISH steps (all, or those named) on the level folder."""
     import importlib
@@ -1000,6 +1075,10 @@ def finish(names=None):
     os.environ.setdefault("MAGLIASO_OSM_PINNED", "1")        # OpenStreetMap from the extract in beamng/dati
     for name, mod, fn, kw in FINISH:
         if names and name not in names:
+            continue
+        from config import ZONE
+        if ZONE and name in ZONE_SKIP:
+            print(f"== finish: {name} skipped in a zone", flush=True)
             continue
         kw = dict(kw)
         if kw.get("report"):
