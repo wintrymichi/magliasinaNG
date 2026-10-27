@@ -1167,3 +1167,25 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   roadheight now saves an empty Surface (distance inf, height nan). Expect more such Malcantone-only data (poses,
   road_profile, photo markings, wall caps): a zone has none of it in reach and every reader must take "nothing".
   The Actions cache saves only when the job succeeds: the zone workflow saves the downloads right after them.
+- More Malcantone-only assumptions found on ti_1_0 (2026-10-27), all fixed so the Malcantone build is unchanged:
+  stage_roads with no corridor polygons (bb of an empty list); vanilla/carryover read the reference zip under
+  levels/<LEVEL_NAME> (the zip's level is always magliaso_pura) and carryover took over the v1.1 route paint and props
+  (now none in a zone); the Monte Lema cable car/summit outside the zone's terrain; guardrails_final.json and the
+  photo rails (NaN feet outside the zone's DTM: savgol "array must not contain infs or NaNs"): area.in_zone drops
+  photo data outside a zone; spawns from poses.json (zone_route picks main roads near the core); races skipped.
+- A dense zone is slow on one process: ti_1_0 stages roads 81 min, walls 21, buildings 36, vegetation 20, canopy 28,
+  finishing optimize 11, unpaved 17, markings 13, road_wear 12 (cloud container). wintryserver (6 cores) ran the
+  stages in 73 min. GitHub stops a job at 6 h: zone_build.yml runs the stages and the finishing steps as two jobs.
+  NET_WORKERS forks the network tiles (results added in tile order, same level). MAGLIASO_CHECKPOINT=1 pickles
+  (scene, ctx) after every stage (700 MB on ti_1_0) and `build_level.py --reuse-roads --resume` goes on after a crash.
+- The cloud container's disk (about 30 GB usable) fills with a zone: the raw swisstopo tiles (data/swissalti3d_05,
+  dsm_05, buildings3d) are not read after build_rasters/extract_buildings and can go during a build.
+- skimage was missing in the cloud container (vegetation's watershed): pip install scikit-image before a local build.
+- wintryserver (michi's Ubuntu server, 6 cores, 14 GB, /mnt/disk8tb): RC sessions work only inside /mnt/disk8tb/ticino.
+  Claude Code's auto-mode check refused to run the cloned repo's Python ("Code from External") until michi wrote the
+  exact permission in the thread; sudo asks a password (osmium-tool unpacked from the .deb into /mnt/disk8tb/ticino).
+  `claude remote-control` in a terminal registers the folder as a device; an RC started inside a running session did not.
+- Traffic lights (markings_rules, 2026-10-27): OSM highway=traffic_signals on an arm makes the junction signalled
+  (3+ arms): every way in gets a stop line, an instance of a two-phase sequence (axes) and the stock boom
+  /art/shapes/objects/s_trafficlight_boom_sn.dae on its kerb side, local +x to the kerb (as BeamNG.Earth places it,
+  tested by them in 0.40.3; not yet seen in our level). Controllers and instances share one id count.
