@@ -1210,3 +1210,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - parking.Ground.terrain converted the whole 8192x8192 terrain to float64 at every call (three calls a parking spot):
   more than 20 min of parking on the dense zone ti_1_0. It now converts only the four samples it reads (same numbers).
 - roof_posts took 36 min on ti_1_0 (union_all of the buffered roof faces of each shape); not changed yet.
+- The finishing steps ran one after the other in ONE process and the memory they left added up (wintryserver: 7-10 GB
+  at the start of each step after two hours, OOM at road_seams with 13.1 GB). build_level.finish now runs each step in
+  a forked child (MAGLIASO_STEP_FORK=0 turns it off; no fork on Windows): the steps share nothing but the files.

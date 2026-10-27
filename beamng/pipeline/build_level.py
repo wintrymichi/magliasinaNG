@@ -1067,6 +1067,7 @@ FINISH = [
 
 # not in a Ticino zone (config.ZONE): the time trials follow the Malcantone's named roads
 ZONE_SKIP = {"races"}
+STEP_FORK = hasattr(os, "fork") and os.environ.get("MAGLIASO_STEP_FORK", "1") != "0"
 
 
 def finish(names=None, after=None):
@@ -1091,7 +1092,28 @@ def finish(names=None, after=None):
             kw["report"] = os.path.join(rdir, f"{name}.json")
         t0 = time.time()
         print(f"== finish: {name} ({mod}.{fn})", flush=True)
-        getattr(importlib.import_module(mod), fn)(root, **kw)
+        if STEP_FORK:
+            # each step in a child process: the memory a step leaves behind added up from one step to the next and the
+            # 14 GB server ran out of it after two hours of steps (Ticino zone ti_1_0)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            pid = os.fork()
+            if pid == 0:
+                code = 0
+                try:
+                    getattr(importlib.import_module(mod), fn)(root, **kw)
+                except BaseException:
+                    import traceback
+                    traceback.print_exc()
+                    code = 1
+                sys.stdout.flush()
+                sys.stderr.flush()
+                os._exit(code)
+            status = os.waitpid(pid, 0)[1]
+            if status:
+                raise SystemExit(f"finish step {name} failed (wait status {status})")
+        else:
+            getattr(importlib.import_module(mod), fn)(root, **kw)
         print(f"[finish {name}: {time.time() - t0:.0f} s]", flush=True)
 
 
