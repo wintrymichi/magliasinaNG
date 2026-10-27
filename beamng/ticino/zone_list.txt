@@ -1,0 +1,3 @@
+# Ticino zones built by .github/workflows/zone_build.yml (one zone file name a line, beamng/ticino/zones/ti)
+# probe: Bioggio - Lugano west
+ti_1_0

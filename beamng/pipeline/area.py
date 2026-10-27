@@ -18,20 +18,32 @@ distant backdrop starts at the edge of that square.
 import json, os
 import numpy as np
 import shapely
-from config import (AREA_MARGIN, BOUNDARY, EXTRA_CORRIDOR, EXTRA_ROAD_MARGIN, K, ROUTE_MARGIN, TER_SIZE, TER_SQUARE, TER_X0,
+from config import (ZONE, AREA_MARGIN, BOUNDARY, EXTRA_CORRIDOR, EXTRA_ROAD_MARGIN, K, ROUTE_MARGIN, TER_SIZE, TER_SQUARE, TER_X0,
                     TER_X1, TER_Y0, TER_Y1, local_to_lv95, lv95_to_local, wgs_to_local)
 
 DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
 _cache = {}
 
 
+def zone_box():
+    """The playable area of a Ticino zone (config.ZONE): its rectangle (LV95 in the zone file) in local coordinates."""
+    e0, n0, e1, n1 = ZONE["area_lv95"]
+    x0, y0 = lv95_to_local(e0, n0)
+    x1, y1 = lv95_to_local(e1, n1)
+    return shapely.box(x0, y0, x1, y1)
+
+
 def boundary():
-    """The quadrilateral drawn by the user (local coordinates)."""
+    """The quadrilateral drawn by the user (local coordinates); a zone's rectangle."""
+    if ZONE:
+        return zone_box()
     return shapely.Polygon([wgs_to_local(lat, lon) for lat, lon in BOUNDARY])
 
 
 def route():
     """The Street View route (main run of the calibrated poses)."""
+    if ZONE:
+        return shapely.LineString()                  # the Street View route is the Malcantone's
     if "route" not in _cache:
         poses = json.load(open(os.path.join(DATI, "poses.json")))
         _cache["route"] = shapely.LineString([p["pos"][:2] for p in poses if p["main_run"]])
@@ -44,6 +56,8 @@ EXTRA_ROADS = ("cantonale_gravesano.json",)
 def extra_roads():
     """The roads added beyond the boundary (dati/<file> of EXTRA_ROADS, strade_extra.py), as local
     lines."""
+    if ZONE:
+        return []
     if "extra" not in _cache:
         out = []
         for name in EXTRA_ROADS:
@@ -60,6 +74,8 @@ CORRIDORS = "strade_extra_v22.json"
 
 def extra_corridors():
     """v2.2: [(key, name, local MultiLineString)] of the roads of dati/strade_extra_v22.json (strade_extra.py)."""
+    if ZONE:
+        return []
     if "corridors" not in _cache:
         out = []
         f = os.path.join(DATI, CORRIDORS)
@@ -79,6 +95,8 @@ VILLAGES = "paesi_interi.json"
 
 def villages():
     """v3.0.40: [(key, name, local Polygon)] of the whole villages of dati/paesi_interi.json (paesi_interi.py)."""
+    if ZONE:
+        return []
     if "villages" not in _cache:
         out = []
         f = os.path.join(DATI, VILLAGES)
@@ -96,7 +114,7 @@ def villages():
 def polygon():
     """The playable area (local coordinates)."""
     if "area" not in _cache:
-        _cache["area"] = _polygon(corridors=True)
+        _cache["area"] = zone_box() if ZONE else _polygon(corridors=True)
     return _cache["area"]
 
 

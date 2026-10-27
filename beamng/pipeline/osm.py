@@ -10,7 +10,7 @@ stays the geometry of reference. (c) OpenStreetMap contributors, ODbL.
 import gzip, json, os
 import numpy as np
 import shapely
-from config import DATA, wgs_to_local
+from config import DATA, ZONE, wgs_to_local
 
 PATH = os.path.join(DATA, "osm", "osm_area.json")
 DATI = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati")
@@ -26,6 +26,8 @@ def source(path=PATH, pinned=PINNED):
     """The file to read: the download, else the extract kept in the repository; None without both. With
     MAGLIASO_OSM_PINNED=1 (build_level.py, the v2.8 workflows) always the extract: a level built on the PC is the one built
     on GitHub."""
+    if ZONE:                                         # a Ticino zone: the extracts in dati are the Malcantone's
+        return path if os.path.exists(path) else None
     if os.environ.get("MAGLIASO_OSM_PINNED") == "1":
         return pinned if os.path.exists(pinned) else None
     return path if os.path.exists(path) else (pinned if os.path.exists(pinned) else None)

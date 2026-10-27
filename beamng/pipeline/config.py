@@ -5,6 +5,7 @@ World frame (BeamNG): x = east, y = north, z = up, metres, true ground scale.
 where (E, N) are Swiss LV95 (EPSG:2056) coordinates and K is the LV95 point
 scale factor at the map centre, so 1 m in BeamNG is 1 m on the ground.
 """
+import json
 import os
 from pyproj import Transformer
 
@@ -14,7 +15,11 @@ DATASET = os.environ.get("MAGLIASO_DATASET") or r"C:\Users\michi\Documents\magli
 ROOT = os.environ.get("MAGLIASO_ROOT") or r"D:\beamng_magliaso"                         # heavy data / cache
 DATA = os.path.join(ROOT, "data")
 WORK = os.path.join(ROOT, "work")
-LEVEL_NAME = "magliaso_pura"
+# Ticino a blocchi (beamng/ticino/zones.py): MAGLIASO_ZONE names a zone file that moves the playable area, the terrain
+# block and the level name to one zone of the Ticino grid. Without it everything is the Malcantone level as before.
+ZONE_FILE = os.environ.get("MAGLIASO_ZONE")
+ZONE = json.load(open(ZONE_FILE, encoding="utf-8")) if ZONE_FILE else None
+LEVEL_NAME = ZONE["level"] if ZONE else "magliaso_pura"
 BEAMNG_USER = os.environ.get("MAGLIASO_BEAMNG_USER") or r"C:\Users\michi\AppData\Local\BeamNG\BeamNG.drive\current"
 BEAMNG_GAME = os.environ.get("MAGLIASO_BEAMNG_GAME") or r"C:\Program Files (x86)\Steam\steamapps\common\BeamNG.drive"
 # the released level (zip) whose copies of vanilla files stand in for the game install when
@@ -45,6 +50,8 @@ EXTRA_CORRIDOR = 100.0
 TER_SIZE = 8192                 # terrain samples per side
 TER_SQUARE = 1.5                # metres per terrain sample
 TER_X0, TER_Y0 = -7230.0, -4731.0
+if ZONE:
+    TER_SIZE, TER_X0, TER_Y0 = int(ZONE["ter_size"]), float(ZONE["ter_x0"]), float(ZONE["ter_y0"])
 TER_X1 = TER_X0 + (TER_SIZE - 1) * TER_SQUARE
 TER_Y1 = TER_Y0 + (TER_SIZE - 1) * TER_SQUARE
 

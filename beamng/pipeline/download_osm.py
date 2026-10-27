@@ -19,7 +19,7 @@ the Overpass servers; --pin copies the downloaded files there.
 """
 import gzip, json, os, shutil, sys, time
 import requests
-from config import DATA, local_to_lv95, lv95_to_wgs
+from config import DATA, ZONE, local_to_lv95, lv95_to_wgs
 import area
 
 URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
@@ -93,8 +93,39 @@ def overpass(q, attempts=6):
     raise RuntimeError("Overpass failed")
 
 
+def zone_main():
+    """A Ticino zone (config.ZONE): the elements over the area + MARGIN from the Geofabrik extracts (Overpass is not
+    fit for 60 zones in parallel), Switzerland and, where the zone reaches over the border, the north-west of Italy.
+    No municipalities (the zones have no zone report). The extracts in dati are
+    replaced by the zone's: run zone builds only in a scratch checkout (the workflow), never in a working copy."""
+    import download_swisstopo as ds
+    b = bbox()
+    box = tuple(float(v) for v in b.split(","))
+    got = [[], []]
+    seen = [set(), set()]
+    for url in ZONE_PBFS:
+        pbf = ds.fetch(url, os.path.join(DATA, "osm", os.path.basename(url)))[0]
+        for k, els in enumerate(pbf_elements(pbf, box)):
+            for e in els:
+                if (e["type"], e["id"]) not in seen[k]:
+                    seen[k].add((e["type"], e["id"]))
+                    got[k].append(e)
+    src = "Geofabrik " + ", ".join(map(os.path.basename, ZONE_PBFS)) + time.strftime(" %Y-%m-%d")
+    for path, els in ((OUT, got[0]), (POIS, got[1]), (COMMUNES, [])):
+        d = {"elements": els, "bbox": b, "source": src}
+        json.dump(d, open(path + ".part", "w"))
+        os.replace(path + ".part", path)
+        # many steps read the extracts in dati directly: in a zone build (a scratch checkout) they become the zone's
+        os.remove(PINNED[path]) if os.path.exists(PINNED[path]) else None
+        with gzip.open(PINNED[path], "wt", encoding="utf-8") as f:
+            json.dump(d, f, separators=(",", ":"))
+        print(os.path.basename(path), len(els), "OSM elements over", b, flush=True)
+
+
 def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    if ZONE:
+        return zone_main()
     for path, query in ((OUT, QUERY), (COMMUNES, QUERY_COMMUNES), (POIS, QUERY_POIS)):
         if os.path.exists(path):
             print(path, "exists")
@@ -117,6 +148,7 @@ def main():
 
 
 PBF = "https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"
+ZONE_PBFS = (PBF, "https://download.geofabrik.de/europe/italy/nord-ovest-latest.osm.pbf")
 # the filters of QUERY and QUERY_POIS: key -> None (any value) or a regex of values
 WAY_TAGS = {"highway": None, "railway": None, "barrier": None, "waterway": None,
             "man_made": "bridge|embankment|pier", "amenity": "parking|bench", "public_transport": None}
