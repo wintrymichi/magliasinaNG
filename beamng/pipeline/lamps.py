@@ -303,7 +303,9 @@ def lamps_step(root, village_lights=True, report=None):
     pano = cKDTree(np.array([p["pos"][:2] for p in json.load(open(os.path.join(DATI, "poses.json")))]))
 
     lights_f = f"{lv}/main/MissionGroup/props/street_lights/items.level.json"
-    old = read_items(zi, lights_f)
+    # a Ticino zone has no lamps of the panoramas (props.py): the group is made here
+    fresh = lights_f not in zi.NameToInfo
+    old = [] if fresh else read_items(zi, lights_f)
     old_lamps = [o for o in old if o.get("class") == "TSStatic" and o.get("shapeName") == LIGHT]
     have_light = any(o.get("class") in ("PointLight", "SpotLight") for o in old)
     for k, o in enumerate(old):                     # v3.1: every lamp light as props.lamp_light makes it now
@@ -429,8 +431,14 @@ def lamps_step(root, village_lights=True, report=None):
                 zo.writestr(inf, data, compress_type=inf.compress_type)
             elif re.fullmatch(r"levels/[^/]+/README\.md", inf.filename) and os.path.exists(pw.LEVEL_README):
                 zo.writestr(inf, open(pw.LEVEL_README, "rb").read(), compress_type=inf.compress_type)
+            elif fresh and inf.filename == f"{lv}/main/MissionGroup/props/items.level.json":
+                zo.writestr(inf, zi.read(inf) + (json.dumps({"name": "street_lights", "class": "SimGroup",
+                            "persistentId": bng.pid(), "__parent": "props"}, separators=(",", ":")) + "\n").encode(),
+                            compress_type=inf.compress_type)
             else:
                 zo.writestr(inf, zi.read(inf), compress_type=inf.compress_type)
+        if fresh:
+            zo.writestr(lights_f, data)
     print("written in %.0f s: %d lamps (%d new), %d lights" % (time.time() - t0, len(old_lamps) + len(new),
                                                                   len(new), lights), flush=True)
     if report:

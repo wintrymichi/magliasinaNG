@@ -1197,3 +1197,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Then paved_edges went OOM even with PATCH_WORKERS=1 (12.36 GB peak; Minecraft with -Xmx8G and immich run there too):
   unpaved_step built the two TriSurfaces (7.9 M faces, ~1.5 GB each) in main although Python 3.14 starts the pool
   workers from a forkserver, which build their own. Main builds them only under "fork" now (same output).
+- lamps_step read props/street_lights, which only props.py makes from the panorama lamps of the Malcantone: KeyError in a
+  zone. It now makes the group (and its SimGroup line in props) when it is missing.
