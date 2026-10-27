@@ -114,28 +114,34 @@ def _safe_cdt(cdt):
     return run
 
 
-def _safe_union(union):
-    # GEOS overlay can stop on a "non-noded intersection" of nearly collinear edges (zone ti_1_3, vegetation
-    # clearance): retry snap-rounded to a mm grid, then a cm grid. Unchanged where the plain union works.
-    def run(geometries, grid_size=None, **kw):
+def _safe_overlay(op):
+    # GEOS overlay can stop on a "non-noded intersection" or "Ring edge missing" (zones ti_1_3 vegetation clearance,
+    # ti_1_6 landmarks): retry snap-rounded to a mm grid, then a cm grid, then on make_valid inputs. Unchanged where
+    # the plain operation works.
+    def run(*geoms, grid_size=None, **kw):
         try:
-            return union(geometries, grid_size=grid_size, **kw)
+            return op(*geoms, grid_size=grid_size, **kw)
         except Exception as e:
             import shapely
             if grid_size is not None or not isinstance(e, shapely.errors.GEOSException):
                 raise
             for gs in (0.001, 0.01):
                 try:
-                    return union(geometries, grid_size=gs, **kw)
+                    return op(*geoms, grid_size=gs, **kw)
                 except Exception:
                     pass
-            raise
+            try:
+                return op(*[shapely.make_valid(g) for g in geoms], grid_size=0.01, **kw)
+            except Exception:
+                raise e
     return run
 
 
 try:
     import shapely as _shapely
     _shapely.constrained_delaunay_triangles = _safe_cdt(_shapely.constrained_delaunay_triangles)
-    _shapely.union_all = _shapely.unary_union = _safe_union(_shapely.union_all)
+    _shapely.union_all = _shapely.unary_union = _safe_overlay(_shapely.union_all)
+    for _n in ("intersection", "difference", "union", "symmetric_difference"):
+        setattr(_shapely, _n, _safe_overlay(getattr(_shapely, _n)))
 except ImportError:
     pass
