@@ -9,9 +9,12 @@ from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import dijkstra
 from scipy.spatial import cKDTree
 
-PLACES = [(752, -1100), (545, -968), (-200, -215), (-240, 50), (-250, -1000), (-2250, -1060), (-1200, -2000),
-          (783, -1143), (2090, 0)]          # Magliaso (on the cantonale: in run 9 the car started inside the
-                                            # roundabout and hung there 26 s, then raced the late timeline), up the cantonale to Pura, down to Ponte Tresa, Caslano, Agno
+PLACES = [(752, -1100), (545, -968), (-200, -215), (-2250, -1060), (-1200, -2000), (783, -1143), (2090, 0)]
+# Magliaso (on the cantonale: in run 9 the car started inside the roundabout and hung there 26 s, then raced the late
+# timeline), up the cantonale through Pura, round by the west to Ponte Tresa, Caslano, Agno. (-240, 50) above Pura and
+# (-250, -1000) lay on dead ends: the route went in and came back the same way (run 11 stopped at the first)
+REUSE = 20.0                        # cost factor of a road the route has already driven
+SPUR_MAX = 120.0                    # m: a dead end this long (a place snapped onto a side road) is cut out
 A_LAT = 2.5                         # m/s2 in bends
 STEP, VMAX, WELD = 8.0, 11.0, 1.0   # 40 km/h: scriptai catches up on a late timeline at any speed (run 9 flipped at 50)
 
@@ -40,13 +43,20 @@ def main(level, out):
     # north of the start, and the car fell 2 m off the road into it (laptop run 9)
     L = (np.linalg.norm(P[E[:, 0], :2] - P[E[:, 1], :2], axis=1) + 1e-3) / np.clip(D, 0.05, 1.0) ** 4
     n = len(P)
-    G = coo_matrix((np.r_[L, L], (np.r_[E[:, 0], E[:, 1]], np.r_[E[:, 1], E[:, 0]])), shape=(n, n)).tocsr()
+    used = np.zeros(len(E), bool)
+    eid = {}
+    for k, (a, b) in enumerate(E):
+        eid[(a, b)] = eid[(b, a)] = k
     vmap = {}
     for (a, b), v in zip(E, V):
         vmap[(a, b)] = vmap[(b, a)] = v
     route = []
     for (x0, y0), (x1, y1) in zip(PLACES[:-1], PLACES[1:]):
         a, b = tree.query([x0, y0])[1], tree.query([x1, y1])[1]
+        # roads already driven cost REUSE times more: a leg back over the road it came by is a turn-round, and
+        # scriptai cannot turn round (run 11 stopped where the route went up to Pura and back down the same road)
+        W = L * np.where(used, REUSE, 1.0)
+        G = coo_matrix((np.r_[W, W], (np.r_[E[:, 0], E[:, 1]], np.r_[E[:, 1], E[:, 0]])), shape=(n, n)).tocsr()
         _, pred = dijkstra(G, indices=a, return_predecessors=True)
         if pred[b] < 0:
             print("no path", (x0, y0), "->", (x1, y1))
@@ -56,6 +66,26 @@ def main(level, out):
             seq.append(pred[seq[-1]])
         seq = seq[::-1]
         route.extend(seq if not route else seq[1:])
+        for u, w in zip(seq, seq[1:]):
+            used[eid[(u, w)]] = True
+    # no out-and-back spurs: a place snapped to a node of a side road made the path go in and back over the same
+    # nodes, and scriptai cannot turn round (laptop run 11 stopped at the dead end at -259,61). Cut each A-B-A out
+    same = lambda i, j: np.linalg.norm(P[route[i], :2] - P[route[j], :2]) < WELD
+    i = 1
+    while i < len(route) - 1:
+        if same(i - 1, i + 1):
+            j = 1
+            while i - j - 1 >= 0 and i + j + 1 < len(route) and same(i - j - 1, i + j + 1):
+                j += 1
+            spur = sum(np.linalg.norm(P[route[k + 1], :2] - P[route[k], :2]) for k in range(i - j, i))
+            if spur > SPUR_MAX:
+                print("turn-round left in: %.0f m back at %.0f,%.0f" % (spur, *P[route[i], :2]))
+                i += 1
+                continue
+            route = route[:i - j + 1] + route[i + j + 1:]
+            i = max(1, i - j)
+        else:
+            i += 1
     pts, t, last = [], 0.0, None
     for i, k in enumerate(route):
         p = P[k]

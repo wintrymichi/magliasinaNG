@@ -1142,6 +1142,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   it moves the node away and narrows the width (lane 0.3 m from the drop, never under 3 m), spread over 2 nodes each
   side, faded out 6 m from the ends. On v3.1.1: 9 of 3,451 roads, 48 nodes, at most 3.2 m (the cantonale 2.9 m west).
   route.json regenerated from the fixed roads. Not run in the main build yet (only on the Ticino test level).
+- Laptop run 11: the ai_lanes fix held (the car stayed on the cantonale at 684,-1040), 2.3 km of route, 6 window moves,
+  no fall. Two stops: (1) at 59,-748 the car hit a street lamp standing 2.2 m inside the cantonale's AI width and stood
+  40 s: 17 of the 2,108 lamps stood inside an AI width (also the known one at Pura, 287,-892). ai_lanes.lamps_clear moves
+  those out to the half width + 0.6 m with their lights, or removes them where the ground there is 0.8 m off (2). A first
+  version moved every lamp closer than half width + 0.6 (1,447): the lamps stand 0.3-0.5 m beyond the edge on purpose;
+  only lamps INSIDE the width move. (2) the route ran into dead ends and back over the same nodes ((-240,50) and
+  (-250,-1000) were places on side roads), and scriptai cannot turn round: it stopped at -259,61. make_route.py now
+  makes roads already driven cost 20x, cuts spurs under 120 m and reports longer ones; new places, 19.6 km, no
+  turn-round (cos < -0.8) left. Unwinding every A-B-A with no length limit collapsed the route to 7.7 km (whole legs).
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold

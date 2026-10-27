@@ -11,6 +11,11 @@ nearest the last height); a step over DROP between two samples is a drop. Where 
 node moves away from it and the width shrinks so that the lane ends CLEAR m before it, never under MIN_W. The moves
 are spread over the neighbouring nodes and fade to nothing at the road's ends (the junctions stay welded).
 
+The street lamps are then kept out of the (fixed) AI roads: 17 of 2,108 stood inside an AI road's width, one 2.2 m
+in the cantonale north of Pura (58.7,-748.7), where the autotest's car hit it and stood 40 s (laptop run 11), and the
+known one at Pura (287,-892) the AI hit twice in the piano video. Each moves out to the road's half width + LAMP_CLEAR
+with its lights; where the ground there is more than LAMP_DZ off the old foot (a wall, a bank) the lamp goes.
+
     python ai_lanes.py <root: the folder that holds levels/<name>/> [report.json]
 """
 import json
@@ -35,6 +40,10 @@ SEARCH = 2.5            # m further out on the free side, where the surface may 
 END_FADE = 6.0          # m from each end over which the move fades to 0
 SPREAD = 2              # nodes either side that take a node's move too (the largest one wins)
 ITEMS = "main/MissionGroup/AIRoads/items.level.json"
+LAMPS = "main/MissionGroup/props/street_lights/items.level.json"
+LAMP_CLEAR = 0.6        # m from the AI road's edge to a lamp post
+LAMP_DZ = 0.8           # m: a new foot further from the old one in height is no place for the lamp
+LIGHT_R = 3.0           # m: the lights of a lamp (its head) within this of the post
 
 
 def surfaces(zi, lv):
@@ -121,11 +130,81 @@ def fix_road(S, N):
     return out, int((np.abs(big * fade) > 0.05).sum())
 
 
+def _write(zi, name, objs):
+    p = zi.path(name)
+    os.remove(p)                                     # a hard-linked copy of a released level stays as it was
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("".join(json.dumps(o, separators=(",", ":")) + "\n" for o in objs))
+
+
+def lamps_clear(zi, lv, S, roads, res):
+    """Street lamps out of the AI roads' widths (see the module's docstring)."""
+    name = f"{lv}/{LAMPS}"
+    if name not in zi.NameToInfo:
+        return
+    from tunnels import Terrain
+    ter = Terrain(os.path.join(zi.path(lv)))
+    A, B, H = [], [], []
+    for o in roads:
+        N = np.asarray(o["nodes"], np.float64)
+        A.append(N[:-1, :2]); B.append(N[1:, :2]); H.append(np.minimum(N[:-1, 3], N[1:, 3]) / 2)
+    A, B, H = np.concatenate(A), np.concatenate(B), np.concatenate(H)
+    D = B - A
+    DD = np.maximum((D * D).sum(1), 1e-9)
+
+    def deficit(p):
+        """How far p lies inside the widest-reaching AI road near it, and the way out of it."""
+        t = np.clip(((p - A) * D).sum(1) / DD, 0, 1)
+        q = A + D * t[:, None]
+        d = np.hypot(*(p - q).T)
+        k = int(np.argmin(d - H))
+        out = (p - q[k]) / d[k] if d[k] > 1e-6 else np.array([-D[k, 1], D[k, 0]]) / np.sqrt(DD[k])
+        return H[k] + LAMP_CLEAR - d[k], out
+
+    def ground(x, y, z):
+        h = S.height([x], [y], "near", zhint=[z])[0]
+        return h if np.isfinite(h) and abs(h - z) < 2 * LAMP_DZ else float(ter.sample([x], [y])[0])
+
+    objs = [json.loads(l) for l in zi.read(name).decode("utf-8").splitlines() if l.strip()]
+    posts = [i for i, o in enumerate(objs) if o.get("class") == "TSStatic"]
+    lights = [i for i, o in enumerate(objs) if o.get("class") != "TSStatic" and o.get("position")]
+    LP = np.array([objs[i]["position"][:2] for i in lights]) if lights else np.zeros((0, 2))
+    drop = set()
+    for i in posts:
+        p0 = np.asarray(objs[i]["position"], np.float64)
+        p = p0[:2].copy()
+        if deficit(p)[0] <= LAMP_CLEAR:              # beyond the edge already: the lamps stand there on purpose
+            continue
+        for _ in range(3):                           # out of one road can be into the next
+            need, out = deficit(p)
+            if need <= 0:
+                break
+            p = p + out * (need + 0.01)
+        if np.allclose(p, p0[:2]):
+            continue
+        mine = [lights[j] for j in np.flatnonzero(np.hypot(*(LP - p0[:2]).T) < LIGHT_R)] if lights else []
+        z = ground(p[0], p[1], p0[2] - 0.0)
+        if deficit(p)[0] > 0 or abs(z - p0[2]) > LAMP_DZ:
+            drop.update([i] + mine)
+            res["lamps_removed"] += 1
+            print(f"ai_lanes: lamp at {p0[0]:.1f},{p0[1]:.1f} removed (no room beside the road)", flush=True)
+            continue
+        v = np.r_[p - p0[:2], z - p0[2]]
+        for j in [i] + mine:
+            objs[j]["position"] = [float(a + b) for a, b in zip(objs[j]["position"], v)]
+        res["lamps_moved"] += 1
+        res["lamp_move_m_max"] = round(max(res["lamp_move_m_max"], float(np.hypot(*v[:2]))), 2)
+        print(f"ai_lanes: lamp at {p0[0]:.1f},{p0[1]:.1f} moved {np.hypot(*v[:2]):.2f} m out, dz {v[2]:+.2f}", flush=True)
+    if res["lamps_moved"] or res["lamps_removed"]:
+        _write(zi, name, [o for k, o in enumerate(objs) if k not in drop])
+
+
 def ai_lanes_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
-    res = {"roads": 0, "roads_moved": 0, "nodes_moved": 0, "move_m_max": 0.0}
+    res = {"roads": 0, "roads_moved": 0, "nodes_moved": 0, "move_m_max": 0.0, "lamps_moved": 0, "lamps_removed": 0,
+           "lamp_move_m_max": 0.0}
     name = f"{lv}/{ITEMS}"
     if name not in zi.NameToInfo:
         print("ai_lanes: no AI roads", flush=True)
@@ -153,10 +232,8 @@ def ai_lanes_step(root, report=None):
                 print(f"ai_lanes: {o.get('name')} {k} nodes moved, the most at {N[i, 0]:.0f},{N[i, 1]:.0f} "
                       f"by {np.hypot(*(M[i, :2] - N[i, :2])):.2f} m, width {N[i, 3]:.1f} -> {M[i, 3]:.1f}", flush=True)
     if res["roads_moved"]:
-        p = zi.path(name)
-        os.remove(p)                                 # a hard-linked copy of a released level stays as it was
-        with open(p, "w", encoding="utf-8") as f:
-            f.write("".join(json.dumps(o, separators=(",", ":")) + "\n" for o in lines))
+        _write(zi, name, lines)
+    lamps_clear(zi, lv, S, [o for o in lines if o.get("class") == "DecalRoad" and len(o.get("nodes", [])) >= 2], res)
     res["seconds"] = round(time.time() - t0, 1)
     print("ai_lanes:", res, flush=True)
     if report:

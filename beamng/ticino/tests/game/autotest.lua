@@ -20,7 +20,7 @@ local PLAN = {
   -- 'route': the scripted route (ticino_test_route.json, 16.8 km Magliaso - Pura - Ponte Tresa - Caslano - Agno)
   -- crosses many windows whatever the AI makes of the roads; in runs 7 and 8 the AI turned into a steep village lane
   -- north of the start, spun there and never left the first window. Then the AI on its own from where the route ends.
-  variants = {{name = 'route', route = true, minutes = 18}, {name = 'cells', minutes = 6}},
+  variants = {{name = 'route', route = true, minutes = 36}, {name = 'cells', minutes = 6}},
   jumps = {                     -- teleports far away: the streaming pauses and builds the window at once
     {name = 'nord', at = {2290, 5649}},
     {name = 'ovest', at = {-3921, 2303}},
