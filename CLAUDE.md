@@ -1207,3 +1207,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Swiss for now; the zone extract should get the communes from the pbf before the border zones are built.
 - fuel_stations.new_canopy (a station with no survey canopy, never reached in the Malcantone) used the 2D np.cross that
   numpy 2 refuses: crashed in the zone. A code path the Malcantone never took is untested: expect more of these.
+- parking.Ground.terrain converted the whole 8192x8192 terrain to float64 at every call (three calls a parking spot):
+  more than 20 min of parking on the dense zone ti_1_0. It now converts only the four samples it reads (same numbers).
+- roof_posts took 36 min on ti_1_0 (union_all of the buffered roof faces of each shape); not changed yet.
