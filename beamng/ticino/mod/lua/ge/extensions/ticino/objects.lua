@@ -276,12 +276,21 @@ function M.updateCols(x, y, force)
     if not want[k] then
       for _, id in ipairs(ids) do delete(id) end
       C.live[k] = nil
+      C.tris = (C.tris or 0) - ((C.liveTris or {})[k] or 0)
+      if C.liveTris then C.liveTris[k] = nil end
       changed = true
     end
   end
   -- the queue: the wanted cells not made yet, the car's own cell first; a cell half made stays where it is
   local q = {}
-  if C.job and want[C.job.key] then q[1] = C.job.key else C.job = nil end
+  if C.job and want[C.job.key] then q[1] = C.job.key
+  elseif C.job then
+    -- a half made cell no longer wanted: its pieces go too (they stayed in the scene before, and the cell made
+    -- again later registered the same names: 56 "SimNameDictionary::insert" warnings in laptop run 3)
+    for _, id in ipairs(C.job.ids) do delete(id) end
+    C.tris = (C.tris or 0) - (C.job.tris or 0)
+    C.job = nil
+  end
   local order = {}
   for k, ab in pairs(want) do
     if not C.live[k] and not (C.job and C.job.key == k) then
@@ -355,7 +364,8 @@ local function colPiece(C, job)
   o:setPosition(vec3(job.x0, job.y0, job.z0))
   -- not drawn: collision only (EarthNG: setRenderEnabled(false) keeps the collision, setHidden drops it)
   if not pcall(function() o:setRenderEnabled(false) end) then C.noRenderOff = true end
-  C.tris = (C.tris or 0) + nt
+  C.tris = (C.tris or 0) + nt         -- live triangles of the cells (made minus deleted)
+  job.tris = (job.tris or 0) + nt
   return o:getID()
 end
 
@@ -398,6 +408,8 @@ function M.stepCols(clock, budgetMs)
       end
       if job.left <= 0 then
         C.live[job.key] = job.ids
+        C.liveTris = C.liveTris or {}
+        C.liveTris[job.key] = job.tris or 0
         C.job = nil
         S.colDirty = true
       end
@@ -515,7 +527,7 @@ function M.clear()
   for _, f in pairs(S.farLive) do delete(f.id) end
   for _, ids in pairs(S.col.live) do for _, id in ipairs(ids) do delete(id) end end
   if S.col.job then for _, id in ipairs(S.col.job.ids) do delete(id) end end
-  S.col.live, S.col.cell, S.col.job, S.col.queue = {}, nil, nil, {}
+  S.col.live, S.col.cell, S.col.job, S.col.queue, S.col.liveTris, S.col.tris = {}, nil, nil, {}, {}, 0
   S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
   S.farQueue, S.farPos = {}, 1
 end

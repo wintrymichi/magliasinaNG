@@ -327,6 +327,7 @@ local function run()
       pcall(function() core_camera.setByName(0, 'orbit'); core_camera.resetCamera(0) end)
       job.sleep(5)
       rec.shot = shoot('jump_' .. j.name)
+      job.sleep(2)
       res.jumps[#res.jumps + 1] = rec
       note(string.format('jump %s: worst frame %d ms, fell %s', j.name, rec.worst_ms, tostring(rec.fell)))
       save()
@@ -354,6 +355,7 @@ local function run()
         end)
         job.sleep(4)
         res.shots[#res.shots + 1] = {name = 'tunnel_' .. v.name, method = shoot('tunnel_' .. v.name)}
+        job.sleep(2)     -- the shot is taken a few frames later: in laptop run 3 each file showed the NEXT view
       end
       local rec = {name = 'tunnel_floor', at = T.floor}
       if veh then

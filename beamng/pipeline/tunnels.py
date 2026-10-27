@@ -43,6 +43,8 @@ FADE = 60.0             # m along which the height change of a live portal fades
 SHELL = 0.5             # m of concrete round the tube
 SHELL_NEAR = 30.0       # m from a portal where the outer shell is drawn (inside the hill nobody sees it)
 COVER_THIN = 2.0        # m: where the ground stands less than this over the shell, the shell is drawn too
+COVER_MIN = 0.5         # m of ground the mound keeps over the shell where the tube runs in the hill
+MOUND_W = 8.0           # m beside the shell over which the mound falls back to the ground (1:1)
 HEAD = 1.0              # m, thickness of a headwall
 HEAD_W = 1.6            # m of headwall beside the shell
 HEAD_UP = 1.4           # m of headwall over the shell
@@ -434,6 +436,11 @@ def build_tube(tb, mats, ter=None):
             add("mp_tunnel_walk", tb.orient(tb.sweep([(sg * c, KERB), (sg * c, 0.0)], i0, i1, False), 0, True))
     else:
         add_track(tb, add, i0, i1)
+    # a floor under the headwall and up to the swissTLM3D portal, 3 cm under the level's own track or road there:
+    # the holes reach out to the headwall's face and one saw through them past the ballast (the lake under it)
+    for a, b in ((0, i0), (i1, m - 1)):
+        add("mp_ballast" if tb.kind != "road" else "mp_road_asphalt",
+            up(tb.sweep([(tb.hw, -0.03), (-tb.hw, -0.03)], a, b, False)))
     # lamp strips along both sides of the vault
     a = math.radians(55)
     for sg in (1, -1):
@@ -553,6 +560,46 @@ def headwall(tb, i, inward):
     return T
 
 
+def mound(tb, ter, tops=None):
+    """Raise the ground over the tube where it runs in the hill but its side or top stands out of the slope (laptop
+    run 3 of the Ticino test, 2026-10-26: the lake side of the Vallone d'Agno vault stood out as a grey hump; the
+    DTM there is the slope smeared over a tube that is in rock, and the portal cuttings of the DTM reach 4-8 m into
+    the swissTLM3D tube, so the vault stood bare behind the headwalls). From the swissTLM3D portals in, COVER_MIN
+    over the shell, then 1:1 down over MOUND_W. Never under a road or track face. Returns the number of terrain
+    vertices raised."""
+    ok = np.ones(len(tb.s), bool)
+    ext = tb.hw_out + MOUND_W
+    xs, ys = tb.P[ok, 0], tb.P[ok, 1]
+    c0 = int(max(0, math.floor((xs.min() - ext - ter.x0) / ter.sq)))
+    c1 = int(min(ter.n - 1, math.ceil((xs.max() + ext - ter.x0) / ter.sq)))
+    r0 = int(max(0, math.floor((ys.min() - ext - ter.y0) / ter.sq)))
+    r1 = int(min(ter.n - 1, math.ceil((ys.max() + ext - ter.y0) / ter.sq)))
+    R, C = np.mgrid[r0:r1 + 1, c0:c1 + 1]
+    R, C = R.ravel(), C.ravel()
+    x, y = ter.x0 + C * ter.sq, ter.y0 + R * ter.sq
+    s, n, i = tb.local(np.column_stack([x, y]))
+    an = np.abs(n)
+    # from the swissTLM3D portal in, one square behind the headwall's face: a vertex raised nearer to it made the
+    # terrain (and the hole caps) in front of the face slope up into the opening (spikes on the track in the renders)
+    k = ok[i] & (an <= ext) & (s >= tb.s[0]) & (s <= tb.s[-1])
+    # the terrain is flat between its vertices 1.5 m apart: each vertex takes the highest shell within one square
+    near = np.maximum(an - ter.sq, 0.0)
+    want = tb.floor[i] + np.nan_to_num(tb.extrados(np.minimum(near, tb.hw_out)), nan=tb.wall) + COVER_MIN \
+        - np.maximum(near - tb.hw_out, 0.0)
+    h = ter.h[R, C]
+    k &= want > h
+    if tops is not None:
+        for j in np.where(k & (an > tb.hw_out))[0]:      # over the tube the level's own track goes into it anyway
+            for kind in ("road", "rail"):
+                if np.isfinite(tops.height(x[j], y[j], kind, want[j], dz=30.0)):
+                    k[j] = False
+    R, C, w = R[k], C[k], want[k]
+    ter.h[R, C] = w
+    ter.q = ter.q.copy() if not ter.q.flags.writeable else ter.q
+    ter.q[R, C] = np.clip(np.round((w - ter.z0) / ter.maxh * 65535.0), 0, 65535).astype(np.uint16)
+    return int(k.sum())
+
+
 def holes(tb, ter):
     """Terrain samples to hole: squares (lower-left sample) meeting the footprint of the tube from the headwall in,
     where the ground stands between the floor + CLEAR and the shell's top. Returns (rows, cols)."""
@@ -669,6 +716,7 @@ def tunnels_step(root, report=None):
     shp_dir = os.path.join(lv, "art", "shapes", "tunnels")
     os.makedirs(shp_dir, exist_ok=True)
     for k, tb in enumerate(tubes):
+        res["mound_vertices"] = res.get("mound_vertices", 0) + mound(tb, ter, tops)
         parts = build_tube(tb, mats, ter)
         R, C = holes(tb, ter)
         capT, capC = cap(tb, ter, R, C, colours)

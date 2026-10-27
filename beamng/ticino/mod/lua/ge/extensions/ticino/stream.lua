@@ -36,6 +36,9 @@ M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
+M.MAP_RESET_FRAMES = 30   -- the AI map is read again this many frames after a terrain swap: the AI DecalRoads clip
+                           -- to the terrain, so outside the window their nodes are at z 0 (laptop run 3: 14-19 k of
+                           -- 20,810 nodes; a map.reset() after the window came gave every node within 300 m its height)
 M.TEMP = '/temp/ticino/'
 M.PERF_FILE = '/ticino_perf.csv'
 M.TERRAIN_NAME = 'theTerrain'
@@ -209,6 +212,7 @@ local function apply(job, kind)
   st.curJob = job
   st.moves = st.moves + 1
   st.quiet = { frames = M.SWAP_QUIET_FRAMES, ms = M.SWAP_QUIET_MS }
+  if M.MAP_RESET_FRAMES then st.mapResetIn = M.MAP_RESET_FRAMES end
   st.watch = { frames = 10, worst = 0, rec = { time = os.date('%H:%M:%S'), kind = kind, wx = job.wx, wy = job.wy,
     buildMs = job.ms, buildFrames = job.frames, applyMs = tApply, grassMs = tGrass, farMs = tFar } }
   log('I', 'ticino', string.format('%s: window at (%d, %d): files %.0f ms in %d frames, swap %.1f ms, grass %.1f ms',
@@ -347,6 +351,17 @@ local function onUpdate(dtReal)
       w.rec.live, w.rec.colliders = s.live, s.colliders
       perfLine(w.rec)
       st.watch = nil
+    end
+  end
+  if st.mapResetIn and not st.resumeIn then
+    st.mapResetIn = st.mapResetIn - 1
+    if st.mapResetIn <= 0 then
+      st.mapResetIn = nil
+      local t0 = clock()
+      local ok = pcall(function() map.reset() end)
+      local ms = clock() - t0
+      perfLine({ time = os.date('%H:%M:%S'), kind = 'mapreset', wx = st.window[1], wy = st.window[2], applyMs = ms })
+      log('I', 'ticino', string.format('AI map read again after the window move: %.1f ms%s', ms, ok and '' or ' (failed)'))
     end
   end
   local x, y = focus()

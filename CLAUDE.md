@@ -776,6 +776,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   position is more than SHAPE_REACH from a tube: 12 s.
 - Importing config without MAGLIASO_ROOT made a folder "D:\beamng_magliaso" in beamng/pipeline (Windows paths taken as
   relative): export MAGLIASO_ROOT before any scratch import.
+- In the game (laptop run 3) the vault stood bare behind the S headwall: the DTM's portal cuttings reach 4-8 m into
+  the swissTLM3D tube and on the lake side the slope stands under the shell along the whole tunnel (holes there, the
+  shell was what one saw). tunnels.mound raises the terrain over the tube (COVER_MIN over the shell, 1:1 down over
+  MOUND_W, never over a road/track face beside it): shell points over the ground 38 -> 0, holes 100 -> 27. Raising
+  vertices up to the headwall's back made the terrain and the hole caps in front of the face slope up into the
+  opening (spikes on the track): only from the swissTLM3D portal in. A floor plate now covers the stretch under the
+  headwall (one saw the lake through the holes beside the ballast). Check with a probe of shell points vs the
+  terrain (square_height, holes skipped), not by eye.
 
 ## Data from the cloud sessions
 
@@ -1069,6 +1077,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   z < 1 nodes before and after a map.reset() at each jump; the 3,124 core_trafficSignals "Map node could not be set"
   likely have the same cause. Also logged: material cbv array exhausted (8192 slots) at 113 s, a 16x448 bollard
   texture that is not a power of two (TextureCooker refuses it).
+- Laptop run 3 (2026-10-26): collision cells work (colFailed 0, 1.7 M triangles made), no jump fell, the car stands
+  on the tunnel floor. map.reset() after the window came gave every AI node within 300 m its height (0 of 59-281 left
+  at z < 1), while 14-19 k of the 20,810 stayed at 0: stream.lua now reads the AI map again MAP_RESET_FRAMES after
+  every window swap (perf row "mapreset"). A collision cell dropped half made left its pieces in the scene and the
+  remade cell registered the same names (56 SimNameDictionary::insert warnings); colTris was a "made" counter, now live.
+  createScreenshot2 takes the shot a few frames later: with the camera moved on at once, every tunnel shot showed the
+  NEXT pose (and the last two were alike). Wait 2 s after each shot before moving the camera.
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
