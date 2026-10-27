@@ -16,8 +16,11 @@ local worst = 0
 local PLAN = {
   start_wait = 60,              -- textures of the first view
   fps_cap = 30,                 -- michi: 30 fps in tests that do not measure FPS (a hitch shows at any cap)
-  drive_minutes = 14,           -- the AI (or the scripted route, ticino_test_route.json) drives the player's car
-  variants = {{name = 'cells'}},  -- one drive with the collision cells round the car
+  drive_minutes = 14,           -- default length of a drive
+  -- 'route': the scripted route (ticino_test_route.json, 16.8 km Magliaso - Pura - Ponte Tresa - Caslano - Agno)
+  -- crosses many windows whatever the AI makes of the roads; in runs 7 and 8 the AI turned into a steep village lane
+  -- north of the start, spun there and never left the first window. Then the AI on its own from where the route ends.
+  variants = {{name = 'route', route = true, minutes = 18}, {name = 'cells', minutes = 6}},
   jumps = {                     -- teleports far away: the streaming pauses and builds the window at once
     {name = 'nord', at = {2290, 5649}},
     {name = 'ovest', at = {-3921, 2303}},
@@ -251,10 +254,10 @@ local function run()
     local variants = PLAN.variants
     local t = 0
     for _, v in ipairs(variants) do
-      local scripted = mapNodes() < 100 and route ~= nil
+      local scripted = route ~= nil and (v.route or mapNodes() < 100)
       res.drive[#res.drive + 1] = {variant = v.name, time = os.date('%H:%M:%S'), scripted = scripted}
       if scripted then
-        note('no AI road graph: the car follows the scripted route')
+        note(v.route and 'the car follows the scripted route' or 'no AI road graph: the car follows the scripted route')
         followRoute()
         job.sleep(10)
       else
@@ -262,7 +265,7 @@ local function run()
         aiDrive(true)
       end
       local still, modes, m = 0, {'span', 'random', 'span'}, 1
-      for i = 1, PLAN.drive_minutes * 60 do
+      for i = 1, (v.minutes or PLAN.drive_minutes) * 60 do
         job.sleep(1)
         t = t + 1
         sample(t)
@@ -305,10 +308,9 @@ local function run()
       if ticino_stream and ticino_stream.setFocus then ticino_stream.setFocus(j.at[1], j.at[2]) end
       job.sleep(10)
       local z0all, z0near, near = mapZeroNodes(j.at[1], j.at[2], 300)
-      pcall(function() map.reset() end)
-      job.sleep(3)
+      job.sleep(5)                           -- stream.lua reads the AI map again itself at a jump (run 8)
       local z1all, z1near = mapZeroNodes(j.at[1], j.at[2], 300)
-      note(string.format('jump %s: AI nodes with z < 1: %d (%d of %d within 300 m), after map.reset() %d (%d)',
+      note(string.format('jump %s: AI nodes with z < 1: %d (%d of %d within 300 m), 5 s later %d (%d)',
         j.name, z0all, z0near, near, z1all, z1near))
       if ticino_stream and ticino_stream.setFocus then ticino_stream.setFocus(nil) end
       local p, err = placeOnRoad(j.at[1], j.at[2])

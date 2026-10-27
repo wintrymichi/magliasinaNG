@@ -1118,6 +1118,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Between jumps the far nodes stay at z 0 (only the window's are right). Also seen: 4,857 core_trafficSignals errors,
   hitches up to 260 ms at jumps. The S tunnel portal showed the lake through two small gaps at the jamb feet: an
   apron (tunnels.APRON, 1.6 m of ballast/asphalt 3 cm under the floor) now runs out in front of each face.
+- Laptop run 8: loads (48.7 s), no crash, jumps fine, the reset at a jump reads every node near it (1.8-2.5 s inside
+  the paused jump), the jamb gaps are closed. But the apron stood out past the S headwall as a plate 1-1.5 m over the
+  lake-side slope: its open edges now go FOOT under the lowest ground beside them. The AI drove only 873 m: in "span"
+  mode it turned into a 3.4 m village lane north of the start (630-690,-790..-850), spun its wheels there and looped
+  with the "moved 30 m on" helper, never leaving the first window. Not a streaming fault: the cell collision there
+  matched the exact meshes on every road cell (0.25 m raster, 0 cells over 3 cm; only the skin moved, up to 0.67 m,
+  off the road), the lane is smooth at 14 %. Which way span mode turns is luck: the drive now follows the scripted
+  route (16.8 km, Magliaso-Pura-Ponte Tresa-Caslano-Agno) first, then the AI. The autotest's own map.reset at a jump
+  doubled stream.lua's (6,553 trafficSignals errors): removed.
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold

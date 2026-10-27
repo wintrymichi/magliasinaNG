@@ -450,6 +450,19 @@ def build_tube(tb, mats, ter=None):
         d = np.r_[tb.T[st] * way * APRON, 0.0]
         a0, a1 = tb.frame(st, W, -0.03), tb.frame(st, -W, -0.03)
         add("mp_ballast" if tb.kind != "road" else "mp_road_asphalt", up(np.array([[a0, a1, a1 + d], [a0, a1 + d, a0 + d]])))
+        if ter is None:
+            continue
+        # its open edges go down FOOT under the lowest ground beside them, as the headwall's sides do: on the lake
+        # side of the S portal the apron stood as a plate 1-1.5 m over the slope (laptop run 8)
+        for p, q in ((a0, a0 + d), (a0 + d, a1 + d), (a1 + d, a1)):
+            t = np.linspace(0, 1, 6)[:, None]
+            L = p[:2] + (q[:2] - p[:2]) * t
+            g = float(np.min(ter.sample(L[:, 0], L[:, 1])))
+            if g < min(p[2], q[2]) - 0.1:
+                z = g - FOOT
+                p2, q2 = np.r_[p[:2], z], np.r_[q[:2], z]
+                quad = np.array([[p, q, q2], [p, q2, p2]])
+                add("mp_tunnel_portal", np.concatenate([quad, quad[:, ::-1]]))
     # lamp strips along both sides of the vault
     a = math.radians(55)
     for sg in (1, -1):
