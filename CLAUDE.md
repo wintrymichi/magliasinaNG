@@ -1093,6 +1093,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   AI roads with useSubdivisions false and MAP_RESET_FRAMES is nil. The AI left the road twice at Pura (250-290,-890,
   runs 3 and 4, into the wood against a tree): the same place as the known lamp/4 m AI drop of the piano video
   (Known issues), a map fault, not streaming.
+- Laptop run 5: useSubdivisions false CRASHED the level load. map.lua (0.40.1) L459 edgeCompare compares `a.lanes <
+  b.lanes`; the node reduction (RDP, ~L1985) builds a new edge with NO lanes when it removes a middle node between two
+  nodes already linked directly, and compares it with that edge: "attempt to compare nil with string" when posMin/max,
+  radii, drivability, oneWay and speedLimit are all equal (two AI roads joining the same two nodes, one with a node in
+  between). Control points coincide exactly where subdivided edges differed by mm. The game then reloaded the level by
+  itself and crashed in C++ (c0000005). In the ticino roads the ties were the two one-way halves of a road round a
+  splitter island (X and X_j1, islands.island_lanes). blocks.ai_roads gives every AI road a speed limit of its own
+  (+1e-5 m/s per road), which ends the compare before lanes; beamng/ticino/aimap_check.py emulates map.lua's
+  passes from the code read on the laptop (16 crashing compares in 4 node orders before, 0 in 8 after) and
+  blocks.py stops if it finds one. resolveT/XJunctions and mergeNodesToLines are not emulated.
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
