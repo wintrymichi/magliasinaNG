@@ -704,6 +704,12 @@ def decide(junc, cx, stats):
             for a in arms:
                 if a.control is None:
                     a.control = "right_of_way"
+        # v3.2: traffic lights (OSM highway=traffic_signals on an arm) control every way in of the junction
+        J["signalled"] = len(arms) >= 3 and any(a.control == "signals" for a in arms)
+        if J["signalled"]:
+            for a in arms:
+                if a.enter:
+                    a.control = "signals"
         for a in arms:
             if a.control:
                 stats["arms_" + a.control] = stats.get("arms_" + a.control, 0) + 1
@@ -742,6 +748,7 @@ class Paint:
         self.polys = []        # (ring (m, 2), z_hint, colour, kind)
         self.count = {}
         self.signals = []      # (position (3,), direction of travel (2,), "stop" / "give_way"): signals.json
+        self.lights = []       # (stop point (3,), travel (2,), junction key, pole (3,), kerb side (2,)): traffic lights
 
     def line(self, P, zh, width, colour, kind, road=-1):
         if len(P) >= 2:
@@ -759,11 +766,12 @@ def transverse(junc, roads, paint, stats):
     align = R["edge_off"] - R["w"] / 2           # the line's junction side in line with the outer side of an edge line
     for J in junc:
         arms, main = J["arms"], J["main"]
-        for a in arms:
-            if a in main:
+        for ji, a in enumerate(arms):
+            lit = J.get("signalled") and a.control == "signals"
+            if a in main and not lit:
                 continue
             r = a.r
-            others = main if main else [b for b in arms if b.r is not r]
+            others = [b for b in (main if main and a not in main else arms) if b.r is not r]
             s0 = stop_station(a, others, -align if main else 0.0) if others else a.s
             a.stop_s = s0
             ctl = a.control
@@ -780,6 +788,8 @@ def transverse(junc, roads, paint, stats):
                 a.line = depth > 0
             if ctl in ("stop", "give_way") and r.drive >= 0.3:
                 signal_point(a, s0, ctl, paint)
+            if lit:
+                light_point(a, s0, id(J), paint)
             r.cut.append(tuple(sorted((a.s, s0 + a.d * (depth + 0.3)))))
             r.jcut.append(tuple(sorted((a.s, s0 + a.d * (depth + 0.3)))))
             if line_ok and depth > 0 and not r.oneway and W >= R["long_w"]:
@@ -807,6 +817,32 @@ def signal_point(a, s0, kind, paint):
         t = (float(r.eR[i0]) + c) / 2
     p = r.at(s0 + a.d * 0.5, t)
     paint.signals.append((np.array([p[0], p[1], float(r.z[i0])]), -unit(r.T[i0] * a.d), kind))
+
+
+def light_point(a, s0, key, paint):
+    """A traffic light of arm a (v3.2): its stop point (as signal_point) and the pole of its head, on the kerb side
+    of the approach LIGHT_OUT m past the carriageway's edge, LIGHT_BACK m before the stop line."""
+    r = a.r
+    i0 = r.idx(s0)
+    c = float(r.c[i0])
+    if r.oneway:
+        t = (float(r.eL[i0]) + float(r.eR[i0])) / 2
+    elif a.d > 0:
+        t = (c + float(r.eL[i0])) / 2
+    else:
+        t = (float(r.eR[i0]) + c) / 2
+    p = r.at(s0 + a.d * 0.5, t)
+    travel = -unit(r.T[i0] * a.d)
+    sp = s0 + a.d * LIGHT_BACK
+    ip = r.idx(sp)
+    # the kerb side: right of the travel towards the junction (travel -d along s: +t when d > 0)
+    if a.d > 0:
+        tk, side = float(r.eL[ip]) + LIGHT_OUT, r.N[ip].copy()
+    else:
+        tk, side = float(r.eR[ip]) - LIGHT_OUT, -r.N[ip].copy()
+    q = r.at(sp, tk)
+    paint.lights.append((np.array([p[0], p[1], float(r.z[i0])]), travel, key,
+                         np.array([q[0], q[1], float(r.z[ip])]), unit(side)))
 
 
 def draw_stop_line(a, s0, others, paint):
@@ -1949,6 +1985,15 @@ SIGNAL_TYPES = {"stop": ("signStop", "basicStop"), "give_way": ("signYield", "ba
 SIGNAL_DEFINITIONS = {"states": {"basicYield": {"action": "yield", "lights": ["black"], "name": "Give Way"}},
                       "types": {"signYield": {"isSimple": True, "name": "Give Way", "states": ["basicYield"]}}}
 SIGNAL_SAME = 3.0          # m: signal points of one kind this close, facing the same way, are one
+# v3.2: traffic lights. The game's US timings (settings/trafficSignals.json lightsBasic, as east_coast_usa writes its
+# controllers); the head is the stock boom of art/ (always loaded), turned so its local +x points to the kerb side
+# (BeamNG.Earth places the same model the same way, tested in 0.40.3)
+LIGHT_TYPE = "lightsBasic"
+LIGHT_STATES = ({"state": "greenTrafficLight", "duration": 15}, {"state": "yellowTrafficLight", "duration": 4},
+                {"state": "redTrafficLight", "duration": 1.25})
+LIGHT_SHAPE = "/art/shapes/objects/s_trafficlight_boom_sn.dae"
+LIGHT_BACK = 1.0           # m from the stop line back along the approach
+LIGHT_OUT = 0.8            # m beyond the carriageway's edge
 
 
 def snap_ring_signals(paint, roads):
@@ -2047,9 +2092,10 @@ def give_way_drivability(points, objs, roads, stats=None):
     return n
 
 
-def signals_json(points, stats=None):
+def signals_json(points, stats=None, lights=()):
     """levels/<level>/signals.json of the stop and give-way points: one simple controller per kind, an
-    instance per point (sequence 0: no timer)."""
+    instance per point (sequence 0: no timer); v3.2: the traffic lights, a sequence of two phases per junction (its
+    ways in split by axis), one controller per phase, an instance per way in named as its head's signalInstance."""
     ctrl = {}
     out = {"instances": [], "controllers": [], "sequences": {}}
     for kind, (typ, state) in SIGNAL_TYPES.items():
@@ -2070,6 +2116,40 @@ def signals_json(points, stats=None):
                                  "startDisabled": False})
     if stats is not None:
         stats["signals"] = {k: sum(1 for _, _, q in kept if q == k) for k in SIGNAL_TYPES}
+    heads = []
+    by_j = {}
+    for L in lights:
+        by_j.setdefault(L[2], []).append(L)
+    cid, sid = max([c["id"] for c in out["controllers"]], default=0), 0
+    for J in by_j.values():
+        sid += 1
+        a0 = np.arctan2(J[0][1][1], J[0][1][0])
+        phase = [0 if abs(((np.arctan2(L[1][1], L[1][0]) - a0) + np.pi / 2) % np.pi - np.pi / 2) < np.pi / 4 else 1
+                 for L in J]
+        ph_ids = []
+        for ph in sorted(set(phase)):
+            cid += 1
+            ph_ids.append((ph, cid))
+            out["controllers"].append({"id": cid, "name": "lights_%d_%d" % (sid, ph), "type": LIGHT_TYPE,
+                                       "defaultIndex": 3, "states": [dict(st) for st in LIGHT_STATES]})
+        seq = {"id": sid, "name": "lights_%d" % sid, "startTime": 0,
+               "phases": [{"controllerIds": [c]} for _, c in ph_ids]}
+        out.setdefault("_seqs", []).append(seq)
+        for L, ph in zip(J, phase):
+            nid += 1
+            name = "trafficLight_%d_%d" % (sid, nid)
+            p, d = L[0], L[1]
+            out["instances"].append({"id": nid, "name": name, "controllerId": dict(ph_ids)[ph], "sequenceId": sid,
+                                     "group": "lights_%d" % sid, "pos": [round(float(v), 3) for v in p],
+                                     "dir": [round(float(d[0]), 4), round(float(d[1]), 4), 0.0],
+                                     "startDisabled": False})
+            heads.append((name, L[3], L[4]))
+    if out.get("_seqs"):
+        # the game reads sequences as a list (east_coast_usa) or the empty object of a level without any (italy)
+        out["sequences"] = out.pop("_seqs")
+    if stats is not None:
+        stats["traffic_lights"] = {"junctions": len(by_j), "heads": len(heads)}
+    out["_heads"] = heads
     return out
 
 
@@ -2104,14 +2184,23 @@ def markings_rules_step(root, report=None):
                   bng.material("mp_road_paint_red", base_color=[0.66, 0.46, 0.46, 1], roughness=0.7)):
             mats.setdefault(m["name"], m)
         new_files[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
-        new_files[f"{LV}/signals.json"] = json.dumps(signals_json(paint.signals, stats), indent=1).encode("utf-8")
+        sj = signals_json(paint.signals, stats, paint.lights)
+        heads = sj.pop("_heads")
+        new_files[f"{LV}/signals.json"] = json.dumps(sj, indent=1).encode("utf-8")
         ai_items = f"{LV}/main/MissionGroup/AIRoads/items.level.json"
         ai = read_items(zi, ai_items)
         if give_way_drivability(paint.signals, ai, roads, stats):
             new_files[ai_items] = ("\n".join(json.dumps(o, separators=(",", ":")) for o in ai) + "\n").encode("utf-8")
         new_files[f"{LV}/signalControllerDefinitions.json"] = json.dumps(SIGNAL_DEFINITIONS, indent=1).encode("utf-8")
         parent = next((o["__parent"] for o in mk if "__parent" in o), "markings")
-        keep = [o for o in mk if not NET_SHAPE.search(o.get("shapeName", "")) and not OLD_SHAPE.search(o.get("shapeName", ""))]
+        keep = [o for o in mk if not NET_SHAPE.search(o.get("shapeName", "")) and not OLD_SHAPE.search(o.get("shapeName", ""))
+                and o.get("annotation") != "TRAFFIC_SIGNALS"]
+        for name, q, side in heads:
+            o = bng.tsstatic(LIGHT_SHAPE, q, collision=True, decal=False, annotation="TRAFFIC_SIGNALS")
+            o["rotationMatrix"] = bng.rot_local_x_to(float(np.arctan2(side[1], side[0])))
+            o["dynamic"] = True
+            o["signalInstance"] = name
+            objs.append(o)
         for o in objs:
             o["__parent"] = parent
         new_files[mk_items] = ("\n".join(json.dumps(o, separators=(",", ":")) for o in keep + objs) + "\n").encode("utf-8")
