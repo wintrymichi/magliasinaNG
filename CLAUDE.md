@@ -1216,3 +1216,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - tunnels.holes tested every terrain square of a tube's bounding box (16 KD queries each): the Lugano zone has 32 live
   tunnels, some kilometres long and reaching out of the zone (a box of 2,650 x 3,410 squares), and the step ran over
   40 min. Only the squares within a band round the tube's line are tested now.
+- First full zone ti_1_0 on wintryserver (2026-10-27): zip 1.88 GB (5,020 files, level 10.6 GB unpacked), stages 1 h 46
+  min, finishing steps about 4 h with the restarts (tunnels 42 min with the old holes(), paved_edges 32, roof_posts 24,
+  steep_skin 19), package 7 min. Server setup: python3-venv missing (venv --without-pip + get-pip.py), osmium-tool
+  unpacked from the .deb (no sudo), long runs under setsid/nohup. Peak RAM after the fixes ~10 GB; it shares 15 GB
+  with Minecraft (-Xmx8G) and immich. No gh there: the zip stays in /mnt/disk8tb/ticino/bm/dist.
+- download_osm.pbf_communes checked on the server: 25 municipalities over the Malcantone-Lugano box in 19 s, 2 GB.
