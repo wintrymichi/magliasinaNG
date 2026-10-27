@@ -1069,15 +1069,18 @@ FINISH = [
 ZONE_SKIP = {"races"}
 
 
-def finish(names=None):
-    """The FINISH steps (all, or those named) on the level folder."""
+def finish(names=None, after=None):
+    """The FINISH steps (all, or those named, or those after the step `after`) on the level folder."""
     import importlib
     root = os.path.dirname(os.path.dirname(LEVEL_DIR))       # the folder that holds levels/<name>/
     rdir = os.path.join(WORK, "reports")
     os.makedirs(rdir, exist_ok=True)
     os.environ.setdefault("MAGLIASO_OSM_PINNED", "1")        # OpenStreetMap from the extract in beamng/dati
+    todo = [f[0] for f in FINISH]
+    if after:
+        todo = todo[todo.index(after) + 1:]
     for name, mod, fn, kw in FINISH:
-        if names and name not in names:
+        if (names and name not in names) or name not in todo:
             continue
         from config import ZONE
         if ZONE and name in ZONE_SKIP:
@@ -1095,6 +1098,9 @@ def finish(names=None):
 def main():
     if "--finish" in sys.argv[1:]:
         finish([a for a in sys.argv[1:] if not a.startswith("--")])
+        return
+    if "--finish-after" in sys.argv[1:]:                 # build_level.py --finish-after <step>: the rest of the chain
+        finish(after=sys.argv[sys.argv.index("--finish-after") + 1])
         return
     reuse = "--reuse-roads" in sys.argv[1:]
     stages = [a for a in sys.argv[1:] if not a.startswith("--")] or STAGES
@@ -1151,7 +1157,7 @@ def main():
                                  "rivers", "vineyards") if k in ctx}
     if stats:
         json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
-    if set(stages) == set(STAGES):
+    if set(stages) == set(STAGES) and "--no-finish" not in sys.argv[1:]:
         finish()
     print("level written to", LEVEL_DIR)
 

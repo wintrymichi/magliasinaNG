@@ -1,4 +1,5 @@
-# Ticino a blocchi: the full pipeline build of Ticino zones (beamng/ticino/zones.py), one job per zone, each with
+# Ticino a blocchi: the full pipeline build of Ticino zones (beamng/ticino/zones.py), two jobs per zone (the stages, then the
+# finishing steps: GitHub stops a job after 6 h), each with
 # MAGLIASO_ZONE set (config.py: the zone's area, terrain block and level name; without it the build is the Malcantone
 # level as before). The zones are listed in beamng/ticino/zone_list.txt (one zone file name a line); a change of
 # beamng/ticino/zone_stamp.txt on a push starts the run. Each zone's zip and build log go to the DRAFT release
@@ -37,7 +38,7 @@ jobs:
             gh release create ticino-zones --draft --target "$GITHUB_SHA" --title "Ticino zones (draft, not a release)" \
               --notes "Pipeline builds of Ticino zones (beamng/ticino/zones.py) of branch $GITHUB_REF_NAME. Not a release."
 
-  zone:
+  stages:
     needs: setup
     runs-on: ubuntu-24.04
     timeout-minutes: 360
@@ -143,16 +144,113 @@ jobs:
           tar -cf - --exclude='*.osm.pbf' data work | zstd -T0 -3 | split -b 1900M - "$RUNNER_TEMP/${Z}_data.tar.zst.part"
           for f in "$RUNNER_TEMP/${Z}_data.tar.zst.part"*; do gh release upload ticino-zones "$f" --clobber; done
 
-      - name: Level (build_level.py, every finishing step inside)
+      - name: Level, the stages (build_level.py, finishing steps in the next job)
+        working-directory: beamng/pipeline
+        env:
+          NET_WORKERS: "3"
+        run: |
+          /usr/bin/time -v python build_level.py --no-finish 2>&1 | tee "$MAGLIASO_ROOT/logs/4_build_level.log"
+          df -h .
+
+      - name: Hand the build over to the finishing job
+        run: |
+          cd "$MAGLIASO_ROOT"
+          tar -cf - --exclude='*.osm.pbf' --exclude=dist . | zstd -T0 -3 > "$RUNNER_TEMP/root.tar.zst"
+          ls -la "$RUNNER_TEMP/root.tar.zst"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: root-${{ matrix.zone }}
+          path: ${{ runner.temp }}/root.tar.zst
+          compression-level: 0
+          retention-days: 2
+
+      - name: Logs (also when a step failed)
+        if: always()
+        run: |
+          free -g; df -h . || true
+          (cd "$MAGLIASO_ROOT" && zip -qr "$RUNNER_TEMP/${Z}_logs_1.zip" logs work/reports 2>/dev/null) || true
+          gh release upload ticino-zones "$RUNNER_TEMP/${Z}_logs_1.zip" --clobber || true
+
+  finish:
+    needs: [setup, stages]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    if: always() && needs.setup.result == 'success'
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        zone: ${{ fromJson(needs.setup.outputs.zones) }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_ZONE: ${{ github.workspace }}/beamng/ticino/zones/ti/${{ matrix.zone }}.json
+      PYTHONHASHSEED: "0"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+      Z: ${{ matrix.zone }}
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0 osmium
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: root-${{ matrix.zone }}
+          path: ${{ runner.temp }}
+
+      - name: The build of the first job
+        run: |
+          mkdir -p "$MAGLIASO_ROOT"
+          zstd -dc "$RUNNER_TEMP/root.tar.zst" | tar -C "$MAGLIASO_ROOT" -xf -
+          rm "$RUNNER_TEMP/root.tar.zst"
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+          # the zone's OSM and GWR extracts in dati, as the first job left them (download_osm.py, download_gwr.py)
+          cd beamng/pipeline && python download_gwr.py && python - <<'PY'
+          import gzip, json, os
+          import download_osm as d
+          for src, dst in d.PINNED.items():
+              if os.path.exists(src):
+                  os.remove(dst)
+                  with gzip.open(dst, "wt", encoding="utf-8") as f:
+                      json.dump(json.load(open(src)), f, separators=(",", ":"))
+          PY
+          df -h .
+
+      - name: Level, the finishing steps
         working-directory: beamng/pipeline
         run: |
-          /usr/bin/time -v python build_level.py 2>&1 | tee "$MAGLIASO_ROOT/logs/4_build_level.log"
+          /usr/bin/time -v python build_level.py --finish 2>&1 | tee "$MAGLIASO_ROOT/logs/5_finish.log"
           df -h .
 
       - name: Package
         working-directory: beamng/pipeline
         run: |
-          python package.py "$Z" 2>&1 | tee "$MAGLIASO_ROOT/logs/5_package.log"
+          python package.py "$Z" 2>&1 | tee "$MAGLIASO_ROOT/logs/6_package.log"
           ls -la "$MAGLIASO_ROOT/dist"
           gh release upload ticino-zones "$MAGLIASO_ROOT/dist/$Z.zip" --clobber
 
@@ -160,5 +258,5 @@ jobs:
         if: always()
         run: |
           free -g; df -h . || true
-          (cd "$MAGLIASO_ROOT" && zip -qr "$RUNNER_TEMP/${Z}_logs.zip" logs work/reports 2>/dev/null) || true
-          gh release upload ticino-zones "$RUNNER_TEMP/${Z}_logs.zip" --clobber || true
+          (cd "$MAGLIASO_ROOT" && zip -qr "$RUNNER_TEMP/${Z}_logs_2.zip" logs work/reports 2>/dev/null) || true
+          gh release upload ticino-zones "$RUNNER_TEMP/${Z}_logs_2.zip" --clobber || true
