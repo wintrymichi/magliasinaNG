@@ -1,1 +1,4 @@
 # zones to build again after a fix (zone_retry_stamp.txt starts them)
+ti_m1_7
+ti_1_6
+ti_m1_2
