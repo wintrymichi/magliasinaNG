@@ -14,9 +14,10 @@ on:
       - beamng/ticino/zone_retry_stamp.txt
 
 # a push of zone_retry_stamp.txt builds only the zones of zone_retry.txt (the failed ones, after a fix) beside a run of
-# the whole list, which it must not cancel (its first push ADDS the stamp: test added and modified)
+# the whole list, which it must not cancel. A retry is told by "[zone retry]" in the commit message: a test of
+# head_commit.added/modified for the stamp came out false and the first retry built the whole list (cancelled)
 concurrency:
-  group: ticino-zones-${{ github.ref }}-${{ contains(format('{0}{1}', toJSON(github.event.head_commit.added), toJSON(github.event.head_commit.modified)), 'zone_retry_stamp.txt') && 'retry' || 'all' }}
+  group: ticino-zones-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[zone retry]') && 'retry' || 'all' }}
   cancel-in-progress: false
 
 permissions:
@@ -35,7 +36,7 @@ jobs:
       - id: z
         run: |
           L=beamng/ticino/zone_list.txt
-          ${{ contains(format('{0}{1}', toJSON(github.event.head_commit.added), toJSON(github.event.head_commit.modified)), 'zone_retry_stamp.txt') }} && L=beamng/ticino/zone_retry.txt
+          ${{ contains(github.event.head_commit.message, '[zone retry]') }} && L=beamng/ticino/zone_retry.txt
           Z=$(grep -v '^\s*#' $L | grep -v '^\s*$' | python3 -c 'import sys, json; print(json.dumps([l.split()[0] for l in sys.stdin]))')
           echo "zones=$Z" >> "$GITHUB_OUTPUT"
           echo "$Z"
