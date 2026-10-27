@@ -1099,10 +1099,17 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   radii, drivability, oneWay and speedLimit are all equal (two AI roads joining the same two nodes, one with a node in
   between). Control points coincide exactly where subdivided edges differed by mm. The game then reloaded the level by
   itself and crashed in C++ (c0000005). In the ticino roads the ties were the two one-way halves of a road round a
-  splitter island (X and X_j1, islands.island_lanes). blocks.ai_roads gives every AI road a speed limit of its own
-  (+1e-5 m/s per road), which ends the compare before lanes; beamng/ticino/aimap_check.py emulates map.lua's
-  passes from the code read on the laptop (16 crashing compares in 4 node orders before, 0 in 8 after) and
-  blocks.py stops if it finds one. resolveT/XJunctions and mergeNodesToLines are not emulated.
+  splitter island (X and X_j1, islands.island_lanes). beamng/ticino/aimap_check.py emulates map.lua's passes from
+  the code read on the laptop and blocks.py stops if it finds a crashing compare (resolveT/XJunctions and
+  mergeNodesToLines are not emulated).
+- Laptop run 6: the first fix, a speed limit of its own per road, crashed the same way: 0.40.1 does NOT read a
+  DecalRoad's `speedLimit` from items.level.json (an in-game probe read r.speedLimit nil and getField '' on all 3,451
+  roads; vanilla Utah writes none), so createSpeedLimits gave both halves the same value. The emulation had read the
+  json value, so it said 0. Emulate only what the game is shown to read. Now blocks.ai_roads gives every road a node
+  width of its own (+2e-6 m per road, float32 keeps it), which ends the compare at the radii: 11 crashing compares in
+  3 orders before, 0 in 8 after, with the speed emulated as one auto value and the nodes as float32. Not drivability:
+  a lower drivability makes the AI give way at the joint. (The probe also read useSubdivisions as nil, yet runs 1-4
+  without the key had subdivided z 0 nodes and no crash, and 5-6 with false crashed: the key is read.)
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold

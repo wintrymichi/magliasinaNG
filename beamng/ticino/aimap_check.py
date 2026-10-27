@@ -19,6 +19,9 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 
+SPEED_AUTO = 13.9
+
+
 class Crash(Exception):
     pass
 
@@ -97,9 +100,9 @@ class Map:
         one_way = bool(road.get("oneWay", False))
         flip = bool(road.get("flipDirection", False))
         no_merge = True if not road.get("autoJunction") else None
-        speed = road.get("speedLimit")
-        if speed is not None and speed <= 0:
-            speed = None
+        # 0.40.1 does not read a DecalRoad's speedLimit from items.level.json (an in-game probe read nil on every
+        # road, laptop run 6): createSpeedLimits fills one in, here the same for every road (the worst case)
+        speed = SPEED_AUTO
         lanes = None
         if road.get("autoLanes", True) is False:
             lanes = "-" * max(0, road.get("lanesLeft", 0)) + "+" * max(0, road.get("lanesRight", 0))
@@ -107,7 +110,7 @@ class Map:
             if one_way and lanes[:1] == "-":
                 lanes = flip_lanes(lanes)
                 flip = not flip
-        pts = road["nodes"]
+        pts = np.asarray(road["nodes"], dtype=np.float32).astype(float).tolist()   # the engine keeps float32
         prev = "%s_%d" % (prefix, 1)
         self.nodes[prev] = dict(pos=tuple(pts[0][:3]), radius=pts[0][3] * 0.5, links={}, noMerge=no_merge, endNode=True)
         for i in range(1, len(pts)):

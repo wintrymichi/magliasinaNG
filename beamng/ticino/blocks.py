@@ -447,22 +447,24 @@ def copy_level(src_dir, dst_dir, src_level, skip):
     log("level copy:", n_txt, "text files rewritten,", n_link, "linked")
 
 
-AI_SPEED_STEP = 1e-5       # m/s added per AI road (3,451 roads: at most +0.035 m/s)
+AI_WIDTH_STEP = 2e-6       # m of width added per AI road (3,451 roads: at most +7 mm; float32 keeps 2 ulp at 8 m)
 
 
 def ai_roads(objs, n_ai):
-    """The AI DecalRoads of a scene file as the streamed level needs them: useSubdivisions off and a speed limit of
-    their own. Without subdivisions two roads that join the same two nodes (the two one-way halves round a splitter
+    """The AI DecalRoads of a scene file as the streamed level needs them: useSubdivisions off and a width of their
+    own. Without subdivisions two roads that join the same two nodes (the two one-way halves round a splitter
     island) tie in every field map.lua's edgeCompare reads before `lanes`, and its node reduction compares them with
-    a new edge that has no lanes: "attempt to compare nil with string", the level load crashed (laptop run 5). A speed
-    limit that differs by AI_SPEED_STEP per road ends the compare before `lanes` (aimap_check.py emulates it)."""
+    a new edge that has no lanes: "attempt to compare nil with string", the level load crashed (laptop runs 5, 6).
+    A node width that differs by AI_WIDTH_STEP per road ends the compare at the radii (aimap_check.py emulates it).
+    Not the speed limit: 0.40.1 does not read a DecalRoad's speedLimit from the scene file (run 6 probe), and not
+    the drivability: a lower drivability makes the AI give way at the joint."""
     out = []
     for o in objs:
         if o.get("class") == "DecalRoad":
             n_ai[0] += 1
             o = dict(o, useSubdivisions=False)
-            if o.get("speedLimit"):
-                o["speedLimit"] = round(float(o["speedLimit"]) + n_ai[0] * AI_SPEED_STEP, 6)
+            o["nodes"] = [list(n[:3]) + [round(float(n[3]) + n_ai[0] * AI_WIDTH_STEP, 6)] + list(n[4:])
+                          for n in o["nodes"]]
         out.append(o)
     return out
 
