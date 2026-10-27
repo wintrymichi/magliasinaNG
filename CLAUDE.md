@@ -1242,3 +1242,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - zone_route (spawns) took the nearest 6-10 m Strasse: zone ti_0_3 (mountains) has none and argmin of an empty list
   crashed. It falls back to any Strasse, then any segment. A new retry push REPLACES a retry still pending (one pending
   run per concurrency group): put the pending run's zones into the new list too.
+- Zone ti_m1_7 crashed in buildings_mesh (None.strip on b['uuid']): some swissBUILDINGS3D features of the Lugano sheets
+  have no UUID, and extract_buildings merged all of them into ONE building keyed None. They now get a key per EGID,
+  else per feature (the Malcantone has none: unchanged).
