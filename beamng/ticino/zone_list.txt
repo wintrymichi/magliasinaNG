@@ -1,3 +1,4 @@
 # Ticino zones built by .github/workflows/zone_build.yml (one zone file name a line, beamng/ticino/zones/ti)
+# "<zone> data" also uploads its downloads + work (after the network step) for a build in the cloud session
 # probe: Bioggio - Lugano west
-ti_1_0
+ti_1_0 data

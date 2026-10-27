@@ -1162,3 +1162,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (Lugano): the window of tile N45E006 rounded to start one cell west of the map's box, c0 = -1, and `out[r0:, -1:...]`
   is an empty slice ("boolean index did not match ... size of axis is 0"). The Malcantone box never touched a tile
   edge. Clamp a pasted window's offsets, never slice with a start that may be negative.
+- Next on ti_1_0: network_surface.cantonale_hold -> roadheight.build crashed (NaN bounds): the corridor surfaces are
+  cut along the Malcantone Street View route (poses.json main_run), which no other zone touches. With no polygons
+  roadheight now saves an empty Surface (distance inf, height nan). Expect more such Malcantone-only data (poses,
+  road_profile, photo markings, wall caps): a zone has none of it in reach and every reader must take "nothing".
+  The Actions cache saves only when the job succeeds: the zone workflow saves the downloads right after them.
