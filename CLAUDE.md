@@ -1189,3 +1189,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (3+ arms): every way in gets a stop line, an instance of a two-phase sequence (axes) and the stock boom
   /art/shapes/objects/s_trafficlight_boom_sn.dae on its kerb side, local +x to the kerb (as BeamNG.Earth places it,
   tested by them in 0.40.3; not yet seen in our level). Controllers and instances share one id count.
+- signs_net had `levels/magliaso_pura` written in (KeyError in a zone after 6 min of the signs step): grep the pipeline for
+  the old level name, every reader must use LEVEL_NAME.
+- wintryserver OOM (2026-10-27, ti_1_0): the finishing step unpaved peaked at 12.95 GB RSS + 2 workers of 1.7 GB, and
+  immich/java hold ~3 GB with 3 GB swap: the kernel killed build_level (rc 137, no traceback). PATCH_WORKERS=1 passed
+  (633 s). Run the zone finishing steps there with PATCH_WORKERS=1.
