@@ -9,9 +9,9 @@ recovered from the vertex colours of the released building meshes.
 """
 import io, json, os, re, zipfile
 import numpy as np
-from config import BEAMNG_GAME, REFERENCE_ZIP, LEVEL_NAME
+from config import BEAMNG_GAME, REFERENCE_ZIP
 
-LEVEL = f"levels/{LEVEL_NAME}"
+LEVEL = "levels/magliaso_pura"          # the reference zip's level, also in a Ticino zone build
 
 
 def have_game():

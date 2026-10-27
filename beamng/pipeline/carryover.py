@@ -13,9 +13,9 @@ import numpy as np
 import bng
 import patch_release as pr
 import road_mesh
-from config import LEVEL_NAME, REFERENCE_ZIP
+from config import ZONE, REFERENCE_ZIP
 
-LEVEL = f"levels/{LEVEL_NAME}"
+LEVEL = "levels/magliaso_pura"          # the reference zip's level
 FILES = ("art/road/", "art/shapes/roads/markings.dae", "art/shapes/props/", "art/shapes/signs/")
 GROUPS = ("main/MissionGroup/roads/markings/", "main/MissionGroup/props/")
 NEEDED = ("theTerrain.ter", "main/MissionGroup/level_objects/terrain/", "main/MissionGroup/roads/surfaces/",
@@ -74,7 +74,10 @@ def copy_files(ref, level_dir, prefix):
 
 
 def markings(level_dir, scene, new_road, new_ground, ref=None):
-    """Road paint of the released level on the new road meshes."""
+    """Road paint of the released level on the new road meshes (not in a Ticino zone: the paint of the Malcantone
+    route, with its paths)."""
+    if ZONE:
+        return
     own = ref is None
     ref = ref or Reference()
     try:
@@ -99,7 +102,9 @@ def markings(level_dir, scene, new_road, new_ground, ref=None):
 
 
 def props(level_dir, scene, new_ground, ref=None):
-    """Street lights, poles, signs and furniture of the released level on the new ground."""
+    """Street lights, poles, signs and furniture of the released level on the new ground (not in a zone)."""
+    if ZONE:
+        return
     own = ref is None
     ref = ref or Reference()
     try:
