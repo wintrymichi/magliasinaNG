@@ -1199,3 +1199,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   workers from a forkserver, which build their own. Main builds them only under "fork" now (same output).
 - lamps_step read props/street_lights, which only props.py makes from the panorama lamps of the Malcantone: KeyError in a
   zone. It now makes the group (and its SimGroup line in props) when it is missing.
+  The first version of that fix crashed in pits(), which reads ALL in main too (the cloud container's Python 3.13 forks,
+  so the local run never took that path): ALL is built from al.npy there when it is missing. Test a change that depends
+  on the start method under "forkserver" too (multiprocessing.set_start_method).
+- signs_more planned 0 signs in a zone (then crashed on an empty DAE): its in_ch() needs the Swiss commune outlines
+  (dati/osm_communes.json.gz), which download_osm.zone_main leaves empty. In a zone without them everything counts as
+  Swiss for now; the zone extract should get the communes from the pbf before the border zones are built.

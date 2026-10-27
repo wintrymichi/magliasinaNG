@@ -1296,6 +1296,8 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
             print("terrain vertices in the keep-out with nothing between them and the road: %d" % free.sum())
             back[np.flatnonzero(back)[free]] = False
         if hold is not None and back.any():
+            if ALL is None:                     # pits() reads the faces here too
+                ALL = road_mesh.TriSurface(np.load(os.path.join(tmp, "al.npy")))
             free = pits(q0, road_z, rr[back], cc[back])
             print("terrain vertices in the keep-out in a trench between the road and higher ground: %d" % free.sum())
             back[np.flatnonzero(back)[free]] = False

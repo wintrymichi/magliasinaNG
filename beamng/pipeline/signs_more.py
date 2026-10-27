@@ -34,6 +34,7 @@ import shapely
 import osm
 import signs_net as sn
 from signs_net import Sign
+from config import ZONE
 import argparse, json, math, os, sys, tempfile, time, zipfile
 from collections import Counter
 import bng
@@ -72,10 +73,13 @@ class Ctx:
         self.ways = ways
         comm = sn.communes()
         self.swiss = shapely.union_all([g for _, g in comm]) if comm else None
-        shapely.prepare(self.swiss)
+        if self.swiss is not None:
+            shapely.prepare(self.swiss)
         self.bt = _buildings()
 
     def in_ch(self, p):
+        if self.swiss is None and ZONE:             # a Ticino zone has no commune outlines yet: all Swiss
+            return True
         return self.swiss is not None and self.swiss.contains(shapely.Point(float(p[0]), float(p[1])))
 
     def village(self, p, lim):
@@ -445,6 +449,8 @@ def signs_more_step(root, report=None):
     up = ps.level_plates(z)
     signs = plan(up)
     print(f"{len(signs)} signs planned: {Counter(s.kind for s in signs)}", flush=True)
+    if not signs:
+        return 0
     old_mats = json.loads(z.read(ps.MATERIALS)) if ps.MATERIALS in z.namelist() else {}
     world = ps.World(z, np.array([[s.x, s.y] for s in signs]))
     from scipy.spatial import cKDTree
