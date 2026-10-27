@@ -647,6 +647,12 @@ def holes(tb, ter):
         return np.zeros(0, int), np.zeros(0, int)
     R, C = np.mgrid[r0:r1 + 1, c0:c1 + 1]
     R, C = R.ravel(), C.ravel()
+    # only the squares along the tube: the box of a long tube (the Ceneri base tunnel from a Lugano zone) held millions
+    import shapely
+    band = shapely.LineString(tb.P[:, :2]).buffer(ext + 2 * STEP + 3 * ter.sq)
+    shapely.prepare(band)
+    near = shapely.contains_xy(band, ter.x0 + (C + 0.5) * ter.sq, ter.y0 + (R + 0.5) * ter.sq)
+    R, C = R[near], C[near]
     hit = np.zeros(len(R), bool)
     # every square tested on a 4 x 4 grid of points in it
     for u in (0.1, 0.37, 0.63, 0.9):

@@ -1213,3 +1213,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - The finishing steps ran one after the other in ONE process and the memory they left added up (wintryserver: 7-10 GB
   at the start of each step after two hours, OOM at road_seams with 13.1 GB). build_level.finish now runs each step in
   a forked child (MAGLIASO_STEP_FORK=0 turns it off; no fork on Windows): the steps share nothing but the files.
+- tunnels.holes tested every terrain square of a tube's bounding box (16 KD queries each): the Lugano zone has 32 live
+  tunnels, some kilometres long and reaching out of the zone (a box of 2,650 x 3,410 squares), and the step ran over
+  40 min. Only the squares within a band round the tube's line are tested now.
