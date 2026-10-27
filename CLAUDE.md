@@ -1236,3 +1236,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   so _fix moved the tree to NaN (0 * NaN is NaN even at the step d = 0). Some drivable raster cell had a NaN height:
   a mesh of that zone has NaN vertices somewhere (not found yet: look at the zone's road/yard DAEs when the zip is
   there). intrusion now treats a NaN cell as no intrusion, _fix falls back to (1, 0), items with no ground are dropped.
+- zone_route (spawns) took the nearest 6-10 m Strasse: zone ti_0_3 (mountains) has none and argmin of an empty list
+  crashed. It falls back to any Strasse, then any segment. A new retry push REPLACES a retry still pending (one pending
+  run per concurrency group): put the pending run's zones into the new list too.

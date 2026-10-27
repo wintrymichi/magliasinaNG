@@ -868,8 +868,12 @@ def zone_route(ctx):
     x0, y0, x1, y1 = ZONE["core_local"]
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     big = {"10m Strasse", "8m Strasse", "6m Strasse"}
-    ok = np.array([net.segs[k]["class"] in big and not net.segs[k]["bridge"] for k in net.seg])
-    idx = np.flatnonzero(ok)
+    open_ = np.array([not net.segs[k]["bridge"] and net.segs[k]["n"] >= 2 for k in net.seg], bool)
+    idx = np.flatnonzero(open_ & np.array([net.segs[k]["class"] in big for k in net.seg], bool))
+    if not len(idx):                                 # a mountain zone with no main road (ti_0_3): any road
+        idx = np.flatnonzero(open_ & np.array(["Strasse" in net.segs[k]["class"] for k in net.seg], bool))
+    if not len(idx):
+        idx = np.flatnonzero(open_)
     out = []
     for tx, ty in ((cx, cy), ((cx + x0) / 2, (cy + y0) / 2), ((cx + x1) / 2, (cy + y1) / 2)):
         i = idx[np.argmin(np.hypot(net.x[idx] - tx, net.y[idx] - ty))]
