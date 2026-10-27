@@ -1127,6 +1127,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   off the road), the lane is smooth at 14 %. Which way span mode turns is luck: the drive now follows the scripted
   route (16.8 km, Magliaso-Pura-Ponte Tresa-Caslano-Agno) first, then the AI. The autotest's own map.reset at a jump
   doubled stream.lua's (6,553 trafficSignals errors): removed.
+- Laptop run 9: load, jumps, cells and the tunnel all fine (the apron skirt closes the S portal; tunnel done). The
+  scripted route flipped the car after 155 m: it started inside the Magliaso roundabout, hung there 26 s, then
+  scriptai raced the late timeline at 14 m/s (it keeps to the times, not to a speed) and at the bend at 684,-1040 the
+  car left the cantonale and fell 2 m on its roof into the lane below. make_route.py now starts on the cantonale,
+  weights the path by drivability ** 4, drives at most 40 km/h and slower in bends (A_LAT). The AI drive after it went
+  1.16 km west through Pura with 6 short stops. The jump check 1 s after stream.lua's reset log still saw the old
+  heights; 5 s later all were right (the reset lands a few frames after its log line).
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
