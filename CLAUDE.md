@@ -1222,3 +1222,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   unpacked from the .deb (no sudo), long runs under setsid/nohup. Peak RAM after the fixes ~10 GB; it shares 15 GB
   with Minecraft (-Xmx8G) and immich. No gh there: the zip stays in /mnt/disk8tb/ticino/bm/dist.
 - download_osm.pbf_communes checked on the server: 25 municipalities over the Malcantone-Lugano box in 19 s, 2 GB.
+- GEOS constrained_delaunay_triangles raised "Unable to find a convex corner" on a wall polygon of ti_m1_7 (stage walls):
+  config.py wraps it for every caller (retry on the cleaned polygon, else no triangles and a log line).
+- zone_build.yml: zone_retry_stamp.txt builds only zone_retry.txt (failed zones after a fix) in its own concurrency
+  group, so it does not cancel the run of the whole list (a push of zone_stamp.txt would: cancel-in-progress).

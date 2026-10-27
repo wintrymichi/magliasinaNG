@@ -11,10 +11,13 @@ on:
   push:
     paths:
       - beamng/ticino/zone_stamp.txt
+      - beamng/ticino/zone_retry_stamp.txt
 
+# a push of zone_retry_stamp.txt builds only the zones of zone_retry.txt (the failed ones, after a fix) beside a run of
+# the whole list, which it must not cancel
 concurrency:
-  group: ticino-zones-${{ github.ref }}
-  cancel-in-progress: true
+  group: ticino-zones-${{ github.ref }}-${{ contains(toJSON(github.event.head_commit.modified), 'zone_retry_stamp.txt') && 'retry' || 'all' }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -31,7 +34,9 @@ jobs:
       - uses: actions/checkout@v4
       - id: z
         run: |
-          Z=$(grep -v '^\s*#' beamng/ticino/zone_list.txt | grep -v '^\s*$' | python3 -c 'import sys, json; print(json.dumps([l.split()[0] for l in sys.stdin]))')
+          L=beamng/ticino/zone_list.txt
+          ${{ contains(toJSON(github.event.head_commit.modified), 'zone_retry_stamp.txt') }} && L=beamng/ticino/zone_retry.txt
+          Z=$(grep -v '^\s*#' $L | grep -v '^\s*$' | python3 -c 'import sys, json; print(json.dumps([l.split()[0] for l in sys.stdin]))')
           echo "zones=$Z" >> "$GITHUB_OUTPUT"
           echo "$Z"
           gh release view ticino-zones >/dev/null 2>&1 || \

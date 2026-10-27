@@ -91,3 +91,31 @@ for _d in (DATA, WORK):
 # guard rails) are used. v2.2: this is the default; MAGLIASO_NO_PHOTO_TEXTURES=0 brings back the
 # photo textures of the local v1.x builds, for private study only.
 NO_PHOTO = os.environ.get("MAGLIASO_NO_PHOTO_TEXTURES", "1") != "0"
+
+
+# GEOS's constrained Delaunay gives up on some degenerate survey polygons ("Unable to find a convex corner", a wall of
+# the Ticino zone ti_m1_7; never in the Malcantone): every caller gets the triangles of the polygon cleaned up, or none
+# (the piece is left without a cap) instead of a crash. The answer is unchanged wherever GEOS succeeds.
+def _safe_cdt(cdt):
+    def run(geometry, **kw):
+        try:
+            return cdt(geometry, **kw)
+        except Exception as e:
+            import shapely
+            if not isinstance(geometry, shapely.Geometry):
+                raise
+            for g in (shapely.make_valid(geometry).buffer(0), geometry.simplify(0.01).buffer(0)):
+                try:
+                    return cdt(g, **kw)
+                except Exception:
+                    pass
+            print("constrained Delaunay failed, piece left out:", e, round(geometry.area, 2), "m2", flush=True)
+            return shapely.GeometryCollection()
+    return run
+
+
+try:
+    import shapely as _shapely
+    _shapely.constrained_delaunay_triangles = _safe_cdt(_shapely.constrained_delaunay_triangles)
+except ImportError:
+    pass
