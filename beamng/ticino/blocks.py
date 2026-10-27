@@ -453,6 +453,11 @@ def write_scene(kept, dst_dir, tb_new, src_level):
     for path, objs in kept.items():
         if path.endswith("level_objects/terrain"):
             objs = [tb_new if o.get("class") == "TerrainBlock" else o for o in objs]
+        # the AI roads: map.lua builds the AI graph from a DecalRoad's subdivided edges when useSubdivisions is on,
+        # and those are clipped to the terrain, which exists only in the streamed window: 14-19 k of the 20,810
+        # nodes lay at z 0 (laptop runs 2-4). Off, it takes the control points with their own heights. (A
+        # map.reset() after every window move fixed the nodes near the car but froze the laptop 2-2.5 s each time.)
+        objs = [dict(o, useSubdivisions=False) if o.get("class") == "DecalRoad" else o for o in objs]
         d = os.path.join(main, *path.split("/")) if path != "." else main
         os.makedirs(d, exist_ok=True)
         with wopen(os.path.join(d, "items.level.json"), "w", encoding="utf-8") as f:

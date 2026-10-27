@@ -784,6 +784,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   opening (spikes on the track): only from the swissTLM3D portal in. A floor plate now covers the stretch under the
   headwall (one saw the lake through the holes beside the ballast). Check with a probe of shell points vs the
   terrain (square_height, holes skipped), not by eye.
+- Laptop run 4: the headwalls stood on nothing on the lake side (ground 2.4 m under the floor beside the track, the
+  wall's sides ended 0.6 m under it): a gap under the S portal at track level. Each side now goes FOOT under the
+  lowest ground at its outer edge, with the triangle under the floor's edge closed.
 
 ## Data from the cloud sessions
 
@@ -1084,6 +1087,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   remade cell registered the same names (56 SimNameDictionary::insert warnings); colTris was a "made" counter, now live.
   createScreenshot2 takes the shot a few frames later: with the camera moved on at once, every tunnel shot showed the
   NEXT pose (and the last two were alike). Wait 2 s after each shot before moving the camera.
+- Laptop run 4: that map.reset() froze the game 1.9-2.5 s at EVERY window move (perf rows "mapreset"): never call it
+  on the fly. map.lua (0.40, loadJsonDecalMap) takes a DecalRoad's subdivided edges (clipped to the terrain) when
+  useSubdivisions is on and edgeCount > 2, else its control points with their own z: blocks.py now writes the ticino
+  AI roads with useSubdivisions false and MAP_RESET_FRAMES is nil. The AI left the road twice at Pura (250-290,-890,
+  runs 3 and 4, into the wood against a tree): the same place as the known lamp/4 m AI drop of the piano video
+  (Known issues), a map fault, not streaming.
 - Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
   is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
   ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold

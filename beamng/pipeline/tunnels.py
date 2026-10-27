@@ -48,6 +48,7 @@ MOUND_W = 8.0           # m beside the shell over which the mound falls back to 
 HEAD = 1.0              # m, thickness of a headwall
 HEAD_W = 1.6            # m of headwall beside the shell
 HEAD_UP = 1.4           # m of headwall over the shell
+FOOT = 0.4              # m a headwall's side goes under the lowest ground at its edge
 PORTAL_OUT = 1.5        # m: the headwall stands this far out of the swissTLM3D portal (one terrain square)
 CLEAR = 0.25            # m: ground this far over the floor is in the way
 APPROACH = 10.0         # m out of a live portal where meshes in the opening's clearance are taken out
@@ -450,7 +451,7 @@ def build_tube(tb, mats, ter=None):
     # headwalls at the live portals
     for e, live in enumerate(tb.live):
         if live:
-            add("mp_tunnel_portal", headwall(tb, 0 if e == 0 else m - 1, 1 if e == 0 else -1))
+            add("mp_tunnel_portal", headwall(tb, 0 if e == 0 else m - 1, 1 if e == 0 else -1, ter))
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
@@ -504,12 +505,20 @@ def add_track(tb, add, i0, i1):
         add("mp_rail_steel", np.concatenate(flanks))
 
 
-def headwall(tb, i, inward):
-    """A headwall HEAD m thick from station i inwards (inward +1 / -1 along the stations), round the opening."""
+def headwall(tb, i, inward, ter=None):
+    """A headwall HEAD m thick from station i inwards (inward +1 / -1 along the stations), round the opening. Each
+    side goes down to FOOT under the lowest ground at its outer edge: on the lake side of the Vallone d'Agno the
+    ground falls away beside the track and the wall stood on nothing, a gap under it (laptop run 4)."""
     ring = tb.ring()
     W = tb.hw_out + HEAD_W
     top = tb.crown + SHELL + HEAD_UP
     j = i + inward
+    bot = {1: -0.6, -1: -0.6}
+    if ter is not None:
+        for sg in (1, -1):
+            g = [float(ter.sample([tb.frame(st, sg * W * f, 0.0)[0]], [tb.frame(st, sg * W * f, 0.0)[1]])[0])
+                 for st in (i, j) for f in (0.6, 1.0)]
+            bot[sg] = min(-0.6, min(g) - tb.floor[i] - FOOT)
     # the face: the outer rectangle minus the opening, as a fan of quads between the opening and the rectangle
     frame = []
     k = len(ring)
@@ -517,17 +526,21 @@ def headwall(tb, i, inward):
     rect = []
     for n, z in ring:
         if z <= tb.wall + 1e-6:
-            rect.append((math.copysign(W, n), z - 0.6 if z == 0.0 else z))
+            rect.append((math.copysign(W, n), bot[1 if n > 0 else -1] if z == 0.0 else z))
         else:
             rect.append((n * W / tb.hw, top))
-    rect[0] = (W, -0.6)
-    rect[-1] = (-W, -0.6)
+    rect[0] = (W, bot[1])
+    rect[-1] = (-W, bot[-1])
     tris = []
     for st, face_out in ((i, True), (j, False)):
         for a in range(k - 1):
             p0, p1 = tb.frame(st, *ring[a]), tb.frame(st, *ring[a + 1])
             q0, q1 = tb.frame(st, *rect[a]), tb.frame(st, *rect[a + 1])
             tris += [p0, q0, q1, p0, q1, p1]
+        # under the floor's edge down to the side's foot (the fan joins the floor corner to the foot diagonally)
+        for sg in (1, -1):
+            if bot[sg] < -0.6 + 1e-6:
+                tris += [tb.frame(st, sg * tb.hw, 0.0), tb.frame(st, sg * tb.hw, bot[sg]), tb.frame(st, sg * W, bot[sg])]
         # the corners of the rectangle above the vault's sides
         for sg in (1, -1):
             a0 = tb.frame(st, sg * W, tb.wall)
@@ -535,7 +548,7 @@ def headwall(tb, i, inward):
             a2 = tb.frame(st, sg * tb.hw * 0.92, top)
             tris += [a0, a1, a2]
     # the outer sides and the top of the block
-    for (n0, z0), (n1, z1) in (((W, -0.6), (W, top)), ((W, top), (-W, top)), ((-W, top), (-W, -0.6))):
+    for (n0, z0), (n1, z1) in (((W, bot[1]), (W, top)), ((W, top), (-W, top)), ((-W, top), (-W, bot[-1]))):
         A0, A1 = tb.frame(i, n0, z0), tb.frame(i, n1, z1)
         B0, B1 = tb.frame(j, n0, z0), tb.frame(j, n1, z1)
         tris += [A0, B0, B1, A0, B1, A1]

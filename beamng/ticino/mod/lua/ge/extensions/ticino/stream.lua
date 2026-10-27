@@ -36,9 +36,9 @@ M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
-M.MAP_RESET_FRAMES = 30   -- the AI map is read again this many frames after a terrain swap: the AI DecalRoads clip
-                           -- to the terrain, so outside the window their nodes are at z 0 (laptop run 3: 14-19 k of
-                           -- 20,810 nodes; a map.reset() after the window came gave every node within 300 m its height)
+M.MAP_RESET_FRAMES = nil  -- frames after a terrain swap to read the AI map again (nil: never). A map.reset() fixed
+                           -- the z 0 nodes near the car but froze the laptop 2-2.5 s every move (run 4); the AI roads
+                           -- now have useSubdivisions off (blocks.py), so the graph takes their own heights
 M.TEMP = '/temp/ticino/'
 M.PERF_FILE = '/ticino_perf.csv'
 M.TERRAIN_NAME = 'theTerrain'
