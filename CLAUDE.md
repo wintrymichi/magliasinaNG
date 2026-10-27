@@ -1232,3 +1232,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - GEOS union_all stopped on "TopologyException: found non-noded intersection" (zone ti_1_3, clearance._tile in the
   vegetation stage, 22 min in). config.py wraps shapely.union_all/unary_union like the CDT: on a GEOSException it
   retries snapped to a 1 mm, then 1 cm grid (shapely.ops.unary_union goes through shapely.union_all, so it is covered).
+- canopy.run crashed in zone ti_0_m1 (int(NaN) in TileRasters.cell): TileRasters.intrusion returned a NaN direction,
+  so _fix moved the tree to NaN (0 * NaN is NaN even at the step d = 0). Some drivable raster cell had a NaN height:
+  a mesh of that zone has NaN vertices somewhere (not found yet: look at the zone's road/yard DAEs when the zip is
+  there). intrusion now treats a NaN cell as no intrusion, _fix falls back to (1, 0), items with no ground are dropped.
