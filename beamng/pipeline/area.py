@@ -33,6 +33,16 @@ def zone_box():
     return shapely.box(x0, y0, x1, y1)
 
 
+def in_zone(x, y, margin=50.0):
+    """True where (x, y) lies in a Ticino zone's area + margin (always True for the Malcantone level): the data
+    measured on the Malcantone photos (rails, lamps, ...) are dropped outside a zone, where nothing is built."""
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    if not ZONE:
+        return np.ones(np.shape(x), bool)
+    x0, y0, x1, y1 = zone_box().bounds
+    return (x >= x0 - margin) & (x <= x1 + margin) & (y >= y0 - margin) & (y <= y1 + margin)
+
+
 def boundary():
     """The quadrilateral drawn by the user (local coordinates); a zone's rectangle."""
     if ZONE:

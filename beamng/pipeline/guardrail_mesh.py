@@ -106,6 +106,7 @@ def sv_runs(existing):
     v2.8 the points left were joined, and the rail went on across the stretch along the existing one)."""
     if not os.path.exists(SV_RUNS):
         return []
+    import area
     import shapely
     old = shapely.union_all([shapely.LineString(np.array(r["pts"])[:, :2]).buffer(1.5) for r in existing
                              if len(r["pts"]) > 1]) if existing else None
@@ -115,6 +116,7 @@ def sv_runs(existing):
         if len(P) < 2:
             continue
         keep = ~shapely.contains_xy(old, P[:, 0], P[:, 1]) if old is not None else np.ones(len(P), bool)
+        keep &= area.in_zone(P[:, 0], P[:, 1])
         for piece in pieces(keep):
             if len(piece) >= 3:
                 out.append({"pts": P[piece], "side": r["side"], "seg": r.get("seg", -1), "votes": r.get("votes", 0)})
@@ -507,7 +509,11 @@ def edge_fn(level_dir, near=8.0):
     pts = [np.array(r["pts"], float)[:, :2] for r in json.load(open(os.path.join(WORK, "guardrails_final.json")))]
     if os.path.exists(SV_RUNS):
         pts += [np.array(r["pts"], float)[:, :2] for r in json.load(open(SV_RUNS)) if len(r["pts"])]
-    pts = np.concatenate([resample(np.column_stack([p, np.zeros(len(p))]), 1.0)[0][:, :2] for p in pts if len(p) > 1])
+    import area
+    pts = [p for p in pts if len(p) > 1 and area.in_zone(p[:, 0], p[:, 1]).all()]
+    if not pts:                                      # a Ticino zone with no photo rails
+        return None
+    pts = np.concatenate([resample(np.column_stack([p, np.zeros(len(p))]), 1.0)[0][:, :2] for p in pts])
     mats = osm_surface.ROAD_MATS + osm_surface.HARD_MATS + ("mp_road_asphalt_fresh", "mp_sidewalk", "mp_island")
     tops = markings_net.road_tops(level_dir, mats)
     d, _ = cKDTree(pts).query(tops.mean(1)[:, :2], distance_upper_bound=near)
@@ -516,7 +522,9 @@ def edge_fn(level_dir, near=8.0):
 
 
 def build(level_dir, level_name, scene, road_fn=None):
-    runs = json.load(open(os.path.join(WORK, "guardrails_final.json")))
+    import area
+    runs = [r for r in json.load(open(os.path.join(WORK, "guardrails_final.json")))
+            if len(r["pts"]) and area.in_zone(np.array(r["pts"])[:, 0], np.array(r["pts"])[:, 1]).all()]
     foot = foot_fn()
     items = []
     measured = []

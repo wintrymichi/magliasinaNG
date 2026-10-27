@@ -805,6 +805,9 @@ def stage_buildings(scene, ctx):
     from config import wgs_to_local
     ground = forest_fill.terrain_sampler()
     near = wgs_to_local(*landmarks.LEMA_BOTTOM)
+    ext = TER_SIZE * TER_SQUARE
+    if not (TER_X0 <= near[0] <= TER_X0 + ext and TER_Y0 <= near[1] <= TER_Y0 + ext):
+        return                                       # a Ticino zone away from the Monte Lema
     for shape, origin, ntri, coll in landmarks.cableway(LEVEL_DIR, LEVEL_NAME, ground, near) + \
             landmarks.summit(LEVEL_DIR, LEVEL_NAME, ground):
         scene.add("MissionGroup/landmarks", bng.tsstatic(shape, origin, collision=coll, decal=False,
@@ -1095,7 +1098,17 @@ def main():
         return
     reuse = "--reuse-roads" in sys.argv[1:]
     stages = [a for a in sys.argv[1:] if not a.startswith("--")] or STAGES
-    if set(stages) == set(STAGES) and os.path.exists(LEVEL_DIR):
+    # MAGLIASO_CHECKPOINT=1 keeps (scene, ctx) after every stage in WORK; --resume goes on from there after a crash
+    # (the Ticino zones: a fault in a late stage cost hours of stages before it)
+    import pickle
+    ckpt = os.path.join(WORK, "build_checkpoint.pkl")
+    resume = "--resume" in sys.argv[1:] and os.path.exists(ckpt)
+    if resume:
+        scene, ctx, done = pickle.load(open(ckpt, "rb"))
+        print("resumed after the stages", done, flush=True)
+    else:
+        scene, ctx, done = bng.Scene(), {"stages": stages}, []
+    if set(stages) == set(STAGES) and os.path.exists(LEVEL_DIR) and not resume:
         roads, keep = level_path("art", "shapes", "roads"), LEVEL_DIR + "_roads"
         if reuse:                                   # everything goes except the road meshes
             shutil.rmtree(keep, ignore_errors=True)
@@ -1105,11 +1118,24 @@ def main():
             os.makedirs(os.path.dirname(roads))
             shutil.move(keep, roads)
     os.makedirs(LEVEL_DIR, exist_ok=True)
-    scene, ctx = bng.Scene(), {"stages": stages}
     for st in stages:
+        if st in done:
+            continue
         t0 = time.time()
         globals()["stage_roads_reuse" if st == "roads" and reuse else f"stage_{st}"](scene, ctx)
         print(f"[stage {st}: {time.time() - t0:.0f} s]", flush=True)
+        done.append(st)
+        if os.environ.get("MAGLIASO_CHECKPOINT") == "1":
+            keep = {}
+            for k, v in ctx.items():                 # what does not pickle (functions) is made again on use
+                try:
+                    pickle.dumps(v, protocol=5)
+                    keep[k] = v
+                except Exception:
+                    print("  checkpoint: ctx[%r] left out" % k, flush=True)
+            with open(ckpt + ".part", "wb") as f:
+                pickle.dump((scene, keep, done), f, protocol=5)
+            os.replace(ckpt + ".part", ckpt)
     scene.write(LEVEL_DIR)
     if "vegetation" in stages:
         # crowns out of the clearance profile of the roads, trunks out of walls and buildings, every
