@@ -1158,3 +1158,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   a cell file must allow that (XY_OFF_CM). Not known until the game test: whether setRenderEnabled exists on
   ProceduralMesh in 0.40 (pcall; the materials are alpha 0 anyway) and whether the winding (clockwise) lets the car
   stand on it.
+- Zone builds (zone_build.yml, MAGLIASO_ZONE, 2026-10-27): download_worldcover failed at once on the probe zone ti_1_0
+  (Lugano): the window of tile N45E006 rounded to start one cell west of the map's box, c0 = -1, and `out[r0:, -1:...]`
+  is an empty slice ("boolean index did not match ... size of axis is 0"). The Malcantone box never touched a tile
+  edge. Clamp a pasted window's offsets, never slice with a start that may be negative.
