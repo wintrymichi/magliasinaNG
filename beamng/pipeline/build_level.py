@@ -198,6 +198,26 @@ def ground_fn():
     return smoothed_sampler(Grid.load(os.path.join(WORK, "dtm05.npz")), 0.6)
 
 
+def carve_corridor(meshed, tops, xs, ys, sq, ov):
+    """The terrain carve under the corridor meshes (stage_roads): ov gets the carve heights."""
+    import shapely
+    import road_mesh
+    from rasterio import features
+    from rasterio.transform import Affine
+    union = shapely.union_all([m.buffer(sq) for m in meshed])
+    bx0, by0, bx1, by1 = union.bounds
+    c0, c1 = max(int(np.searchsorted(xs, bx0)) - 1, 0), min(int(np.searchsorted(xs, bx1)) + 1, len(xs))
+    r0, r1 = max(int(np.searchsorted(ys, by0)) - 1, 0), min(int(np.searchsorted(ys, by1)) + 1, len(ys))
+    tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)  # row 0 = south
+    mask = features.rasterize([(union, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0,
+                              dtype=np.uint8, all_touched=True).astype(bool)
+    rr, cc = np.nonzero(mask)
+    csurf = road_mesh.TriSurface(np.concatenate(tops))
+    zc = road_mesh.carve_window(csurf, xs, ys, r0 + rr, c0 + cc)
+    ok = np.isfinite(zc)
+    ov[r0 + rr[ok], c0 + cc[ok]] = zc[ok] - 0.10
+
+
 def stage_roads(scene, ctx):
     """Collision meshes of every road and path of the area:
     - the cadastral paved surfaces within roadheight.CORRIDOR m of the Street View route (the Strada
@@ -260,11 +280,12 @@ def stage_roads(scene, ctx):
     # within 1 m, as on the rest of the network (network_mesh.py)
     from scipy import ndimage as ndi
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
-    bb = np.array([it[0].bounds for it in items if not it[0].is_empty])
-    win, _, _ = dtm.window(bb[:, 0].min() - 5, bb[:, 1].min() - 5, bb[:, 2].max() + 5, bb[:, 3].max() + 5, pad=4)
-    lo = Grid(ndi.minimum_filter(np.asarray(win.a, np.float32), size=5) - network_mesh.SUNK, win.x_min, win.y_max,
-              win.res)
-    del win
+    bb = np.array([it[0].bounds for it in items if not it[0].is_empty]).reshape(-1, 4)
+    if len(bb):                                      # a Ticino zone away from the Street View route has no corridor
+        win, _, _ = dtm.window(bb[:, 0].min() - 5, bb[:, 1].min() - 5, bb[:, 2].max() + 5, bb[:, 3].max() + 5, pad=4)
+        lo = Grid(ndi.minimum_filter(np.asarray(win.a, np.float32), size=5) - network_mesh.SUNK, win.x_min,
+                  win.y_max, win.res)
+        del win
 
     def z_fn(pid):
         return lambda x, y, comp: np.maximum(S.height(x, y, pid=pid, comp=int(comp)), lo.sample(x, y))
@@ -321,20 +342,11 @@ def stage_roads(scene, ctx):
     sq = xs[1] - xs[0]
     ov = np.full((len(ys), len(xs)), np.nan, np.float32)            # carve height, NaN = none
     cap = np.full((len(ys), len(xs)), np.inf, np.float32)           # highest ground (under decks)
-    corridor = shapely.union_all(meshed)
-    union = shapely.union_all([m.buffer(sq) for m in meshed])
-    bx0, by0, bx1, by1 = union.bounds
-    c0, c1 = max(int(np.searchsorted(xs, bx0)) - 1, 0), min(int(np.searchsorted(xs, bx1)) + 1, len(xs))
-    r0, r1 = max(int(np.searchsorted(ys, by0)) - 1, 0), min(int(np.searchsorted(ys, by1)) + 1, len(ys))
-    tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)  # row 0 = south
-    mask = features.rasterize([(union, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0,
-                              dtype=np.uint8, all_touched=True).astype(bool)
-    rr, cc = np.nonzero(mask)
-    csurf = road_mesh.TriSurface(np.concatenate(tops))
-    zc = road_mesh.carve_window(csurf, xs, ys, r0 + rr, c0 + cc)
-    ok = np.isfinite(zc)
-    ov[r0 + rr[ok], c0 + cc[ok]] = zc[ok] - 0.10
-    ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops))
+    corridor = shapely.union_all(meshed) if meshed else shapely.Polygon()
+    tops = tops or [np.zeros((0, 3, 3))]
+    if meshed:
+        carve_corridor(meshed, tops, xs, ys, sq, ov)
+    ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops)) if len(tops[0]) else None
     # the rest of the network, tile by tile
     net = network_mesh.Network(exclude=corridor)
     ctx["surfaces"] = net.assign_surfaces()
@@ -470,7 +482,7 @@ def stage_roads_reuse(scene, ctx):
     m = np.isfinite(ov)
     ctx["terrain_override"] = (np.nan_to_num(ov), m, None)
     ctx["terrain_cap"] = cap
-    ctx["road_mesh_fn"] = road_mesh.MeshSampler(st["tops"])
+    ctx["road_mesh_fn"] = road_mesh.MeshSampler(st["tops"]) if len(st["tops"]) else None
     ctx["corridor"] = shapely.from_wkb(st["corridor"].tobytes())
     ctx["network"] = network_mesh.Network(exclude=ctx["corridor"])
     if "deck_kind" in st.files:
