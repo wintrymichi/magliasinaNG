@@ -1205,3 +1205,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - signs_more planned 0 signs in a zone (then crashed on an empty DAE): its in_ch() needs the Swiss commune outlines
   (dati/osm_communes.json.gz), which download_osm.zone_main leaves empty. In a zone without them everything counts as
   Swiss for now; the zone extract should get the communes from the pbf before the border zones are built.
+- fuel_stations.new_canopy (a station with no survey canopy, never reached in the Malcantone) used the 2D np.cross that
+  numpy 2 refuses: crashed in the zone. A code path the Malcantone never took is untested: expect more of these.
