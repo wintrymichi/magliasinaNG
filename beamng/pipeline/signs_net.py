@@ -28,7 +28,7 @@ import numpy as np
 import shapely
 import osm
 import signs_ch
-from config import wgs_to_local
+from config import LEVEL_NAME, wgs_to_local
 import hashlib, io, json, math, os, re, struct, sys, tempfile, time, zipfile
 from collections import Counter
 from PIL import Image
@@ -505,7 +505,7 @@ if __name__ == "__main__":
 # A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish signs
 # --------------------------------------------------------------------------------------------------
 
-LEVEL = "levels/magliaso_pura"
+LEVEL = f"levels/{LEVEL_NAME}"
 L = "/" + LEVEL
 SIGN_DIR = f"{LEVEL}/art/shapes/signs/ch"
 SHAPE = f"{LEVEL}/art/shapes/props/props_signs.dae"
