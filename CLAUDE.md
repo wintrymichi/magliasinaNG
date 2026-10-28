@@ -1276,3 +1276,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   stages. zone_build.yml now takes "[zone finish <run id>]" in the commit message (with a zone_stamp.txt change): no
   stages, the finish jobs download that run's root-<zone> artifacts (run-id + github-token, permission actions: read;
   kept 2 days) and run the finishing steps of the new commit. Use it whenever a fix touches only finishing steps.
+- Zones ti_m1_2 and ti_0_2 (with a railway) stopped in catenary: a railway shape had an mp_sleeper part with no top
+  face, and vid.max() of the empty part raised. sleepers() skips such parts, catenary skips a level with no sleepers.
+  A finish run with "[zone finish <run>] [zone retry]" takes zone_retry.txt and has a group of its own (no waiting).

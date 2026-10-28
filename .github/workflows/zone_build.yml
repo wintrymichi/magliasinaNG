@@ -17,7 +17,7 @@ on:
 # the whole list, which it must not cancel. A retry is told by "[zone retry]" in the commit message: a test of
 # head_commit.added/modified for the stamp came out false and the first retry built the whole list (cancelled)
 concurrency:
-  group: ticino-zones-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[zone retry]') && 'retry' || contains(github.event.head_commit.message, '[zone finish ') && 'finish' || 'all' }}
+  group: ticino-zones-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[zone finish ') && format('finish-{0}', github.run_id) || contains(github.event.head_commit.message, '[zone retry]') && 'retry' || 'all' }}
   cancel-in-progress: false
 
 permissions:
@@ -25,7 +25,8 @@ permissions:
   actions: read
 
 # "[zone finish <run id>]" in the commit message: only the finishing steps, on the stages of that run (their artifacts,
-# kept 2 days), with the code of this commit: a fix of a finishing step needs no new 2 h of stages for every zone
+# kept 2 days), with the code of this commit: a fix of a finishing step needs no new 2 h of stages for every zone.
+# With "[zone retry]" too it takes the zones of zone_retry.txt; such a run waits for no other run (its own group)
 
 jobs:
   setup:
