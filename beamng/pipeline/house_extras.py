@@ -346,6 +346,10 @@ def house_extras_step(root, report=None):
             origin = np.array([(tx + 0.5) * DETAIL_TILE, (ty + 0.5) * DETAIL_TILE, 0.0])
             allv = []
             for m, lst in mats.items():
+                # a building with NaN corners (zone ti_0_m1) gives NaN extras: leave those out
+                lst = [(t, w) for t, w in lst if np.isfinite(t).all()]
+                if not lst:
+                    continue
                 Tm = np.array([t for t, _ in lst])
                 Vv = Tm.reshape(-1, 3)
                 if all(w is None for _, w in lst):
@@ -355,6 +359,8 @@ def house_extras_step(root, report=None):
                 mb.add(m, Vv, uvs=UV, normals=bng.flat_normals_soup(Vv))
                 ntri += len(Tm)
                 allv.append(Vv)
+            if not allv:
+                continue
             allv = np.concatenate(allv)
             detail = max(2, int(round(0.5 * float(np.linalg.norm(np.ptp(allv, axis=0))) * optimize_level.PIX_K / NEAR_DRAW)))
             rel = f"{D}/house_extras_{tx:+03d}_{ty:+03d}.dae"

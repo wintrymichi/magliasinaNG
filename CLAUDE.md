@@ -1303,3 +1303,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (optimize warned "invalid value encountered in cast" in bng.py): still to be found in that zone's road meshes.
 - ti_2_7 then stopped in road_seams (sags: no AI road sample over a carriageway, an empty cKDTree index). sags returns
   nothing there and road_seams_step stops after the sags when the level has no carriageway face.
+- ti_0_m1 then stopped in house_extras (int(NaN): the windows of a building with NaN corners). optimize, the first
+  finish step, now drops every triangle with a NaN corner while it merges the shapes (no change where there is none),
+  so the later steps read clean meshes; house_extras also skips NaN pieces. Where the NaN come from is still unknown.
+- Of the 46 zones without GWR buildings, those wholly outside Switzerland (ti_3_m1, Italy) stop at once in
+  build_rasters (FileNotFoundError swissalti3d_05/*.tif: no swissALTI3D tile there). They are not Ticino: leave them out.

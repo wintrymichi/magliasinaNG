@@ -103,6 +103,13 @@ def optimize_dae(members, rel):
             ci = idx[:, 3] if idx.shape[1] > 3 and C is not None else None
             Vm, Nm, Um = V[vi], N[ni], UV[ti]
             Cm = C[ci] if ci is not None else None
+            fin = np.isfinite(Vm).all(1).reshape(-1, 3).all(1)
+            if not fin.all():                   # NaN corners (zone ti_0_m1): the triangles go, or every later step reads NaN
+                k = np.repeat(fin, 3)
+                Vm, Nm, Um = Vm[k], Nm[k], Um[k]
+                Cm = Cm[k] if Cm is not None else None
+                if not len(Vm):
+                    continue
             if rel.startswith("roads/road_") and Cm is None:
                 Tm = np.arange(len(Vm)).reshape(-1, 3)
                 fn, area = mesh_strips._face_normals(Vm, Tm)
