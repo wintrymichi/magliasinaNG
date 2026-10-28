@@ -49,6 +49,9 @@ VANILLA_SHAPES = os.path.join(HERE, "..", "dati", "vanilla_shape_materials.json"
 VANILLA_REL = "art/shapes/props/vanilla.materials.json"
 
 
+WARM_MATERIALS = ("mp_ch_", "mp_fuel_")   # sign and fuel station materials (412 sign PNGs cooked while driving)
+
+
 # ------------------------------------------------------------------ the zones
 class Src:
     """One built zone: its level folder, its terrain, its core."""
@@ -536,6 +539,10 @@ def copy_shared(srcs, dst, skip_shapes):
     for rel, d in mats.items():
         with wopen(os.path.join(dst, *rel.split("/")), "w") as f:
             json.dump(d, f, indent=1)
+    # the materials whose textures the game cooked while driving (0.05-0.14 s each, 2026-10-28): ticino/warmup.lua
+    warm = sorted({k for d in mats.values() for k in d if k.startswith(WARM_MATERIALS)})
+    with wopen(os.path.join(dst, "warmup_materials.json"), "w") as f:
+        json.dump(warm, f)
     log("shared files:", n, "material files:", len(mats), "game model materials added:", added)
 
 
@@ -679,6 +686,12 @@ def main():
     for (cx, cy), objs in tiles.items():
         with wopen(os.path.join(dst, "tiles", f"o_{cx}_{cy}.json"), "w") as f:
             json.dump(objs, f, separators=(",", ":"))
+    # every COLLADA shape of the tiles: the game imports each on first sight (up to 46 s), ticino/warmup.lua does it once
+    shapes = sorted({o["shapeName"] for objs in tiles.values() for o in objs
+                     if str(o.get("shapeName", "")).lower().endswith(".dae")})
+    with wopen(os.path.join(dst, "warmup_shapes.json"), "w") as f:
+        json.dump(shapes, f)
+    log("warm-up list:", len(shapes), "shapes")
     far = write_far(grid, owner, srcs, layers, os.path.join(dst, "far"))
 
     mats, frm = terrain_mats(srcs, layers)

@@ -1394,9 +1394,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   - Shipping .dae: the game imports each COLLADA file on first use (~0.1 s, up to 46 s for bld_*/river_*) -> 30 s of
     stutter in every new zone (13,707 shapes, ~27 GB of XML). Ship .cdae or warm up once. A warm-up from the main menu
     writes grey stub main.materials.json next to the shapes in the user folder (level materials not loaded): run it
-    inside the level or delete them. Not in the repo yet (the PC's warm-up tools are in D:\ticino_tools).
+    inside the level or delete them. Now ticino/warmup.lua (extensions.load('ticino_warmup') inside the level, once)
+    reads warmup_shapes.json and warmup_materials.json that region.py writes.
   - Textures (412 sign PNGs, mp_ch_*) are cooked on first sight, 0.05-0.14 s each: warm up (one ProceduralMesh quad
-    per material in front of the camera for a few frames, ~4 s) or ship cooked DDS. Not in the repo yet.
+    per material in front of the camera for a few frames, ~4 s) or ship cooked DDS. Same warmup.lua, after the shapes.
   - Terrain window swap 0.6-0.9 s every 384 m: the 12,639 invisible AI DecalRoads re-clip to the terrain at every swap
     (+0.1-0.35 s), 7 distinct base colour maps force 7 terrainMaterialCache repacks (~50 ms each), and the window moved
     at every tile. stream.lua: the window moves only when the car's tile leaves places FOLLOW_LO..HI (2..5 of 8), then
