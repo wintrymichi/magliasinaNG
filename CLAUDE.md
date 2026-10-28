@@ -1272,3 +1272,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   prints [mem] lines every minute so the next such stop shows what grew.
 - Zone ti_0_1 stopped in house_details (KeyError 'gbaup'): a GWR record of a zone may lack the period of construction
   (download_gwr counts records with gbauj or gbaup: both are optional). house_details reads gkat, egid, gbaup with .get.
+- Every zone of the full run 40614904081 failed in its finishing steps (gbaup, catenary, memory) after 2 h of good
+  stages. zone_build.yml now takes "[zone finish <run id>]" in the commit message (with a zone_stamp.txt change): no
+  stages, the finish jobs download that run's root-<zone> artifacts (run-id + github-token, permission actions: read;
+  kept 2 days) and run the finishing steps of the new commit. Use it whenever a fix touches only finishing steps.

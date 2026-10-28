@@ -17,28 +17,38 @@ on:
 # the whole list, which it must not cancel. A retry is told by "[zone retry]" in the commit message: a test of
 # head_commit.added/modified for the stamp came out false and the first retry built the whole list (cancelled)
 concurrency:
-  group: ticino-zones-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[zone retry]') && 'retry' || 'all' }}
+  group: ticino-zones-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[zone retry]') && 'retry' || contains(github.event.head_commit.message, '[zone finish ') && 'finish' || 'all' }}
   cancel-in-progress: false
 
 permissions:
   contents: write
+  actions: read
+
+# "[zone finish <run id>]" in the commit message: only the finishing steps, on the stages of that run (their artifacts,
+# kept 2 days), with the code of this commit: a fix of a finishing step needs no new 2 h of stages for every zone
 
 jobs:
   setup:
     runs-on: ubuntu-24.04
     outputs:
       zones: ${{ steps.z.outputs.zones }}
+      from_run: ${{ steps.z.outputs.from_run }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
       - id: z
+        env:
+          MSG: ${{ github.event.head_commit.message }}
         run: |
           L=beamng/ticino/zone_list.txt
           ${{ contains(github.event.head_commit.message, '[zone retry]') }} && L=beamng/ticino/zone_retry.txt
           Z=$(grep -v '^\s*#' $L | grep -v '^\s*$' | python3 -c 'import sys, json; print(json.dumps([l.split()[0] for l in sys.stdin]))')
           echo "zones=$Z" >> "$GITHUB_OUTPUT"
+          F=$(printf '%s' "$MSG" | grep -oE '\[zone finish [0-9]+\]' | grep -oE '[0-9]+' | head -1 || true)
+          echo "from_run=$F" >> "$GITHUB_OUTPUT"
+          echo "finishing steps only, on the stages of run: ${F:-no}"
           echo "$Z"
           gh release view ticino-zones >/dev/null 2>&1 || \
             gh release create ticino-zones --draft --target "$GITHUB_SHA" --title "Ticino zones (draft, not a release)" \
@@ -46,6 +56,7 @@ jobs:
 
   stages:
     needs: setup
+    if: needs.setup.outputs.from_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
@@ -235,6 +246,8 @@ jobs:
         with:
           name: root-${{ matrix.zone }}
           path: ${{ runner.temp }}
+          run-id: ${{ needs.setup.outputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: The build of the first job
         run: |
