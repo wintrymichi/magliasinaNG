@@ -1245,3 +1245,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Zone ti_m1_7 crashed in buildings_mesh (None.strip on b['uuid']): some swissBUILDINGS3D features of the Lugano sheets
   have no UUID, and extract_buildings merged all of them into ONE building keyed None. They now get a key per EGID,
   else per feature (the Malcantone has none: unchanged).
+- props_osm.build wrote its DAE even with no furniture at all (zone ti_2_m1): bng.write_dae fails on an empty
+  MeshBuilder ("need at least one array to concatenate"). Every writer of a merged shape must skip an empty one.
