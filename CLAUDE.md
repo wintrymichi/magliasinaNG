@@ -1297,3 +1297,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - ti_2_7 then stopped in road_wear (no asphalt face: concatenate of nothing). road_wear now writes only its overlay
   materials and textures there (yard_wear needs them), and the other readers of the carriageway (yard_wear, islands,
   direction_signs, bus_shelters, stop_paint) take markings_net.tops_of, an empty (0, 3, 3) array when nothing is there.
+- Zone ti_0_m1 (the one with NaN mesh heights) raised no terrain vertex at all in unpaved and the report's percentile of
+  the empty lift crashed; then the job hung until GitHub's 6 h limit: the [mem] loop started with & kept running after the
+  failed step. The loop is now killed by a trap on EXIT. That NOTHING was raised there likely comes from the NaN vertices
+  (optimize warned "invalid value encountered in cast" in bng.py): still to be found in that zone's road meshes.

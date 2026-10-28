@@ -1306,8 +1306,11 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
         print("terrain vertices in the keep-out left as they were: %d" % back.sum())
     ch = q != q0
     lift = (q[ch].astype(np.float64) - q0[ch]) / 65535.0 * MAXH
-    print("terrain vertices raised: %d, by median %.2f m, 95th percentile %.2f m, at most %.2f m"
-          % (ch.sum(), np.median(lift), np.percentile(lift, 95), lift.max()))
+    if lift.size:                       # a zone can raise nothing at all (ti_0_m1)
+        print("terrain vertices raised: %d, by median %.2f m, 95th percentile %.2f m, at most %.2f m"
+              % (ch.sum(), np.median(lift), np.percentile(lift, 95), lift.max()))
+    else:
+        print("terrain vertices raised: 0")
     QT = q
     qpath = os.path.join(tmp, "qt.npy")
     np.save(qpath, q)
