@@ -1301,3 +1301,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the empty lift crashed; then the job hung until GitHub's 6 h limit: the [mem] loop started with & kept running after the
   failed step. The loop is now killed by a trap on EXIT. That NOTHING was raised there likely comes from the NaN vertices
   (optimize warned "invalid value encountered in cast" in bng.py): still to be found in that zone's road meshes.
+- ti_2_7 then stopped in road_seams (sags: no AI road sample over a carriageway, an empty cKDTree index). sags returns
+  nothing there and road_seams_step stops after the sags when the level has no carriageway face.
