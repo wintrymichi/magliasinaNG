@@ -43,6 +43,10 @@ DROP_GROUPS = ("level_objects/backdrop",)     # each zone's far backdrop: the fa
 FOREST_ROW_DIGITS = 2
 SKIP_FILES = ("theTerrain.ter", "theTerrain.terrain.json", "signals.json", "signalControllerDefinitions.json",
               "city.sites.json", "facilities.sites.json", "main.decals.json")
+# the game's street lamps, benches and delineators: the zones built before carryover.zone_materials have no definition
+# of their materials (red "missing texture" models in the first region, 2026-10-28)
+VANILLA_SHAPES = os.path.join(HERE, "..", "dati", "vanilla_shape_materials.json")
+VANILLA_REL = "art/shapes/props/vanilla.materials.json"
 
 
 # ------------------------------------------------------------------ the zones
@@ -524,10 +528,15 @@ def copy_shared(srcs, dst, skip_shapes):
                         continue
                 link_or_copy(p, q)
                 n += 1
+    have = {k for d in mats.values() for k in d}
+    added = [k for k in json.load(open(VANILLA_SHAPES)) if not k.startswith("_") and k not in have]
+    for k, v in json.load(open(VANILLA_SHAPES)).items():
+        if k in added:
+            mats[VANILLA_REL][k] = v
     for rel, d in mats.items():
         with wopen(os.path.join(dst, *rel.split("/")), "w") as f:
             json.dump(d, f, indent=1)
-    log("shared files:", n, "material files:", len(mats))
+    log("shared files:", n, "material files:", len(mats), "game model materials added:", added)
 
 
 def merge_kept(kept_by_zone):
