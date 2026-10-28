@@ -1270,3 +1270,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   2 m cell (a face is listed in every cell of its bounding box: long faces of a dense zone fill many). height now
   answers more than HEIGHT_CHUNK (200k) points in pieces (same result, checked on random faces); the finish step
   prints [mem] lines every minute so the next such stop shows what grew.
+- Zone ti_0_1 stopped in house_details (KeyError 'gbaup'): a GWR record of a zone may lack the period of construction
+  (download_gwr counts records with gbauj or gbaup: both are optional). house_details reads gkat, egid, gbaup with .get.
