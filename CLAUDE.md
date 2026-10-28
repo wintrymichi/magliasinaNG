@@ -1329,3 +1329,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Zone ti_3_8 has no building of the Federal Register: markings_rules built a cKDTree of np.array([]) (shape (0,), not
   (0, 2)) and stopped. Every GWR point array (markings_rules, lamps, poles, signs_more, street_life) is now
   reshape(-1, 2): an empty KD tree answers inf / 0 counts.
+- The first region with Magliaso (run 40721234941) stopped at once: ti_0_m1's TerrainBlock had position z and maxHeight
+  NaN. One NaN height anywhere made terrain z0 = floor(H.min()) NaN and every height of the .ter garbage (the build log
+  said "terrain z0 nan maxHeight nan" and nobody read it; the NaN mesh vertices of that zone likely have the same root).
+  build_terrain now fills NaN heights from the nearest finite ones and logs where they were (nan_report), and each
+  terrain post step (walls, lake, rivers, railway) prints how many NaN it left. Grep a zone's build log for "nan" in
+  the terrain line before joining it.

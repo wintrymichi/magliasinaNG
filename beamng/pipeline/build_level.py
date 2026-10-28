@@ -80,8 +80,14 @@ def stage_terrain(scene, ctx):
         posts.append(lambda H, xs, ys: railway.carve_terrain(H, xs, ys, keep))
 
     def post(H, xs, ys):
-        for fn in posts:
+        for i, fn in enumerate(posts):
+            prev = H.copy()
             H = fn(H, xs, ys)
+            bad = ~np.isfinite(H)
+            if bad.any():                        # zone ti_0_m1: a NaN height made the whole terrain NaN (z0 nan)
+                print("terrain post %d left %d NaN heights: kept the heights before it there" % (i, bad.sum()),
+                      flush=True)
+                H[bad] = prev[bad]
         return H
     # v2.4: no grass (groundcover.py) within a terrain square of the carved road and path surfaces
     no_cover = None

@@ -264,6 +264,22 @@ def heights_band(xs, ys, dtm, dtm2, wgrid):
     return H
 
 
+def nan_report(H, what):
+    """Fill NaN heights from the nearest finite ones (in place) and say how many: one NaN made the whole .ter of
+    zone ti_0_m1 NaN (z0 = floor(H.min()) is NaN)."""
+    bad = ~np.isfinite(H)
+    if not bad.any():
+        return
+    from scipy.ndimage import distance_transform_edt
+    r, c = np.nonzero(bad)
+    print("terrain: %d NaN heights in %s (rows %d-%d, cols %d-%d), filled from the nearest" % (
+        bad.sum(), what, r.min(), r.max(), c.min(), c.max()), flush=True)
+    if bad.all():
+        raise SystemExit("terrain: no finite height at all in " + what)
+    idx = distance_transform_edt(bad, return_distances=False, return_indices=True)
+    H[bad] = H[idx[0][bad], idx[1][bad]]
+
+
 def build_terrain(level_dir, override=None, override_mask=None, layer_override=None, post_fn=None, cap=None,
                   no_cover=None):
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
@@ -281,16 +297,18 @@ def build_terrain(level_dir, override=None, override_mask=None, layer_override=N
     for r0 in range(0, TER_SIZE, BAND):
         r1 = min(r0 + BAND, TER_SIZE)
         H[r0:r1] = heights_band(xs, ys[r0:r1], dtm, dtm2, wgrid)
+    nan_report(H, "the DTM")
     if override is not None:
-        H = np.where(override_mask, override, H)
+        H = np.where(override_mask & np.isfinite(override), override, H)
     if cap is not None:                                  # under bridge decks: no higher than the slab
-        H = np.minimum(H, cap)
+        H = np.fmin(H, cap)
     if post_fn is not None:
         H = post_fn(H, xs, ys)
         if override is not None:                         # walls may lower it, nothing may raise it over a road
-            H = np.where(override_mask, np.minimum(H, override), H)
+            H = np.where(override_mask, np.fmin(H, override), H)
         if cap is not None:
-            H = np.minimum(H, cap)
+            H = np.fmin(H, cap)
+    nan_report(H, "the terrain")
     gy, gx = np.gradient(H, TER_SQUARE)
     slope = np.degrees(np.arctan(np.hypot(gx, gy))).astype(np.float32)
     del gx, gy
