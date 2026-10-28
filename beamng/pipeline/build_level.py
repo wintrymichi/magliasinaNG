@@ -875,6 +875,10 @@ def zone_route(ctx):
     if not len(idx):
         idx = np.flatnonzero(open_)
     out = []
+    if not len(idx):                                 # no road at all (ti_m4_3): on the ground, facing east
+        for tx, ty in ((cx, cy), ((cx + x0) / 2, (cy + y0) / 2), ((cx + x1) / 2, (cy + y1) / 2)):
+            out += [{"pos": (float(tx), float(ty))}, {"pos": (float(tx) + 5.0, float(ty))}]
+        return out
     for tx, ty in ((cx, cy), ((cx + x0) / 2, (cy + y0) / 2), ((cx + x1) / 2, (cy + y1) / 2)):
         i = idx[np.argmin(np.hypot(net.x[idx] - tx, net.y[idx] - ty))]
         a, n = net.segs[net.seg[i]]["first"], net.segs[net.seg[i]]["n"]
@@ -917,6 +921,8 @@ def stage_spawns(scene, ctx):
     main_cls = {"10m Strasse", "8m Strasse", "6m Strasse", "4m Strasse"}
     ok = np.array([net.segs[k]["class"] in main_cls and not net.segs[k]["bridge"] for k in net.seg])
     idx = np.flatnonzero(ok)
+    if not len(idx):
+        return
     from scipy.spatial import cKDTree
     tree = cKDTree(np.column_stack([net.x[idx], net.y[idx]]))
     taken = [(s[1], s[2]) for s in ctx["spawns"]]

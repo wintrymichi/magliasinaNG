@@ -1247,3 +1247,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   else per feature (the Malcantone has none: unchanged).
 - props_osm.build wrote its DAE even with no furniture at all (zone ti_2_m1): bng.write_dae fails on an empty
   MeshBuilder ("need at least one array to concatenate"). Every writer of a merged shape must skip an empty one.
+- Zone ti_m4_3 has no road segment at all: zone_route now puts the three spawns on the ground of the core (facing
+  east), and the village spawns are skipped when no main road exists (a cKDTree of no points).
