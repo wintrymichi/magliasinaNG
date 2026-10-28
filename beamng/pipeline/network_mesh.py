@@ -1069,8 +1069,9 @@ def block(args):
 
 def terrain_top(Zt, x, y):
     """Height of the terrain at points, the higher of the two ways a square may be split."""
-    c = (x - TER_X0) / TER_SQUARE
-    r = (y - TER_Y0) / TER_SQUARE
+    # points off the terrain take its edge (a zone's AI roads reach out of it: ti_1_3); inside nothing changes
+    c = np.clip((x - TER_X0) / TER_SQUARE, 0, Zt.shape[1] - 1.000001)
+    r = np.clip((y - TER_Y0) / TER_SQUARE, 0, Zt.shape[0] - 1.000001)
     ci, ri = np.floor(c).astype(np.int64), np.floor(r).astype(np.int64)
     u, v = c - ci, r - ri
     z00, z01, z10, z11 = (Zt[ri + i, ci + j].astype(np.float64) for i, j in ((0, 0), (0, 1), (1, 0), (1, 1)))

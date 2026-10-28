@@ -1253,3 +1253,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   traceback): the GitHub runner's 16 GB ran out (unpaved peaked ~13 GB on wintryserver too). zone_build.yml now adds
   a 16 GB swap file in /mnt to both jobs and runs the finishing steps with PATCH_WORKERS=1. A "shutdown signal" with
   no Python error in a zone job is memory, not a cancelled run.
+- Zone ti_1_3's finish crashed in poles.roadside_step (network_mesh.terrain_top: IndexError, row -13659): a zone's AI
+  roads reach far out of its terrain. terrain_top now clamps points to the terrain's edge (inside it nothing changes).
+  The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
