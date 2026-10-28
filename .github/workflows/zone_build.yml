@@ -258,6 +258,8 @@ jobs:
       - name: Level, the finishing steps
         working-directory: beamng/pipeline
         run: |
+          # memory every minute: a runner shut down for memory leaves no traceback (ti_0_6)
+          ( while sleep 60; do echo "[mem] $(free -m | awk '/Mem/{printf "ram %d MB ", $3} /Swap/{printf "swap %d MB", $3}') top $(ps -eo rss=,comm= --sort=-rss | head -1)"; done ) &
           /usr/bin/time -v python build_level.py --finish 2>&1 | tee "$MAGLIASO_ROOT/logs/5_finish.log"
           df -h .
 

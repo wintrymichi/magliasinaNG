@@ -1265,3 +1265,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   by the v1.1 route paint (carryover, Malcantone). markings_rules makes it (and its SimGroup line in roads) when missing.
 - Zone ti_1_6 has no railway: the finish step catenary read railway/items.level.json and stopped (KeyError). It now
   skips a level without a railway group. Other zones without a line will reach the same steps: expect more of these.
+- Zone ti_0_6's finish was shut down in unpaved again WITH the 16 GB swap (32 GB in all, 6 min into the blocks): one
+  block asks TriSurface.height for 1.7 M points, and its work arrays hold one entry per point and face of the point's
+  2 m cell (a face is listed in every cell of its bounding box: long faces of a dense zone fill many). height now
+  answers more than HEIGHT_CHUNK (200k) points in pieces (same result, checked on random faces); the finish step
+  prints [mem] lines every minute so the next such stop shows what grew.
