@@ -526,6 +526,9 @@ def signs_more_step(root, report=None):
         rep["signs"].append({"x": round(float(c[0]), 2), "y": round(float(c[1]), 2), "z": round(z0, 2),
                              "facing": [round(float(nrm[0]), 3), round(float(nrm[1]), 3)],
                              "plates": [[a, b] for a, b in s.plates], "kind": s.kind, "osm": s.osm_id})
+    if mb.empty():      # planned but none placed (zone ti_0_m2: all outside the map or left out)
+        print(f"no sign placed: left out {dict(rep['left_out'])}, outside {dict(rep['outside'])}", flush=True)
+        return 0
     with tempfile.TemporaryDirectory() as d:
         f = os.path.join(d, "props_signs_v28.dae")
         mb.write_dae(f, name="props_signs_v28")

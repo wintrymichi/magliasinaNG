@@ -1286,3 +1286,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   It now reads the group only when it is there (roundabouts and direction_signs already did).
 - Zone ti_m3_3 has no sign at all: signs_net wrote props_signs.dae from an empty MeshBuilder (concatenate of nothing).
   With no sign it now writes no shape and no object (mb.empty() is a method: `if not mb.empty:` is always False).
+- Zone ti_0_m2: signs_more planned signs but placed none (all outside the map or left out) and wrote an empty DAE.
+  It now stops before writing when nothing was placed (it already stopped with nothing planned).
