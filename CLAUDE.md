@@ -1294,3 +1294,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Zone ti_2_0 has no prop at all, so no MissionGroup/props group: poles.roadside_step read props/items.level.json and
   stopped (KeyError), and lamps had written its group file under a props group that did not exist. build_level.finish
   now makes an empty props group (props_group) before the steps when a level has none.
+- ti_2_7 then stopped in road_wear (no asphalt face: concatenate of nothing). road_wear now writes only its overlay
+  materials and textures there (yard_wear needs them), and the other readers of the carriageway (yard_wear, islands,
+  direction_signs, bus_shelters, stop_paint) take markings_net.tops_of, an empty (0, 3, 3) array when nothing is there.

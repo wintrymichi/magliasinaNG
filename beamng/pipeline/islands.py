@@ -448,7 +448,7 @@ def island_lanes(roads, islands, carr, rep):
 
 def islands_step(root, report=None):
     from road_mesh import TriSurface
-    from markings_net import shape_tris, up_faces, CARRIAGE_MATS
+    from markings_net import shape_tris, up_faces, tops_of, CARRIAGE_MATS
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -484,7 +484,7 @@ def islands_step(root, report=None):
     builders = {}
     polys = []
     surf = shape_tris(zi, lv, items)
-    carr = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in CARRIAGE_MATS]))
+    carr = TriSurface(tops_of(surf, lambda m: m in CARRIAGE_MATS))
     del surf
     if tops:
         T = np.concatenate(tops)
