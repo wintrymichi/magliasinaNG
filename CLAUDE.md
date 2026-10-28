@@ -1291,3 +1291,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Zone ti_2_7 has no carriageway face at all (paths only): markings_rules.paint_level concatenated nothing. The step now
   paints nothing there and only makes the empty roads/markings group the later steps read. Other steps that read the
   carriageway (road_wear, stop_paint, parking) may meet the same zone next.
+- Zone ti_2_0 has no prop at all, so no MissionGroup/props group: poles.roadside_step read props/items.level.json and
+  stopped (KeyError), and lamps had written its group file under a props group that did not exist. build_level.finish
+  now makes an empty props group (props_group) before the steps when a level has none.

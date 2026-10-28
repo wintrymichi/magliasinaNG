@@ -1080,6 +1080,23 @@ ZONE_SKIP = {"races"}
 STEP_FORK = hasattr(os, "fork") and os.environ.get("MAGLIASO_STEP_FORK", "1") != "0"
 
 
+def props_group():
+    """A zone with no prop at all (ti_2_0) has no props group: many finish steps add theirs to it, so make it empty."""
+    mg = os.path.join(LEVEL_DIR, "main", "MissionGroup")
+    pf = os.path.join(mg, "props", "items.level.json")
+    if os.path.exists(pf):
+        return
+    os.makedirs(os.path.dirname(pf), exist_ok=True)
+    open(pf, "w").close()
+    top = os.path.join(mg, "items.level.json")
+    rows = [json.loads(l) for l in open(top, encoding="utf-8") if l.strip()] if os.path.exists(top) else []
+    if not any(r.get("name") == "props" for r in rows):
+        rows.append({"name": "props", "class": "SimGroup", "persistentId": bng.pid(), "__parent": "MissionGroup"})
+        with open(top, "w", encoding="utf-8") as f:
+            f.write("\n".join(json.dumps(r, separators=(",", ":")) for r in rows) + "\n")
+    print("props group made (the level had none)", flush=True)
+
+
 def finish(names=None, after=None):
     """The FINISH steps (all, or those named, or those after the step `after`) on the level folder."""
     import importlib
@@ -1087,6 +1104,7 @@ def finish(names=None, after=None):
     rdir = os.path.join(WORK, "reports")
     os.makedirs(rdir, exist_ok=True)
     os.environ.setdefault("MAGLIASO_OSM_PINNED", "1")        # OpenStreetMap from the extract in beamng/dati
+    props_group()
     todo = [f[0] for f in FINISH]
     if after:
         todo = todo[todo.index(after) + 1:]
