@@ -297,7 +297,7 @@ def lamps_step(root, village_lights=True, report=None):
           % (len(CARR.t), len(GROUND.t), len(ROOF.t), len(WALL.t), obst.n), flush=True)
 
     gwr = json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz")))["buildings"]
-    G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or MIN_AREA) >= MIN_AREA])
+    G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or MIN_AREA) >= MIN_AREA]).reshape(-1, 2)
     gtree = cKDTree(G)
     commune = [b.get("ggdename", "") for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or MIN_AREA) >= MIN_AREA]
     pano = cKDTree(np.array([p["pos"][:2] for p in json.load(open(os.path.join(DATI, "poses.json")))]))

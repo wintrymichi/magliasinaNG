@@ -62,7 +62,7 @@ HAZARDS = {"falling_rocks": "1.13", "animal_crossing": "1.24", "school_zone": "1
 def _buildings():
     from scipy.spatial import cKDTree
     g = json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz"), "rt", encoding="utf-8"))["buildings"]
-    B = np.array([[b["x"], b["y"]] for b in g if b.get("gstat") == 1004 and (b.get("garea") or 0) >= 30])
+    B = np.array([[b["x"], b["y"]] for b in g if b.get("gstat") == 1004 and (b.get("garea") or 0) >= 30]).reshape(-1, 2)
     return cKDTree(B)
 
 

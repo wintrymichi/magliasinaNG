@@ -454,7 +454,7 @@ class Context:
             for nd in w["nodes"]:
                 self.node_ways.setdefault(nd, []).append(i)
         gwr = json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz")))["buildings"]
-        G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or 30) >= 30])
+        G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or 30) >= 30]).reshape(-1, 2)
         self.gtree = cKDTree(G)
         rings = [w["line"] for w in self.ways if w["tags"].get("junction") in ("roundabout", "circular")]
         self.rings = shapely.union_all(rings) if rings else None

@@ -331,7 +331,7 @@ def roadside_step(root, report=None):
                         for o in pl.read_items(zi, f) if o.get("class") == "TSStatic"], np.float64).reshape(-1, 2)
     ltree = cKDTree(lamp_xy) if len(lamp_xy) else None
     gwr = json.load(gzip.open(os.path.join(pl.DATI, "gwr_area.json.gz")))["buildings"]
-    G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or pl.MIN_AREA) >= pl.MIN_AREA])
+    G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or pl.MIN_AREA) >= pl.MIN_AREA]).reshape(-1, 2)
     gtree = cKDTree(G)
     pano = cKDTree(np.array([p["pos"][:2] for p in json.load(open(os.path.join(pl.DATI, "poses.json")))]))
     roads = [o for o in pl.read_items(zi, f"{lv}/main/MissionGroup/AIRoads/items.level.json") if o.get("class") == "DecalRoad"]

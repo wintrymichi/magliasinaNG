@@ -1325,3 +1325,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   goes on; the Malcantone build still stops on them. A step that wrote some files before such an error keeps them.
 - Zones ti_m4_2, ti_m5_3, ti_m5_4 have Swiss terrain but no swissTLM3D road at all (network.nodes_of: max of nothing):
   mostly Italy, left out for now. About 25 zones of the 46 without buildings stop in build_rasters (no swissALTI3D).
+- Zone ti_3_8 has no building of the Federal Register: markings_rules built a cKDTree of np.array([]) (shape (0,), not
+  (0, 2)) and stopped. Every GWR point array (markings_rules, lamps, poles, signs_more, street_life) is now
+  reshape(-1, 2): an empty KD tree answers inf / 0 counts.

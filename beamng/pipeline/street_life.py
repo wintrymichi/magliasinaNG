@@ -615,7 +615,7 @@ def street_life_step(root, report=None):
     rng = np.random.default_rng(SEED)
     site = Site(zi, lv)
     gwr = [b for b in json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz")))["buildings"] if b.get("gstat") == 1004]
-    houses = np.array([[b["x"], b["y"]] for b in gwr if (b.get("garea") or MIN_AREA) >= MIN_AREA])
+    houses = np.array([[b["x"], b["y"]] for b in gwr if (b.get("garea") or MIN_AREA) >= MIN_AREA]).reshape(-1, 2)
     roads = Roads(zi, lv, houses)
     site.lanes = roads
     out = Out(site, rng)
