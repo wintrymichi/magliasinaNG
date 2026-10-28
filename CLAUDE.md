@@ -1377,3 +1377,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   The two halves of a tube across a zone core edge matched to the cm (both zones build the whole tube): not the cause.
 - None of these can be fixed in region.py (it only reads the built zones): they need the zones rebuilt (stages ai,
   guardrails + finishing markings, tunnels). Only the materials went into the region of 2026-10-28 evening.
+- The first Magliaso region (ticino_region_1..5, 2026-10-28) opened West Coast USA on DESKTOP-OUPOLOA: region.py took
+  the first zone's info.json as it was, with spawnPoints spawn_magliaso... (the region names them ti_0_m1_spawn_* )
+  and a preview ti_0_m1_preview.jpg the copy skips (*.jpg). beamng.log: "Spawnpoint validation failed", 404 on the
+  preview, and freeroamConfigurator.json kept west_coast_usa: the level was never requested. region.py now lists the
+  region's own spawns and packs the preview as ticino_preview.jpg. A local fix (info.json + jpg) sits in the user
+  folder levels\ticino on that PC: delete it once a fixed zip 1 is installed. After any change to object names, check
+  info.json's spawnPoints and previews against the packed level.

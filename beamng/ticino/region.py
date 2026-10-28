@@ -710,6 +710,24 @@ def main():
     info["size"] = [grid.W, grid.W]
     if sp:
         info["defaultSpawnPointName"] = sp["name"]
+    # the zone's info.json lists its spawns unprefixed and a preview the copy skips (*.jpg): the game found no listed
+    # spawn ("Spawnpoint validation failed") and kept West Coast USA (2026-10-28). List the region's own spawns and
+    # pack the first zone's preview under the region's name.
+    info["spawnPoints"] = [{"objectname": o["name"], "translationId": o["name"]} for o in spawns]
+    info["previews"] = []
+    for s in srcs:
+        try:
+            names = json.load(open(os.path.join(s.dir, "info.json"))).get("previews") or []
+        except (OSError, ValueError):
+            names = []
+        for pv in [os.path.join(s.dir, n) for n in names] + [os.path.join(s.dir, s.level + "_preview.jpg")]:
+            if os.path.isfile(pv):
+                with open(pv, "rb") as fi, wopen(os.path.join(dst, f"{LEVEL}_preview.jpg"), "wb") as fo:
+                    shutil.copyfileobj(fi, fo)
+                info["previews"] = [f"{LEVEL}_preview.jpg"]
+                break
+        if info["previews"]:
+            break
     with wopen(os.path.join(dst, "info.json"), "w") as f:
         json.dump(info, f, indent=2)
 
