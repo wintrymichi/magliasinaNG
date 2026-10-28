@@ -60,7 +60,7 @@ def main():
         # the bytes written so far (the open zip's file) + this file uncompressed: never over the limit
         if state["z"].fp.tell() + os.path.getsize(p) > limit:
             start()
-        state["z"].write(p, name, compress_type=zipfile.ZIP_STORED if name.lower().endswith(package.STORED) else None)
+        state["z"].write(p, name, compress_type=zipfile.ZIP_STORED if name.lower().endswith(package.STORED) or "/blocks/" in name else None)
 
     start()
     for p, name in base:

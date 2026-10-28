@@ -1390,3 +1390,25 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   forest.lua M.FILE). Never give a file of our own a name ending the game claims (.forest.json, .materials.json,
   items.level.json...). michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
   %LOCALAPPDATA%\BeamNG\ticino_backup\ticino_region_1.orig.zip).
+- First region drive on DESKTOP-OUPOLOA (2026-10-28 evening, fixes tried there as user-folder overrides, then ported):
+  - Shipping .dae: the game imports each COLLADA file on first use (~0.1 s, up to 46 s for bld_*/river_*) -> 30 s of
+    stutter in every new zone (13,707 shapes, ~27 GB of XML). Ship .cdae or warm up once. A warm-up from the main menu
+    writes grey stub main.materials.json next to the shapes in the user folder (level materials not loaded): run it
+    inside the level or delete them. Not in the repo yet (the PC's warm-up tools are in D:\ticino_tools).
+  - Textures (412 sign PNGs, mp_ch_*) are cooked on first sight, 0.05-0.14 s each: warm up (one ProceduralMesh quad
+    per material in front of the camera for a few frames, ~4 s) or ship cooked DDS. Not in the repo yet.
+  - Terrain window swap 0.6-0.9 s every 384 m: the 12,639 invisible AI DecalRoads re-clip to the terrain at every swap
+    (+0.1-0.35 s), 7 distinct base colour maps force 7 terrainMaterialCache repacks (~50 ms each), and the window moved
+    at every tile. stream.lua: the window moves only when the car's tile leaves places FOLLOW_LO..HI (2..5 of 8), then
+    by 4 tiles; DROP_AI_ROADS deletes the AI DecalRoads after the first map.reset (later jumps keep that map);
+    BASE_COMBINED makes one base map for all materials. ~0.22 s every ~1.5 km. setField('position') costs the same as
+    setPosition. The AI roads need heights of their own, read once, not clipped to the terrain (to do).
+  - Reading 4.9 MB terrain blocks from the zip inside one frame: 150-230 ms frames. stream.lua yields after each block
+    read (yieldingCache) and pack_region stores blocks/ uncompressed.
+  - be:reloadCollision costs ~0.15 us per ProceduralMesh triangle: 9 collision cells of 128 m in Lugano were 60-110 ms
+    a rebuild (radius 2: 25 cells, 170-250 ms). collision.CELL_M is 64 (25-35 ms, hysteresis colCell / 8). Rebuilds
+    only for props or trees wait up to RELOAD_DEFER_MS for the cells' next one; street clutter never collides
+    (objects.NO_COLLISION_SHAPES, 60 % of the colliders).
+  - A GE extension named ticino_warmup is looked up as ticino/warmup.lua (an underscore is a folder).
+  - The PC keeps user-folder overrides (lua/ge/extensions/ticino/, levels/ticino/{info.json, ticino_preview.jpg,
+    stream.json, col64/, blocks/}) that win over any zip: run D:\ticino_tools\pulizia_override.ps1 before new zips.

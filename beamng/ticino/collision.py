@@ -32,7 +32,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
-CELL_M = 128.0
+CELL_M = 64.0   # a rebuild costs ~0.15 us a cell triangle: 9 cells of 128 m in Lugano 60-110 ms, of 64 m 25-35 ms
 PIECE_TRIS = 1200           # EarthNG: one ProceduralMesh of ~28 k hung the game; createMesh ~1.7 us a tri; Lua decode ~3 us
 XY_OFF_CM = 16384           # x, y from -163.84 m to +491.51 m round a cell (triangles go to the cell of their centre)
 WELD_M = 0.001

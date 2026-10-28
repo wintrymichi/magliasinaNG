@@ -10,8 +10,19 @@
 -- cost ~3 us per unique triangle in a rebuild: 1.12 M in the 3 x 3 tiles of 384 m were 3.4 s of frozen physics at
 -- every tile, in-game test 2026-10-26; EarthNG measured a ProceduralMesh at 0.27 us).
 
+-- Tried on michi's PC (2026-10-28): small street clutter never collides (NO_COLLISION_SHAPES:
+-- 60 % of the colliders); the collision cells can be 64 m (cfg.colDir, cfg.colCell of stream.json:
+-- a rebuild costs ~0.15 us a cell triangle, 9 cells of 128 m in Lugano were 60-110 ms); colUrgent tells a rebuild for
+-- the cells from one for props or trees only (stream.lua lets those wait). COL_LAZY > 0 re-centres the cells only when
+-- the car's cell is more than COL_LAZY from their centre (tried with 1: too many triangles).
+
 local M = {}
 
+M.NO_COLLISION_SHAPES = { 'clutter_pallet', 'clutter_metal_bin', 'clutter_big_dustbin', 'clutter_metal_drum',
+  'clutter_mailboxstand', 'clutter_plastic_chair', 'clutter_metal_chair', 'clutter_round_ptable',
+  'clutter_round_mtable', 'clutter_pwood_table', 'clutter_sorting_bin', 'clutter_convexmirror' }
+M.COL_LAZY = 0             -- 1 tried: 25 cells of 128 m were 1.1 M triangles, a rebuild 170-250 ms in Lugano
+M.SLOW_SPAWN_MS = 40       -- an object (or far tile) that takes longer to make is logged with its shape
 M.CACHE_TILES = 400
 M.FAR_SHAPE = '/levels/%s/far/f_%d_%d.cdae'
 M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
@@ -47,8 +58,12 @@ function M.init(cfg, level, group)
   S.has = cfg.tiles or {}
   S.farHas = {}
   for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
-  S.col = { size = cfg.colCell, R = cfg.colRadius or 1, has = {}, live = {}, cell = nil, queue = {},
+  S.col = { size = cfg.colCell, R = (cfg.colRadius or 1) + M.COL_LAZY, has = {}, live = {}, cell = nil, queue = {},
             types = cfg.colGroundTypes or {} }
+  S.noColShape = {}
+  -- the cells of 64 m (stream.json colCell; colDir if not col: the rebuild cost follows the cells' triangles)
+  M.COL_FILE = '/levels/%s/' .. (cfg.colDir or 'col') .. '/c_%d_%d.bin'
+  if cfg.colCell and cfg.colCell < 128 then M.COL_HYST_M = cfg.colCell / 8 end
   for _, k in ipairs(cfg.colCells or {}) do S.col.has[k] = true end
 end
 
@@ -97,9 +112,24 @@ local function delete(id)
   if o then o:delete() end
 end
 
--- Can this entry collide at all (its own collisionType, the groups switched off by setCollision)?
+-- Is the shape one of NO_COLLISION_SHAPES? (cached by shape name)
+local function clutter(shape)
+  if not shape then return false end
+  local v = S.noColShape[shape]
+  if v == nil then
+    v = false
+    local s = string.lower(shape)
+    for _, p in ipairs(M.NO_COLLISION_SHAPES) do
+      if s:find(p, 1, true) then v = true; break end
+    end
+    S.noColShape[shape] = v
+  end
+  return v
+end
+
+-- Can this entry collide at all (its own collisionType, the groups switched off by setCollision, the clutter)?
 local function canCollide(e)
-  return e.class == 'TSStatic' and e.collisionType ~= 'None' and not S.noCol[e.g or '']
+  return e.class == 'TSStatic' and e.collisionType ~= 'None' and not S.noCol[e.g or ''] and not clutter(e.shapeName)
 end
 
 -- Distance (Chebyshev, tiles) of tile (tx, ty) from (cx, cy); nil when there is no centre yet
@@ -202,7 +232,12 @@ function M.step(clock, budgetMs)
       l = nil
     end
     if want and not l then
+      local ts = clock()
       local ok, id = pcall(spawn, e, col)
+      local dts = clock() - ts
+      if dts > M.SLOW_SPAWN_MS then
+        log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
+      end
       if ok and id then
         S.live[key] = { id = id, col = col }
         if col then S.colDirty = true end
@@ -242,9 +277,12 @@ function M.reloadCollisionIfDirty(clock)
   if not S.colDirty then return 0 end
   local t0 = clock()
   be:reloadCollision()
-  S.colDirty = false
+  S.colDirty, S.colUrgent = false, false
   return clock() - t0
 end
+
+-- Is the pending rebuild for the collision cells (not only props or trees, which may wait for the next one)?
+function M.colUrgent() return S and S.colUrgent end
 
 -- Collision cells: the car at (x, y). Deletes the cells beyond colRadius of its cell (with COL_HYST_M of hysteresis)
 -- and queues the missing ones for stepCols. Returns true when the set changed.
@@ -253,12 +291,14 @@ function M.updateCols(x, y, force)
   if not C.size then return false end
   local cfg = S.cfg
   local i, j = math.floor((x - cfg.origin[1]) / C.size), math.floor((y - cfg.origin[2]) / C.size)
-  local c = C.cell
+  local c = C.cell                  -- the centre of the cells made (the car's cell when they were chosen)
   if c and not force then
-    if c[1] == i and c[2] == j then return false end
-    local x0, y0 = cfg.origin[1] + c[1] * C.size, cfg.origin[2] + c[2] * C.size
+    local L = M.COL_LAZY
+    if math.abs(i - c[1]) <= L and math.abs(j - c[2]) <= L then return false end
+    local x0, y0 = cfg.origin[1] + (c[1] - L) * C.size, cfg.origin[2] + (c[2] - L) * C.size
+    local span = (2 * L + 1) * C.size
     local h = M.COL_HYST_M
-    if x >= x0 - h and x < x0 + C.size + h and y >= y0 - h and y < y0 + C.size + h then return false end
+    if x >= x0 - h and x < x0 + span + h and y >= y0 - h and y < y0 + span + h then return false end
   end
   C.cell = { i, j }
   local R = C.R
@@ -272,6 +312,7 @@ function M.updateCols(x, y, force)
     end
   end
   local changed = false
+  S.colUrgent = true                -- the cells round the car changed: their rebuild is not to wait
   for k, ids in pairs(C.live) do
     if not want[k] then
       for _, id in ipairs(ids) do delete(id) end
@@ -486,6 +527,7 @@ function M.stepFar(clock, budgetMs)
     S.farPos = S.farPos + 1
     local key, tx, ty = w[1], w[2], w[3]
     if not S.farLive[key] then
+      local ts = clock()
       local o = createObject('TSStatic')
       o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
       o:setField('collisionType', 0, 'None')
@@ -500,6 +542,8 @@ function M.stepFar(clock, budgetMs)
       S.farLive[key] = f
       M._farHide(f)
       made = made + 1
+      local dts = clock() - ts
+      if dts > M.SLOW_SPAWN_MS then log('W', 'ticino', string.format('slow far tile %.0f ms: %s', dts, key)) end
     end
     if budgetMs and clock() - t0 > budgetMs then break end
   end
