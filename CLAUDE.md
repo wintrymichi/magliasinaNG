@@ -1352,3 +1352,28 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the terrain line before joining it.
   The rebuild (run 40723783273) showed the source: "terrain post 0 left 909 NaN heights", i.e. walls.carve_terrain /
   adjust_terrain_roadside (post 0) writes NaN at 909 vertices of ti_0_m1; not looked into yet (z0 240, maxHeight 874).
+
+## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
+
+- Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py
+  (carryover.props returns at once in a zone), so art/shapes/props/vanilla.materials.json (italy_poles_lights_etc,
+  eca_bld_wood, m_oldwood, italy_bld_metal, trafficlight...) and the mp_delineator_* definitions were never written,
+  while lamps_step, street_life and props_osm place those models in every zone. dati/vanilla_shape_materials.json holds
+  the v3.1.1 definitions; carryover.zone_materials writes them in a zone, region.py adds any the zones lack. Compare
+  a zone's material keys with the released Malcantone's (and the DAEs' `<material name=` against them) after adding a
+  step that places game models.
+- Motorways had no AI road, paint or guard rail: ai_roads.TLM_DRIVE had no "Autobahn" (the Malcantone has none), and
+  markings_rules and the rails work from the AI roads / measured runs only. In a zone Autobahn is now drivable (one-way
+  by RICHTUNGSG, lanesRight from the width, 120 km/h, no village 50), markings_rules.lay_lanes draws 6/12 lane lines and
+  the hard-shoulder line on one-way roads of 2+ lanes, guardrail_mesh.motorway_runs lays rails on both edges, open
+  where another road comes within its half width + 0.8 m at the same level (z within 3 m: not under a viaduct).
+- swissTLM3D draws the two carriageways of the A2 2.5-4 m apart along the MEDIAN, not in their middles (survey at
+  Lugano: carriageways at -11.5..-0.5 and 2.5..14.3 m across one line). Meshed 11 m wide on those lines they overlapped
+  into one 14 m slab. network.separate_carriageways (zone only) moves each line away from its twin to carriageway +
+  MEDIAN apart before measuring: share of line points inside the survey road 0.1-0.6 -> 1.0 on most of ti_1_0's lines.
+- Twin tunnel tubes (Galleria della Collina d'Oro, lines 10.5-18 m apart) ran into each other: a 10.5 m motorway
+  carriageway made 13.5 m tubes and 16.7 m headwalls, each closing half the other's opening ("tunnel mezzi rotti").
+  Motorway tubes are now 8 m of carriageway, and twin_heads stops a headwall TWIN_GAP short of the twin's inside wall.
+  The two halves of a tube across a zone core edge matched to the cm (both zones build the whole tube): not the cause.
+- None of these can be fixed in region.py (it only reads the built zones): they need the zones rebuilt (stages ai,
+  guardrails + finishing markings, tunnels). Only the materials went into the region of 2026-10-28 evening.

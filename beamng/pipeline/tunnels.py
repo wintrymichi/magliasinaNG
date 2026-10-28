@@ -57,9 +57,14 @@ CAP_RES = 0.25          # m, grid of the cap over the holes
 LIGHT_STEP = 20.0
 WALK = 1.0              # m, walkway beside the carriageway
 KERB = 0.15
+# Twin tubes (one swissTLM3D line per carriageway, Ticino 2026-10-28): the Galleria della Collina d'Oro's lines run 10.5-18 m
+# apart, and with 10.5 m of motorway carriageway each tube was 13.5 m wide over its shell and its headwall 16.7 m:
+# the tubes ran into each other and each headwall closed half the other's opening. A motorway tube is now two lanes
+# (8 m, 10 m inside the walls) and a headwall stops short of the twin's opening (twin_heads).
+TWIN_GAP = 0.3          # m a headwall keeps from the twin tube's inside wall
 # carriageway width (m) by swissTLM3D class; the rest of the classes are paths, never in a tunnel of the level
 CARRIAGEWAY = {"1m Weg": 1.6, "2m Weg": 2.6, "3m Strasse": 3.6, "4m Strasse": 4.6, "6m Strasse": 6.6,
-               "8m Strasse": 8.0, "10m Strasse": 10.0, "Autostrasse": 9.0, "Autobahn": 10.5, "Ausfahrt": 4.6,
+               "8m Strasse": 8.0, "10m Strasse": 10.0, "Autostrasse": 8.0, "Autobahn": 8.0, "Ausfahrt": 4.6,
                "Einfahrt": 4.6, "Autozug": 4.6, "Verbindung": 4.6, "Zufahrt": 4.6}
 DRIVABILITY = {"1m Weg": 0.3, "2m Weg": 0.4, "3m Strasse": 0.75, "4m Strasse": 0.9}
 # (half width inside, height of the straight walls, crown over the floor) by kind
@@ -303,6 +308,7 @@ class Tube:
         self.T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
         self.N = np.column_stack([-self.T[:, 1], self.T[:, 0]])
         self.live = [False, False]
+        self.head_w = [{1: None, -1: None}, {1: None, -1: None}]   # per end, per side: headwall width (twin_heads)
         # the floor: the carriageway (road) or the top of the ballast (rail: swissTLM3D gives the rails)
         import railway
         self.rail_drop = 0.0 if kind == "road" else railway.RAIL_H + railway.SLEEPER_H
@@ -472,7 +478,7 @@ def build_tube(tb, mats, ter=None):
     # headwalls at the live portals
     for e, live in enumerate(tb.live):
         if live:
-            add("mp_tunnel_portal", headwall(tb, 0 if e == 0 else m - 1, 1 if e == 0 else -1, ter))
+            add("mp_tunnel_portal", headwall(tb, 0 if e == 0 else m - 1, 1 if e == 0 else -1, ter, tb.head_w[e]))
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
@@ -526,18 +532,47 @@ def add_track(tb, add, i0, i1):
         add("mp_rail_steel", np.concatenate(flanks))
 
 
-def headwall(tb, i, inward, ter=None):
+def twin_heads(tubes, reach=40.0):
+    """Per live end of every tube and per side, how far its headwall may reach: short of the inside wall of another
+    tube beside it (a twin of the other carriageway) near that end. None: the full HEAD_W."""
+    for tb in tubes:
+        for e in (0, 1):
+            if not tb.live[e]:
+                continue
+            i = 0 if e == 0 else len(tb.s) - 1
+            p, nrm = tb.P[i, :2], tb.N[i]
+            for ot in tubes:
+                if ot is tb:
+                    continue
+                d = np.linalg.norm(ot.P[:, :2] - p, axis=1)
+                near = d < reach
+                if not near.any():
+                    continue
+                n = (ot.P[near, :2] - p) @ nrm                  # across this tube's axis
+                for sg in (1, -1):
+                    side = n[np.sign(n) == sg]
+                    if not len(side):
+                        continue
+                    lim = float(np.min(np.abs(side))) - ot.hw - TWIN_GAP
+                    cur = tb.head_w[e][sg]
+                    tb.head_w[e][sg] = lim if cur is None else min(cur, lim)
+
+
+def headwall(tb, i, inward, ter=None, widths=None):
     """A headwall HEAD m thick from station i inwards (inward +1 / -1 along the stations), round the opening. Each
     side goes down to FOOT under the lowest ground at its outer edge: on the lake side of the Vallone d'Agno the
     ground falls away beside the track and the wall stood on nothing, a gap under it (laptop run 4)."""
     ring = tb.ring()
-    W = tb.hw_out + HEAD_W
+    Wf = tb.hw_out + HEAD_W
+    # each side as wide as the twin beside it leaves (never narrower than the shell round the opening)
+    Ws = {sg: Wf if not widths or widths.get(sg) is None else float(np.clip(widths[sg], tb.hw + 0.2, Wf))
+          for sg in (1, -1)}
     top = tb.crown + SHELL + HEAD_UP
     j = i + inward
     bot = {1: -0.6, -1: -0.6}
     if ter is not None:
         for sg in (1, -1):
-            g = [float(ter.sample([tb.frame(st, sg * W * f, 0.0)[0]], [tb.frame(st, sg * W * f, 0.0)[1]])[0])
+            g = [float(ter.sample([tb.frame(st, sg * Ws[sg] * f, 0.0)[0]], [tb.frame(st, sg * Ws[sg] * f, 0.0)[1]])[0])
                  for st in (i, j) for f in (0.6, 1.0)]
             bot[sg] = min(-0.6, min(g) - tb.floor[i] - FOOT)
     # the face: the outer rectangle minus the opening, as a fan of quads between the opening and the rectangle
@@ -546,12 +581,13 @@ def headwall(tb, i, inward, ter=None):
     # rectangle points matched to every ring point: same n clipped to the rectangle, on its top or sides
     rect = []
     for n, z in ring:
+        sg = 1 if n > 0 else -1
         if z <= tb.wall + 1e-6:
-            rect.append((math.copysign(W, n), bot[1 if n > 0 else -1] if z == 0.0 else z))
+            rect.append((sg * Ws[sg], bot[sg] if z == 0.0 else z))
         else:
-            rect.append((n * W / tb.hw, top))
-    rect[0] = (W, bot[1])
-    rect[-1] = (-W, bot[-1])
+            rect.append((n * Ws[sg] / tb.hw, top))
+    rect[0] = (Ws[1], bot[1])
+    rect[-1] = (-Ws[-1], bot[-1])
     tris = []
     for st, face_out in ((i, True), (j, False)):
         for a in range(k - 1):
@@ -561,24 +597,25 @@ def headwall(tb, i, inward, ter=None):
         # under the floor's edge down to the side's foot (the fan joins the floor corner to the foot diagonally)
         for sg in (1, -1):
             if bot[sg] < -0.6 + 1e-6:
-                tris += [tb.frame(st, sg * tb.hw, 0.0), tb.frame(st, sg * tb.hw, bot[sg]), tb.frame(st, sg * W, bot[sg])]
+                tris += [tb.frame(st, sg * tb.hw, 0.0), tb.frame(st, sg * tb.hw, bot[sg]), tb.frame(st, sg * Ws[sg], bot[sg])]
         # the corners of the rectangle above the vault's sides
         for sg in (1, -1):
-            a0 = tb.frame(st, sg * W, tb.wall)
-            a1 = tb.frame(st, sg * W, top)
-            a2 = tb.frame(st, sg * tb.hw * 0.92, top)
+            a0 = tb.frame(st, sg * Ws[sg], tb.wall)
+            a1 = tb.frame(st, sg * Ws[sg], top)
+            a2 = tb.frame(st, sg * tb.hw * 0.92 * Ws[sg] / Wf, top)
             tris += [a0, a1, a2]
     # the outer sides and the top of the block
-    for (n0, z0), (n1, z1) in (((W, bot[1]), (W, top)), ((W, top), (-W, top)), ((-W, top), (-W, bot[-1]))):
+    Wp, Wn = Ws[1], Ws[-1]
+    for (n0, z0), (n1, z1) in (((Wp, bot[1]), (Wp, top)), ((Wp, top), (-Wn, top)), ((-Wn, top), (-Wn, bot[-1]))):
         A0, A1 = tb.frame(i, n0, z0), tb.frame(i, n1, z1)
         B0, B1 = tb.frame(j, n0, z0), tb.frame(j, n1, z1)
         tris += [A0, B0, B1, A0, B1, A1]
     # the cornice: a lip 0.25 m out over the face
     for st, sgn in ((i, -inward),):
-        c0 = tb.frame(st, W + 0.2, top) + np.r_[tb.T[st] * sgn * 0.25, 0]
-        c1 = tb.frame(st, -W - 0.2, top) + np.r_[tb.T[st] * sgn * 0.25, 0]
-        d0 = tb.frame(j, W + 0.2, top)
-        d1 = tb.frame(j, -W - 0.2, top)
+        c0 = tb.frame(st, Wp + 0.2, top) + np.r_[tb.T[st] * sgn * 0.25, 0]
+        c1 = tb.frame(st, -Wn - 0.2, top) + np.r_[tb.T[st] * sgn * 0.25, 0]
+        d0 = tb.frame(j, Wp + 0.2, top)
+        d1 = tb.frame(j, -Wn - 0.2, top)
         lift = np.r_[0, 0, 0.3]
         tris += [c0 + lift, d0 + lift, d1 + lift, c0 + lift, d1 + lift, c1 + lift]
         tris += [c0, c0 + lift, c1 + lift, c0, c1 + lift, c1]
@@ -736,6 +773,7 @@ def tunnels_step(root, report=None):
         if any(tb.live):
             tubes.append(tb)
     print("tunnels: %d lines, %d with a live portal (%.0f s)" % (len(cand), len(tubes), time.time() - t0), flush=True)
+    twin_heads(tubes)
     if not tubes:                                       # lines in the zone, none joins a road or track (ti_m2_3)
         return res
     mats = materials()

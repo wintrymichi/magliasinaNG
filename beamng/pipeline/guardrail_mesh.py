@@ -14,7 +14,7 @@ road level).
 """
 import json, os
 import numpy as np
-from config import WORK
+from config import WORK, ZONE
 import bng
 
 # (depth towards the road, height below the top) of the rail face, top -> bottom
@@ -521,6 +521,56 @@ def edge_fn(level_dir, near=8.0):
     return lambda x, y: S.height(x, y, "high")
 
 
+MOTORWAY_CLASSES = ("Autobahn", "Autostrasse")
+MOTORWAY_TOP = 0.75      # m, top of the rail over its foot (as the measured ones)
+MOTORWAY_CLEAR = 0.8     # m beyond the half width of another road: no rail (ramps, slip roads, junctions)
+MOTORWAY_STEP = 2.0      # m between the points of a motorway rail
+
+
+def motorway_runs():
+    """Rails along both edges of every motorway carriageway of a zone (swissTLM3D Autobahn / Autostrasse): the
+    Ticino zones' motorways had none, nothing measured them (2026-10-28). Open wherever another road comes within
+    its half width + MOTORWAY_CLEAR (the ramps leave and join there); the other carriageway only where it overlaps
+    the rail (a median of two rails back to back, one is dropped as a double). No rail in a tunnel (the network
+    leaves them out)."""
+    import network
+    from scipy.spatial import cKDTree
+    segs, st, _ = network.load()
+    xy = np.column_stack([st["x"], st["y"]])
+    tree = cKDTree(xy)
+    cls = np.array([segs[k]["class"] for k in st["seg"]])
+    kind = np.array([segs[k]["kind"] for k in st["seg"]])
+    out = []
+    for sg in segs:
+        if sg["kind"] != "road" or sg["class"] not in MOTORWAY_CLASSES or sg["n"] < 2:
+            continue
+        a, n = sg["first"], sg["n"]
+        Q = np.column_stack([st["x"][a:a + n], st["y"][a:a + n], st["z_tlm"][a:a + n], st["width"][a:a + n]])
+        Q, _s = resample(Q, MOTORWAY_STEP)
+        if len(Q) < 3:
+            continue
+        T = np.gradient(Q[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        Nl = np.column_stack([-T[:, 1], T[:, 0]])
+        for side in (1, -1):
+            P = Q[:, :2] + side * Nl * (0.5 * Q[:, 3:4] + EDGE_OUT)
+            keep = np.ones(len(P), bool)
+            for k, lst in enumerate(tree.query_ball_point(P, 10.0)):
+                for j in lst:
+                    if st["seg"][j] == sg["id"] or kind[j] == "path" or abs(st["z_tlm"][j] - Q[k, 2]) > 3.0:
+                        continue                 # a road under a viaduct or over a cutting does not open the rail
+                    other_mw = cls[j] in MOTORWAY_CLASSES
+                    reach = 0.5 * st["width"][j] + (-0.3 if other_mw else MOTORWAY_CLEAR)
+                    if np.hypot(*(P[k] - xy[j])) < reach:
+                        keep[k] = False
+                        break
+            for piece in pieces(keep):
+                if len(piece) >= 3:
+                    out.append({"pts": np.column_stack([P[piece], Q[piece, 2], np.full(len(piece), MOTORWAY_TOP)]),
+                                "side": side, "seg": sg["id"]})
+    return out
+
+
 def build(level_dir, level_name, scene, road_fn=None):
     import area
     runs = [r for r in json.load(open(os.path.join(WORK, "guardrails_final.json")))
@@ -550,6 +600,15 @@ def build(level_dir, level_name, scene, road_fn=None):
         for r in extra:
             r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
     extra = open_crossings(extra)
+    if ZONE:                                  # the motorways of a Ticino zone (not in the Malcantone build)
+        # the z of a motorway point is its carriageway's (swissTLM3D), also on a viaduct: to_edge looks for the
+        # road's edge at that height (the foot of the measured rails is the ground, the valley under a viaduct)
+        mw = motorway_runs()
+        if road_fn is not None:
+            for r in mw:
+                r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
+        extra += mw
+        print("motorway guard rails: %d runs, %.1f km" % (len(mw), sum(length(r["pts"]) for r in mw) / 1000))
     # where a panorama run lies along a rail laid already (on the edge of the road as built, two runs can
     # come onto one line): only the first; the runs with more votes first
     extra.sort(key=lambda r: -np.ravel(r.get("votes", 0))[0])

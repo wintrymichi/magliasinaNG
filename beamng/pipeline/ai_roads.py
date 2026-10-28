@@ -59,6 +59,13 @@ def recentre(P, road, maxw=8.0):
 TLM_DRIVE = {"10m Strasse": 1.0, "8m Strasse": 1.0, "6m Strasse": 1.0, "Autostrasse": 1.0, "Ausfahrt": 0.9,
              "Einfahrt": 0.9, "Verbindung": 0.9, "4m Strasse": 0.8, "Platz": 0.5, "Raststaette": 0.5,
              "3m Strasse": 0.5, "Zufahrt": 0.4, "Dienstzufahrt": 0.3}
+# The motorways (swissTLM3D Autobahn, one line per carriageway) had no AI road: none crossed the Malcantone, and in the
+# Ticino zones their carriageways stood without traffic, paint (markings_rules draws on the AI roads) or guard rails
+# (2026-10-28). Only in a zone, so the Malcantone's own build does not change.
+MOTORWAY = {"Autobahn": 120, "Autostrasse": 100}       # km/h, the Swiss limits
+if ZONE:
+    TLM_DRIVE["Autobahn"] = 1.0
+MOTORWAY_LANE_W, MOTORWAY_SHOULDER = 3.75, 2.5    # m: lanes of a carriageway beside its hard shoulder
 
 
 BANNED = 0.1           # drivability of the roads closed to general traffic (swissTLM3D)
@@ -204,6 +211,9 @@ def network_roads(out, net, main_zone):
                 o["position"] = o["nodes"][0][:3]
             o["oneWay"] = True
             o["lanesLeft"], o["lanesRight"] = 0, 1
+            if ZONE and s["class"] in MOTORWAY:          # a carriageway of two (or more) lanes
+                o["lanesRight"] = int(np.clip(round((np.median(width) - MOTORWAY_SHOULDER) / MOTORWAY_LANE_W), 1, 3))
+                o["autoLanes"] = False
         o["_class"], o["_natural"], o["_banned"] = s["class"], s["surface"] == "natural", bool(s.get("ban"))
         o["_ring"] = bool(s.get("roundabout"))
         out.append(o)
@@ -569,7 +579,9 @@ def _limits_along(o, cls, natural, banned, ring, ways, gtree):
     N = np.asarray(o["nodes"], float)
     P = N[:, :2]
     lim = np.full(len(P), float(LIMIT_OUT))
-    if gtree is not None:
+    if ZONE and cls in MOTORWAY:                   # no village on a motorway: its own limit, OSM may lower it
+        lim[:] = MOTORWAY[cls]
+    elif gtree is not None:
         village = gtree.query_ball_point(P, VILLAGE_R, return_length=True) >= VILLAGE_N
         lim[village] = LIMIT_VILLAGE
     cap = LIMIT_CLASS.get(cls)

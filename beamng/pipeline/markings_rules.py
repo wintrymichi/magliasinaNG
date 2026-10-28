@@ -298,6 +298,7 @@ class Road:
         self.k, self.name = k, obj.get("name", "")
         self.drive = float(obj.get("drivability", 1))
         self.oneway = bool(obj.get("oneWay"))
+        self.n_lanes = int(obj.get("lanesRight", 1)) if self.oneway else 0   # > 1: a motorway carriageway (ai_roads)
         self.X, self.z, self.w, self.closed = ax
         T = np.gradient(self.X, axis=0)
         self.T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
@@ -1213,6 +1214,31 @@ def lay_pieces(r, pieces, offset, paint, stats, family, width=None, colour="whit
                     stats[kind + "_m"] = stats.get(kind + "_m", 0.0) + float(s[q - 1] - s[p])
 
 
+MOTORWAY_DASH = (6.0, 12.0)    # m, the lane line of a Swiss motorway (SSV 6.02, Leitlinie 6/12)
+MOTORWAY_LANE = 3.75            # m
+MOTORWAY_SHOULDER_MIN = 1.5     # m left beside the lanes: a hard shoulder, set off by a continuous line
+
+
+def lay_lanes(r, paint, stats):
+    """The lanes of a one-way carriageway of two or more lanes (the motorways of the Ticino zones, 2026-10-28):
+    the centre-line rules draw nothing on a one-way road, so the carriageways had no lane lines. Dashed lines between
+    the lanes counted from the left edge (the overtaking side), a continuous line before the hard shoulder."""
+    n = r.n_lanes
+    lw = np.clip((r.W - R["edge_off"]) / n, 2.75, MOTORWAY_LANE)
+    left = r.eL - R["edge_off"]
+    for k in range(1, n):
+        off = left - k * lw
+        pieces = [(p, q, "lane") for p, q in dashes(0.0, r.L, *MOTORWAY_DASH)]
+        lay_pieces(r, pieces, lambda s, off=off: r.interp(off, s), paint, stats, "lane")
+    shoulder = left - n * lw
+    room = shoulder - r.eR
+    ok = clean_mask(room >= MOTORWAY_SHOULDER_MIN, STEP, RUN_MIN, GAP_FILL)
+    for p, q in runs(ok):
+        lay_pieces(r, [(r.s[p], r.s[min(q, len(r.s) - 1)], "shoulder")], lambda s: r.interp(shoulder, s), paint,
+                   stats, "lane")
+    stats["motorway_carriageways"] = stats.get("motorway_carriageways", 0) + 1
+
+
 def edge_lines(r, tr, centre, stats):
     """Edge lines of road r: {side: mask (n,)} where they are painted; centre: (n,) where it has a centre line."""
     out = {}
@@ -1891,6 +1917,8 @@ def paint_level(zi, bbox=None, stats=None):
         for a, b, _ in segs:
             centre[r.idx(a):r.idx(b) + 1] = True
         lay_edges(r, edge_lines(r, tr, centre, stats), paint, stats)
+        if r.oneway and r.n_lanes >= 2:
+            lay_lanes(r, paint, stats)
     arrows(roads, cx, paint, stats)
     islands(roads, junc, paint, stats)
     zone_texts(roads, junc, paint, stats)
