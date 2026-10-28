@@ -1280,3 +1280,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   face, and vid.max() of the empty part raised. sleepers() skips such parts, catenary skips a level with no sleepers.
   A finish run with "[zone finish <run>] [zone retry]" takes zone_retry.txt and has a group of its own (no waiting).
 - Zone ti_1_1 has no lake: water.lake_step stopped on "no WaterBlock LagoDiLugano" (SystemExit). It now skips the level.
+- Zone ti_m2_3: 3 tunnel lines, none with a live portal, and cut_meshes concatenated no tubes. tunnels_step now stops
+  right after the portal check when no tube is live.

@@ -736,6 +736,8 @@ def tunnels_step(root, report=None):
         if any(tb.live):
             tubes.append(tb)
     print("tunnels: %d lines, %d with a live portal (%.0f s)" % (len(cand), len(tubes), time.time() - t0), flush=True)
+    if not tubes:                                       # lines in the zone, none joins a road or track (ti_m2_3)
+        return res
     mats = materials()
     bng.write_materials(os.path.join(lv, "art", "shapes", "tunnels", "main.materials.json"), mats)
     sys.path.insert(0, HERE)
