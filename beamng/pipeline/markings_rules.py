@@ -1837,6 +1837,8 @@ def paint_level(zi, bbox=None, stats=None):
         items = [o for o in items if "position" not in o or o["position"] == [0, 0, 0] or
                  (bbox[0] - 300 < o["position"][0] < bbox[2] + 300 and bbox[1] - 300 < o["position"][1] < bbox[3] + 300)]
     surf = shape_tris(zi, LV, items)
+    if not any(m in CARRIAGE_MATS for m in surf):     # a zone with no carriageway at all (ti_2_7): nothing to paint
+        return None
     tops = np.concatenate([up_faces(t) for m, t in surf.items() if m in ROAD_MATS])
     carr = np.concatenate([up_faces(t) for m, t in surf.items() if m in CARRIAGE_MATS])
     del surf
@@ -2171,7 +2173,24 @@ def markings_rules_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
     stats = {}
-    paint, roads, junc, S = paint_level(zi, stats=stats)
+    got = paint_level(zi, stats=stats)
+    if got is None:
+        # the later steps read roads/markings: give it an empty group when there is none
+        print("markings: no carriageway in the level, nothing painted", flush=True)
+        mk_items = f"{LV}/main/MissionGroup/roads/markings/items.level.json"
+        if mk_items not in zi.NameToInfo:
+            g = f"{LV}/main/MissionGroup/roads/items.level.json"
+            new_files = {mk_items: b"", g: (zi.read(g) if g in zi.NameToInfo else b"") + (json.dumps(
+                {"name": "markings", "class": "SimGroup", "persistentId": bng.pid(), "__parent": "roads"},
+                separators=(",", ":")) + "\n").encode("utf-8")}
+            with zi.writer() as zo:
+                for i in zi.infolist():
+                    if i.filename not in new_files:
+                        zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+                for n, data in sorted(new_files.items()):
+                    zo.writestr(n, data, compress_type=zipfile.ZIP_DEFLATED)
+        return 0
+    paint, roads, junc, S = got
     builders = {}
     tessellate(paint, S, builders, stats)
     report_numbers(paint, stats)

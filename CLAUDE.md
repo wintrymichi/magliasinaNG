@@ -1288,3 +1288,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   With no sign it now writes no shape and no object (mb.empty() is a method: `if not mb.empty:` is always False).
 - Zone ti_0_m2: signs_more planned signs but placed none (all outside the map or left out) and wrote an empty DAE.
   It now stops before writing when nothing was placed (it already stopped with nothing planned).
+- Zone ti_2_7 has no carriageway face at all (paths only): markings_rules.paint_level concatenated nothing. The step now
+  paints nothing there and only makes the empty roads/markings group the later steps read. Other steps that read the
+  carriageway (road_wear, stop_paint, parking) may meet the same zone next.
