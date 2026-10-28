@@ -2176,7 +2176,9 @@ def markings_rules_step(root, report=None):
     tessellate(paint, S, builders, stats)
     report_numbers(paint, stats)
     mk_items = f"{LV}/main/MissionGroup/roads/markings/items.level.json"
-    mk = read_items(zi, mk_items)
+    # a zone with no v1.1 route paint has no markings group yet (ti_0_7): it is made here
+    fresh = mk_items not in zi.NameToInfo
+    mk = [] if fresh else read_items(zi, mk_items)
     old = {k: v for k, v in old_paint(zi, mk).items()}
     stats["old_paint_m2"] = old
     tmp = tempfile.mkdtemp(prefix="magliaso_mkr_")
@@ -2219,6 +2221,11 @@ def markings_rules_step(root, report=None):
             o["__parent"] = parent
         new_files[mk_items] = ("\n".join(json.dumps(o, separators=(",", ":")) for o in keep + objs) + "\n").encode("utf-8")
         n_old = sum(1 for n in zi.namelist() if NET_SHAPE.search(n) or OLD_SHAPE.search(n))
+        if fresh:
+            g = f"{LV}/main/MissionGroup/roads/items.level.json"
+            new_files[g] = ((zi.read(g) if g in zi.NameToInfo else b"") + (json.dumps(
+                {"name": "markings", "class": "SimGroup", "persistentId": bng.pid(), "__parent": "roads"},
+                separators=(",", ":")) + "\n").encode("utf-8"))
         with zi.writer() as zo:
             for i in zi.infolist():
                 n = i.filename
