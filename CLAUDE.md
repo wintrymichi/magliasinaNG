@@ -1235,6 +1235,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Then ti_1_6 (after its CDT fix) stopped in landmarks.band_all on an intersection ("Ring edge missing"): the wrapper
   (config._safe_overlay) now covers shapely.intersection/difference/union/symmetric_difference too (the Geometry
   methods and operators call them), with make_valid inputs as the last try.
+  ti_1_6 failed again: make_valid turned a facade polygon into a polygon + line collection and the retry stopped on
+  "Overlay input is mixed-dimension". The last tries now clean polygonal inputs with buffer(0) (stays a polygon).
 - canopy.run crashed in zone ti_0_m1 (int(NaN) in TileRasters.cell): TileRasters.intrusion returned a NaN direction,
   so _fix moved the tree to NaN (0 * NaN is NaN even at the step d = 0). Some drivable raster cell had a NaN height:
   a mesh of that zone has NaN vertices somewhere (not found yet: look at the zone's road/yard DAEs when the zip is

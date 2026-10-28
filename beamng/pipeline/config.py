@@ -133,7 +133,22 @@ def _safe_overlay(op):
             try:
                 return op(*[shapely.make_valid(g) for g in geoms], grid_size=0.01, **kw)
             except Exception:
-                raise e
+                pass
+            # make_valid can turn a polygon into a polygon + line collection ("mixed-dimension", ti_1_6 landmarks):
+            # polygons cleaned by buffer(0) stay polygons
+            import numpy as np
+
+            def clean(g):
+                a = np.asarray(g, dtype=object)
+                t = shapely.get_type_id(a)
+                c = np.where((t == 3) | (t == 6), shapely.buffer(a, 0), shapely.make_valid(a))
+                return c.item() if c.ndim == 0 else c
+            for gs in (None, 0.01):
+                try:
+                    return op(*[clean(g) for g in geoms], grid_size=gs, **kw)
+                except Exception:
+                    pass
+            raise e
     return run
 
 
