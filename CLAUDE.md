@@ -1255,6 +1255,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   no Python error in a zone job is memory, not a cancelled run.
 - Zone ti_1_3's finish crashed in poles.roadside_step (network_mesh.terrain_top: IndexError, row -13659): a zone's AI
   roads reach far out of its terrain. terrain_top now clamps points to the terrain's edge (inside it nothing changes).
-  The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
+  Zones ti_m1_2 and ti_m2_2 (same row) both crashed at row -8539, ti_1_3 at -13659: the SAME absolute point south of
+  every zone, likely a Malcantone-located AI road or data leaking into zone builds (not found yet: look for it when a
+  zone zip is there). The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
 - Zone ti_0_7's finish crashed in markings_rules (KeyError roads/markings/items.level.json): the group is made only
   by the v1.1 route paint (carryover, Malcantone). markings_rules makes it (and its SimGroup line in roads) when missing.
