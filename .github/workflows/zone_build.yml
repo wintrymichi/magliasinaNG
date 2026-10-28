@@ -74,6 +74,10 @@ jobs:
       - name: Disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          # 16 GB of RAM: a dense zone's unpaved step went past it and the runner was shut down (ti_0_6)
+          sudo swapoff -a || true
+          sudo fallocate -l 16G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          free -g
           df -h .
 
       - uses: actions/checkout@v4
@@ -202,13 +206,17 @@ jobs:
       MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
       MAGLIASO_ZONE: ${{ github.workspace }}/beamng/ticino/zones/ti/${{ matrix.zone }}.json
       PYTHONHASHSEED: "0"
-      PATCH_WORKERS: "2"
+      PATCH_WORKERS: "1"
       PYTHONUNBUFFERED: "1"
       Z: ${{ matrix.zone }}
     steps:
       - name: Disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          # 16 GB of RAM: a dense zone's unpaved step went past it and the runner was shut down (ti_0_6)
+          sudo swapoff -a || true
+          sudo fallocate -l 16G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          free -g
           df -h .
 
       - uses: actions/checkout@v4

@@ -1249,3 +1249,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   MeshBuilder ("need at least one array to concatenate"). Every writer of a merged shape must skip an empty one.
 - Zone ti_m4_3 has no road segment at all: zone_route now puts the three spawns on the ground of the core (facing
   east), and the village spawns are skipped when no main road exists (a cKDTree of no points).
+- Zone ti_0_6's finish job stopped in unpaved with "The runner has received a shutdown signal" (exit 143, no
+  traceback): the GitHub runner's 16 GB ran out (unpaved peaked ~13 GB on wintryserver too). zone_build.yml now adds
+  a 16 GB swap file in /mnt to both jobs and runs the finishing steps with PATCH_WORKERS=1. A "shutdown signal" with
+  no Python error in a zone job is memory, not a cancelled run.
