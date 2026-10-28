@@ -12,7 +12,7 @@ import json, os, pickle
 import numpy as np
 import shapely
 from scipy.ndimage import gaussian_filter1d, median_filter
-from config import DATA, WORK, wgs_to_local, TER_X0, TER_Y0, TER_X1, TER_Y1
+from config import DATA, WORK, ZONE, wgs_to_local, TER_X0, TER_Y0, TER_X1, TER_Y1
 import bng
 import osm
 from clearance import keep_to_surface
@@ -233,6 +233,10 @@ def build(scene, hfn, net=None):
             "nodes": nodes, "lanesLeft": 1, "lanesRight": 1, "_class": "6m Strasse"}]
     main_line = shapely.LineString(np.column_stack([cx, cy]))
     main_zone = main_line.buffer(4.0)
+    if ZONE and not ((cx >= TER_X0) & (cx <= TER_X1) & (cy >= TER_Y0) & (cy <= TER_Y1)).all():
+        # the Malcantone's Street View route is no road of a zone (it stood km out of every zone's terrain and
+        # poles.roadside_step crashed on it): the network's own lines take its place
+        out, main_zone = [], shapely.Polygon()
     if net is not None:                       # v2.0: the swissTLM3D network of the whole area
         print("AI roads", 1 + network_roads(out, net, main_zone))
         rep = traffic_ready(out)
