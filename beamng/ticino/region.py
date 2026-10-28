@@ -8,7 +8,7 @@ the Malcantone's grid without gaps. So each zone gives only what lies in its cor
   - the objects in the core: a shape used by one object only (the merged shapes of 384 / 1,152 m chunks, which reach
     across the core's edge) keeps the triangles whose centre lies in the core (clip_dae), copied under z/<zone>/;
     a shape used by several objects and the game's own shapes go by the object's position;
-  - its forest items, per 384 m tile (tiles/t_<cx>_<cy>.forest.json): the mod makes them round the car (forest.lua)
+  - its forest items, per 384 m tile (tiles/t_<cx>_<cy>.trees.json): the mod makes them round the car (forest.lua)
     instead of one Forest of millions of items;
   - its roads (DecalRoads) cut exactly at the core's edge and welded to the neighbour's (region_net.py), its water
     blocks cut to the core, its sounds, spawn points, signals, parking spots and fuel stations in the core.
@@ -660,7 +660,7 @@ def main():
     ftypes, ftiles, item_data = {}, {}, {}
     nf = sum(forest_zone(grid, s, ftypes, ftiles, item_data) for s in srcs)
     for (cx, cy), rows in ftiles.items():
-        with wopen(os.path.join(dst, "tiles", f"t_{cx}_{cy}.forest.json"), "w") as f:
+        with wopen(os.path.join(dst, "tiles", f"t_{cx}_{cy}.trees.json"), "w") as f:
             json.dump(rows, f, separators=(",", ":"))
     with wopen(os.path.join(dst, "art", "forest", "managedItemData.json"), "w") as f:
         json.dump(item_data, f, indent=1)

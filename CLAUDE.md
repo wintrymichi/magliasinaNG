@@ -1384,3 +1384,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   region's own spawns and packs the preview as ticino_preview.jpg. A local fix (info.json + jpg) sits in the user
   folder levels\ticino on that PC: delete it once a fixed zip 1 is installed. After any change to object names, check
   info.json's spawnPoints and previews against the packed level.
+- With info.json fixed, 0.40.3 crashed as soon as forest.lua registered a Forest: the engine reads EVERY *.forest.json
+  of the level as old-format forest data (ForestData::readAppendJsonV23Format "string pointer is null" on
+  tiles/t_10_0.forest.json, the streamer's row format). The tile files are now t_<cx>_<cy>.trees.json (region.py,
+  forest.lua M.FILE). Never give a file of our own a name ending the game claims (.forest.json, .materials.json,
+  items.level.json...). michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
+  %LOCALAPPDATA%\BeamNG\ticino_backup\ticino_region_1.orig.zip).

@@ -1,4 +1,4 @@
--- Ticino streaming: the forest items of the 384 m tiles (tiles/t_<cx>_<cy>.forest.json, region.py) around the car.
+-- Ticino streaming: the forest items of the 384 m tiles (tiles/t_<cx>_<cy>.trees.json, region.py) around the car.
 -- A whole region's forest is millions of items: one Forest with all of them is out of the question, so every tile
 -- within RADIUS of the car's tile gets a small Forest of its own (from a pool) with its items, thinned with distance
 -- (SHARE: a fixed share of the rows, the same ones every time: a move adds or removes only the difference), made and
@@ -17,7 +17,7 @@ M.RADIUS = 4                          -- tiles (Chebyshev) round the car's tile 
 M.SHARE = { [0] = 1.0, 1.0, 0.6, 0.35, 0.2 }   -- share of a tile's rows shown at that distance
 M.PER_FRAME = 250                     -- items made or removed a frame at most
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
-M.FILE = '/levels/%s/tiles/t_%d_%d.forest.json'
+M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
 M.CACHE_TILES = 120
 
 local S = nil
