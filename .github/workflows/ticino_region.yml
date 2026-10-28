@@ -1,0 +1,83 @@
+# Ticino region: the zones of beamng/ticino/region_list.txt (built by zone_build.yml, zips on the DRAFT release
+# "ticino-zones") joined by region.py into one streaming level `ticino`, split by pack_region.py into mod zips under
+# 2 GB, attached to the DRAFT release "ticino-region" (not public). Started by a change of beamng/ticino/region_stamp.txt
+# on a push (the cloud session cannot dispatch a workflow off the default branch).
+name: ticino region
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/region_stamp.txt
+
+concurrency:
+  group: ticino-region-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  region:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PYTHONUNBUFFERED: "1"
+      W: ${{ github.workspace }}/../rw
+    steps:
+      - name: Disk space and swap
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo swapoff -a || true
+          sudo fallocate -l 16G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0 fast_simplification==0.2.0
+
+      - name: Zone zips (draft release ticino-zones)
+        run: |
+          mkdir -p "$W/src" "$W/out" "$W/dist"
+          gh api "repos/$GH_REPO/releases?per_page=50" --jq '.[] | select(.tag_name == "ticino-zones") | .assets[] | "\(.name) \(.id)"' > "$W/assets.txt"
+          for z in $(grep -v '^#' beamng/ticino/region_list.txt); do
+            id=$(awk -v n="$z.zip" '$1 == n {print $2}' "$W/assets.txt")
+            [ -n "$id" ] || { echo "no zip for $z"; exit 1; }
+            curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+              "https://api.github.com/repos/$GH_REPO/releases/assets/$id" -o "$W/$z.zip"
+            ls -la "$W/$z.zip"
+            unzip -q "$W/$z.zip" "levels/$z/*" -d "$W/src"
+            rm "$W/$z.zip"
+          done
+          df -h "$W"
+
+      - name: Region
+        working-directory: beamng/ticino
+        run: |
+          python region.py --zones $(grep -v '^#' region_list.txt) --src "$W/src" --out "$W/out" --workers 4 2>&1 | tee "$W/region.log"
+          rm -rf "$W/src"
+          du -sh "$W/out"
+
+      - name: Mod zips
+        working-directory: beamng/ticino
+        run: |
+          python pack_region.py --out "$W/out" --dist "$W/dist" 2>&1 | tee -a "$W/region.log"
+          (cd "$W/dist" && sha256sum *.zip > ticino_region.sha256 && cat ticino_region.sha256)
+
+      - name: Draft release "ticino-region" (not public)
+        run: |
+          gh release delete ticino-region --yes --cleanup-tag || true
+          gh release create ticino-region "$W"/dist/*.zip "$W/dist/ticino_region.sha256" "$W/region.log" \
+            --draft --target "$GITHUB_SHA" --title "Ticino region: test mod (draft, not a release)" \
+            --notes "Zones $(grep -v '^#' beamng/ticino/region_list.txt | tr '\n' ' ')joined into the level ticino (branch $GITHUB_REF_NAME at ${GITHUB_SHA::7}). Put ALL the zips into mods/. Not a release."
