@@ -1279,3 +1279,4 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Zones ti_m1_2 and ti_0_2 (with a railway) stopped in catenary: a railway shape had an mp_sleeper part with no top
   face, and vid.max() of the empty part raised. sleepers() skips such parts, catenary skips a level with no sleepers.
   A finish run with "[zone finish <run>] [zone retry]" takes zone_retry.txt and has a group of its own (no waiting).
+- Zone ti_1_1 has no lake: water.lake_step stopped on "no WaterBlock LagoDiLugano" (SystemExit). It now skips the level.
