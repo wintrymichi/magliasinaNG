@@ -1308,3 +1308,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   so the later steps read clean meshes; house_extras also skips NaN pieces. Where the NaN come from is still unknown.
 - Of the 46 zones without GWR buildings, those wholly outside Switzerland (ti_3_m1, Italy) stop at once in
   build_rasters (FileNotFoundError swissalti3d_05/*.tif: no swissALTI3D tile there). They are not Ticino: leave them out.
+- Zone ti_m3_1 (mostly Italy) has no road at all: ai_roads.graph_report concatenated nothing. ai_roads.build now leaves
+  an empty AIRoads group there (the many readers of AIRoads/items.level.json find an empty file).

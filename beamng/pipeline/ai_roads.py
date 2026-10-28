@@ -239,6 +239,10 @@ def build(scene, hfn, net=None):
         out, main_zone = [], shapely.Polygon()
     if net is not None:                       # v2.0: the swissTLM3D network of the whole area
         print("AI roads", 1 + network_roads(out, net, main_zone))
+        if not out:                           # a zone with no road at all (ti_m3_1): an empty group for the readers
+            scene.group(g)
+            json.dump({}, open(os.path.join(WORK, "ai_network.json"), "w"))
+            return
         rep = traffic_ready(out)
         json.dump(rep, open(os.path.join(WORK, "ai_network.json"), "w"), indent=1)
         for o in out:
