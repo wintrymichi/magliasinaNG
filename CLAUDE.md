@@ -1317,6 +1317,21 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (two zones would both draw their overlap). A region's forest (millions of items) cannot be one Forest: forest.lua
   streams one small Forest per tile from a pool (BeamNG.Earth's way). The first forest.lua remade whole tiles at every
   tile change: a pass now compares each row with what is made and adds or removes only the difference.
+- Welding the region's roads (region_net.py, 2026-10-28): the zones build a road crossing a core edge with the SAME
+  nodes (122 of 123 crossings of ti_0_m1/ti_1_m1/ti_0_0/ti_1_0 within 5 cm), so region.py's first cut ("one node
+  beyond the edge") was already linked in the AI graph (pieces 90 and dead ends 2,298 before, 90 / 2,296 after): what it
+  really did wrong was doubling the last segment of every crossing road (122 doubled segments, two parallel edges for
+  the traffic). Roads are now cut exactly on the edge and the two cut ends welded into one point; every cut end left
+  unwelded (58) lies on the region's outer border. Check a merge with graph_report AND a count of doubled segments.
+- Do not drop strada_cantonale from every zone: in ti_0_m1 and ti_0_0 the Street View route lies wholly in the zone's
+  terrain and is the ONLY AI road of the Magliaso-Pura cantonale (swissTLM3D lines along it covered 0-13 %: the route
+  replaced them, ai_roads main_zone). region_net.stale_cantonale drops it only from a zone where it reaches beyond the
+  zone's terrain (the zones built before the fix of ai_roads.build).
+- signals.json of a zone: `sequences` is a LIST, ids of instances and controllers come from one counter, the stop and
+  give-way controllers (ids 1, 2, isSimple) are in every zone. A light group (sequence) goes to the zone whose core holds
+  the middle of its lights: by single position the lights of one junction on a core edge would split between zones.
+- A release zip of the draft release can be read in parts with HTTP range requests (zipfile over a seekable reader on
+  the asset's redirect URL): the scene files of four 1.5-2 GB zone zips came down in seconds, no full download.
 - ti_0_m1 then stopped in sidewalks (merged_pieces_raised: max of an empty array): a merged prop DAE has NaN vertices,
   so `W <= W.min() + 0.05` found no feet. The piece is skipped. Props DAEs carry the NaN too (not only roads/buildings).
 - Sparse zones (ti_m1_m1: one road shape, no unpaved road) crash in one finishing step after another on empty data

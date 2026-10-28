@@ -10,8 +10,8 @@ the Malcantone's grid without gaps. So each zone gives only what lies in its cor
     a shape used by several objects and the game's own shapes go by the object's position;
   - its forest items, per 384 m tile (tiles/t_<cx>_<cy>.forest.json): the mod makes them round the car (forest.lua)
     instead of one Forest of millions of items;
-  - its AI roads cut at the core's edge (one node beyond, so the roads of two neighbours overlap a segment), its
-    water blocks cut to the core, its sounds and spawn points in the core.
+  - its roads (DecalRoads) cut exactly at the core's edge and welded to the neighbour's (region_net.py), its water
+    blocks cut to the core, its sounds, spawn points, signals, parking spots and fuel stations in the core.
 The files every zone has alike (materials, textures, the game's sky, ground cover) are taken once.
 
     python region.py --zones ti_0_0 ti_1_0 ... --src <folder with levels/<zone>/ of each> --out <folder>
@@ -34,6 +34,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks  # noqa: E402
+import region_net  # noqa: E402
 from blocks import LEVEL, STREAMED, log, wopen, link_or_copy, read_ndjson, scene_files, quat_conj_from_rows  # noqa: E402
 
 GRID_CFG = os.path.join(HERE, "zones", "malcantone.json")     # the grid, the window and the groups' radii
@@ -67,6 +68,7 @@ class Src:
         self.oy = int(round((float(self.tb["position"][1]) - grid.y0) / grid.sq))
         assert abs(self.ox * grid.sq + grid.x0 - float(self.tb["position"][0])) < 1e-3, "off the grid"
         self.prefix = f"/levels/{self.level}/"
+        self.grid = grid
 
     def in_core(self, x, y):
         x0, y0, x1, y1 = self.core
@@ -368,8 +370,12 @@ def entry(o, rel, r, level_path):
     return e
 
 
-def stream_zone(grid, s, dst, tiles, kept, stats):
-    """The zone's objects in its core: streamed ones into tiles, the others into kept {group path: [objects]}."""
+def stream_zone(grid, s, dst, tiles, kept, stats, roads):
+    """The zone's objects in its core: streamed ones into tiles, the others into kept {group path: [objects]}, the
+    DecalRoads cut to the core into roads [(group path, object, zone, cut at start, cut at end)] (welded later)."""
+    stale = region_net.stale_cantonale([o for objs in s.scene.values() for o in objs], s, grid)
+    if stale:
+        log(s.name, "carries the Malcantone's Street View route beyond its terrain: left out")
     uses = collections.Counter(o.get("shapeName", "") for objs in s.scene.values() for o in objs
                                if o.get("class") == "TSStatic")
     cache = {}
@@ -411,8 +417,11 @@ def stream_zone(grid, s, dst, tiles, kept, stats):
                 if o is None:
                     continue
             elif cls == "DecalRoad":
-                for piece in cut_road(o, s):
-                    kept.setdefault(path, []).append(piece)
+                if stale and region_net.is_cantonale(o.get("name", "")):
+                    stats["stale_cantonale"] += 1
+                    continue
+                for piece, c0, c1 in region_net.cut_road(o, s):
+                    roads.append((path, piece, s.name, c0, c1))
                 continue
             elif cls in ("SpawnSphere",):
                 if not s.in_core(x, y):
@@ -444,28 +453,6 @@ def clip_box(o, core):
         return None
     return dict(o, position=[round((x0 + x1) / 2, 3), round((y0 + y1) / 2, 3), cz],
                 scale=[round(x1 - x0, 3), round(y1 - y0, 3), sz])
-
-
-def cut_road(o, s):
-    """The runs of a DecalRoad's nodes inside the core, one node beyond on each side; named after the zone."""
-    nodes = o.get("nodes") or []
-    inside = [s.in_core(n[0], n[1]) for n in nodes]
-    out, i, k = [], 0, 0
-    while i < len(nodes):
-        if not inside[i]:
-            i += 1
-            continue
-        j = i
-        while j + 1 < len(nodes) and inside[j + 1]:
-            j += 1
-        a, b = max(i - 1, 0), min(j + 1, len(nodes) - 1)
-        if b > a:
-            run = nodes[a:b + 1]
-            name = f"{s.name}_{o.get('name', 'road')}" + (f"_c{k}" if k else "")
-            out.append(dict(o, name=name, nodes=run, position=run[0][:3]))
-            k += 1
-        i = j + 1
-    return out
 
 
 # ------------------------------------------------------------------ forest
@@ -585,6 +572,48 @@ def write_scene(kept, dst, tb_new):
                 f.write(json.dumps(o, separators=(",", ":")) + "\n")
 
 
+# ------------------------------------------------------------------ roads, signals, sites
+def net_report(srcs, roads):
+    """Welds the cut roads across the core edges (region_net.weld) and returns the AI network as the traffic sees
+    it before (region.py's first cut: one node beyond the edge) and after."""
+    before = []
+    for s in srcs:
+        stale = region_net.stale_cantonale([o for objs in s.scene.values() for o in objs], s, s.grid)
+        for path, objs in s.scene.items():
+            for o in objs:
+                if region_net.is_ai(o) and not (stale and region_net.is_cantonale(o.get("name", ""))):
+                    before.extend(region_net.old_cut(o, s))
+    rep = {"ai_before": region_net.graph_report(before)}
+    rep["weld"] = region_net.weld([(o, z, c0, c1) for _, o, z, c0, c1 in roads])
+    rep["ai_after"] = region_net.graph_report([o for _, o, _, _, _ in roads if region_net.is_ai(o)])
+    for k in ("ai_before", "weld", "ai_after"):
+        log(k, rep[k])
+    return rep
+
+
+def write_spots(srcs, dst):
+    """signals.json, the sites files and main.decals.json of the region, each spot from its zone's core."""
+    rep = {}
+    sig, rep["signals"] = region_net.merge_signals(srcs)
+    with wopen(os.path.join(dst, "signals.json"), "w") as f:
+        json.dump(sig, f, indent=1)
+    defs = next((os.path.join(s.dir, "signalControllerDefinitions.json") for s in srcs
+                 if os.path.exists(os.path.join(s.dir, "signalControllerDefinitions.json"))), None)
+    if defs:
+        link_or_copy(defs, os.path.join(dst, "signalControllerDefinitions.json"))
+    for fn in ("city.sites.json", "facilities.sites.json"):
+        d, rep[fn] = region_net.merge_sites(srcs, fn, LEVEL)
+        if d is not None:
+            with wopen(os.path.join(dst, fn), "w", encoding="utf-8") as f:
+                json.dump(d, f, indent=1)
+    dec, rep["decals"] = region_net.merge_decals(srcs)
+    with wopen(os.path.join(dst, "main.decals.json"), "w") as f:
+        json.dump(dec, f)
+    for k in ("signals", "city.sites.json", "facilities.sites.json", "decals"):
+        log(k, rep[k])
+    return rep
+
+
 # ------------------------------------------------------------------ main
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -609,11 +638,16 @@ def main():
 
     tiles, kept_by_zone, own = {}, [], {}
     stats = collections.Counter()
+    roads = []
     for s in srcs:
-        kept = {}
-        own[s.name] = stream_zone(grid, s, dst, tiles, kept, stats)
+        kept, zs = {}, collections.Counter()
+        own[s.name] = stream_zone(grid, s, dst, tiles, kept, zs, roads)
         kept_by_zone.append(kept)
-        log("objects of", s.name, dict(stats))
+        stats.update(zs)
+        log("objects of", s.name, dict(zs))
+    report = net_report(srcs, roads)
+    for path, o, z, _, _ in roads:
+        kept_by_zone[[s.name for s in srcs].index(z)].setdefault(path, []).append(o)
     ftypes, ftiles, item_data = {}, {}, {}
     nf = sum(forest_zone(grid, s, ftypes, ftiles, item_data) for s in srcs)
     for (cx, cy), rows in ftiles.items():
@@ -624,6 +658,9 @@ def main():
     log("forest items:", nf, "in", len(ftiles), "tiles,", len(ftypes), "types")
 
     copy_shared(srcs, dst, own)
+    report.update(write_spots(srcs, dst))
+    with wopen(os.path.join(a.out, "region_report.json"), "w") as f:
+        json.dump(report, f, indent=1)
     cells = None
     if not a.no_collision_cells:
         import collision
