@@ -1317,3 +1317,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (two zones would both draw their overlap). A region's forest (millions of items) cannot be one Forest: forest.lua
   streams one small Forest per tile from a pool (BeamNG.Earth's way). The first forest.lua remade whole tiles at every
   tile change: a pass now compares each row with what is made and adds or removes only the difference.
+- ti_0_m1 then stopped in sidewalks (merged_pieces_raised: max of an empty array): a merged prop DAE has NaN vertices,
+  so `W <= W.min() + 0.05` found no feet. The piece is skipped. Props DAEs carry the NaN too (not only roads/buildings).

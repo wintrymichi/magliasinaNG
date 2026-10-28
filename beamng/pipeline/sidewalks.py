@@ -493,9 +493,9 @@ def sidewalks_step(root, report=None):
             n = 0
             for cid in np.unique(comp[dz_v > 0.005]):
                 k = np.flatnonzero(comp == cid)
-                lo = k[W[k, 2] <= W[k, 2].min() + 0.05]          # the piece's feet
+                lo = k[W[k, 2] <= W[k, 2].min() + 0.05]          # the piece's feet (none: a NaN corner, ti_0_m1)
                 ext = np.ptp(W[k, :2], axis=0).max()
-                if ext > PIECE_MAX or not np.isfinite(z0_v[lo]).all() or \
+                if not len(lo) or ext > PIECE_MAX or not np.isfinite(z0_v[lo]).all() or \
                         not (-1.0 < (W[lo, 2] - z0_v[lo])).all() or ((W[lo, 2] - z0_v[lo]) > 0.25).any():
                     continue                    # not standing in the pavement (posts go down into it), or too long
                 add[k] = dz_v[lo].max()
