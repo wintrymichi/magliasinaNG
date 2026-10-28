@@ -1310,3 +1310,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   build_rasters (FileNotFoundError swissalti3d_05/*.tif: no swissALTI3D tile there). They are not Ticino: leave them out.
 - Zone ti_m3_1 (mostly Italy) has no road at all: ai_roads.graph_report concatenated nothing. ai_roads.build now leaves
   an empty AIRoads group there (the many readers of AIRoads/items.level.json find an empty file).
+- Joining zones into one streaming level (beamng/ticino/region.py, 2026-10-28): every zone is built with its own Z0/MAXH,
+  terrain material names (GUIDs) and TextureSet: requantize the heights to one global range, match the layers by
+  internalName and rename the TextureSet, or the window's TerrainBlock keeps the first zone's set. The 1152 m merged
+  shapes straddle the core edges: clip them per triangle (by centre) to each zone's core, never keep them by position
+  (two zones would both draw their overlap). A region's forest (millions of items) cannot be one Forest: forest.lua
+  streams one small Forest per tile from a pool (BeamNG.Earth's way). The first forest.lua remade whole tiles at every
+  tile change: a pass now compares each row with what is made and adds or removes only the difference.

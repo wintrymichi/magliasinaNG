@@ -24,6 +24,7 @@
 
 local terwin = require('ticino/terwin')
 local objects = require('ticino/objects')
+local forest = require('ticino/forest')
 
 local M = {}
 
@@ -31,6 +32,8 @@ M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
+M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
+M.FOREST_JUMP_MS = 3000    -- forest items made at a jump, while the game is paused
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
@@ -236,6 +239,8 @@ local function jump(x, y)
   objects.step(clock, nil)
   objects.updateCols(x, y, true)
   objects.stepCols(clock, nil)
+  forest.retarget(cx, cy)
+  forest.step(clock, M.FOREST_JUMP_MS, 1e9)
   -- the collision rebuild waits for the swapped terrain (SWAP_QUIET_FRAMES), the game stays paused till after it
   st.jumpReload = true
   st.resumeIn = M.SWAP_QUIET_FRAMES + 2
@@ -297,6 +302,7 @@ local function start()
     else log('W', 'ticino', 'terrain material not found: ' .. bm[1]) end
   end
   objects.init(cfg, M.LEVEL, group)
+  forest.init(cfg, M.LEVEL, objects.markColDirty)
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, #(cfg.far or {})))
 end
@@ -304,6 +310,7 @@ end
 local function stop()
   if not st then return end
   objects.clear()
+  forest.clear()
   removeFiles(st.prevJob)
   removeFiles(st.curJob)
   if st.job then removeFiles(st.job) end
@@ -394,7 +401,7 @@ local function onUpdate(dtReal)
   end
   if not st.cell or st.cell[1] ~= cx or st.cell[2] ~= cy then
     st.cell = { cx, cy }
-    local q = objects.retarget(cx, cy)
+    local q = objects.retarget(cx, cy) + forest.retarget(cx, cy)
     st.objRec = { time = os.date('%H:%M:%S'), kind = 'tile', wx = cx, wy = cy, objsQueued = q }
     objects.updateFar(cx, cy, wcx, wcy, n)
     return            -- the window work waits for the next frame
@@ -429,6 +436,8 @@ local function onUpdate(dtReal)
   -- the objects
   if objects.pending() then
     objects.step(clock, M.OBJ_BUDGET_MS)
+  elseif forest.pending() then
+    forest.step(clock, M.FOREST_BUDGET_MS)
   elseif st.objRec then
     perfLine(st.objRec)
     st.objRec = nil
@@ -453,7 +462,7 @@ function M.status()
   if not st then return 'off' end
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
-           objects = s, last = st.perf[#st.perf], tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+           objects = s, forest = forest.stats(), last = st.perf[#st.perf], tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
 end
 
 -- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).

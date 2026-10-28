@@ -433,6 +433,7 @@ function M.setColRadius(r)
 end
 
 function M.colDirty() return S and S.colDirty end
+function M.markColDirty() if S then S.colDirty = true end end
 function M.colCell() return S and S.col.cell end
 
 -- Far ground: spawn the tiles within farRadius of (cx, cy) that are not there, delete the ones 2 beyond it,

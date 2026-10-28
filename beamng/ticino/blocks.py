@@ -140,7 +140,7 @@ def window_ter(zone, blocks_dir, nb, wx, wy, materials, z0=None):
         k = (bx, by)
         if k not in cache:
             p = os.path.join(blocks_dir, f"t_{bx}_{by}.bin")
-            if 0 <= bx < nb and 0 <= by < nb and os.path.exists(p):
+            if os.path.exists(p):       # block indices may be negative (region.py: the zones west and south)
                 raw = np.fromfile(p, "u1")
                 cache[k] = (raw[:2 * B * B].view("<u2").reshape(B, B), raw[2 * B * B:].reshape(B, B))
             else:
@@ -371,32 +371,42 @@ def write_far(zone, H, L, z0, maxh, materials, level_dir, src_mats, src_level, o
                         f = g.shape[0] / n
                         rr, cc = np.meshgrid((r * f).astype(int), (c * f).astype(int), indexing="ij")
                         col[sel] = g[np.clip(rr, 0, g.shape[0] - 1), np.clip(cc, 0, g.shape[1] - 1)][sel]
-            X, Y = np.meshgrid(np.arange(k) * step * zone.sq, np.arange(k) * step * zone.sq)
-            V = np.stack([X, Y, h], -1).reshape(-1, 3)
-            cols = np.concatenate([col.reshape(-1, 3), np.ones((k * k, 1))], 1)
-            ii = np.arange(k * k).reshape(k, k)
-            a, b, c2, d = ii[:-1, :-1].ravel(), ii[:-1, 1:].ravel(), ii[1:, :-1].ravel(), ii[1:, 1:].ravel()
-            T = np.concatenate([np.stack([a, b, d], 1), np.stack([a, d, c2], 1)])
-            # skirt: the border ring again 4 m lower, so no crack shows against the window or a coarser tile
-            ring = np.concatenate([ii[0, :], ii[1:, -1], ii[-1, -2::-1], ii[-2:0:-1, 0]])
-            Vs = V[ring] - [0, 0, 4.0]
-            base = len(V)
-            nr = len(ring)
-            j = np.arange(nr)
-            A, Bn = ring[j], ring[(j + 1) % nr]
-            As, Bs = base + j, base + (j + 1) % nr
-            Ts = np.concatenate([np.stack([A, As, Bs], 1), np.stack([A, Bs, Bn], 1)])
-            # written compiled (.cdae, as BeamNG.Earth writes its far tiles): the game converted every far .dae the
-            # first time it was shown, part of the 40 s of a quick travel into a new zone (2026-10-26)
-            C8 = np.clip(np.round(np.concatenate([cols, cols[ring]]) * 255), 0, 255).astype(np.uint8)
-            cdae.write(os.path.join(out_dir, f"f_{cx}_{cy}.cdae"), np.concatenate([V, Vs]), np.concatenate([T, Ts]),
-                       uvs=np.zeros((base + nr, 2)), material=FAR_MAT, colors=C8, object_name="farground")
+            far_cell(os.path.join(out_dir, f"f_{cx}_{cy}.cdae"), h, col, k, step, zone.sq)
             keys.append(f"{cx}_{cy}")
-    mats = [bng.material(FAR_MAT, base_color=[1, 1, 1, 1], vert_color=True, roughness=0.95,
-                         extra={"castShadows": False})]
-    bng.write_materials(os.path.join(out_dir, "far.materials.json"), mats)
+    bng.write_materials(os.path.join(out_dir, "far.materials.json"), [far_material()])
     log("far ground:", len(keys), "cells,", k - 1, "x", k - 1, "squares of", step * zone.sq, "m each")
     return keys
+
+
+def far_cell(path, h, col, k, step, sq):
+    """One far tile: k x k heights h and colours col (0..1) every step samples of sq m, from the cell's corner."""
+    X, Y = np.meshgrid(np.arange(k) * step * sq, np.arange(k) * step * sq)
+    V = np.stack([X, Y, h], -1).reshape(-1, 3)
+    cols = np.concatenate([col.reshape(-1, 3), np.ones((k * k, 1))], 1)
+    ii = np.arange(k * k).reshape(k, k)
+    a, b, c2, d = ii[:-1, :-1].ravel(), ii[:-1, 1:].ravel(), ii[1:, :-1].ravel(), ii[1:, 1:].ravel()
+    T = np.concatenate([np.stack([a, b, d], 1), np.stack([a, d, c2], 1)])
+    # skirt: the border ring again 4 m lower, so no crack shows against the window or a coarser tile
+    ring = np.concatenate([ii[0, :], ii[1:, -1], ii[-1, -2::-1], ii[-2:0:-1, 0]])
+    Vs = V[ring] - [0, 0, 4.0]
+    base = len(V)
+    nr = len(ring)
+    j = np.arange(nr)
+    A, Bn = ring[j], ring[(j + 1) % nr]
+    As, Bs = base + j, base + (j + 1) % nr
+    Ts = np.concatenate([np.stack([A, As, Bs], 1), np.stack([A, Bs, Bn], 1)])
+    # written compiled (.cdae, as BeamNG.Earth writes its far tiles): the game converted every far .dae the
+    # first time it was shown, part of the 40 s of a quick travel into a new zone (2026-10-26)
+    C8 = np.clip(np.round(np.concatenate([cols, cols[ring]]) * 255), 0, 255).astype(np.uint8)
+    if os.path.lexists(path):
+        os.remove(path)
+    cdae.write(path, np.concatenate([V, Vs]), np.concatenate([T, Ts]),
+               uvs=np.zeros((base + nr, 2)), material=FAR_MAT, colors=C8, object_name="farground")
+
+
+def far_material():
+    return bng.material(FAR_MAT, base_color=[1, 1, 1, 1], vert_color=True, roughness=0.95,
+                        extra={"castShadows": False})
 
 
 # ------------------------------------------------------------------ level copy
