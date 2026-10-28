@@ -1350,3 +1350,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   build_terrain now fills NaN heights from the nearest finite ones and logs where they were (nan_report), and each
   terrain post step (walls, lake, rivers, railway) prints how many NaN it left. Grep a zone's build log for "nan" in
   the terrain line before joining it.
+  The rebuild (run 40723783273) showed the source: "terrain post 0 left 909 NaN heights", i.e. walls.carve_terrain /
+  adjust_terrain_roadside (post 0) writes NaN at 909 vertices of ti_0_m1; not looked into yet (z0 240, maxHeight 874).
