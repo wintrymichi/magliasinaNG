@@ -1263,3 +1263,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Zones built before this fix (main run 40595329416) still carry it: drop strada_cantonale when merging them. The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
 - Zone ti_0_7's finish crashed in markings_rules (KeyError roads/markings/items.level.json): the group is made only
   by the v1.1 route paint (carryover, Malcantone). markings_rules makes it (and its SimGroup line in roads) when missing.
+- Zone ti_1_6 has no railway: the finish step catenary read railway/items.level.json and stopped (KeyError). It now
+  skips a level without a railway group. Other zones without a line will reach the same steps: expect more of these.

@@ -585,6 +585,9 @@ def catenary_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
+    if f"{lv}/main/MissionGroup/railway/items.level.json" not in zi.NameToInfo:
+        print("catenary: no railway in the level", flush=True)          # a zone without a line (ti_1_6)
+        return 0
     C, Ls = sleepers(zi, lv)
     kind = np.where(Ls < 2.25, 1.90, 2.60)
     print("sleepers: %d (%d metre gauge)" % (len(C), int((kind < 2).sum())), flush=True)
