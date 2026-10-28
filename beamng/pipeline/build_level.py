@@ -1097,6 +1097,13 @@ def props_group():
     print("props group made (the level had none)", flush=True)
 
 
+def nothing_there(e):
+    """An error of a step that met no data at all (concatenate of nothing, max of an empty array): a sparse Ticino zone
+    (mountains, a strip of Switzerland) has steps with nothing to do, and every such step crashed one at a time."""
+    return isinstance(e, ValueError) and any(m in str(e) for m in (
+        "need at least one array to concatenate", "zero-size array to reduction operation"))
+
+
 def finish(names=None, after=None):
     """The FINISH steps (all, or those named, or those after the step `after`) on the level folder."""
     import importlib
@@ -1130,14 +1137,17 @@ def finish(names=None, after=None):
                 code = 0
                 try:
                     getattr(importlib.import_module(mod), fn)(root, **kw)
-                except BaseException:
+                except BaseException as e:
                     import traceback
                     traceback.print_exc()
-                    code = 1
+                    code = 3 if ZONE and nothing_there(e) else 1
                 sys.stdout.flush()
                 sys.stderr.flush()
                 os._exit(code)
             status = os.waitpid(pid, 0)[1]
+            if os.WIFEXITED(status) and os.WEXITSTATUS(status) == 3:
+                print(f"== finish: {name} found nothing to work on in this zone, left out", flush=True)
+                continue
             if status:
                 raise SystemExit(f"finish step {name} failed (wait status {status})")
         else:
