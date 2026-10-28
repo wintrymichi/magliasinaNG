@@ -1284,3 +1284,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   right after the portal check when no tube is live.
 - Zone ti_0_3 (mountains) has no traffic island: sidewalks read roads/islands/items.level.json unguarded (KeyError).
   It now reads the group only when it is there (roundabouts and direction_signs already did).
+- Zone ti_m3_3 has no sign at all: signs_net wrote props_signs.dae from an empty MeshBuilder (concatenate of nothing).
+  With no sign it now writes no shape and no object (mb.empty() is a method: `if not mb.empty:` is always False).
