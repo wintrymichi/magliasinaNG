@@ -1282,3 +1282,5 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Zone ti_1_1 has no lake: water.lake_step stopped on "no WaterBlock LagoDiLugano" (SystemExit). It now skips the level.
 - Zone ti_m2_3: 3 tunnel lines, none with a live portal, and cut_meshes concatenated no tubes. tunnels_step now stops
   right after the portal check when no tube is live.
+- Zone ti_0_3 (mountains) has no traffic island: sidewalks read roads/islands/items.level.json unguarded (KeyError).
+  It now reads the group only when it is there (roundabouts and direction_signs already did).

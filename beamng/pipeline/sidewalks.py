@@ -265,7 +265,8 @@ def sidewalks_step(root, report=None):
 
     # what lies beside the pavements: every other top face of the road meshes within reach
     sw_tree = cKDTree(T.reshape(-1, 3)[:, :2])
-    surf = shape_tris(zi, lv, items + read_items(zi, f"{lv}/main/MissionGroup/roads/islands/items.level.json"))
+    isl = f"{lv}/main/MissionGroup/roads/islands/items.level.json"
+    surf = shape_tris(zi, lv, items + (read_items(zi, isl) if isl in zi.NameToInfo else []))
     CT, CL = [T], [np.full(len(T), LABELS.index("sidewalk"))]
     for m, t in surf.items():
         if m == SIDEWALK:
