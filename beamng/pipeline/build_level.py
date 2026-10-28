@@ -1099,7 +1099,10 @@ def props_group():
 
 def nothing_there(e):
     """An error of a step that met no data at all (concatenate of nothing, max of an empty array): a sparse Ticino zone
-    (mountains, a strip of Switzerland) has steps with nothing to do, and every such step crashed one at a time."""
+    (mountains, a strip of Switzerland) has steps with nothing to do, and every such step crashed one at a time. A group
+    the stages never made (no buildings at all in ti_m3_1: no buildings/items.level.json) is nothing there too."""
+    if isinstance(e, KeyError):
+        return "items.level.json" in str(e)
     return isinstance(e, ValueError) and any(m in str(e) for m in (
         "need at least one array to concatenate", "zero-size array to reduction operation"))
 

@@ -1321,7 +1321,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   so `W <= W.min() + 0.05` found no feet. The piece is skipped. Props DAEs carry the NaN too (not only roads/buildings).
 - Sparse zones (ti_m1_m1: one road shape, no unpaved road) crash in one finishing step after another on empty data
   (network_mesh.top_faces concatenated nothing). In a zone, build_level.finish now leaves out a step whose child ends on
-  "need at least one array to concatenate" / "zero-size array to reduction operation" (nothing_there, exit code 3) and
+  "need at least one array to concatenate" / "zero-size array to reduction operation" or a KeyError of a group's
+  items.level.json the stages never made (ti_m3_1: no buildings group) (nothing_there, exit code 3) and
   goes on; the Malcantone build still stops on them. A step that wrote some files before such an error keeps them.
 - Zones ti_m4_2, ti_m5_3, ti_m5_4 have Swiss terrain but no swissTLM3D road at all (network.nodes_of: max of nothing):
   mostly Italy, left out for now. About 25 zones of the 46 without buildings stop in build_rasters (no swissALTI3D).
