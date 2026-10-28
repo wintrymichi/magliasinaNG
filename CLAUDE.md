@@ -1257,6 +1257,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   roads reach far out of its terrain. terrain_top now clamps points to the terrain's edge (inside it nothing changes).
   Zones ti_m1_2 and ti_m2_2 (same row) both crashed at row -8539, ti_1_3 at -13659: the SAME absolute point south of
   every zone: ai_roads.build added the Malcantone's Street View route (strada_cantonale, road_profile.npz) to every
-  zone's AI roads. A zone now leaves it out unless it lies wholly in the zone's terrain (the network lines take it). The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
+  zone's AI roads. A zone now leaves it out unless it lies wholly in the zone's terrain (the network lines take it).
+  Zones built before this fix (main run 40595329416) still carry it: drop strada_cantonale when merging them. The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
 - Zone ti_0_7's finish crashed in markings_rules (KeyError roads/markings/items.level.json): the group is made only
   by the v1.1 route paint (carryover, Malcantone). markings_rules makes it (and its SimGroup line in roads) when missing.
