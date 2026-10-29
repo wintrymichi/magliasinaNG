@@ -361,7 +361,7 @@ def _write_kept(data, tris, masks, dst, compact=False, near=None):
         sels = []
         for _, tm, idx, ok, c in items:
             sel = idx[ok]
-            if not len(sel):
+            if not len(sel) and len(idx):       # (a block of no triangles in the source stays empty)
                 k = 0 if near is None else int(np.argmin((c[:, 0] - near[0]) ** 2 + (c[:, 1] - near[1]) ** 2))
                 sel = idx[k:k + 1].copy()       # a geometry needs a triangle: one of no area
                 sel[:, :, :] = sel[:, :1, :]

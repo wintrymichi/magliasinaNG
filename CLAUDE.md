@@ -1412,6 +1412,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   corner nearest the piece (a placeholder at idx[0] lay anywhere in the shape and opened collision cells there).
   ti_0_m1 before/after: same 22,558,815 triangles with the same world centres per group, z/ 3,050 -> 2,905 MB, DAEs
   1,829 -> 3,357 (p95 7.2 -> 3.3 MB; the 128 m skin tiles stay whole), one more tile and collision cell, slice 152 -> 227 s.
+  First run on all 87 zones (run 40881073781): ti_3_6 stopped in _write_kept (argmin of an empty sequence): a
+  <triangles> block with NO triangles in the source shape asked for the placeholder's nearest corner. An empty block
+  now stays empty.
 
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
