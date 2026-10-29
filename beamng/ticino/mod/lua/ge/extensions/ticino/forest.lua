@@ -19,6 +19,8 @@ M.PER_FRAME = 250                     -- items made or removed a frame at most
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
 M.CACHE_TILES = 120
+M.WAVE_NEAR = 1                       -- rings round the car's tile whose trees come whole before any farther tree
+M.WAVE_PART = 0.4                     -- share of its trees a farther tile gets in the first pass of the wave
 
 local S = nil
 
@@ -133,17 +135,35 @@ function M.retarget(cx, cy)
       keys[#keys + 1] = key
     end
   end
-  -- removals first (they free the frame for the near tiles), then the nearest tiles
-  table.sort(keys, function(a, b)
-    local ra, rb = want[a].share == 0, want[b].share == 0
-    if ra ~= rb then return ra end
-    return dist(a, c) < dist(b, c)
+  -- the wave (michi, 2026-10-29): the tiles up to WAVE_NEAR rings from the car get their whole share first, the
+  -- farther ones then WAVE_PART of it ring by ring, then the removals and thinnings, then the rest of the far shares
+  -- (a pass adds only the rows its share has over the last one: shown() is the same rows at a higher share)
+  local passes = {}
+  for _, key in ipairs(keys) do
+    local w, t = want[key], S.tiles[key]
+    local d = dist(key, c)
+    local cur = t and t.share or 0
+    if d <= M.WAVE_NEAR then
+      passes[#passes + 1] = { key, w.share, w.solid, 0, d }
+    elseif w.share <= cur then
+      passes[#passes + 1] = { key, w.share, w.solid, 2, d }
+    elseif w.share * M.WAVE_PART <= cur then
+      passes[#passes + 1] = { key, w.share, w.solid, 3, d }
+    else
+      passes[#passes + 1] = { key, w.share * M.WAVE_PART, w.solid, 1, d }
+      passes[#passes + 1] = { key, w.share, w.solid, 3, d }
+    end
+  end
+  table.sort(passes, function(a, b)
+    if a[4] ~= b[4] then return a[4] < b[4] end
+    if a[5] ~= b[5] then return a[5] < b[5] end
+    return a[1] < b[1]
   end)
   S.queue, S.qpos = {}, 1
-  for _, key in ipairs(keys) do
-    S.queue[#S.queue + 1] = { key = key, share = want[key].share, solid = want[key].solid, pos = 1 }
+  for _, p in ipairs(passes) do
+    S.queue[#S.queue + 1] = { key = p[1], share = p[2], solid = p[3], pos = 1, near = p[4] == 0 }
   end
-  return #keys
+  return #S.queue
 end
 
 -- Work on the queue: at most perFrame items made or removed (nil: PER_FRAME) and budgetMs (nil: no limit).
@@ -214,6 +234,26 @@ function M.step(clock, budgetMs, perFrame)
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+-- Are trees of the near rings (WAVE_NEAR) still queued?
+function M.nearPending() return S and S.qpos <= #S.queue and S.queue[S.qpos].near or false end
+
+-- Read (at most n) tree files of the ring just beyond RADIUS before the car gets there (a tile's JSON was read in
+-- the frame its first item was made). Returns the number read.
+function M.prefetch(cx, cy, n)
+  if not S then return 0 end
+  local R, done = M.RADIUS + 1, 0
+  for ty = cy - R, cy + R do
+    for tx = cx - R, cx + R do
+      local key = tx .. '_' .. ty
+      if S.has[key] and S.rows[key] == nil then
+        rowsOf(key)
+        done = done + 1
+        if done >= n then return done end
+      end
+    end
+  end
+  return done
+end
 
 function M.clear()
   if not S then return end

@@ -29,6 +29,7 @@ M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
 M.COL_FILE = '/levels/%s/col/c_%d_%d.bin'
 M.COL_XY_OFF_CM = 16384     -- collision.XY_OFF_CM
 M.COL_HYST_M = 16          -- the car's collision cell changes only this far past its edge
+M.WAVE_DEL_AT = 1.5        -- objects that went out of range are deleted after the new ones of the rings 0 and 1 are made
 
 -- keys of an entry that are not engine fields
 local SKIP = { class = true, p = true, q = true, s = true, g = true, r = true, name = true }
@@ -197,13 +198,32 @@ function M.retarget(cx, cy)
       for tx = old[1] - R, old[1] + R do visit(tx, ty) end
     end
   end
-  -- deletions first, then the colliders, then everything else; what was still queued stays queued after them
+  -- the order of the wave (michi, 2026-10-29: "prima le cose vicine, poi quelle lontane a onda"): the colliders and
+  -- the deletions of colliders first (physics), then the drawn objects tile ring by tile ring from the car outwards,
+  -- the deletions of the objects that only drew after the rings up to WAVE_DEL_AT, the outer rings last. What was
+  -- still queued for the last tile is sorted in again by its distance from the new one.
+  -- An entry's place: -1 when its collision changes, WAVE_DEL_AT when it only goes, else its tile's ring
+  local function prio(op)
+    local e, d = op[2], dist(op[3], op[4], new)
+    local want = d <= (e.r or 0)
+    local c1 = want and canCollide(e) and d <= colR
+    local l = S.live[op[1]]
+    if (l and l.col or false) ~= c1 then return -1 end
+    if not want then return M.WAVE_DEL_AT end
+    return d
+  end
   local q = {}
   for _, list in ipairs({ dels, cols, adds }) do
     for _, op in ipairs(list) do q[#q + 1] = op end
   end
-  local nCol = #dels + #cols
   for i = S.qpos, #S.queue do q[#q + 1] = S.queue[i] end
+  for i, op in ipairs(q) do op[5], op[6] = prio(op), i end
+  table.sort(q, function(a, b)
+    if a[5] ~= b[5] then return a[5] < b[5] end
+    return a[6] < b[6]
+  end)
+  local nCol = 0
+  while nCol < #q and q[nCol + 1][5] < 0 do nCol = nCol + 1 end
   S.queue, S.qpos = q, 1
   S.colQEnd = nCol
   S.cell = new
@@ -221,6 +241,7 @@ function M.step(clock, budgetMs)
     local op = q[S.qpos]
     S.qpos = S.qpos + 1
     local key, e = op[1], op[2]
+    local heavy = false
     local d = dist(op[3], op[4], S.cell)
     local want = d <= (e.r or 0)
     local col = want and canCollide(e) and d <= colR
@@ -238,6 +259,7 @@ function M.step(clock, budgetMs)
       if dts > M.SLOW_SPAWN_MS then
         log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
       end
+      heavy = dts > M.SLOW_SPAWN_MS
       if ok and id then
         S.live[key] = { id = id, col = col }
         if col then S.colDirty = true end
@@ -247,7 +269,8 @@ function M.step(clock, budgetMs)
         if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
       end
     end
-    if budgetMs and clock() - t0 > budgetMs then break end
+    -- one heavy object a frame: a second one after it would add its cost to the same frame
+    if heavy or (budgetMs and clock() - t0 > budgetMs) then break end
   end
   return S.qpos > #q
 end
@@ -594,6 +617,11 @@ function M.stats()
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+-- Are objects of the rings up to d (tiles from the car's) still queued? (the queue is sorted by ring: the head tells)
+function M.nearPending(d)
+  if not S or S.qpos > #S.queue then return false end
+  return (S.queue[S.qpos][5] or 0) <= d
+end
 -- Are colliders (and deletions) of the last retarget still queued? (they come first in the queue)
 function M.collidersPending() return S and S.qpos <= (S.colQEnd or 0) end
 

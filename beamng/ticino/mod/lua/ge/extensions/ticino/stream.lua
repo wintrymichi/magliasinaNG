@@ -36,6 +36,7 @@ local M = {}
 M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
+M.NEAR_RINGS = 1           -- the objects of the tiles this near the car's (Chebyshev) come before the window's files
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
 M.FOREST_JUMP_MS = 3000    -- forest items made at a jump, while the game is paused
@@ -181,7 +182,7 @@ local function perfLine(t)
   st.perf[#st.perf + 1] = t
   local cols = { 'time', 'kind', 'wx', 'wy', 'buildMs', 'buildFrames', 'applyMs', 'grassMs', 'farMs', 'worstFrameMs',
                  'objsQueued', 'reloadMs', 'live', 'colliders', 'colCells', 'afterReloadWorstMs', 'afterReloadSlowFrames',
-                 'baseMs', 'posMs', 'terMs', 'postMs', 'next1Ms', 'next2Ms', 'next3Ms', 'next4Ms' }
+                 'baseMs', 'posMs', 'terMs', 'postMs', 'next1Ms', 'next2Ms', 'next3Ms', 'next4Ms', 'nearMs' }
   local lines = { table.concat(cols, ',') }
   for _, r in ipairs(st.perf) do
     local v = {}
@@ -616,7 +617,7 @@ local function onUpdate(dtReal)
     st.act = 'retarget'
     st.cell = { cx, cy }
     local q = objects.retarget(cx, cy) + forest.retarget(cx, cy)
-    st.objRec = { time = os.date('%H:%M:%S'), kind = 'tile', wx = cx, wy = cy, objsQueued = q }
+    st.objRec = { time = os.date('%H:%M:%S'), kind = 'tile', wx = cx, wy = cy, objsQueued = q, t0 = clock() }
     objects.updateFar(cx, cy, wcx, wcy, n)
     return            -- the window work waits for the next frame
   end
@@ -639,6 +640,22 @@ local function onUpdate(dtReal)
     end
   else
     st.dirtySince = nil
+  end
+  -- the near rings first (michi, 2026-10-29, "a onda"): the objects and trees of the car's tile and the ones beside it
+  -- come before the next window's files (a window starts moving with the car still 2 tiles from its edge) and before
+  -- anything farther
+  if objects.nearPending(M.NEAR_RINGS) then
+    st.act = 'near objects'
+    objects.step(clock, M.OBJ_BUDGET_MS)
+    return
+  end
+  if forest.nearPending() then
+    st.act = 'near forest'
+    forest.step(clock, M.FOREST_BUDGET_MS)
+    return
+  end
+  if st.objRec and st.objRec.t0 and not st.objRec.nearMs then
+    st.objRec.nearMs = clock() - st.objRec.t0
   end
   -- the window
   local tx, ty = follow(cx, wcx, n), follow(cy, wcy, n)
@@ -669,7 +686,7 @@ local function onUpdate(dtReal)
     st.objRec = nil
   elseif not objects.farPending() then
     st.act = 'prefetch'
-    objects.prefetch(1)
+    if objects.prefetch(1) == 0 then forest.prefetch(cx, cy, 1) end
   else
     st.act = 'far'
     objects.stepFar(clock, M.FAR_BUDGET_MS)

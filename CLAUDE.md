@@ -1395,6 +1395,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - `gh api --paginate` on release assets follows a next link with repositories/<id>/..., which the cloud proxy refuses
   (403): page by hand (&page=N).
 
+- Loading in a wave (michi, 2026-10-29, "prima le cose vicine, poi quelle lontane a onda"): objects.retarget queued the
+  drawn objects in the raster order of the tiles, so a building 6 tiles out could be made before the wall beside the
+  car, and while the next terrain window's files were written (many frames) no object was made at all. Now the queue
+  is sorted by ring (colliders first, deletions after ring 1), forest.retarget makes rings 0-1 whole, then the far
+  rings at WAVE_PART of their share, then the rest, and stream.lua makes rings 0-1 before the window's files. The
+  forest rows of the next ring are read in idle frames (they were read in the frame of the first tree). Checked
+  only outside the game (tests/wave_order.lua); not measured on the PC yet. There is no luajit binary in the cloud
+  container: `pip install lupa` gives LuaJIT 2.1 (`from lupa import luajit21`).
+
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
 - Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py
