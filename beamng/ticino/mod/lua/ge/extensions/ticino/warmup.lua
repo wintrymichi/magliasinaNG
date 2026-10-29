@@ -7,6 +7,8 @@
 -- (2) One small double-sided quad per sign/fuel material (warmup_materials.json) in front of the camera for
 --     TEX_FRAMES frames, so the game cooks their textures (412 sign PNGs, 0.05-0.14 s each, ~4 s in all).
 -- Tried on michi's PC (2026-10-28): 10,212 shapes in 968 s, 0 errors; 424 materials in ~4 s.
+-- Since 2026-10-29 the zones ship their shapes compiled (.cdae, dae2cdae.py): the lists hold only what is left as .dae
+-- (the game's own props), so (1) is short; (2) is still needed.
 -- All of Ticino (region_base.py) has a list per zone (warmup/<zone>.json): only the zones whose core lies within
 -- RADIUS_M of the camera are warmed (all of them would take hours). Drive to another part and run it again there.
 -- Progress: the log and <user folder>/ticino_warmup/progress.txt. Unloads itself when done.

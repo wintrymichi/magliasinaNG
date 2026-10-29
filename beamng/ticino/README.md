@@ -44,7 +44,9 @@ cut into blocks and streamed, must look and drive like v3.1.1.
 - `mod/lua/ge/extensions/ticino/`: `stream.lua` (the extension `ticino_stream`), `terwin.lua` (window and base maps
   from the blocks), `png.lua`, `objects.lua`. `mod/scripts/ticino/modScript.lua` keeps the extension loaded.
 - `collision.py`: the collision cells (needs `fast_simplification`); `cdae.py`: the far ground as `.cdae` (writer from BeamNG.Earth).
-- `tests/test_cdae.py` (the writer against shapes the game compiled), `tests/check_blocks.py`, `tests/test_lua.py` (needs `luajit`), `tests/sim_stream.lua` (the mod driven at 120 km/h
+- `dae2cdae.py`: every shape of the zones compiled to `.cdae` at build time (see "Shapes shipped compiled").
+- `tests/test_cdae.py` (the writer against shapes the game compiled), `tests/test_dae2cdae.py` (compiled shapes read
+  back against their `.dae`, and against the game's own cache files with `--golden`), `tests/shape_file.lua`, `tests/check_blocks.py`, `tests/test_lua.py` (needs `luajit`), `tests/sim_stream.lua` (the mod driven at 120 km/h
   outside the game, with the game API stubbed).
 
 ## Checked in the cloud (2026-10-26, v3.1.1 zip)
@@ -108,13 +110,32 @@ with it every move used the helper's files (0 ms of Lua, worst Lua frame 36-108 
 now), the jump waited 122-382 ms for it (a cold helper reads the blocks from the zips), a window took the helper
 30-130 ms. Helper killed halfway: the next moves were made in Lua again, as before.
 
+## Shapes shipped compiled (.cdae, 2026-10-29)
+
+The game imports a Collada `.dae` the first time it shows it (about 0.1 s, the biggest up to 46 s) and keeps a
+compiled copy in `<user>/temp/.../*.cdae`. With 13,707 `.dae` (27 GB of XML) in the zones that was 30 s of stutter in
+every new zone, or a warm-up of 968 s for one region (HANDOFF of 2026-10-28, point 3). Now `region_slice.py` compiles
+every shape of a zone with `dae2cdae.py` after the collision cells have read them, and ships only the `.cdae`; the
+base compiles the shared shapes and points the scene at the slices' `.cdae`. The game loads a `.cdae` as it loads its
+own cache: no import, no warm-up (`warmup/<zone>.json` lists only what is left as `.dae`: the game's own props).
+
+- What is compiled: the shapes `bng.write_dae` writes (one node per detail level `<name>_a<size>`, one triangle list per
+  material, normals, uvs, vertex colours): all the zones' shapes. Left as `.dae`: forest shapes (`managedItemData.json`)
+  and shapes with prebaked imposters beside them (`x.dae.imposter.dds`), anything else the parser does not know.
+- Same picture: the same triangles, detail levels and sizes, materials, normals, uvs and colours (`tests/test_dae2cdae.py`
+  on a whole zone: 709 of 709 identical), laid out as the game lays out its own cache (`cdae.py`).
+- Smaller: zone ti_0_8, 396 MB of `.dae` -> 190 MB of `.cdae` (in the zip 74 -> 86 MB: binary floats compress less).
+  709 shapes in 8 s on 4 cores.
+- Mixed installs: `objects.lua` takes the `.cdae` when it is there and the `.dae` when a tile names a `.cdae` that is not
+  installed (an older zone zip beside a newer base).
+- By hand: `python dae2cdae.py <level folder>` (or `--one in.dae out.cdae`).
+
 ## Not done yet (phase 1 and later)
 
 - Floating origin (rebase every ~15 km): not needed for the Malcantone (12 km), needed for Ticino (62 x 93 km).
 - Forest streaming (840k items are one Forest today), AI navgraph clipped to the window and a traffic guard.
 - The pipeline building a zone block by block (today: cut a finished level), new zones, the detail modules of the plan
   (guard rails and walls from LiDAR, lamps, tunnels).
-- `.cdae` shipped in the zip instead of DAE (no conversion in the game).
 - Big map, time trials and spawn points of a zone set in the mod.
 
 Credits: the terrain swap, ground cover flush, runtime objects and pause follow BeamNG.Earth (TecnaGamer, MIT,
