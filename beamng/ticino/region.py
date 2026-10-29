@@ -49,6 +49,10 @@ VANILLA_SHAPES = os.path.join(HERE, "..", "dati", "vanilla_shape_materials.json"
 VANILLA_REL = "art/shapes/props/vanilla.materials.json"
 
 
+# a streamed shape of a single object bigger than this is cut into squares of SPLIT_M (half a 384 m tile): michi's
+# wave, 2026-10-29 (stream.lua makes the near rings first, and a small piece costs a quarter of a big one)
+SPLIT_BYTES = 2_000_000
+SPLIT_M = 192.0
 WARM_MATERIALS = ("mp_ch_", "mp_fuel_")   # sign and fuel station materials (412 sign PNGs cooked while driving)
 
 
@@ -312,16 +316,13 @@ _TRI = re.compile(rb'(<triangles[^>]*count=")(\d+)("[^>]*>)(.*?)(<p>)([^<]*)(</p
 _INPUT = re.compile(rb'<input semantic="([A-Z]+)" source="#([^"]+)" offset="(\d+)"')
 
 
-def clip_dae(src, dst, pos, q, scale, rect):
-    """Writes src to dst with the triangles whose centre (in the world, the object at pos / q / scale) lies in rect
-    (x0, y0, x1, y1). Returns the share kept (1.0: dst is a link to src; 0: nothing written)."""
-    data = open(src, "rb").read()
+def _tri_blocks(data, pos, q, scale):
+    """Every <triangles> block of a DAE: (geometry match, triangles match, index array (n, 3, stride), centres (n, 3)
+    of its triangles in the world, the object at pos / q / scale)."""
     R = blocks_rot(q)
     sc = np.asarray(scale if scale is not None else [1, 1, 1], np.float64)
     p0 = np.asarray(pos, np.float64)
-    x0, y0, x1, y1 = rect
-    total = kept = 0
-    out, last = [], 0
+    out = []
     for gm in _GEOM.finditer(data):
         geo = gm.group(0)
         vm = re.search(rb'<vertices id="[^"]+">\s*<input semantic="POSITION" source="#([^"]+)"', geo)
@@ -334,41 +335,168 @@ def clip_dae(src, dst, pos, q, scale, rect):
         if R is not None:
             P = P @ R.T
         P = P + p0
-        parts, glast = [], 0
         for tm in _TRI.finditer(geo):
             inputs = _INPUT.findall(tm.group(4) + tm.group(0))
             stride = max(int(o) for _, _, o in inputs) + 1
             voff = next(int(o) for s, _, o in inputs if s == b"VERTEX")
             idx = np.array(tm.group(6).split(), np.int64).reshape(-1, 3, stride)
-            c = P[idx[:, :, voff]].mean(1)
-            ok = (c[:, 0] >= x0) & (c[:, 0] < x1) & (c[:, 1] >= y0) & (c[:, 1] < y1)
-            total += len(ok)
-            kept += int(ok.sum())
-            if ok.all():
-                continue
+            out.append((gm, tm, idx, P[idx[:, :, voff]].mean(1)))
+    return out
+
+
+def _write_kept(data, tris, masks, dst, compact=False, near=None):
+    """Writes data to dst with only the triangles of each block whose mask is True (masks parallel to tris).
+    compact: each geometry keeps only the vertices (and normals, uvs, colours) its kept triangles use: a shape cut
+    into many pieces would otherwise carry all its vertices in every piece. near (x, y): the triangle of no area a
+    block with nothing kept needs stands on the corner of its triangle nearest to it (in the piece, not somewhere
+    in the whole shape, where the collision cells would count it)."""
+    out, last = [], 0
+    by_geo = collections.defaultdict(list)
+    for (gm, tm, idx, c), ok in zip(tris, masks):
+        by_geo[gm.start()].append((gm, tm, idx, ok, c))
+    for g0 in sorted(by_geo):
+        items = by_geo[g0]
+        gm = items[0][0]
+        geo = gm.group(0)
+        sels = []
+        for _, tm, idx, ok, c in items:
             sel = idx[ok]
             if not len(sel):
-                sel = idx[:1].copy()            # a geometry needs a triangle: one of no area
+                k = 0 if near is None else int(np.argmin((c[:, 0] - near[0]) ** 2 + (c[:, 1] - near[1]) ** 2))
+                sel = idx[k:k + 1].copy()       # a geometry needs a triangle: one of no area
                 sel[:, :, :] = sel[:, :1, :]
+            sels.append(sel)
+        remap = _compact(geo, items, sels) if compact else None
+        if remap is None and all(it[3].all() for it in items):
+            continue
+        parts, glast = [], 0
+        for (_, tm, idx, ok, _), sel in zip(items, sels):
+            if remap is None and ok.all():
+                continue
+            if remap is not None:
+                sel = sel.copy()
+                for off, m in remap["offsets"].items():
+                    sel[:, :, off] = m[sel[:, :, off]]
             body = " ".join(map(str, sel.reshape(-1).tolist())).encode()
             parts.append(geo[glast:tm.start()])
             parts.append(tm.group(1) + str(len(sel)).encode() + tm.group(3) + tm.group(4) + tm.group(5) + body
                          + tm.group(7))
             glast = tm.end()
-        if parts:
-            parts.append(geo[glast:])
-            out.append(data[last:gm.start()])
-            out.append(b"".join(parts))
-            last = gm.end()
+        parts.append(geo[glast:])
+        geo2 = b"".join(parts)
+        if remap is not None:
+            for sid, keep in remap["sources"].items():
+                geo2 = _cut_source(geo2, sid, keep)
+        out.append(data[last:gm.start()])
+        out.append(geo2)
+        last = gm.end()
+    out.append(data[last:])
+    with wopen(dst, "wb") as f:
+        f.write(b"".join(out))
+
+
+def _compact(geo, items, sels):
+    """{"offsets": {offset: old -> new index array}, "sources": {source id: old indices kept}} of a geometry whose
+    kept triangles are sels, or None when it cannot be compacted (a source read at offsets of different meaning)."""
+    vm = re.search(rb'<vertices id="([^"]+)">(.*?)</vertices>', geo, re.S)
+    if not vm or len(re.findall(rb"<input ", vm.group(2))) != 1:
+        return None
+    pos_src = re.search(rb'source="#([^"]+)"', vm.group(2)).group(1)
+    src_of = {}                                  # offset -> source id
+    for it in items:
+        tm = it[1]
+        for sem, sid, off in _INPUT.findall(tm.group(4) + tm.group(0)):
+            sid = pos_src if sem == b"VERTEX" else sid
+            if src_of.setdefault(int(off), sid) != sid:
+                return None
+    if any(not re.search(_SRC % re.escape(sid), geo, re.S) for sid in set(src_of.values())):
+        return None                              # a source with no float array and accessor as bng.write_dae writes
+    used = collections.defaultdict(list)
+    for sel in sels:
+        for off, sid in src_of.items():
+            used[sid].append(sel[:, :, off].reshape(-1))
+    sources, maps = {}, {}
+    for sid, lists in used.items():
+        keep = np.unique(np.concatenate(lists))
+        m = np.full(int(keep.max()) + 1, -1, np.int64)
+        m[keep] = np.arange(len(keep))
+        sources[sid], maps[sid] = keep, m
+    return {"offsets": {off: maps[sid] for off, sid in src_of.items()}, "sources": sources}
+
+
+_SRC = rb'(<source id="%s">\s*<float_array[^>]*count=")(\d+)("[^>]*>)([^<]*)(</float_array>.*?<accessor[^>]*count=")(\d+)("[^>]*stride=")(\d+)'
+
+
+def _cut_source(geo, sid, keep):
+    """geo with the float array of source sid cut to the elements keep (its accessor's stride)."""
+    m = re.search(_SRC % re.escape(sid), geo, re.S)
+    if not m:
+        raise ValueError(f"source {sid!r} not found")
+    stride = int(m.group(8))
+    vals = m.group(4).split()
+    A = np.array(vals, dtype=object).reshape(-1, stride)[keep]
+    body = b" ".join(A.reshape(-1).tolist())
+    rep = (m.group(1) + str(A.size).encode() + m.group(3) + body + m.group(5) + str(len(A)).encode() + m.group(7)
+           + m.group(8))
+    return geo[:m.start()] + rep + geo[m.end():]
+
+
+def _in_rect(c, rect):
+    x0, y0, x1, y1 = rect
+    return (c[:, 0] >= x0) & (c[:, 0] < x1) & (c[:, 1] >= y0) & (c[:, 1] < y1)
+
+
+def clip_dae(src, dst, pos, q, scale, rect):
+    """Writes src to dst with the triangles whose centre (in the world, the object at pos / q / scale) lies in rect
+    (x0, y0, x1, y1). Returns the share kept (1.0: dst is a link to src; 0: nothing written)."""
+    data = open(src, "rb").read()
+    tris = _tri_blocks(data, pos, q, scale)
+    masks = [_in_rect(c, rect) for _, _, _, c in tris]
+    total = sum(len(m) for m in masks)
+    kept = sum(int(m.sum()) for m in masks)
     if total == 0 or kept == 0:
         return 0.0
     if kept == total:
         link_or_copy(src, dst)
         return 1.0
-    out.append(data[last:])
-    with wopen(dst, "wb") as f:
-        f.write(b"".join(out))
+    _write_kept(data, tris, masks, dst)
     return kept / total
+
+
+def split_dae(src, dst, pos, q, scale, rect, x0, y0, step):
+    """The triangles of src in rect, cut into squares of step m from (x0, y0) by their centres: one file per square,
+    dst with _q<i>_<j> before .dae. Returns [((i, j), path, triangles)] ([] when nothing lies in rect), or the share
+    kept as clip_dae (dst written as clip_dae writes it) when the kept triangles reach less than a square across (a
+    128 m skin tile: cutting it gains nothing)."""
+    data = open(src, "rb").read()
+    tris = _tri_blocks(data, pos, q, scale)
+    masks = [_in_rect(c, rect) for _, _, _, c in tris]
+    cs = [c[m] for (_, _, _, c), m in zip(tris, masks)]
+    cs = np.concatenate(cs) if cs else np.zeros((0, 3))
+    if len(cs) and (cs[:, :2].max(0) - cs[:, :2].min(0)).max() < step:
+        total = sum(len(m) for m in masks)
+        if len(cs) == total:
+            link_or_copy(src, dst)
+            return 1.0
+        _write_kept(data, tris, masks, dst)
+        return len(cs) / total
+    lab = []
+    for _, _, _, c in tris:
+        i = np.floor((c[:, 0] - x0) / step).astype(np.int64)
+        j = np.floor((c[:, 1] - y0) / step).astype(np.int64)
+        i[~_in_rect(c, rect)] = np.iinfo(np.int64).min
+        lab.append((i, j))
+    keys = sorted({(int(a), int(b)) for i, j in lab for a, b in zip(i.tolist(), j.tolist())
+                   if a != np.iinfo(np.int64).min})
+    base = dst[:-4] if dst.lower().endswith(".dae") else dst
+    out = []
+    for a, b in keys:
+        masks = [(i == a) & (j == b) for i, j in lab]
+        n = sum(int(m.sum()) for m in masks)
+        path = f"{base}_q{a}_{b}.dae"
+        _write_kept(data, tris, masks, path, compact=True, near=(x0 + (a + 0.5) * step, y0 + (b + 0.5) * step))
+        out.append(((a, b), path, n))
+    return out
 
 
 def blocks_rot(q):
@@ -418,6 +546,7 @@ def stream_zone(grid, s, dst, tiles, kept, stats, roads, shapes=True):
             pos = o.get("position", [0, 0, 0])
             shape = o.get("shapeName", "")
             lp = None
+            pieces = None
             x, y = pos[0], pos[1]
             if not shapes and r is not None and cls in STREAMED:
                 continue
@@ -435,10 +564,33 @@ def stream_zone(grid, s, dst, tiles, kept, stats, roads, shapes=True):
                     if not s.in_core(x, y):
                         continue
                     lp = f"/levels/{LEVEL}/{relp}"
+                elif shapes and os.path.getsize(s.path(shape)) > SPLIT_BYTES and isinstance(pieces := split_dae(
+                        s.path(shape), os.path.join(dst, "z", s.name, *relp.split("/")), pos,
+                        quat_conj_from_rows(o["rotationMatrix"]) if "rotationMatrix" in o else None, o.get("scale"),
+                        s.core, grid.x0, grid.y0, SPLIT_M), list):
+                    # a heavy shape (a 384 / 1,152 m chunk of buildings, roads, walls...) in squares of SPLIT_M, each
+                    # its own object of the tile it lies in: the mod makes them ring by ring, a quarter of the cost
+                    # each (the wave of stream.lua; one big shape took up to 110 ms to make, 375 ms to draw first)
+                    stats["split" if pieces else "outside"] += 1
+                    stats["split_pieces"] += len(pieces)
+                    if pieces:
+                        own_shapes.add(shape)
+                    base = relp[:-4] if relp.lower().endswith(".dae") else relp
+                    for (a, b), _, _ in pieces:
+                        cx, cy = s.core_cell(*grid.cell_of(grid.x0 + (a + 0.5) * SPLIT_M, grid.y0 + (b + 0.5) * SPLIT_M))
+                        e = entry(o, rel, r, f"/levels/{LEVEL}/z/{s.name}/{base}_q{a}_{b}.dae")
+                        if e.get("name"):
+                            e["name"] = f"{e['name']}_q{a}_{b}"
+                        tiles.setdefault((cx, cy), []).append(e)
+                        stats["streamed"] += 1
+                    continue
                 else:
                     q = quat_conj_from_rows(o["rotationMatrix"]) if "rotationMatrix" in o else None
                     out = os.path.join(dst, "z", s.name, *relp.split("/"))
-                    share = clip_dae(s.path(shape), out, pos, q, o.get("scale"), s.core)
+                    if isinstance(pieces, float):         # split_dae found it small and clipped it already
+                        share = pieces
+                    else:
+                        share = clip_dae(s.path(shape), out, pos, q, o.get("scale"), s.core)
                     stats["clipped" if 0 < share < 1 else "whole" if share else "outside"] += 1
                     if share == 0:
                         continue

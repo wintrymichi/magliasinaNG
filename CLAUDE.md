@@ -1404,6 +1404,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   only outside the game (tests/wave_order.lua); not measured on the PC yet. There is no luajit binary in the cloud
   container: `pip install lupa` gives LuaJIT 2.1 (`from lupa import luajit21`).
 
+- Phase 2 of the wave (region.split_dae, 2026-10-29): a streamed single-use shape over SPLIT_BYTES (2 MB) whose kept
+  triangles reach a 192 m square or more is cut into 192 m squares, each its own tile entry (z/<zone>/<shape>_q<i>_<j>.dae).
+  clip_dae keeps ALL vertices of a geometry: cutting into many pieces that way would carry every vertex in every piece,
+  so the pieces are compacted (each source cut to the indices its triangles use; sources must look as bng.write_dae
+  writes them, else that geometry is not compacted). A piece with no triangle of some block gets one of no area on the
+  corner nearest the piece (a placeholder at idx[0] lay anywhere in the shape and opened collision cells there).
+  ti_0_m1 before/after: same 22,558,815 triangles with the same world centres per group, z/ 3,050 -> 2,905 MB, DAEs
+  1,829 -> 3,357 (p95 7.2 -> 3.3 MB; the 128 m skin tiles stay whole), one more tile and collision cell, slice 152 -> 227 s.
+
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
 - Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py
