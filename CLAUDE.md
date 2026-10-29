@@ -95,6 +95,15 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   code before hunting a crash in beamng.log. Fewer, bigger files per zone would shorten it (5 region zips with 31,896
   files mounted in under 1 s).
 
+- All Ticino (ticino-all base, 2026-10-29, 0.40.4): the level loaded, then the game froze for good in its first frame
+  after the vehicle spawn (one core at 100 %, no disk, ~5 min, then Windows closed it: "Application Hang"). Cause:
+  city.sites.json with 122,111 parking spots (58 MB); with the spots removed the level ran. region_net.merge_sites
+  keeps MAX_PARKING. Found by elimination with empty user-folder overrides (AI roads, SFX emitters, water, vegetation
+  all innocent) after the streamer itself was cleared twice: tests/sim_stream.lua with the zones' real files (the
+  first jump took 2.3 s of Lua) and a traced copy of the streamer whose onUpdate never ran. beamng.log is buffered
+  and cut off at a freeze: write a trace file of your own (rewrite it after every step) instead of trusting its
+  last line. A user-folder file of 0 bytes replaces a level's items.level.json for such a test.
+
 - Replays keep the time of day they were recorded at; core_environment.setTimeOfDay during playback works only with the
   replay paused. For sunset or night shots record the replay at that hour (tod 0.245 golden sunset, 0.27 dusk, 0.29
   lamps on with an orange sky, 0.5 full night, 0.85 morning) ("Video cinematico con pianoforte", 2026-10-21).
