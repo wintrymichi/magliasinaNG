@@ -87,6 +87,14 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
   long step ends.
 
+- 88 Ticino zips (ticino-all, ~596,000 files, 49 GB) in mods (2026-10-29, 0.40.4): the first start after installing
+  them blocked the main thread while core_modmanager.initDB mounted the new mods; after ~70 s Windows reported it as
+  "not responding" and it was closed (launcher log: exit 0xCFFFFFFF STATUS_APPLICATION_HANG; beamng.log cut off in
+  the middle of the mountEntry lines, so it reads like a crash). Not a crash: started again, it reached the menu
+  (michi). Wait through "not responding" on the first start with many new mods; read beamng-launcher.log for the exit
+  code before hunting a crash in beamng.log. Fewer, bigger files per zone would shorten it (5 region zips with 31,896
+  files mounted in under 1 s).
+
 - Replays keep the time of day they were recorded at; core_environment.setTimeOfDay during playback works only with the
   replay paused. For sunset or night shots record the replay at that hour (tod 0.245 golden sunset, 0.27 dusk, 0.29
   lamps on with an orange sky, 0.5 full night, 0.85 morning) ("Video cinematico con pianoforte", 2026-10-21).
