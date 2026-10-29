@@ -28,6 +28,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks  # noqa: E402
 import collision  # noqa: E402
+import dae2cdae  # noqa: E402
 import region  # noqa: E402
 import zipremote  # noqa: E402
 from blocks import LEVEL, log, wopen  # noqa: E402
@@ -279,6 +280,18 @@ def main():
         info["previews"] = [f"{LEVEL}_preview.jpg"]
     with wopen(os.path.join(dst, "info.json"), "w") as f:
         json.dump(info, f, indent=2)
+
+    # the shared shapes compiled to .cdae as the slices expect (dae2cdae.compilable), and the scene's references to
+    # the shapes the slices compiled under z/<zone>/ (static groups: landmarks) pointed at the .cdae
+    dae2cdae.compile_level(dst, f"/levels/{LEVEL}", workers=4, log=log)
+    zkept = {z: set(slices[z]["cdae"]["kept"]) for z in zones if slices[z].get("cdae")}
+
+    def zpath(p):
+        parts = p.split("/")
+        if len(parts) > 4 and parts[1:4] == ["levels", LEVEL, "z"] and parts[4] in zkept and p not in zkept[parts[4]]:
+            return p[:-4] + ".cdae"
+        return None
+    log("scene references to compiled zone shapes:", dae2cdae.rewrite_refs(dst, zpath))
 
     stream = {
         "version": 2, "zone": "ticino:%d zones" % len(zones), "level": LEVEL,

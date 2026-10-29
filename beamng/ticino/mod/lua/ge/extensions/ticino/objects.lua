@@ -62,6 +62,7 @@ function M.init(cfg, level, group)
   S.col = { size = cfg.colCell, R = (cfg.colRadius or 1) + M.COL_LAZY, has = {}, live = {}, cell = nil, queue = {},
             types = cfg.colGroundTypes or {} }
   S.noColShape = {}
+  S.shapeFile = {}
   -- the cells of 64 m (stream.json colCell; colDir if not col: the rebuild cost follows the cells' triangles)
   M.COL_FILE = '/levels/%s/' .. (cfg.colDir or 'col') .. '/c_%d_%d.bin'
   if cfg.colCell and cfg.colCell < 128 then M.COL_HYST_M = cfg.colCell / 8 end
@@ -87,11 +88,35 @@ local function tile(cx, cy)
   return t or nil
 end
 
+-- The shape file to load: the zones' shapes are compiled to .cdae at build time (dae2cdae.py: no Collada import while
+-- driving). Should a tile name a .cdae that is not installed (an older zone zip beside a newer one) the .dae is
+-- taken, and a .dae with a .cdae beside it takes the .cdae. Cached by name.
+local function shapeFile(name)
+  local v = S.shapeFile[name]
+  if v then return v end
+  v = name
+  if FS and type(name) == 'string' then
+    local low = name:lower()
+    if low:sub(-5) == '.cdae' then
+      if not FS:fileExists(name) and FS:fileExists(name:sub(1, -6) .. '.dae') then v = name:sub(1, -6) .. '.dae' end
+    elseif low:sub(-4) == '.dae' then
+      if FS:fileExists(name:sub(1, -5) .. '.cdae') then v = name:sub(1, -5) .. '.cdae' end
+    end
+  end
+  S.shapeFile[name] = v
+  return v
+end
+M.shapeFile = function(name) return shapeFile(name) end
+
 local function spawn(e, col)
   local o = createObject(e.class)
   if not o then return nil end
   for k, v in pairs(e) do
-    if not SKIP[k] then o:setField(k, 0, fieldStr(v)) end
+    if k == 'shapeName' then
+      o:setField(k, 0, shapeFile(v))
+    elseif not SKIP[k] then
+      o:setField(k, 0, fieldStr(v))
+    end
   end
   if e.class == 'TSStatic' then
     o:setField('collisionType', 0, col and (e.collisionType or 'Visible Mesh Final') or 'None')

@@ -7,7 +7,8 @@ A slice holds, under levels/ticino/:
     blocks/terrain/t_<bx>_<by>.bin, blocks/base/<key>_<bx>_<by>.rgb   the zone's blocks (its core and the border
                                                                       blocks the plan gives it)
     far/f_<cx>_<cy>.cdae                                              the far ground of those blocks
-    z/<zone>/...                                                      the zone's shapes, clipped to its core
+    z/<zone>/...                                                      the zone's shapes, clipped to its core,
+                                                                      compiled to .cdae (dae2cdae.py)
     tiles/o_<cx>_<cy>.json, tiles/t_<cx>_<cy>.trees.json             the streamed objects and trees of its core
     col/c_<i>_<j>.bin                                                 the collision cells of its core
     z/<zone>/slice.json                                               what region_base.py puts into stream.json
@@ -25,6 +26,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks  # noqa: E402
+import dae2cdae  # noqa: E402
 import region  # noqa: E402
 from blocks import LEVEL, log, wopen  # noqa: E402
 
@@ -105,6 +107,25 @@ def main():
     keys, _, cstats = collision.build(grid, tiles, dst, LEVEL, os.path.join(dst, "col"), workers=a.workers,
                                       types=plan["groundTypes"], gtypes_dir=s.dir, bounds=s.core)
     os.remove(os.path.join(dst, "col", "col.materials.json"))           # the base's
+    # the zone's shapes compiled to .cdae (dae2cdae.py), after the collision cells were read from the .dae: the game
+    # loads them as it loads its own cache, with no Collada import while driving; the shared shapes the base compiles
+    # by the same test (dae2cdae.compilable on the zone's copy)
+    cstat, compiled, dae_kept = dae2cdae.compile_level(os.path.join(dst, "z", s.name), f"/levels/{LEVEL}/z/{s.name}",
+                                                       workers=a.workers, rewrite=False, log=log)
+    shared = {}
+    for objs in tiles.values():
+        for o in objs:
+            sh = str(o.get("shapeName", ""))
+            if not sh.lower().endswith(".dae"):
+                continue
+            if sh in compiled:
+                o["shapeName"] = compiled[sh]
+            elif not sh.startswith(f"/levels/{LEVEL}/z/"):
+                if sh not in shared:
+                    src = s.path(s.prefix + sh[len(f"/levels/{LEVEL}/"):])
+                    shared[sh] = src is not None and os.path.exists(src) and dae2cdae.compilable(src)
+                if shared[sh]:
+                    o["shapeName"] = sh[:-4] + ".cdae"
     for (cx, cy), objs in tiles.items():
         with wopen(os.path.join(dst, "tiles", f"o_{cx}_{cy}.json"), "w") as f:
             json.dump(objs, f, separators=(",", ":"))
@@ -117,6 +138,7 @@ def main():
         "tiles": {f"{cx}_{cy}": len(v) for (cx, cy), v in tiles.items()},
         "forestTiles": {f"{cx}_{cy}": len(v) for (cx, cy), v in ftiles.items()},
         "colCells": keys, "colStats": cstats, "warmupShapes": shapes, "objects": dict(stats),
+        "cdae": {"version": dae2cdae.VERSION, "stats": cstat, "kept": dae_kept},
         "seconds": round(time.time() - t0),
     }
     with wopen(os.path.join(dst, "z", s.name, "slice.json"), "w") as f:
