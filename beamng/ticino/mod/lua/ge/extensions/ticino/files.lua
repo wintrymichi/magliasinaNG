@@ -44,14 +44,11 @@ function M.init(cfg, clock, info)
   S = { serving = false, root = M.LEVEL_ROOT, near = {}, far = {}, gen = -1, last = -1e9, clock = clock,
         lateNear = {}, lateFar = {}, lateN = 0, lateRun = 0, refreshes = 0, lastRefresh = -1e9, t0 = clock() }
   S.tileM = cfg.cell * cfg.square
-  -- the packs are in mods if any of a few tile files is found (a test install may hold only some zones)
-  local inPacks, probes = false, 0
-  for k in pairs(cfg.tiles or {}) do
-    probes = probes + 1
-    if exists(M.LEVEL_ROOT .. 'tiles/o_' .. k .. '.json') then inPacks = true; break end
-    if probes >= 400 then break end
+  -- the packs are in mods if any zone's slice.json is there (a test install may hold only some zones)
+  local inPacks = #(cfg.zones or {}) == 0
+  for _, z in ipairs(cfg.zones or {}) do
+    if exists(M.LEVEL_ROOT .. 'z/' .. z .. '/slice.json') then inPacks = true; break end
   end
-  if probes == 0 then inPacks = true end
   if not inPacks and info and info.serve then
     S.serving = true
     S.root = info.root or '/temp/ticino/srv/'
