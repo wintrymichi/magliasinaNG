@@ -31,6 +31,7 @@ local objects = require('ticino/objects')
 local forest = require('ticino/forest')
 local png = require('ticino/png')
 local helper = require('ticino/helper')
+local files = require('ticino/files')
 
 local M = {}
 
@@ -79,6 +80,8 @@ M.PERF_FILE = '/ticino_perf.csv'
 M.TERRAIN_NAME = 'theTerrain'
 M.HELPER = true            -- use the helper process's window files when it runs (ticino/helper.lua)
 M.HELPER_WAIT_MS = 8000    -- at a jump, wait this long for the helper's window before making it in Lua
+M.SERVE_WAIT_MS = 20000    -- at a jump with the Ticino server, wait this long for the tiles round the car (files.lua)
+M.SERVE_RINGS = 1          -- the rings of tiles round the car that must be there before the jump goes on
 M.GROUP = 'ticino_stream'
 
 local st = nil
@@ -443,6 +446,7 @@ local function jump(x, y)
   runJob(job, nil)
   st.cell = { cx, cy }
   if not job.failed then apply(job, 'jump') end
+  if files.serving() then job.serveWaitMs = files.waitNear(cx, cy, M.SERVE_RINGS, cfg.tiles or {}, M.SERVE_WAIT_MS) end
   objects.retarget(cx, cy)
   objects.step(clock, nil)
   objects.updateCols(x, y, true)
@@ -532,6 +536,9 @@ local function start()
     return
   end
   if not FS:directoryExists(M.TEMP) then FS:directoryCreate(M.TEMP, true) end
+  -- the zone files: from the packs in mods, or from the Ticino server (files.lua) when it runs and they are not there
+  if M.HELPER then helper.init(cfg, clock) end
+  files.init(cfg, clock, M.HELPER and helper.info() or nil)
   local group = scenetree.findObject(M.GROUP)
   if not group then
     group = createObject('SimGroup')
@@ -540,8 +547,8 @@ local function start()
     scenetree.MissionGroup:addObject(group)
   end
   st = { cfg = cfg, tb = tb, group = group, serial = 0, moves = 0, reloads = 0, perf = {},
-         tcache = terwin.newCache('/levels/' .. M.LEVEL .. '/blocks/terrain/', 16),
-         bcache = terwin.newCache('/levels/' .. M.LEVEL .. '/blocks/base/', 12 * #(cfg.baseTextures or {})),
+         tcache = terwin.newCache(files.map('/levels/' .. M.LEVEL .. '/blocks/terrain/'), 16),
+         bcache = terwin.newCache(files.map('/levels/' .. M.LEVEL .. '/blocks/base/'), 12 * #(cfg.baseTextures or {})),
          window = { cfg.start[1], cfg.start[2] }, baseMats = {}, started = true }
   -- the terrain materials whose base colour is the window's map
   for _, bm in ipairs(cfg.baseMaterials or {}) do
@@ -558,7 +565,6 @@ local function start()
   if M.TB_BASE_TEX_SIZE > 0 then tb:setField('baseTexSize', 0, tostring(M.TB_BASE_TEX_SIZE)) end
   st.layerKey = {}                    -- terrain material (.ter name) -> its streamed base map (BASE_COMBINED)
   for _, bm in ipairs(cfg.baseMaterials or {}) do st.layerKey[bm[2]] = bm[3] end
-  if M.HELPER then helper.init(cfg, clock) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
@@ -575,6 +581,7 @@ local function stop()
   removeFiles(st.curJob)
   if st.job then removeFiles(st.job) end
   helper.stop()
+  files.stop()
   st = nil
 end
 
@@ -664,6 +671,14 @@ local function onUpdate(dtReal)
   if M.HELPER then
     local lo, hi = followPlaces(n)
     helper.tick(x, y, st.window, lo, hi, n)
+  end
+  -- the server finished tiles the streamer had to skip: ask again for what the car's tile wants
+  local nearCame, farCame = files.poll()
+  if nearCame and st.cell then
+    objects.refresh()
+    forest.retarget(st.cell[1], st.cell[2])
+  elseif farCame then
+    objects.refreshFar()
   end
   local cx, cy = cellOf(x, y)
   local wcx, wcy = st.window[1] / cfg.cell, st.window[2] / cfg.cell
@@ -773,7 +788,7 @@ function M.status()
   if not st then return 'off' end
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
-           objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+           objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), files = files.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
 end
 
 -- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).

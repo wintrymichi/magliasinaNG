@@ -472,7 +472,8 @@ LOD_TOP_SIZE = 2.0          # px: the size of the one (or the last, coarsest) de
 
 
 def encode(positions, tris, normals=None, uvs=None, material="bngEarthDae", uvs2=None,
-           tangent_uvs=None, object_name="tile", tri_materials=None, colors=None, collision_only=False, lods=None):
+           tangent_uvs=None, object_name="tile", tri_materials=None, colors=None, collision_only=False, lods=None,
+           detail_sizes=None):
     """Shape bytes for one static mesh, laid out exactly as the engine writes a compiled
     Collada file with the same geometry.
 
@@ -492,7 +493,10 @@ def encode(positions, tris, normals=None, uvs=None, material="bngEarthDae", uvs2
     detail whose size is at most the shape's projected size in pixels): a list of (size_px, dict of positions, tris
     and optional uvs / tri_materials / colors, same material list), sizes falling, the last one drawn down to
     LOD_TOP_SIZE px. The main mesh is drawn from lods[0]'s size up: lods=[(300, lite)] draws the full mesh while the
-    shape spans 300 px or more, the lite one below."""
+    shape spans 300 px or more, the lite one below.
+    detail_sizes: the size of every level (main mesh first), as a Collada file names them (skin_a388, skin_a136,
+    skin_a45): the shape is not drawn below the last one, as the engine compiles such a file (dae2cdae.py). A lod
+    dict may then also carry its own normals."""
     if collision_only:
         object_name = "Colmesh"
         lods = None
@@ -520,11 +524,16 @@ def encode(positions, tris, normals=None, uvs=None, material="bngEarthDae", uvs2
     for size, d in (lods or []):
         Pl = np.asarray(d["positions"], np.float64).reshape(-1, 3)
         Tl, TMl = _sorted_tris(d["tris"], d.get("tri_materials"), nmat)
-        bl, lol, hil, ntl = _mesh_data(Pl, Tl, TMl, nmat, None, d.get("uvs"), None, None, d.get("colors"))
+        bl, lol, hil, ntl = _mesh_data(Pl, Tl, TMl, nmat, d.get("normals"), d.get("uvs"), d.get("uvs2"), None,
+                                       d.get("colors"))
         lo, hi = np.minimum(lo, lol), np.maximum(hi, hil)
         levels.append((float(size), bl, ntl))
     # each level is drawn from the next coarser level's size up: the finest from lods[0]'s size, the last from 2 px
     sizes = [float(lv[0]) for lv in levels[1:]] + [LOD_TOP_SIZE]
+    if detail_sizes is not None:
+        if len(detail_sizes) != len(levels):
+            raise CdaeError("detail_sizes: one size per level")
+        sizes = [float(x) for x in detail_sizes]
 
     center = ((lo + hi) * np.float32(0.5)).astype(np.float32)
     half = ((hi - lo) * np.float32(0.5)).astype(np.float32)
@@ -562,7 +571,8 @@ def encode(positions, tris, normals=None, uvs=None, material="bngEarthDae", uvs2
         "details": details,
     }
     out = bytearray()
-    for v in (LOD_TOP_SIZE, len(levels) - 1 if not collision_only else 0, radius, radius, centre, bounds):
+    for v in (sizes[-1] if not collision_only else LOD_TOP_SIZE, len(levels) - 1 if not collision_only else 0,
+              radius, radius, centre, bounds):
         _pack(out, v)       # smallestVisibleSize/DL, radius, tubeRadius
     for name in SHAPE_VECTORS:
         n, size, data = shape_vecs.get(name, _empty(SHAPE_VECTOR_ELEM[name]))
@@ -577,8 +587,8 @@ def encode(positions, tris, normals=None, uvs=None, material="bngEarthDae", uvs2
         out += body
     _pack(out, 0)                                          # sequences
     _pack(out, len(materials))                             # materials
-    for name in materials:
-        for v in (name, MAT_S_WRAP | MAT_T_WRAP, 0, 0xFFFFFFFF, 0xFFFFFFFF, 1.0, 1.0):
+    for k, name in enumerate(materials):          # reflectanceMap: the material's own index, as the engine writes it
+        for v in (name, MAT_S_WRAP | MAT_T_WRAP, k, 0xFFFFFFFF, 0xFFFFFFFF, 1.0, 1.0):
             _pack(out, v)
 
     header = packb({"info": INFO, "compression": False, "bodysize": len(out), "objectNames": [object_name]})

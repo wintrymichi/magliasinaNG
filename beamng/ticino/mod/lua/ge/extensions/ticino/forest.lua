@@ -11,6 +11,8 @@
 -- emptied Forests never deleted (deleting one whose items were in the static collision hung the game), the twins with
 -- collidable 0 (a change costs more with every colliding item), createNewItem with setFromEuler of the negated yaw.
 
+local files = require('ticino/files')
+
 local M = {}
 
 M.RADIUS = 4                          -- tiles (Chebyshev) round the car's tile that get trees
@@ -34,7 +36,7 @@ local function rowsOf(key)
   local r = S.rows[key]
   if r ~= nil then return r or nil end
   local cx, cy = key:match('^(%-?%d+)_(%-?%d+)$')
-  local ok, data = pcall(jsonDecode, readFile(string.format(M.FILE, S.level, tonumber(cx), tonumber(cy))) or '')
+  local ok, data = pcall(jsonDecode, readFile(files.map(string.format(M.FILE, S.level, tonumber(cx), tonumber(cy)))) or '')
   r = (ok and type(data) == 'table') and data or false
   S.rows[key] = r
   S.rowOrder[#S.rowOrder + 1] = key
@@ -117,7 +119,7 @@ function M.retarget(cx, cy)
   for ty = cy - M.RADIUS, cy + M.RADIUS do
     for tx = cx - M.RADIUS, cx + M.RADIUS do
       local key = tx .. '_' .. ty
-      if S.has[key] then
+      if S.has[key] and files.near(key) then
         local d = math.max(math.abs(tx - cx), math.abs(ty - cy))
         want[key] = { share = M.SHARE[d] or 0, solid = d <= M.SOLID_RADIUS }
       end
@@ -245,7 +247,7 @@ function M.prefetch(cx, cy, n)
   for ty = cy - R, cy + R do
     for tx = cx - R, cx + R do
       local key = tx .. '_' .. ty
-      if S.has[key] and S.rows[key] == nil then
+      if S.has[key] and S.rows[key] == nil and files.ready(key) then
         rowsOf(key)
         done = done + 1
         if done >= n then return done end
