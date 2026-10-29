@@ -1509,3 +1509,25 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   - A GE extension named ticino_warmup is looked up as ticino/warmup.lua (an underscore is a folder).
   - The PC keeps user-folder overrides (lua/ge/extensions/ticino/, levels/ticino/{info.json, ticino_preview.jpg,
     stream.json, col64/, blocks/}) that win over any zip: run D:\ticino_tools\pulizia_override.ps1 before new zips.
+
+## Ticino as a product (branch ticino, install/, settings, 2026-10-29)
+
+- The branch `ticino` holds all Ticino work (n0o5te + wave loading + helper + parking cap); thread branches open PRs
+  against it, not main. beamng/ticino/diag (test overrides) was dropped from it: get it from history if needed.
+- The traffic signal errors of the full Ticino ("Map node could not be set", 4,020 of 4,065 instances, each logged
+  twice: at the load and at the jump's map.reset) are the AI map's z 0 nodes: the 45 that worked all lie within
+  ~2.5 km of the spawn (the only terrain at load). trafficSignals.getBestRoad uses map.findClosestRoad, a 3D
+  distance searched up to 200 m. Checked against the json first: every signal is 0.6-4.3 m from an AI road node in
+  xy and within 0.1 m in z, so the data is right and the game's graph is not. In 0.40 map.reset IS loadMap and takes
+  ready nodes (loadMap(customMapNodes): only convertToSingleSided, no linkMap): the way out without DecalRoads.
+- ticino_perf.csv of the first jump on the full map: posMs 1,711 + terMs 1,811 (the 57,298 AI DecalRoads re-clip on
+  the block move), next1Ms 11,684 (frame after the swap), then a 30.5 s frame (the map.reset of the jump).
+- stream.lua reads <user>/settings/ticino.json (preset, helper, diagnostics, field overrides); the csv files are off
+  unless "diagnostics": true. A PC test that reads ticino_perf.csv must write that file first.
+- The installer's helper and installer zips must not be called ticino_*.zip: the installer (and the game's mods
+  folder logic of every earlier script) treats every ticino_*.zip as a level zip. They are helper_ticino.zip and
+  installer_ticino.zip.
+- The cloud session could not run a downloaded pwsh to check the PowerShell scripts (auto mode refused code from
+  outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
+- `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,
+  403): page by hand with &page=N.
