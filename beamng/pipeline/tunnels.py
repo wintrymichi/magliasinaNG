@@ -62,6 +62,16 @@ KERB = 0.15
 # the tubes ran into each other and each headwall closed half the other's opening. A motorway tube is now two lanes
 # (8 m, 10 m inside the walls) and a headwall stops short of the twin's opening (twin_heads).
 TWIN_GAP = 0.3          # m a headwall keeps from the twin tube's inside wall
+# One tunnel in pieces (Galleria Vedeggio-Cassarate, Ticino 2026-10-29): swissTLM3D splits a tunnel's line wherever
+# its class or a junction changes. The 29 m piece in the middle had no live portal and was never built (a gap in the
+# tube), and the two one-way lanes of the Cassarate portal (Einfahrt 15 m, Ausfahrt 11 m, 4.6 m apart) were two tubes
+# standing in each other's lane. chain() joins pieces end to end into one tube, makes the two short lanes of one
+# portal one wider piece, and leaves a branch (a service access) as a tube of its own whose joined end opens into the
+# tube it meets (open_junctions).
+JOIN = 1.0              # m: line ends this close are one node
+BRANCH_MAX = 60.0       # m: lanes of a portal this short (or shorter) that end at portals PORTAL_SPAN apart are one
+PORTAL_SPAN = 15.0
+CHAIN_TURN = 50.0       # deg: at a node of three or more lines, the pair turning less than this is chained
 # carriageway width (m) by swissTLM3D class; the rest of the classes are paths, never in a tunnel of the level
 CARRIAGEWAY = {"1m Weg": 1.6, "2m Weg": 2.6, "3m Strasse": 3.6, "4m Strasse": 4.6, "6m Strasse": 6.6,
                "8m Strasse": 8.0, "10m Strasse": 10.0, "Autostrasse": 8.0, "Autobahn": 8.0, "Ausfahrt": 4.6,
@@ -95,6 +105,118 @@ def lines():
                 p = np.asarray(part, np.float64)
                 xy = np.array([lv95_to_local(e, n) for e, n in p[:, :2]])
                 out.append(("road" if key == "roads" else "rail", f["props"], np.column_stack([xy, p[:, 2]])))
+    return out
+
+
+def chain(found):
+    """[(kind, props, Q, joined [start, end], group)]: the lines of one tunnel joined end to end. A line's props get
+    "_CW" (carriageway) when two lanes of a portal were made one; joined says which ends meet another tunnel line
+    (no portal there), group numbers the lines that meet (a group is built if any of its lines has a live portal)."""
+    out = []
+    for kind in ("road", "rail"):
+        L = [[props, np.asarray(Q, np.float64)] for k, props, Q in found if k == kind and len(Q) >= 2]
+        if not L:
+            continue
+        nodes = []                                  # node of each end, by clustering the ends within JOIN
+
+        def node_of(p):
+            for k, q in enumerate(nodes):
+                if np.hypot(*(q - p)) < JOIN:
+                    return k
+            nodes.append(np.asarray(p[:2], np.float64))
+            return len(nodes) - 1
+        E = [[node_of(Q[0, :2]), node_of(Q[-1, :2])] for _, Q in L]
+        alive = [True] * len(L)
+
+        def at(k):
+            return [(j, e) for j in range(len(L)) if alive[j] for e in (0, 1) if E[j][e] == k]
+
+        def length(Q):
+            return float(np.linalg.norm(np.diff(Q[:, :2], axis=0), axis=1).sum())
+
+        def away(j, e):                             # the line's points from the node out
+            return L[j][1] if e == 0 else L[j][1][::-1]
+        # two short lanes of one portal: one piece down their middle, as wide as both
+        if kind == "road":
+            for k in range(len(nodes)):
+                ls = [(j, e) for j, e in at(k) if length(L[j][1]) <= BRANCH_MAX and len(at(E[j][1 - e])) == 1]
+                done = False
+                for a in range(len(ls)):
+                    for b in range(a + 1, len(ls)):
+                        (ja, ea), (jb, eb) = ls[a], ls[b]
+                        A, B = away(ja, ea), away(jb, eb)
+                        span = float(np.hypot(*(A[-1, :2] - B[-1, :2])))
+                        if done or span > PORTAL_SPAN or ja == jb:
+                            continue
+                        t = np.linspace(0, 1, 12)
+
+                        def res(Q):
+                            d = np.r_[0, np.cumsum(np.linalg.norm(np.diff(Q[:, :2], axis=0), axis=1))]
+                            return np.column_stack([np.interp(t * d[-1], d, Q[:, c]) for c in range(3)])
+                        M = (res(A) + res(B)) / 2
+                        props = dict(L[ja][0] if length(A) >= length(B) else L[jb][0])
+                        cw = max(CARRIAGEWAY.get(L[ja][0].get("OBJEKTART", ""), 4.6),
+                                 CARRIAGEWAY.get(L[jb][0].get("OBJEKTART", ""), 4.6))
+                        props["_CW"] = cw + span
+                        props["OBJEKTART"] = props.get("OBJEKTART", "")
+                        L[ja] = [props, M]
+                        E[ja] = [k, node_of(M[-1, :2])]
+                        alive[jb] = False
+                        done = True
+        # groups and joints are those of the lines before chaining: lines meeting at a node
+        deg = [len(at(k)) for k in range(len(nodes))]
+        parent = list(range(len(L)))
+
+        def find(j):
+            while parent[j] != j:
+                parent[j] = parent[parent[j]]
+                j = parent[j]
+            return j
+        for k in range(len(nodes)):
+            here = [j for j, _ in at(k)]
+            for j in here[1:]:
+                parent[find(j)] = find(here[0])
+        # chaining: at a node of two lines, or the straightest pair of a node of more
+        changed = True
+        while changed:
+            changed = False
+            for k in range(len(nodes)):
+                here = at(k)
+                if len(here) < 2:
+                    continue
+                best = None
+                for a in range(len(here)):
+                    for b in range(a + 1, len(here)):
+                        (ja, ea), (jb, eb) = here[a], here[b]
+                        if ja == jb:
+                            continue
+                        A, B = away(ja, ea), away(jb, eb)
+                        da = A[min(3, len(A) - 1), :2] - A[0, :2]
+                        db = B[min(3, len(B) - 1), :2] - B[0, :2]
+                        c = -float(da @ db) / max(np.linalg.norm(da) * np.linalg.norm(db), 1e-9)
+                        turn = math.degrees(math.acos(np.clip(c, -1, 1)))
+                        if (len(here) == 2 or turn < CHAIN_TURN) and (best is None or turn < best[0]):
+                            best = (turn, ja, ea, jb, eb)
+                if best is None:
+                    continue
+                _, ja, ea, jb, eb = best
+                A, B = away(ja, ea), away(jb, eb)
+                Q = np.vstack([A[::-1], B[1:]])            # from A's far end through the node to B's far end
+                pa, pb = L[ja][0], L[jb][0]
+                props = dict(pa if length(A) >= length(B) else pb)
+                props["NAME"] = pa.get("NAME") or pb.get("NAME") or ""
+                cws = [p.get("_CW", CARRIAGEWAY.get(p.get("OBJEKTART", ""), 4.6)) for p in (pa, pb)]
+                if kind == "road":
+                    props["_CW"] = max(cws)
+                L[ja] = [props, Q]
+                E[ja] = [E[ja][1 - ea], E[jb][1 - eb]]
+                alive[jb] = False
+                changed = True
+        base = len(out) and max(o[4] for o in out) + 1 or 0
+        for j in range(len(L)):
+            if alive[j]:
+                jn = [deg[E[j][e]] > 1 for e in (0, 1)]
+                out.append((kind, L[j][0], L[j][1], jn, base + find(j)))
     return out
 
 
@@ -283,11 +405,12 @@ class Tops:
 
 # ------------------------------------------------------------------ one tunnel
 class Tube:
-    def __init__(self, kind, props, Q):
+    def __init__(self, kind, props, Q, joined=(False, False), group=None):
         self.kind, self.props = kind, props
+        self.joined, self.group = list(joined), group
         art = props.get("OBJEKTART", "")
         if kind == "road":
-            self.cw = CARRIAGEWAY.get(art, 4.6)
+            self.cw = float(props.get("_CW", CARRIAGEWAY.get(art, 4.6)))
             self.hw = self.cw / 2 + WALK
             self.wall, self.crown = ROAD_WALL, ROAD_CLEARANCE + 0.9
         else:
@@ -318,13 +441,19 @@ class Tube:
         """Live portals: the line moved to the mesh it joins there, the change faded over FADE m."""
         dz = np.zeros(len(self.s))
         for e, (i, sgn) in enumerate(((0, -1), (len(self.s) - 1, 1))):
+            if self.joined[e]:                  # another tunnel line goes on there: no portal
+                continue
             p, t = self.P[i], self.T[i] * sgn
             zs = []
+            # beside the axis too: the two lanes of a portal made one piece (chain) may have an island between them
+            nrm = np.r_[-t[1], t[0]]
             for back in (1.5, 3.0, 4.5, 6.0):
-                q = p[:2] + t * back
-                z = tops.height(q[0], q[1], self.kind, p[2])
-                if np.isfinite(z):
-                    zs.append(z)
+                for off in (0.0, self.cw / 4, -self.cw / 4):
+                    q = p[:2] + t * back + nrm * off
+                    z = tops.height(q[0], q[1], self.kind, p[2])
+                    if np.isfinite(z):
+                        zs.append(z)
+                        break
             if zs:
                 self.live[e] = True
                 change = (zs[0] - p[2])
@@ -406,12 +535,13 @@ def build_tube(tb, mats, ter=None):
             out.setdefault(m, []).append(T)
     m = len(tb.s)
     # the portals stand PORTAL_OUT out of the swissTLM3D ends: stations added before the first and after the last
-    ext = PORTAL_OUT + HEAD
+    # (a joined end, where another tunnel line goes on, is not a portal: a token station there)
+    ext = [0.1 if tb.joined[e] else PORTAL_OUT + HEAD for e in (0, 1)]
     P = tb.P
-    pre = P[0] - np.r_[tb.T[0] * ext, 0]
-    post = P[-1] + np.r_[tb.T[-1] * ext, 0]
+    pre = P[0] - np.r_[tb.T[0] * ext[0], 0]
+    post = P[-1] + np.r_[tb.T[-1] * ext[1], 0]
     tb.P = np.vstack([pre, P, post])
-    tb.s = np.r_[-ext, tb.s, tb.s[-1] + ext]
+    tb.s = np.r_[-ext[0], tb.s, tb.s[-1] + ext[1]]
     tb.T = np.vstack([tb.T[0], tb.T, tb.T[-1]])
     tb.N = np.vstack([tb.N[0], tb.N, tb.N[-1]])
     tb.floor = np.r_[tb.floor[0], tb.floor, tb.floor[-1]]
@@ -480,6 +610,44 @@ def build_tube(tb, mats, ter=None):
         if live:
             add("mp_tunnel_portal", headwall(tb, 0 if e == 0 else m - 1, 1 if e == 0 else -1, ter, tb.head_w[e]))
     return {k: np.concatenate(v) for k, v in out.items()}
+
+
+def inside_inner(tb, P, margin=0.05):
+    """Points (k, 3) inside the tube's clear space (walls and vault, over the floor), between its end stations."""
+    s, n, i = tb.local(P[:, :2])
+    z = P[:, 2] - tb.floor[i]
+    vault = tb.wall + (tb.crown - tb.wall) * np.sqrt(np.maximum(1 - (np.minimum(np.abs(n), tb.hw) / tb.hw) ** 2, 0))
+    return (s >= tb.s[0]) & (s <= tb.s[-1]) & (np.abs(n) < tb.hw - margin) & (z > margin) & (z < vault - margin)
+
+
+def open_junction(tb, parts, tubes):
+    """Where a branch meets the tube it opens into (joined ends), the faces of either standing in the other's clear
+    space go: the branch's walls across the tube's carriageway, the tube's wall across the branch's opening. A branch
+    (the shorter) also loses its deck over the other's carriageway. Changes parts in place; returns the count."""
+    mates = [ot for ot in tubes if ot is not tb and ot.group == tb.group]
+    gone = 0
+    for m in list(parts):
+        T = parts[m]
+        c = T.mean(1)
+        drop = np.zeros(len(T), bool)
+        for ot in mates:
+            box = (c[:, 0] > ot.P[:, 0].min() - ot.hw_out) & (c[:, 0] < ot.P[:, 0].max() + ot.hw_out) & \
+                  (c[:, 1] > ot.P[:, 1].min() - ot.hw_out) & (c[:, 1] < ot.P[:, 1].max() + ot.hw_out)
+            if not box.any():
+                continue
+            k = np.where(box)[0]
+            hit = inside_inner(ot, c[k])
+            if tb.length < ot.length and m in ("mp_road_asphalt", "mp_ballast", "mp_tunnel_walk"):
+                s, n, i = ot.local(c[k, :2])
+                z = c[k, 2] - ot.floor[i]
+                hit |= (s >= ot.s[0]) & (s <= ot.s[-1]) & (np.abs(n) < max(ot.cw / 2, ot.hw - 1.0)) & (np.abs(z) < 0.5)
+            drop[k[hit]] = True
+        if drop.any():
+            gone += int(drop.sum())
+            parts[m] = T[~drop]
+            if not len(parts[m]):
+                del parts[m]
+    return gone
 
 
 def runs(idx):
@@ -754,12 +922,12 @@ def tunnels_step(root, report=None):
     lv = os.path.join(root, "levels", LEVEL_NAME)
     ter = Terrain(lv)
     cand = []
-    for kind, props, Q in lines():
+    for kind, props, Q, joined, group in chain(lines()):
         if len(Q) < 2:
             continue
         if not (ter.inside(*Q[0, :2]) or ter.inside(*Q[-1, :2])):
             continue
-        cand.append(Tube(kind, props, Q))
+        cand.append(Tube(kind, props, Q, joined, group))
     res = {"candidates": len(cand), "tunnels": 0, "km": 0.0, "portals": 0, "holes": 0, "cap_triangles": 0,
            "cut_triangles": 0, "forest_removed": 0, "lights": 0, "ai_roads": 0, "list": []}
     if not cand:
@@ -767,11 +935,11 @@ def tunnels_step(root, report=None):
         return res
     ends = np.array([tb.P[i, :2] for tb in cand for i in (0, -1)])
     tops = Tops(lv, ends)
-    tubes = []
     for tb in cand:
         tb.join(tops)
-        if any(tb.live):
-            tubes.append(tb)
+    # a line is built when it or a line it meets (a branch, the tube a branch opens into) has a live portal
+    live_groups = {tb.group for tb in cand if any(tb.live)}
+    tubes = [tb for tb in cand if any(tb.live) or (any(tb.joined) and tb.group in live_groups)]
     print("tunnels: %d lines, %d with a live portal (%.0f s)" % (len(cand), len(tubes), time.time() - t0), flush=True)
     twin_heads(tubes)
     if not tubes:                                       # lines in the zone, none joins a road or track (ti_m2_3)
@@ -798,6 +966,8 @@ def tunnels_step(root, report=None):
     for k, tb in enumerate(tubes):
         res["mound_vertices"] = res.get("mound_vertices", 0) + mound(tb, ter, tops)
         parts = build_tube(tb, mats, ter)
+        if any(ot is not tb and ot.group == tb.group for ot in tubes):
+            res["junction_cut_triangles"] = res.get("junction_cut_triangles", 0) + open_junction(tb, parts, tubes)
         R, C = holes(tb, ter)
         capT, capC = cap(tb, ter, R, C, colours)
         origin = np.r_[tb.P[len(tb.P) // 2, :2], 0.0]

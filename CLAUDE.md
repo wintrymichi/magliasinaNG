@@ -788,6 +788,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   wall's sides ended 0.6 m under it): a gap under the S portal at track level. Each side now goes FOOT under the
   lowest ground at its outer edge, with the triangle under the floor's edge closed.
 
+- Galleria Vedeggio-Cassarate (zone ti_1_0, 2026-10-29, michi: "mi sembrava rotto"): swissTLM3D splits a tunnel's line
+  wherever its class or a junction changes, and every piece was a tube of its own built only with a live portal. The
+  29 m piece before the Cassarate portal had none: a 29 m gap in the tube, the main tube ending open in the hill. The
+  portal's two one-way lanes (Einfahrt 15 m, Ausfahrt 11 m, 4.6 m apart) were two 6.6 m tubes standing in each
+  other's lane. tunnels.chain joins pieces end to end (a node of two lines, or the straightest pair under CHAIN_TURN),
+  makes two short lanes ending at portals PORTAL_SPAN apart one piece as wide as both (the whole tube takes the widest
+  piece: Vedeggio-Cassarate is 9.2 m of carriageway now), and a branch left at a node of three lines (the 8 m service
+  access) gets no portal at its joined end; open_junction takes out the faces of either tube standing in the other's
+  clear space. A group of lines that meet is built when any of them has a live portal. All of Ticino: 436 lines ->
+  340 tubes. Checked in the cloud on the pack alone (a plan view of the junction, no face in a driving envelope), not
+  in the game. Look at the lines of a tunnel in tunnels_tlm.json.gz (the pieces, their classes, which ends touch)
+  before blaming the tube geometry.
+
 ## Data from the cloud sessions
 
 - swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
