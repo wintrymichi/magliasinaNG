@@ -450,6 +450,8 @@ def sleepers(zi, lv):
             t = W[idx[:, 0]].reshape(-1, 3, 3)
             n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
             t = t[n[:, 2] > 0.9 * np.maximum(np.linalg.norm(n, axis=1), 1e-12)]
+            if not len(t):                      # a sleeper part with no top face in it (zone ti_m1_2)
+                continue
             # the same sleeper twice (overlapping lines of swissTLM3D at the switches): once
             r3 = np.round(t * 1000).astype(np.int64)                   # (k, 3 corners, xyz) in mm
             o3 = np.lexsort((r3[:, :, 2], r3[:, :, 1], r3[:, :, 0]), axis=-1)
@@ -470,6 +472,8 @@ def sleepers(zi, lv):
             C.append(Q.mean(1))
             d = np.linalg.norm(Q[:, :, None, :2] - Q[:, None, :, :2], axis=3).max((1, 2))
             Ls.append(d)
+    if not C:
+        return np.zeros((0, 3)), np.zeros(0)
     return np.concatenate(C), np.concatenate(Ls)
 
 
@@ -585,7 +589,13 @@ def catenary_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
+    if f"{lv}/main/MissionGroup/railway/items.level.json" not in zi.NameToInfo:
+        print("catenary: no railway in the level", flush=True)          # a zone without a line (ti_1_6)
+        return 0
     C, Ls = sleepers(zi, lv)
+    if not len(C):
+        print("catenary: no sleepers in the level", flush=True)
+        return 0
     kind = np.where(Ls < 2.25, 1.90, 2.60)
     print("sleepers: %d (%d metre gauge)" % (len(C), int((kind < 2).sum())), flush=True)
     raw = []

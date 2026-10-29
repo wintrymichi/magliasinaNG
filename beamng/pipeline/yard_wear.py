@@ -149,7 +149,7 @@ def yard_wear_step(root, report=None):
         return 0
     import markings_net
     Y = up_faces(surf[YARD])
-    Sall = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in markings_net.CARRIAGE_MATS]))
+    Sall = TriSurface(markings_net.tops_of(surf, lambda m: m in markings_net.CARRIAGE_MATS))
     flush = [up_faces(t) for m, t in surf.items() if m != YARD and (m in rw.PAVED or m in rw.ASPHALT)]
     Sp = TriSurface(np.concatenate(flush) if flush else np.zeros((0, 3, 3)))
     rng = np.random.default_rng(SEED)

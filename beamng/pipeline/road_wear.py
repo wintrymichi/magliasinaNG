@@ -993,6 +993,32 @@ def joint_line(c, t, n, off, width, z, Sa, stats):
     return [("mp_wear_joint", tr, uv)] if len(tr) else []
 
 
+def no_asphalt(zi, lv, report):
+    import italy_mats
+    tmp = tempfile.mkdtemp(prefix="magliaso_wear_")
+    try:
+        textures(tmp)
+        new_files = {f"{lv}/art/shapes/roads/{n}": open(os.path.join(tmp, n), "rb").read()
+                     for n in ["t_wear_edge_b.color.png", "t_wear_edge_o.data.png"] + road_age.textures(tmp)}
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    mats_name = f"{lv}/art/shapes/roads/main.materials.json"
+    mats = json.loads(zi.read(mats_name)) if mats_name in zi.NameToInfo else {}
+    for m in materials() + road_age.materials(italy_mats.OVERLAY):
+        mats[m["name"]] = m
+    new_files[mats_name] = json.dumps(mats, indent=1).encode("utf-8")
+    with zi.writer() as zo:
+        for i in zi.infolist():
+            if i.filename not in new_files:
+                zo.writestr(i, zi.read(i), compress_type=i.compress_type)
+        for n, data in sorted(new_files.items()):
+            zo.writestr(n, data, compress_type=zipfile.ZIP_STORED if n.endswith(".png") else zipfile.ZIP_DEFLATED)
+    print("road wear: no asphalt road in the level, overlay materials only", flush=True)
+    if report:
+        json.dump({"roads": 0}, open(report, "w"), indent=1)
+    return 0
+
+
 def road_wear_step(root, report=None):
     t0 = time.time()
     zi = bng.LevelFiles(root)
@@ -1005,6 +1031,9 @@ def road_wear_step(root, report=None):
         for m, t in shape_tris(zi, lv, read_items(zi, sw)).items():
             surf[m] = np.concatenate([surf[m], t]) if m in surf else t
     import markings_net
+    if not any(m in ASPHALT for m in surf):
+        # a zone with no asphalt road (ti_2_7, paths only): no wear, only the overlay materials yard_wear reads
+        return no_asphalt(zi, lv, report)
     A = np.concatenate([up_faces(t) for m, t in surf.items() if m in ASPHALT])
     Sa = TriSurface(A)
     Sall = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in markings_net.CARRIAGE_MATS]))

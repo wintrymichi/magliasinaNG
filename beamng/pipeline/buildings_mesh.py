@@ -1437,13 +1437,13 @@ def house_details(W, T, ground, gwr, rep, walls=None):
         if not len(hit):
             continue
         g = gwr.meta[hit[0]]
-        if g["gkat"] not in RESIDENTIAL:
+        if g.get("gkat") not in RESIDENTIAL:
             continue
-        hkey = f"{g['egid']}"
+        hkey = f"{g.get('egid')}"
         rep["houses"] += 1
         V3 = tri.reshape(-1, 3)
         top = V3[np.argmax(V3[:, 2])]
-        if (g["gbaup"] or 9999) <= OLD and share(hkey, "aerial", AERIAL_SHARE):
+        if (g.get("gbaup") or 9999) <= OLD and share(hkey, "aerial", AERIAL_SHARE):
             add("mp_house_metal", aerial(top[:2], top[2]))
             rep["aerials"] += 1
         # roof faces by orientation: planes of similar normals

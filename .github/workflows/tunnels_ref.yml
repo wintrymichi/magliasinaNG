@@ -1,0 +1,46 @@
+# The tunnels of swissTLM3D over all of Ticino (beamng/ticino/tunnels_ref.py) committed to the branch as
+# beamng/ticino/dati/tunnels_tlm.json.gz: the cloud sessions cannot reach swisstopo.
+# run stamp: 1
+name: tunnels ref
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-n0o5te]
+    paths: [.github/workflows/tunnels_ref.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tunnels-ref-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tunnels:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependencies
+        run: pip install numpy==2.4.6 shapely==2.1.2 pyproj==3.7.2 requests==2.33.1
+      - name: Tunnels from swissTLM3D
+        working-directory: beamng/ticino
+        run: python tunnels_ref.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beamng/ticino/dati/tunnels_tlm.json.gz
+          if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
+          git commit -m "ticino: swissTLM3D tunnels of Ticino (tunnels_ref.py)"
+          for i in 1 2 3 4; do git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }} && break; sleep $((i*5)); done

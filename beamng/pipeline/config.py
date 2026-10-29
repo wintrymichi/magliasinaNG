@@ -5,6 +5,7 @@ World frame (BeamNG): x = east, y = north, z = up, metres, true ground scale.
 where (E, N) are Swiss LV95 (EPSG:2056) coordinates and K is the LV95 point
 scale factor at the map centre, so 1 m in BeamNG is 1 m on the ground.
 """
+import json
 import os
 from pyproj import Transformer
 
@@ -14,7 +15,11 @@ DATASET = os.environ.get("MAGLIASO_DATASET") or r"C:\Users\michi\Documents\magli
 ROOT = os.environ.get("MAGLIASO_ROOT") or r"D:\beamng_magliaso"                         # heavy data / cache
 DATA = os.path.join(ROOT, "data")
 WORK = os.path.join(ROOT, "work")
-LEVEL_NAME = "magliaso_pura"
+# Ticino a blocchi (beamng/ticino/zones.py): MAGLIASO_ZONE names a zone file that moves the playable area, the terrain
+# block and the level name to one zone of the Ticino grid. Without it everything is the Malcantone level as before.
+ZONE_FILE = os.environ.get("MAGLIASO_ZONE")
+ZONE = json.load(open(ZONE_FILE, encoding="utf-8")) if ZONE_FILE else None
+LEVEL_NAME = ZONE["level"] if ZONE else "magliaso_pura"
 BEAMNG_USER = os.environ.get("MAGLIASO_BEAMNG_USER") or r"C:\Users\michi\AppData\Local\BeamNG\BeamNG.drive\current"
 BEAMNG_GAME = os.environ.get("MAGLIASO_BEAMNG_GAME") or r"C:\Program Files (x86)\Steam\steamapps\common\BeamNG.drive"
 # the released level (zip) whose copies of vanilla files stand in for the game install when
@@ -45,6 +50,8 @@ EXTRA_CORRIDOR = 100.0
 TER_SIZE = 8192                 # terrain samples per side
 TER_SQUARE = 1.5                # metres per terrain sample
 TER_X0, TER_Y0 = -7230.0, -4731.0
+if ZONE:
+    TER_SIZE, TER_X0, TER_Y0 = int(ZONE["ter_size"]), float(ZONE["ter_x0"]), float(ZONE["ter_y0"])
 TER_X1 = TER_X0 + (TER_SIZE - 1) * TER_SQUARE
 TER_Y1 = TER_Y0 + (TER_SIZE - 1) * TER_SQUARE
 
@@ -84,3 +91,72 @@ for _d in (DATA, WORK):
 # guard rails) are used. v2.2: this is the default; MAGLIASO_NO_PHOTO_TEXTURES=0 brings back the
 # photo textures of the local v1.x builds, for private study only.
 NO_PHOTO = os.environ.get("MAGLIASO_NO_PHOTO_TEXTURES", "1") != "0"
+
+
+# GEOS's constrained Delaunay gives up on some degenerate survey polygons ("Unable to find a convex corner", a wall of
+# the Ticino zone ti_m1_7; never in the Malcantone): every caller gets the triangles of the polygon cleaned up, or none
+# (the piece is left without a cap) instead of a crash. The answer is unchanged wherever GEOS succeeds.
+def _safe_cdt(cdt):
+    def run(geometry, **kw):
+        try:
+            return cdt(geometry, **kw)
+        except Exception as e:
+            import shapely
+            if not isinstance(geometry, shapely.Geometry):
+                raise
+            for g in (shapely.make_valid(geometry).buffer(0), geometry.simplify(0.01).buffer(0)):
+                try:
+                    return cdt(g, **kw)
+                except Exception:
+                    pass
+            print("constrained Delaunay failed, piece left out:", e, round(geometry.area, 2), "m2", flush=True)
+            return shapely.GeometryCollection()
+    return run
+
+
+def _safe_overlay(op):
+    # GEOS overlay can stop on a "non-noded intersection" or "Ring edge missing" (zones ti_1_3 vegetation clearance,
+    # ti_1_6 landmarks): retry snap-rounded to a mm grid, then a cm grid, then on make_valid inputs. Unchanged where
+    # the plain operation works.
+    def run(*geoms, grid_size=None, **kw):
+        try:
+            return op(*geoms, grid_size=grid_size, **kw)
+        except Exception as e:
+            import shapely
+            if grid_size is not None or not isinstance(e, shapely.errors.GEOSException):
+                raise
+            for gs in (0.001, 0.01):
+                try:
+                    return op(*geoms, grid_size=gs, **kw)
+                except Exception:
+                    pass
+            try:
+                return op(*[shapely.make_valid(g) for g in geoms], grid_size=0.01, **kw)
+            except Exception:
+                pass
+            # make_valid can turn a polygon into a polygon + line collection ("mixed-dimension", ti_1_6 landmarks):
+            # polygons cleaned by buffer(0) stay polygons
+            import numpy as np
+
+            def clean(g):
+                a = np.asarray(g, dtype=object)
+                t = shapely.get_type_id(a)
+                c = np.where((t == 3) | (t == 6), shapely.buffer(a, 0), shapely.make_valid(a))
+                return c.item() if c.ndim == 0 else c
+            for gs in (None, 0.01):
+                try:
+                    return op(*[clean(g) for g in geoms], grid_size=gs, **kw)
+                except Exception:
+                    pass
+            raise e
+    return run
+
+
+try:
+    import shapely as _shapely
+    _shapely.constrained_delaunay_triangles = _safe_cdt(_shapely.constrained_delaunay_triangles)
+    _shapely.union_all = _shapely.unary_union = _safe_overlay(_shapely.union_all)
+    for _n in ("intersection", "difference", "union", "symmetric_difference"):
+        setattr(_shapely, _n, _safe_overlay(getattr(_shapely, _n)))
+except ImportError:
+    pass

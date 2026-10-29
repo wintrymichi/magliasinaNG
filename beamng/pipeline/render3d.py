@@ -561,6 +561,7 @@ class Level:
                     base[m["internalName"]] = np.median(a, 0)
         lut = np.array([base[m] if m in base else [round(255 * v) for v in LAYER_COLORS.get(m, (0.4, 0.45, 0.3))]
                         for m in names], np.uint8)
+        lut = np.concatenate([lut, np.full((256 - len(lut), 3), 90, np.uint8)])    # 255: a hole (tunnels)
 
         def fn(x, y):
             c = np.clip(np.round((np.asarray(x) - self.tx0) / self.sq).astype(np.int64), 0, n - 1)

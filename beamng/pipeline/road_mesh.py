@@ -306,6 +306,9 @@ def skirt_bands(V, T, depth, top=SKIRT):
     return kerb, wall
 
 
+HEIGHT_CHUNK = 200_000   # points per piece of TriSurface.height
+
+
 class TriSurface:
     """Top faces (k, 3, 3): height at points, as the lowest face, the highest or the face nearest
     to a given height where faces overlap (a road under a bridge)."""
@@ -343,6 +346,13 @@ class TriSurface:
     def height(self, x, y, mode="low", zhint=None):
         x = np.atleast_1d(np.asarray(x, np.float64))
         y = np.atleast_1d(np.asarray(y, np.float64))
+        if len(x) > HEIGHT_CHUNK:
+            # in pieces: the work arrays hold one entry per point and face of its cell, and a block of the unpaved
+            # step (1.7 M points) over a dense zone ran the 16 GB runner out of memory (ti_0_6); same result
+            zh = None if zhint is None else np.broadcast_to(np.atleast_1d(zhint), x.shape)
+            return np.concatenate([self.height(x[i:i + HEIGHT_CHUNK], y[i:i + HEIGHT_CHUNK], mode,
+                                               None if zh is None else zh[i:i + HEIGHT_CHUNK])
+                                   for i in range(0, len(x), HEIGHT_CHUNK)])
         out = np.full(len(x), np.nan)
         if not len(self.t) or not len(x):
             return out

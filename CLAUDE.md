@@ -751,6 +751,56 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the renders: 2 now. The renders draw each billboard as a 6-blade tuft, thinner than the game's textures: judge the
   density in the game.
 
+## Tunnels (tunnels.py, finish step `tunnels`, 2026-10-26)
+
+- The swissTLM3D tunnel lines of all of Ticino come from tunnels_ref.yml (beamng/ticino/dati/tunnels_tlm.json.gz): 436
+  lines, 346 km. In the Malcantone level only the FLP Galleria del Vallone d'Agno (60 m, 2064,-54 -> 2091,0) joins
+  the built meshes: Crespera has no track near it, the other road tunnels are in Italy or outside the network.
+- A portal is "live" if a road or track mesh is there. Rail heads are 7 cm wide: a point-in-triangle test at the
+  portal never hit one and the first run found no live portal. Tops.height takes the median rail-head z within 2.5 m.
+- Holes are terrain layer 255 (no render, no collision). Anything that indexes a lookup table by layer crashes on it
+  (render3d's layer colours did: IndexError 255). So the step runs last among the steps that touch the ground
+  (after vineyards_ground). Steps that read layers (steep_skin, forest_mosaic, understory) must never run after it
+  without handling 255. The assumed square convention (sample (r,c) owns [c..c+1] x [r..r+1]) is NOT checked in the
+  game yet.
+- The first tube had no straight walls: the inner sweep took ring[1:-1], so the vault started at the wall top and
+  one saw the lake under it from inside. Sweep the whole ring.
+- A yard of the roads group (mp_hard_bank of steep_yards, meshed on the DTM over the tube) stood inside the tube as a
+  big curved grey sheet: the roads are cut too (in_volume only, so a road on top of the tube stays). Check the inside
+  with a probe (points of every group inside the inner profile), not only with renders.
+- In render3d the coarse far terrain (step > 1) spans the holes and draws a grey sheet through the tube that the game
+  does not have. Lower it in the render script, as for the cut slopes.
+- The camera "25 m out on the tangent" stood inside the bank: the track curves before the portal. Place cameras from
+  the Tube's own stations.
+- cut_meshes read every shape of the groups across the whole level (76 s for one tunnel). Skipping shapes whose
+  position is more than SHAPE_REACH from a tube: 12 s.
+- Importing config without MAGLIASO_ROOT made a folder "D:\beamng_magliaso" in beamng/pipeline (Windows paths taken as
+  relative): export MAGLIASO_ROOT before any scratch import.
+- In the game (laptop run 3) the vault stood bare behind the S headwall: the DTM's portal cuttings reach 4-8 m into
+  the swissTLM3D tube and on the lake side the slope stands under the shell along the whole tunnel (holes there, the
+  shell was what one saw). tunnels.mound raises the terrain over the tube (COVER_MIN over the shell, 1:1 down over
+  MOUND_W, never over a road/track face beside it): shell points over the ground 38 -> 0, holes 100 -> 27. Raising
+  vertices up to the headwall's back made the terrain and the hole caps in front of the face slope up into the
+  opening (spikes on the track): only from the swissTLM3D portal in. A floor plate now covers the stretch under the
+  headwall (one saw the lake through the holes beside the ballast). Check with a probe of shell points vs the
+  terrain (square_height, holes skipped), not by eye.
+- Laptop run 4: the headwalls stood on nothing on the lake side (ground 2.4 m under the floor beside the track, the
+  wall's sides ended 0.6 m under it): a gap under the S portal at track level. Each side now goes FOOT under the
+  lowest ground at its outer edge, with the triangle under the floor's edge closed.
+
+- Galleria Vedeggio-Cassarate (zone ti_1_0, 2026-10-29, michi: "mi sembrava rotto"): swissTLM3D splits a tunnel's line
+  wherever its class or a junction changes, and every piece was a tube of its own built only with a live portal. The
+  29 m piece before the Cassarate portal had none: a 29 m gap in the tube, the main tube ending open in the hill. The
+  portal's two one-way lanes (Einfahrt 15 m, Ausfahrt 11 m, 4.6 m apart) were two 6.6 m tubes standing in each
+  other's lane. tunnels.chain joins pieces end to end (a node of two lines, or the straightest pair under CHAIN_TURN),
+  makes two short lanes ending at portals PORTAL_SPAN apart one piece as wide as both (the whole tube takes the widest
+  piece: Vedeggio-Cassarate is 9.2 m of carriageway now), and a branch left at a node of three lines (the 8 m service
+  access) gets no portal at its joined end; open_junction takes out the faces of either tube standing in the other's
+  clear space. A group of lines that meet is built when any of them has a live portal. All of Ticino: 436 lines ->
+  340 tubes. Checked in the cloud on the pack alone (a plan view of the junction, no face in a driving envelope), not
+  in the game. Look at the lines of a tunnel in tunnels_tlm.json.gz (the pieces, their classes, which ends touch)
+  before blaming the tube geometry.
+
 ## Data from the cloud sessions
 
 - swisstopo (data.geo.admin.ch, api3), Overpass and the BFS register (public.madd.bfs.admin.ch) are blocked from the
@@ -980,3 +1030,449 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Untested builds for michi go to the GitHub pre-release "nightly" (`nightly_build.yml`, started by changing
   `beamng/nightly/stamp.txt`), never the latest release; michi tests them on the main PC.
 - Document every error and failed attempt in this file, under its topic (michi, 2026-10-20: "sempre").
+
+## Ticino a blocchi (beamng/ticino, 2026-10-26)
+
+- A second map in the same repo: level `ticino`, its own mod zip, never `levels/magliaso_pura` (michi: "devono convivere
+  le due versioni"). Phase 1 cuts the released v3.1.1 into blocks (blocks.py) instead of building; on the PC all data
+  goes on the 6 TB disk (pc_prepare.sh <disk>).
+- The scene objects kept in the level (backdrop, landmarks) still pointed at /levels/magliaso_pura/ after the first cut:
+  copy_level rewrote the files it copied but write_scene wrote the kept objects as read. Grep the cut level for the old
+  level name after any change to blocks.py.
+- A coroutine keeps the arguments of its FIRST resume: the yield function made in runJob read the first frame's start
+  time forever, so every later call yielded at once and a window took 461 frames (7.7 s) instead of ~17. Read the frame
+  start from a table the caller updates (job.t0).
+- Writing the 12 MB window .ter in one f:write took ~40 ms (one frame): write it row by row with yields (writeParts).
+  The PNG writer also never joins its 800 kB IDAT (CRC computed over the parts).
+- `blocks.py --no-far` first deleted the far/ folder with the other outputs (a quick rerun lost the far tiles).
+- Unknown until the game test: the terrain materials' *BaseTexSize unit. The pipeline writes metres (12288 = 8192 x 1.5),
+  BeamNG.Earth measured samples in game; the window's maps assume samples (zone `base_size_unit`).
+- BeamNG.Earth (github.com/TecnaGamer/BeamNG.Earth, MIT, cloned fine from the cloud) has in-game measurements of every
+  engine limit the streaming needs (docs/research/2026-10-12-engine-limits-and-worldgen.md): read it before guessing.
+- blocks.py hard-links the source level into the output and then wrote info.json over the linked file: the SOURCE
+  v3.1.1 info.json got "Streaming test of the Ticino level:" once more per run (seen 4 times). Every write into the
+  output goes through blocks.wopen (removes the path first). After a run, `find <src> -newer <zip>` must list nothing.
+- michi tests the Ticino mod on the Windows PC DESKTOP-OUPOLOA (2026-10-26, "questo qua è un pc windows usa questo"),
+  not on the Linux PC: no Python there, so ticino_test.yml cuts and packs on GitHub (draft release ticino-test) and
+  tests/game/run_test.ps1 runs the test (autotest.lua, as the v3.0.40 runner did).
+- First in-game look (2026-10-26, DESKTOP-OUPOLOA, 0.40.3): level ticino loads in 9 s, no missing material, streaming
+  runs. Hitches: every tile change ended in be:reloadCollision and the physics rebuilt ALL static collision ("Loaded
+  Static Collision" 0.3-1.5 s, 7.4 M triangles) once per 384 m; the window swap itself is 0.16-0.2 s. The first jump
+  made all ~1,000 far tiles at once (7.8 s: the game converts every new DAE). Now far tiles come a few a frame, a
+  deleted collider no longer forces a rebuild, and ticino_stream.setCollision(radius, groupsOff) switches groups (the
+  skin is 26 of the 46 M collidable triangles) for measuring. michi drove east past Agno, out of the built zone (the
+  airport runway is bare terrain there in v3.1.1 too): "no objects" at the zone edge is not a streaming bug.
+- What a collision rebuild costs (console, standing still in ticino, 2026-10-26): the whole static collision 7.12 M
+  triangles 3.40 s; without the Forest 1.12 M and STILL 3.40 s (274k tree instances share ~30 meshes: free); only
+  the car's tile 156 k, 0.54 s; no streamed object at all 4.8 k, 0.002 s (the terrain costs nothing). The time is
+  "Loaded Static Collision" after "Physics collision reloaded" (0.05-0.12 s): about 3 us per unique triangle, skin
+  the worst (57 % of the collidable triangles, most of the time). Do not delete the Forest object to test: the game
+  log stopped being written after it (the game went on).
+- Quick travel into a zone never seen: about 40 s, nearly all "Importing COLLADA" of 551 shapes (the game converts
+  each .dae once, cached afterwards) + 4 s of collision.
+- Collision cells (collision.py, 2026-10-26): fast_simplification (quadric) on a road mesh left holes (1.2 % of the
+  surface samples at 50 % reduction, 4 % at 70 %) and moved edges by up to 0.5 m (the skirts): roads, sidewalks and
+  railway stay exact; only the skin (to 7 %), houses, walls and props are simplified. A sim run whose clock is CPU
+  time (tests/sim_stream.lua) never let a "150 ms after the swap" wait expire: count such waits in dtReal.
+  Collision .cdae with real normals and tangents were 1.1 GB (563 MB zipped); with constant normals 228 MB zipped.
+- Laptop run 1 (2026-10-26, DESKTOP-EKDTIGL, 0.40.1, iGPU 512 MB): no crash, no Out of VRAM, load 48 s, peak 9.5 GB
+  private, ~10 fps. The car fell through the road during autotest's own reload test (cells radius -1 for 12 s with
+  the physics running: no road collision under it) into a yard 1.6 m lower and was stuck for the whole drive. The test
+  now pauses the physics and puts the car back. map.findClosestRoad(vec3(x, y, 1000)) found nothing with 20,810 nodes
+  in the graph: query near the ground (and the test falls back to the nearest node by hand, noting it).
+  colPiece's ffi.cast of the Lua string raised "arithmetic on a string value" for one cell (10 times, the pos not
+  advanced): the piece is now copied into an ffi buffer, and any failure turns ffi off for the session.
+- Laptop run 2 (2026-10-26): that fix made it worse: `ffi.new('uint16_t[?]')` is an array, and `u + 3 * nv` on it
+  raises "bad argument #1 to '__add' (invalid C type)" for EVERY piece (colTris 0, 2,126 failures, no cell had any
+  collision; the car fell through the tunnel floor). The fallback never ran: the error came after the pcall'd copy.
+  Index the array (u[3 * nv + k]); a failed piece now drops the rest of its cell (the read position is lost). Run any
+  decoder change against a real cell file in luajit with stubs before a game test (the ffi and byte paths agree).
+  The AI drove this time (2.3 km in 14 min, 9 stops, "moved 30 m on" worked). Every jump put the car at z 0.5: the
+  AI map's nodes far from the start had z 0 (the AI DecalRoads clip to the terrain, which exists only in the
+  streamed window; the json nodes have their heights). The test now takes the ground under the node and counts the
+  z < 1 nodes before and after a map.reset() at each jump; the 3,124 core_trafficSignals "Map node could not be set"
+  likely have the same cause. Also logged: material cbv array exhausted (8192 slots) at 113 s, a 16x448 bollard
+  texture that is not a power of two (TextureCooker refuses it).
+- Laptop run 3 (2026-10-26): collision cells work (colFailed 0, 1.7 M triangles made), no jump fell, the car stands
+  on the tunnel floor. map.reset() after the window came gave every AI node within 300 m its height (0 of 59-281 left
+  at z < 1), while 14-19 k of the 20,810 stayed at 0: stream.lua now reads the AI map again MAP_RESET_FRAMES after
+  every window swap (perf row "mapreset"). A collision cell dropped half made left its pieces in the scene and the
+  remade cell registered the same names (56 SimNameDictionary::insert warnings); colTris was a "made" counter, now live.
+  createScreenshot2 takes the shot a few frames later: with the camera moved on at once, every tunnel shot showed the
+  NEXT pose (and the last two were alike). Wait 2 s after each shot before moving the camera.
+- Laptop run 4: that map.reset() froze the game 1.9-2.5 s at EVERY window move (perf rows "mapreset"): never call it
+  on the fly. map.lua (0.40, loadJsonDecalMap) takes a DecalRoad's subdivided edges (clipped to the terrain) when
+  useSubdivisions is on and edgeCount > 2, else its control points with their own z: blocks.py now writes the ticino
+  AI roads with useSubdivisions false and MAP_RESET_FRAMES is nil. The AI left the road twice at Pura (250-290,-890,
+  runs 3 and 4, into the wood against a tree): the same place as the known lamp/4 m AI drop of the piano video
+  (Known issues), a map fault, not streaming.
+- Laptop run 5: useSubdivisions false CRASHED the level load. map.lua (0.40.1) L459 edgeCompare compares `a.lanes <
+  b.lanes`; the node reduction (RDP, ~L1985) builds a new edge with NO lanes when it removes a middle node between two
+  nodes already linked directly, and compares it with that edge: "attempt to compare nil with string" when posMin/max,
+  radii, drivability, oneWay and speedLimit are all equal (two AI roads joining the same two nodes, one with a node in
+  between). Control points coincide exactly where subdivided edges differed by mm. The game then reloaded the level by
+  itself and crashed in C++ (c0000005). In the ticino roads the ties were the two one-way halves of a road round a
+  splitter island (X and X_j1, islands.island_lanes). beamng/ticino/aimap_check.py emulates map.lua's passes from
+  the code read on the laptop and blocks.py stops if it finds a crashing compare (resolveT/XJunctions and
+  mergeNodesToLines are not emulated).
+- Laptop run 6: the first fix, a speed limit of its own per road, crashed the same way: 0.40.1 does NOT read a
+  DecalRoad's `speedLimit` from items.level.json (an in-game probe read r.speedLimit nil and getField '' on all 3,451
+  roads; vanilla Utah writes none), so createSpeedLimits gave both halves the same value. The emulation had read the
+  json value, so it said 0. Emulate only what the game is shown to read. Now blocks.ai_roads gives every road a node
+  width of its own (+2e-6 m per road, float32 keeps it), which ends the compare at the radii: 11 crashing compares in
+  3 orders before, 0 in 8 after, with the speed emulated as one auto value and the nodes as float32. Not drivability:
+  a lower drivability makes the AI give way at the joint. (The probe also read useSubdivisions as nil, yet runs 1-4
+  without the key had subdivided z 0 nodes and no crash, and 5-6 with false crashed: the key is read.)
+- Laptop run 7: the width offsets loaded (47.9 s, no crash) but the control-point graph did not help: far nodes kept
+  z 0 all the same (the control points' z is also clipped where no terrain is loaded) and the AI drove 762 m against
+  2,383 m in run 2 (more stops, it hung at joints the subdivided graph had smooth). Reverted: the ticino AI roads are
+  written as the source has them (subdivided, no width offsets, aimap_check.py kept as a tool), and stream.lua calls
+  map.reset() once at each jump, while the game is paused for the reload (MAP_RESET_ON_JUMP), never on the fly.
+  Between jumps the far nodes stay at z 0 (only the window's are right). Also seen: 4,857 core_trafficSignals errors,
+  hitches up to 260 ms at jumps. The S tunnel portal showed the lake through two small gaps at the jamb feet: an
+  apron (tunnels.APRON, 1.6 m of ballast/asphalt 3 cm under the floor) now runs out in front of each face.
+- Laptop run 8: loads (48.7 s), no crash, jumps fine, the reset at a jump reads every node near it (1.8-2.5 s inside
+  the paused jump), the jamb gaps are closed. But the apron stood out past the S headwall as a plate 1-1.5 m over the
+  lake-side slope: its open edges now go FOOT under the lowest ground beside them. The AI drove only 873 m: in "span"
+  mode it turned into a 3.4 m village lane north of the start (630-690,-790..-850), spun its wheels there and looped
+  with the "moved 30 m on" helper, never leaving the first window. Not a streaming fault: the cell collision there
+  matched the exact meshes on every road cell (0.25 m raster, 0 cells over 3 cm; only the skin moved, up to 0.67 m,
+  off the road), the lane is smooth at 14 %. Which way span mode turns is luck: the drive now follows the scripted
+  route (16.8 km, Magliaso-Pura-Ponte Tresa-Caslano-Agno) first, then the AI. The autotest's own map.reset at a jump
+  doubled stream.lua's (6,553 trafficSignals errors): removed.
+- Laptop run 9: load, jumps, cells and the tunnel all fine (the apron skirt closes the S portal; tunnel done). The
+  scripted route flipped the car after 155 m: it started inside the Magliaso roundabout, hung there 26 s, then
+  scriptai raced the late timeline at 14 m/s (it keeps to the times, not to a speed) and at the bend at 684,-1040 the
+  car left the cantonale and fell 2 m on its roof into the lane below. make_route.py now starts on the cantonale,
+  weights the path by drivability ** 4, drives at most 40 km/h and slower in bends (A_LAT). The AI drive after it went
+  1.16 km west through Pura with 6 short stops. The jump check 1 s after stream.lua's reset log still saw the old
+  heights; 5 s later all were right (the reset lands a few frames after its log line).
+- Laptop run 10: the slower route (A_LAT, 40 km/h) flipped at the same place, 684,-1040, at 3-7 m/s: not speed. The AI
+  road strada_cantonale_i1_0 there lies on the EAST EDGE of the cantonale, and its 7.7-9 m width covers the lane
+  tlm_1052 1.2-1.6 m lower beside it: every car on that AI line (scriptai, span AI) goes over the edge. Making the route
+  graph directed for one-way roads gave a 33.8 km detour (reverted). New finish step ai_lanes (pipeline/ai_lanes.py, in
+  ticino_test.yml after tunnels): every AI node walks the road surfaces across its width, and a step over 0.5 m inside
+  it moves the node away and narrows the width (lane 0.3 m from the drop, never under 3 m), spread over 2 nodes each
+  side, faded out 6 m from the ends. On v3.1.1: 9 of 3,451 roads, 48 nodes, at most 3.2 m (the cantonale 2.9 m west).
+  route.json regenerated from the fixed roads. Not run in the main build yet (only on the Ticino test level).
+- Laptop run 11: the ai_lanes fix held (the car stayed on the cantonale at 684,-1040), 2.3 km of route, 6 window moves,
+  no fall. Two stops: (1) at 59,-748 the car hit a street lamp standing 2.2 m inside the cantonale's AI width and stood
+  40 s: 17 of the 2,108 lamps stood inside an AI width (also the known one at Pura, 287,-892). ai_lanes.lamps_clear moves
+  those out to the half width + 0.6 m with their lights, or removes them where the ground there is 0.8 m off (2). A first
+  version moved every lamp closer than half width + 0.6 (1,447): the lamps stand 0.3-0.5 m beyond the edge on purpose;
+  only lamps INSIDE the width move. (2) the route ran into dead ends and back over the same nodes ((-240,50) and
+  (-250,-1000) were places on side roads), and scriptai cannot turn round: it stopped at -259,61. make_route.py now
+  makes roads already driven cost 20x, cuts spurs under 120 m and reports longer ones; new places, 19.6 km, no
+  turn-round (cos < -0.8) left. Unwinding every A-B-A with no length limit collapsed the route to 7.7 km (whole legs).
+- Collision cells as ProceduralMesh (EarthNG's way, michi: "basta che non cambia la grafica"): decoding a piece in Lua
+  is the cost, not the file: a 2,500-triangle piece took 7-10 ms in luajit with s:byte, so a frame went over budget.
+  ffi.cast of the string to uint16_t* and pieces of 1,200 triangles keep a piece under ~5 ms. The cells hold
+  triangles by their centre, so a piece reaches up to ~70 m outside its cell (long road triangles): a range check of
+  a cell file must allow that (XY_OFF_CM). Not known until the game test: whether setRenderEnabled exists on
+  ProceduralMesh in 0.40 (pcall; the materials are alpha 0 anyway) and whether the winding (clockwise) lets the car
+  stand on it.
+- Zone builds (zone_build.yml, MAGLIASO_ZONE, 2026-10-27): download_worldcover failed at once on the probe zone ti_1_0
+  (Lugano): the window of tile N45E006 rounded to start one cell west of the map's box, c0 = -1, and `out[r0:, -1:...]`
+  is an empty slice ("boolean index did not match ... size of axis is 0"). The Malcantone box never touched a tile
+  edge. Clamp a pasted window's offsets, never slice with a start that may be negative.
+- Next on ti_1_0: network_surface.cantonale_hold -> roadheight.build crashed (NaN bounds): the corridor surfaces are
+  cut along the Malcantone Street View route (poses.json main_run), which no other zone touches. With no polygons
+  roadheight now saves an empty Surface (distance inf, height nan). Expect more such Malcantone-only data (poses,
+  road_profile, photo markings, wall caps): a zone has none of it in reach and every reader must take "nothing".
+  The Actions cache saves only when the job succeeds: the zone workflow saves the downloads right after them.
+- More Malcantone-only assumptions found on ti_1_0 (2026-10-27), all fixed so the Malcantone build is unchanged:
+  stage_roads with no corridor polygons (bb of an empty list); vanilla/carryover read the reference zip under
+  levels/<LEVEL_NAME> (the zip's level is always magliaso_pura) and carryover took over the v1.1 route paint and props
+  (now none in a zone); the Monte Lema cable car/summit outside the zone's terrain; guardrails_final.json and the
+  photo rails (NaN feet outside the zone's DTM: savgol "array must not contain infs or NaNs"): area.in_zone drops
+  photo data outside a zone; spawns from poses.json (zone_route picks main roads near the core); races skipped.
+- A dense zone is slow on one process: ti_1_0 stages roads 81 min, walls 21, buildings 36, vegetation 20, canopy 28,
+  finishing optimize 11, unpaved 17, markings 13, road_wear 12 (cloud container). wintryserver (6 cores) ran the
+  stages in 73 min. GitHub stops a job at 6 h: zone_build.yml runs the stages and the finishing steps as two jobs.
+  NET_WORKERS forks the network tiles (results added in tile order, same level). MAGLIASO_CHECKPOINT=1 pickles
+  (scene, ctx) after every stage (700 MB on ti_1_0) and `build_level.py --reuse-roads --resume` goes on after a crash.
+- The cloud container's disk (about 30 GB usable) fills with a zone: the raw swisstopo tiles (data/swissalti3d_05,
+  dsm_05, buildings3d) are not read after build_rasters/extract_buildings and can go during a build.
+- skimage was missing in the cloud container (vegetation's watershed): pip install scikit-image before a local build.
+- wintryserver (michi's Ubuntu server, 6 cores, 14 GB, /mnt/disk8tb): RC sessions work only inside /mnt/disk8tb/ticino.
+  Claude Code's auto-mode check refused to run the cloned repo's Python ("Code from External") until michi wrote the
+  exact permission in the thread; sudo asks a password (osmium-tool unpacked from the .deb into /mnt/disk8tb/ticino).
+  `claude remote-control` in a terminal registers the folder as a device; an RC started inside a running session did not.
+- Traffic lights (markings_rules, 2026-10-27): OSM highway=traffic_signals on an arm makes the junction signalled
+  (3+ arms): every way in gets a stop line, an instance of a two-phase sequence (axes) and the stock boom
+  /art/shapes/objects/s_trafficlight_boom_sn.dae on its kerb side, local +x to the kerb (as BeamNG.Earth places it,
+  tested by them in 0.40.3; not yet seen in our level). Controllers and instances share one id count.
+- signs_net had `levels/magliaso_pura` written in (KeyError in a zone after 6 min of the signs step): grep the pipeline for
+  the old level name, every reader must use LEVEL_NAME.
+- wintryserver OOM (2026-10-27, ti_1_0): the finishing step unpaved peaked at 12.95 GB RSS + 2 workers of 1.7 GB, and
+  immich/java hold ~3 GB with 3 GB swap: the kernel killed build_level (rc 137, no traceback). PATCH_WORKERS=1 passed
+  (633 s). Run the zone finishing steps there with PATCH_WORKERS=1.
+  Then paved_edges went OOM even with PATCH_WORKERS=1 (12.36 GB peak; Minecraft with -Xmx8G and immich run there too):
+  unpaved_step built the two TriSurfaces (7.9 M faces, ~1.5 GB each) in main although Python 3.14 starts the pool
+  workers from a forkserver, which build their own. Main builds them only under "fork" now (same output).
+- lamps_step read props/street_lights, which only props.py makes from the panorama lamps of the Malcantone: KeyError in a
+  zone. It now makes the group (and its SimGroup line in props) when it is missing.
+  The first version of that fix crashed in pits(), which reads ALL in main too (the cloud container's Python 3.13 forks,
+  so the local run never took that path): ALL is built from al.npy there when it is missing. Test a change that depends
+  on the start method under "forkserver" too (multiprocessing.set_start_method).
+- signs_more planned 0 signs in a zone (then crashed on an empty DAE): its in_ch() needs the Swiss commune outlines
+  (dati/osm_communes.json.gz), which download_osm.zone_main leaves empty. In a zone without them everything counts as
+  Swiss for now; the zone extract should get the communes from the pbf before the border zones are built.
+- fuel_stations.new_canopy (a station with no survey canopy, never reached in the Malcantone) used the 2D np.cross that
+  numpy 2 refuses: crashed in the zone. A code path the Malcantone never took is untested: expect more of these.
+- parking.Ground.terrain converted the whole 8192x8192 terrain to float64 at every call (three calls a parking spot):
+  more than 20 min of parking on the dense zone ti_1_0. It now converts only the four samples it reads (same numbers).
+- roof_posts took 36 min on ti_1_0 (union_all of the buffered roof faces of each shape); not changed yet.
+- The finishing steps ran one after the other in ONE process and the memory they left added up (wintryserver: 7-10 GB
+  at the start of each step after two hours, OOM at road_seams with 13.1 GB). build_level.finish now runs each step in
+  a forked child (MAGLIASO_STEP_FORK=0 turns it off; no fork on Windows): the steps share nothing but the files.
+- tunnels.holes tested every terrain square of a tube's bounding box (16 KD queries each): the Lugano zone has 32 live
+  tunnels, some kilometres long and reaching out of the zone (a box of 2,650 x 3,410 squares), and the step ran over
+  40 min. Only the squares within a band round the tube's line are tested now.
+- First full zone ti_1_0 on wintryserver (2026-10-27): zip 1.88 GB (5,020 files, level 10.6 GB unpacked), stages 1 h 46
+  min, finishing steps about 4 h with the restarts (tunnels 42 min with the old holes(), paved_edges 32, roof_posts 24,
+  steep_skin 19), package 7 min. Server setup: python3-venv missing (venv --without-pip + get-pip.py), osmium-tool
+  unpacked from the .deb (no sudo), long runs under setsid/nohup. Peak RAM after the fixes ~10 GB; it shares 15 GB
+  with Minecraft (-Xmx8G) and immich. No gh there: the zip stays in /mnt/disk8tb/ticino/bm/dist.
+- download_osm.pbf_communes checked on the server: 25 municipalities over the Malcantone-Lugano box in 19 s, 2 GB.
+- GEOS constrained_delaunay_triangles raised "Unable to find a convex corner" on a wall polygon of ti_m1_7 (stage walls):
+  config.py wraps it for every caller (retry on the cleaned polygon, else no triangles and a log line).
+- zone_build.yml: zone_retry_stamp.txt builds only zone_retry.txt (failed zones after a fix) in its own concurrency
+  group, so it does not cancel the run of the whole list (a push of zone_stamp.txt would: cancel-in-progress).
+  A retry commit must have "[zone retry]" in its message: the first test (head_commit.modified/added holding the
+  stamp's name) came out false in the workflow and the retry started all 71 zones (cancelled at once). Check the
+  setup job's zone list of a new run before leaving it.
+- GEOS union_all stopped on "TopologyException: found non-noded intersection" (zone ti_1_3, clearance._tile in the
+  vegetation stage, 22 min in). config.py wraps shapely.union_all/unary_union like the CDT: on a GEOSException it
+  retries snapped to a 1 mm, then 1 cm grid (shapely.ops.unary_union goes through shapely.union_all, so it is covered).
+  Then ti_1_6 (after its CDT fix) stopped in landmarks.band_all on an intersection ("Ring edge missing"): the wrapper
+  (config._safe_overlay) now covers shapely.intersection/difference/union/symmetric_difference too (the Geometry
+  methods and operators call them), with make_valid inputs as the last try.
+  ti_1_6 failed again: make_valid turned a facade polygon into a polygon + line collection and the retry stopped on
+  "Overlay input is mixed-dimension". The last tries now clean polygonal inputs with buffer(0) (stays a polygon).
+- canopy.run crashed in zone ti_0_m1 (int(NaN) in TileRasters.cell): TileRasters.intrusion returned a NaN direction,
+  so _fix moved the tree to NaN (0 * NaN is NaN even at the step d = 0). Some drivable raster cell had a NaN height:
+  a mesh of that zone has NaN vertices somewhere (not found yet: look at the zone's road/yard DAEs when the zip is
+  there). intrusion now treats a NaN cell as no intrusion, _fix falls back to (1, 0), items with no ground are dropped.
+- zone_route (spawns) took the nearest 6-10 m Strasse: zone ti_0_3 (mountains) has none and argmin of an empty list
+  crashed. It falls back to any Strasse, then any segment. A new retry push REPLACES a retry still pending (one pending
+  run per concurrency group): put the pending run's zones into the new list too.
+- Zone ti_m1_7 crashed in buildings_mesh (None.strip on b['uuid']): some swissBUILDINGS3D features of the Lugano sheets
+  have no UUID, and extract_buildings merged all of them into ONE building keyed None. They now get a key per EGID,
+  else per feature (the Malcantone has none: unchanged).
+- props_osm.build wrote its DAE even with no furniture at all (zone ti_2_m1): bng.write_dae fails on an empty
+  MeshBuilder ("need at least one array to concatenate"). Every writer of a merged shape must skip an empty one.
+- Zone ti_m4_3 has no road segment at all: zone_route now puts the three spawns on the ground of the core (facing
+  east), and the village spawns are skipped when no main road exists (a cKDTree of no points).
+- Zone ti_0_6's finish job stopped in unpaved with "The runner has received a shutdown signal" (exit 143, no
+  traceback): the GitHub runner's 16 GB ran out (unpaved peaked ~13 GB on wintryserver too). zone_build.yml now adds
+  a 16 GB swap file in /mnt to both jobs and runs the finishing steps with PATCH_WORKERS=1. A "shutdown signal" with
+  no Python error in a zone job is memory, not a cancelled run.
+- Zone ti_1_3's finish crashed in poles.roadside_step (network_mesh.terrain_top: IndexError, row -13659): a zone's AI
+  roads reach far out of its terrain. terrain_top now clamps points to the terrain's edge (inside it nothing changes).
+  Zones ti_m1_2 and ti_m2_2 (same row) both crashed at row -8539, ti_1_3 at -13659: the SAME absolute point south of
+  every zone: ai_roads.build added the Malcantone's Street View route (strada_cantonale, road_profile.npz) to every
+  zone's AI roads. A zone now leaves it out unless it lies wholly in the zone's terrain (the network lines take it).
+  Zones built before this fix (main run 40595329416) still carry it: drop strada_cantonale when merging them. The same log showed wall_feet lowered_m_max 354 m: some wall vertex was far off in that zone; not looked at yet.
+- Zone ti_0_7's finish crashed in markings_rules (KeyError roads/markings/items.level.json): the group is made only
+  by the v1.1 route paint (carryover, Malcantone). markings_rules makes it (and its SimGroup line in roads) when missing.
+- Zone ti_1_6 has no railway: the finish step catenary read railway/items.level.json and stopped (KeyError). It now
+  skips a level without a railway group. Other zones without a line will reach the same steps: expect more of these.
+- Zone ti_0_6's finish was shut down in unpaved again WITH the 16 GB swap (32 GB in all, 6 min into the blocks): one
+  block asks TriSurface.height for 1.7 M points, and its work arrays hold one entry per point and face of the point's
+  2 m cell (a face is listed in every cell of its bounding box: long faces of a dense zone fill many). height now
+  answers more than HEIGHT_CHUNK (200k) points in pieces (same result, checked on random faces); the finish step
+  prints [mem] lines every minute so the next such stop shows what grew. With it ti_0_6 passed unpaved (peak 11.1 GB RSS, no swap).
+- Zone ti_0_1 stopped in house_details (KeyError 'gbaup'): a GWR record of a zone may lack the period of construction
+  (download_gwr counts records with gbauj or gbaup: both are optional). house_details reads gkat, egid, gbaup with .get.
+- Every zone of the full run 40614904081 failed in its finishing steps (gbaup, catenary, memory) after 2 h of good
+  stages. zone_build.yml now takes "[zone finish <run id>]" in the commit message (with a zone_stamp.txt change): no
+  stages, the finish jobs download that run's root-<zone> artifacts (run-id + github-token, permission actions: read;
+  kept 2 days) and run the finishing steps of the new commit. Use it whenever a fix touches only finishing steps.
+- Zones ti_m1_2 and ti_0_2 (with a railway) stopped in catenary: a railway shape had an mp_sleeper part with no top
+  face, and vid.max() of the empty part raised. sleepers() skips such parts, catenary skips a level with no sleepers.
+  A finish run with "[zone finish <run>] [zone retry]" takes zone_retry.txt and has a group of its own (no waiting).
+- Zone ti_1_1 has no lake: water.lake_step stopped on "no WaterBlock LagoDiLugano" (SystemExit). It now skips the level.
+- Zone ti_m2_3: 3 tunnel lines, none with a live portal, and cut_meshes concatenated no tubes. tunnels_step now stops
+  right after the portal check when no tube is live.
+- Zone ti_0_3 (mountains) has no traffic island: sidewalks read roads/islands/items.level.json unguarded (KeyError).
+  It now reads the group only when it is there (roundabouts and direction_signs already did).
+- Zone ti_m3_3 has no sign at all: signs_net wrote props_signs.dae from an empty MeshBuilder (concatenate of nothing).
+  With no sign it now writes no shape and no object (mb.empty() is a method: `if not mb.empty:` is always False).
+- Zone ti_0_m2: signs_more planned signs but placed none (all outside the map or left out) and wrote an empty DAE.
+  It now stops before writing when nothing was placed (it already stopped with nothing planned).
+- Zone ti_2_7 has no carriageway face at all (paths only): markings_rules.paint_level concatenated nothing. The step now
+  paints nothing there and only makes the empty roads/markings group the later steps read. Other steps that read the
+  carriageway (road_wear, stop_paint, parking) may meet the same zone next.
+- Zone ti_2_0 has no prop at all, so no MissionGroup/props group: poles.roadside_step read props/items.level.json and
+  stopped (KeyError), and lamps had written its group file under a props group that did not exist. build_level.finish
+  now makes an empty props group (props_group) before the steps when a level has none.
+- ti_2_7 then stopped in road_wear (no asphalt face: concatenate of nothing). road_wear now writes only its overlay
+  materials and textures there (yard_wear needs them), and the other readers of the carriageway (yard_wear, islands,
+  direction_signs, bus_shelters, stop_paint) take markings_net.tops_of, an empty (0, 3, 3) array when nothing is there.
+- Zone ti_0_m1 (the one with NaN mesh heights) raised no terrain vertex at all in unpaved and the report's percentile of
+  the empty lift crashed; then the job hung until GitHub's 6 h limit: the [mem] loop started with & kept running after the
+  failed step. The loop is now killed by a trap on EXIT. That NOTHING was raised there likely comes from the NaN vertices
+  (optimize warned "invalid value encountered in cast" in bng.py): still to be found in that zone's road meshes.
+- ti_2_7 then stopped in road_seams (sags: no AI road sample over a carriageway, an empty cKDTree index). sags returns
+  nothing there and road_seams_step stops after the sags when the level has no carriageway face.
+- ti_0_m1 then stopped in house_extras (int(NaN): the windows of a building with NaN corners). optimize, the first
+  finish step, now drops every triangle with a NaN corner while it merges the shapes (no change where there is none),
+  so the later steps read clean meshes; house_extras also skips NaN pieces. Where the NaN come from is still unknown.
+- Of the 46 zones without GWR buildings, those wholly outside Switzerland (ti_3_m1, Italy) stop at once in
+  build_rasters (FileNotFoundError swissalti3d_05/*.tif: no swissALTI3D tile there). They are not Ticino: leave them out.
+- Zone ti_m3_1 (mostly Italy) has no road at all: ai_roads.graph_report concatenated nothing. ai_roads.build now leaves
+  an empty AIRoads group there (the many readers of AIRoads/items.level.json find an empty file).
+- Joining zones into one streaming level (beamng/ticino/region.py, 2026-10-28): every zone is built with its own Z0/MAXH,
+  terrain material names (GUIDs) and TextureSet: requantize the heights to one global range, match the layers by
+  internalName and rename the TextureSet, or the window's TerrainBlock keeps the first zone's set. The 1152 m merged
+  shapes straddle the core edges: clip them per triangle (by centre) to each zone's core, never keep them by position
+  (two zones would both draw their overlap). A region's forest (millions of items) cannot be one Forest: forest.lua
+  streams one small Forest per tile from a pool (BeamNG.Earth's way). The first forest.lua remade whole tiles at every
+  tile change: a pass now compares each row with what is made and adds or removes only the difference.
+- Welding the region's roads (region_net.py, 2026-10-28): the zones build a road crossing a core edge with the SAME
+  nodes (122 of 123 crossings of ti_0_m1/ti_1_m1/ti_0_0/ti_1_0 within 5 cm), so region.py's first cut ("one node
+  beyond the edge") was already linked in the AI graph (pieces 90 and dead ends 2,298 before, 90 / 2,296 after): what it
+  really did wrong was doubling the last segment of every crossing road (122 doubled segments, two parallel edges for
+  the traffic). Roads are now cut exactly on the edge and the two cut ends welded into one point; every cut end left
+  unwelded (58) lies on the region's outer border. Check a merge with graph_report AND a count of doubled segments.
+- Do not drop strada_cantonale from every zone: in ti_0_m1 and ti_0_0 the Street View route lies wholly in the zone's
+  terrain and is the ONLY AI road of the Magliaso-Pura cantonale (swissTLM3D lines along it covered 0-13 %: the route
+  replaced them, ai_roads main_zone). region_net.stale_cantonale drops it only from a zone where it reaches beyond the
+  zone's terrain (the zones built before the fix of ai_roads.build).
+- signals.json of a zone: `sequences` is a LIST, ids of instances and controllers come from one counter, the stop and
+  give-way controllers (ids 1, 2, isSimple) are in every zone. A light group (sequence) goes to the zone whose core holds
+  the middle of its lights: by single position the lights of one junction on a core edge would split between zones.
+- A release zip of the draft release can be read in parts with HTTP range requests (zipfile over a seekable reader on
+  the asset's redirect URL): the scene files of four 1.5-2 GB zone zips came down in seconds, no full download.
+- ti_0_m1 then stopped in sidewalks (merged_pieces_raised: max of an empty array): a merged prop DAE has NaN vertices,
+  so `W <= W.min() + 0.05` found no feet. The piece is skipped. Props DAEs carry the NaN too (not only roads/buildings).
+- Sparse zones (ti_m1_m1: one road shape, no unpaved road) crash in one finishing step after another on empty data
+  (network_mesh.top_faces concatenated nothing). In a zone, build_level.finish now leaves out a step whose child ends on
+  "need at least one array to concatenate" / "zero-size array to reduction operation" or a KeyError of a group's
+  items.level.json the stages never made (ti_m3_1: no buildings group) (nothing_there, exit code 3) and
+  goes on; the Malcantone build still stops on them. A step that wrote some files before such an error keeps them.
+- Zones ti_m4_2, ti_m5_3, ti_m5_4 have Swiss terrain but no swissTLM3D road at all (network.nodes_of: max of nothing):
+  mostly Italy, left out for now. About 25 zones of the 46 without buildings stop in build_rasters (no swissALTI3D).
+- Zone ti_3_8 has no building of the Federal Register: markings_rules built a cKDTree of np.array([]) (shape (0,), not
+  (0, 2)) and stopped. Every GWR point array (markings_rules, lamps, poles, signs_more, street_life) is now
+  reshape(-1, 2): an empty KD tree answers inf / 0 counts.
+- The first region with Magliaso (run 40721234941) stopped at once: ti_0_m1's TerrainBlock had position z and maxHeight
+  NaN. One NaN height anywhere made terrain z0 = floor(H.min()) NaN and every height of the .ter garbage (the build log
+  said "terrain z0 nan maxHeight nan" and nobody read it; the NaN mesh vertices of that zone likely have the same root).
+  build_terrain now fills NaN heights from the nearest finite ones and logs where they were (nan_report), and each
+  terrain post step (walls, lake, rivers, railway) prints how many NaN it left. Grep a zone's build log for "nan" in
+  the terrain line before joining it.
+  The rebuild (run 40723783273) showed the source: "terrain post 0 left 909 NaN heights", i.e. walls.carve_terrain /
+  adjust_terrain_roadside (post 0) writes NaN at 909 vertices of ti_0_m1; not looked into yet (z0 240, maxHeight 874).
+
+## All of Ticino in one level (region_plan / region_slice / region_base, 2026-10-29)
+
+- region.py loaded every zone at once: 87 zone zips are 65.6 GB (not 120), too much for one runner anyway. Now one
+  GitHub job per zone (ticino_all.yml, region_slice.py) writes the zone's blocks, far ground, clipped shapes, tiles,
+  forest and collision cells, and one small job (region_base.py) the scene, roads, signals, materials, info.json and
+  stream.json from the zones' small files read by HTTP range (87 zips' scenes + materials in about 1 min).
+- What the slices share is fixed in zones/ticino_plan.json (region_plan.py, lists only grow with --add): heights
+  150..3650 m (5.3 cm a step; the Malcantone alone had 1 cm), 21 layers, 43 forest types, 15 ground types. The zones'
+  own z0 went down to -116 m (ti_1_2, ti_1_3) and -704 m (ti_m3_9): carved lake beds / bad ground, clipped at 150.
+- No level shape of any zone is used by more than one TSStatic (all single-use merged chunks): every zone's shapes go
+  under z/<zone>/. Same path, different content across zones: 15,000 shapes (roads, buildings, skin...) and 7 sign
+  PNGs (osm_stop/timetable) and material files: shapes are per zone, the PNGs first zone wins, materials merged by name.
+- A slice writes only the tiles and 64 m collision cells of its own core (Src.core_cell, collision.build bounds): a
+  clipped DAE keeps all its vertices, so dae_center (the box of the first geometry) can lie outside the core, and two
+  zones would have written the same tiles/o_*.json or col/c_*.bin (one file wins in the game's mount).
+- warmup_shapes.json of all Ticino lists every tile shape (hundreds of thousands): the warm-up of the 4-zone region
+  had 13,707 (10,212 took 968 s on michi's PC). region_base writes warmup/<zone>.json and stream.json zoneCores;
+  warmup.lua warms only the zones within RADIUS_M (3 km) of the camera.
+- First run of the 87 zones (run 40830705580, 2026-10-29): 78 slices in about 45 min (20 at a time, the densest
+  ti_1_0 19 min), 9 stopped in collision.write_cell ("a vertex out of the cell's range"): triangles with a corner up
+  to 560 m from their 64 m cell (the 4 Magliaso zones never had one). write_cell now leaves such triangles out and
+  counts them (colStats tris_out_of_cell_range: ti_0_5 20,799 of 10.5 M, ti_m3_9 272, ti_1_2 100). Which meshes they
+  are is not looked at yet: if a car falls through something in those zones, look there first.
+- The base of 87 zones took 2 min (86 s of HTTP range reads): 452 spawns, 57,051 AI roads (4,737 km), 1,534 welded
+  cut ends, the main AI piece 1,879 -> 2,944 km, 122,091 parking spots, 306,957 collision cells in stream.json.
+  89 zips, 51.8 GB. The old ticino_region_*.zip hold the same levels/ticino paths: never install both.
+- `gh api --paginate` on release assets follows a next link with repositories/<id>/..., which the cloud proxy refuses
+  (403): page by hand (&page=N).
+
+- Loading in a wave (michi, 2026-10-29, "prima le cose vicine, poi quelle lontane a onda"): objects.retarget queued the
+  drawn objects in the raster order of the tiles, so a building 6 tiles out could be made before the wall beside the
+  car, and while the next terrain window's files were written (many frames) no object was made at all. Now the queue
+  is sorted by ring (colliders first, deletions after ring 1), forest.retarget makes rings 0-1 whole, then the far
+  rings at WAVE_PART of their share, then the rest, and stream.lua makes rings 0-1 before the window's files. The
+  forest rows of the next ring are read in idle frames (they were read in the frame of the first tree). Checked
+  only outside the game (tests/wave_order.lua); not measured on the PC yet. There is no luajit binary in the cloud
+  container: `pip install lupa` gives LuaJIT 2.1 (`from lupa import luajit21`).
+
+- Phase 2 of the wave (region.split_dae, 2026-10-29): a streamed single-use shape over SPLIT_BYTES (2 MB) whose kept
+  triangles reach a 192 m square or more is cut into 192 m squares, each its own tile entry (z/<zone>/<shape>_q<i>_<j>.dae).
+  clip_dae keeps ALL vertices of a geometry: cutting into many pieces that way would carry every vertex in every piece,
+  so the pieces are compacted (each source cut to the indices its triangles use; sources must look as bng.write_dae
+  writes them, else that geometry is not compacted). A piece with no triangle of some block gets one of no area on the
+  corner nearest the piece (a placeholder at idx[0] lay anywhere in the shape and opened collision cells there).
+  ti_0_m1 before/after: same 22,558,815 triangles with the same world centres per group, z/ 3,050 -> 2,905 MB, DAEs
+  1,829 -> 3,357 (p95 7.2 -> 3.3 MB; the 128 m skin tiles stay whole), one more tile and collision cell, slice 152 -> 227 s.
+  First run on all 87 zones (run 40881073781): ti_3_6 stopped in _write_kept (argmin of an empty sequence): a
+  <triangles> block with NO triangles in the source shape asked for the placeholder's nearest corner. An empty block
+  now stays empty.
+
+## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
+
+- Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py
+  (carryover.props returns at once in a zone), so art/shapes/props/vanilla.materials.json (italy_poles_lights_etc,
+  eca_bld_wood, m_oldwood, italy_bld_metal, trafficlight...) and the mp_delineator_* definitions were never written,
+  while lamps_step, street_life and props_osm place those models in every zone. dati/vanilla_shape_materials.json holds
+  the v3.1.1 definitions; carryover.zone_materials writes them in a zone, region.py adds any the zones lack. Compare
+  a zone's material keys with the released Malcantone's (and the DAEs' `<material name=` against them) after adding a
+  step that places game models.
+- Motorways had no AI road, paint or guard rail: ai_roads.TLM_DRIVE had no "Autobahn" (the Malcantone has none), and
+  markings_rules and the rails work from the AI roads / measured runs only. In a zone Autobahn is now drivable (one-way
+  by RICHTUNGSG, lanesRight from the width, 120 km/h, no village 50), markings_rules.lay_lanes draws 6/12 lane lines and
+  the hard-shoulder line on one-way roads of 2+ lanes, guardrail_mesh.motorway_runs lays rails on both edges, open
+  where another road comes within its half width + 0.8 m at the same level (z within 3 m: not under a viaduct).
+- swissTLM3D draws the two carriageways of the A2 2.5-4 m apart along the MEDIAN, not in their middles (survey at
+  Lugano: carriageways at -11.5..-0.5 and 2.5..14.3 m across one line). Meshed 11 m wide on those lines they overlapped
+  into one 14 m slab. network.separate_carriageways (zone only) moves each line away from its twin to carriageway +
+  MEDIAN apart before measuring: share of line points inside the survey road 0.1-0.6 -> 1.0 on most of ti_1_0's lines.
+- Twin tunnel tubes (Galleria della Collina d'Oro, lines 10.5-18 m apart) ran into each other: a 10.5 m motorway
+  carriageway made 13.5 m tubes and 16.7 m headwalls, each closing half the other's opening ("tunnel mezzi rotti").
+  Motorway tubes are now 8 m of carriageway, and twin_heads stops a headwall TWIN_GAP short of the twin's inside wall.
+  The two halves of a tube across a zone core edge matched to the cm (both zones build the whole tube): not the cause.
+- None of these can be fixed in region.py (it only reads the built zones): they need the zones rebuilt (stages ai,
+  guardrails + finishing markings, tunnels). Only the materials went into the region of 2026-10-28 evening.
+- The first Magliaso region (ticino_region_1..5, 2026-10-28) opened West Coast USA on DESKTOP-OUPOLOA: region.py took
+  the first zone's info.json as it was, with spawnPoints spawn_magliaso... (the region names them ti_0_m1_spawn_* )
+  and a preview ti_0_m1_preview.jpg the copy skips (*.jpg). beamng.log: "Spawnpoint validation failed", 404 on the
+  preview, and freeroamConfigurator.json kept west_coast_usa: the level was never requested. region.py now lists the
+  region's own spawns and packs the preview as ticino_preview.jpg. A local fix (info.json + jpg) sits in the user
+  folder levels\ticino on that PC: delete it once a fixed zip 1 is installed. After any change to object names, check
+  info.json's spawnPoints and previews against the packed level.
+- With info.json fixed, 0.40.3 crashed as soon as forest.lua registered a Forest: the engine reads EVERY *.forest.json
+  of the level as old-format forest data (ForestData::readAppendJsonV23Format "string pointer is null" on
+  tiles/t_10_0.forest.json, the streamer's row format). The tile files are now t_<cx>_<cy>.trees.json (region.py,
+  forest.lua M.FILE). Never give a file of our own a name ending the game claims (.forest.json, .materials.json,
+  items.level.json...). michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
+  %LOCALAPPDATA%\BeamNG\ticino_backup\ticino_region_1.orig.zip).
+- First region drive on DESKTOP-OUPOLOA (2026-10-28 evening, fixes tried there as user-folder overrides, then ported):
+  - Shipping .dae: the game imports each COLLADA file on first use (~0.1 s, up to 46 s for bld_*/river_*) -> 30 s of
+    stutter in every new zone (13,707 shapes, ~27 GB of XML). Ship .cdae or warm up once. A warm-up from the main menu
+    writes grey stub main.materials.json next to the shapes in the user folder (level materials not loaded): run it
+    inside the level or delete them. Now ticino/warmup.lua (extensions.load('ticino_warmup') inside the level, once)
+    reads warmup_shapes.json and warmup_materials.json that region.py writes.
+  - Textures (412 sign PNGs, mp_ch_*) are cooked on first sight, 0.05-0.14 s each: warm up (one ProceduralMesh quad
+    per material in front of the camera for a few frames, ~4 s) or ship cooked DDS. Same warmup.lua, after the shapes.
+  - Terrain window swap 0.6-0.9 s every 384 m: the 12,639 invisible AI DecalRoads re-clip to the terrain at every swap
+    (+0.1-0.35 s), 7 distinct base colour maps force 7 terrainMaterialCache repacks (~50 ms each), and the window moved
+    at every tile. stream.lua: the window moves only when the car's tile leaves places FOLLOW_LO..HI (2..5 of 8), then
+    by 4 tiles; DROP_AI_ROADS deletes the AI DecalRoads after the first map.reset (later jumps keep that map);
+    BASE_COMBINED makes one base map for all materials. ~0.22 s every ~1.5 km. setField('position') costs the same as
+    setPosition. The AI roads need heights of their own, read once, not clipped to the terrain (to do).
+  - Reading 4.9 MB terrain blocks from the zip inside one frame: 150-230 ms frames. stream.lua yields after each block
+    read (yieldingCache) and pack_region stores blocks/ uncompressed.
+  - be:reloadCollision costs ~0.15 us per ProceduralMesh triangle: 9 collision cells of 128 m in Lugano were 60-110 ms
+    a rebuild (radius 2: 25 cells, 170-250 ms). collision.CELL_M is 64 (25-35 ms, hysteresis colCell / 8). Rebuilds
+    only for props or trees wait up to RELOAD_DEFER_MS for the cells' next one; street clutter never collides
+    (objects.NO_COLLISION_SHAPES, 60 % of the colliders).
+  - A GE extension named ticino_warmup is looked up as ticino/warmup.lua (an underscore is a folder).
+  - The PC keeps user-folder overrides (lua/ge/extensions/ticino/, levels/ticino/{info.json, ticino_preview.jpg,
+    stream.json, col64/, blocks/}) that win over any zip: run D:\ticino_tools\pulizia_override.ps1 before new zips.

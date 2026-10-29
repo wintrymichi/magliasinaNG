@@ -1,0 +1,6 @@
+# zones for ticino_all.yml: "all" (every zone of zones/ticino_plan.json) or zone names, one a line
+# 2026-10-29: retry of the 4 slices that stopped on an empty <triangles> block (run 40881073781)
+ti_3_6
+ti_3_9
+ti_m1_8
+ti_m3_9

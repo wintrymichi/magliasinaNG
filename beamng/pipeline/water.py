@@ -277,7 +277,7 @@ def water_level(zi, lv):
             for o in pl.read_items(zi, f):
                 if o.get("class") == "WaterBlock" and str(o.get("name", "")).startswith("LagoDiLugano"):
                     return float(o["position"][2])
-    raise SystemExit("no WaterBlock LagoDiLugano in the level")
+    return None                         # no lake in the level (a zone away from it: ti_1_1)
 
 
 def terrain(zi, lv):
@@ -542,6 +542,9 @@ def lake_step(root, report=None):
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     wl = water_level(zi, lv)
+    if wl is None:
+        print("lake: no WaterBlock LagoDiLugano in the level", flush=True)
+        return 0
     ground = terrain(zi, lv)
     comm = sn.communes()
     swiss = shapely.union_all([g for _, g in comm])
