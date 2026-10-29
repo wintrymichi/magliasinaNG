@@ -185,10 +185,28 @@ def pieces(P, T):
     return out
 
 
+DROPPED = [0]
+
+
 def write_cell(path, x0, y0, parts, types):
-    """parts {ground type: [(P, T)]} -> the cell file (module doc). Returns (triangles, pieces)."""
+    """parts {ground type: [(P, T)]} -> the cell file (module doc). Returns (triangles, pieces). A triangle that does
+    not fit the cell's range (x, y -163..491 m from its corner, z 655 m over z0) is left out (DROPPED counts them):
+    zone ti_0_5 has one with a corner 561 m from its cell (2026-10-29), and one such triangle stopped the whole slice."""
     zs = np.concatenate([P[:, 2] for lst in parts.values() for P, _ in lst])
-    z0 = int(np.floor(zs.min() * 100))
+    z0 = int(np.floor(max(zs.min(), np.median(zs) - 300.0) * 100))
+    fitted = {}
+    for g, lst in parts.items():
+        for P, T in lst:
+            V = np.stack([np.round((P[:, 0] - x0) * 100) + XY_OFF_CM, np.round((P[:, 1] - y0) * 100) + XY_OFF_CM,
+                          np.round(P[:, 2] * 100) - z0], 1)
+            okv = (V >= 0).all(1) & (V <= 65535).all(1)
+            okt = okv[T].all(1)
+            if not okt.all():
+                DROPPED[0] += int((~okt).sum())
+                T = T[okt]
+            if len(T):
+                fitted.setdefault(g, []).append((P, T))
+    parts = fitted
     body, n_tri, n_piece = bytearray(), 0, 0
     for g in sorted(parts):
         P = np.concatenate([P for P, _ in parts[g]])
@@ -318,6 +336,7 @@ def build(zone, tiles, level_dir, src_level, out_dir, workers=4, types=None, gty
     stats.update(cells=len(keys), pieces=int(sum(npieces)), cell_tris_median=int(v[len(v) // 2]) if v else 0,
                  cell_tris_max=v[-1] if v else 0, worst_3x3_tris=int(worst[0]), worst_3x3_at=worst[1],
                  seconds=round(time.time() - t0))
+    stats["tris_out_of_cell_range"] = DROPPED[0]
     log("cells:", len(keys), "of", CELL_M, "m;", {k: v for k, v in stats.items() if not k.startswith("by_")})
     log("ground types:", stats["by_ground"])
     for g, (a, b) in sorted(stats["by_group"].items(), key=lambda kv: -kv[1][0]):
