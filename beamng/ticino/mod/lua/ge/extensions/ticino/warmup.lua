@@ -7,12 +7,15 @@
 -- (2) One small double-sided quad per sign/fuel material (warmup_materials.json) in front of the camera for
 --     TEX_FRAMES frames, so the game cooks their textures (412 sign PNGs, 0.05-0.14 s each, ~4 s in all).
 -- Tried on michi's PC (2026-10-28): 10,212 shapes in 968 s, 0 errors; 424 materials in ~4 s.
+-- All of Ticino (region_base.py) has a list per zone (warmup/<zone>.json): only the zones whose core lies within
+-- RADIUS_M of the camera are warmed (all of them would take hours). Drive to another part and run it again there.
 -- Progress: the log and <user folder>/ticino_warmup/progress.txt. Unloads itself when done.
 local M = {}
 
 M.BUDGET_MS = 250
 M.TEX_FRAMES = 240
 M.PROGRESS = '/ticino_warmup/progress.txt'
+M.RADIUS_M = 3000
 
 local S
 
@@ -32,6 +35,24 @@ end
 local function readList(name)
   local ok, v = pcall(jsonReadFile, '/levels/ticino/' .. name)
   return (ok and type(v) == 'table') and v or {}
+end
+
+-- the shapes to warm: warmup_shapes.json (a region), or the lists of the zones near the camera (all Ticino)
+local function shapeList()
+  local ok, cfg = pcall(jsonReadFile, '/levels/ticino/stream.json')
+  if not (ok and type(cfg) == 'table' and cfg.zoneCores) then return readList('warmup_shapes.json') end
+  local p = core_camera.getPosition()
+  local out, names = {}, {}
+  for zone, c in pairs(cfg.zoneCores) do
+    local dx = math.max(c[1] - p.x, 0, p.x - c[3])
+    local dy = math.max(c[2] - p.y, 0, p.y - c[4])
+    if dx * dx + dy * dy <= M.RADIUS_M * M.RADIUS_M then
+      names[#names + 1] = zone
+      for _, s in ipairs(readList('warmup/' .. zone .. '.json')) do out[#out + 1] = s end
+    end
+  end
+  log('I', 'ticino', 'warm-up zones: ' .. table.concat(names, ' '))
+  return out
 end
 
 local function texStart()
@@ -113,7 +134,7 @@ local function onExtensionLoaded()
     log('E', 'ticino', 'warm-up: load the level ticino first (the shapes need its materials), now: ' .. tostring(lvl))
     return false
   end
-  S = { shapes = readList('warmup_shapes.json'), mats = readList('warmup_materials.json'), pos = 1, done = 0,
+  S = { shapes = shapeList(), mats = readList('warmup_materials.json'), pos = 1, done = 0,
         failed = 0, t0 = clock(), texState = 'waiting' }
   log('I', 'ticino', string.format('warm-up: %d shapes, %d materials', #S.shapes, #S.mats))
   progress('START')

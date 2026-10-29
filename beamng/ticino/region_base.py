@@ -222,8 +222,11 @@ def main():
         for k in d["blocks"]:
             owner[k] = z
     base_keys = sorted(base_keys)
-    with wopen(os.path.join(dst, "warmup_shapes.json"), "w") as f:
-        json.dump(sorted(shp), f)
+    # the warm-up lists per zone: all Ticino's shapes at 0.1 s each would take hours; warmup.lua takes the zones near
+    # the car (stream.json zoneCores)
+    for z in zones:
+        with wopen(os.path.join(dst, "warmup", z + ".json"), "w") as f:
+            json.dump(slices[z]["warmupShapes"], f)
 
     mats, frm = region.terrain_mats(srcs, layers)
     wm = region.window_materials(grid, mats, frm, set(base_keys), os.path.join(dst, "art", "terrains", "w"))
@@ -295,6 +298,7 @@ def main():
         "colRadius": int(grid.cfg.get("col_radius", 1)),
         "maxRadius": max(int(v["radius"]) for v in grid.cfg["groups"].values()),
         "start": [wx, wy], "zones": zones,
+        "zoneCores": {s.name: [round(v, 3) for v in s.core] for s in srcs},
     }
     with wopen(os.path.join(dst, "stream.json"), "w") as f:
         json.dump(stream, f, separators=(",", ":"))

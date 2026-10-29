@@ -1369,7 +1369,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   clipped DAE keeps all its vertices, so dae_center (the box of the first geometry) can lie outside the core, and two
   zones would have written the same tiles/o_*.json or col/c_*.bin (one file wins in the game's mount).
 - warmup_shapes.json of all Ticino lists every tile shape (hundreds of thousands): the warm-up of the 4-zone region
-  had 13,707. Not usable as it is for all Ticino: warm up per zone or ship .cdae.
+  had 13,707 (10,212 took 968 s on michi's PC). region_base writes warmup/<zone>.json and stream.json zoneCores;
+  warmup.lua warms only the zones within RADIUS_M (3 km) of the camera.
 
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
