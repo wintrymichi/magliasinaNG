@@ -116,9 +116,9 @@ class Ground:
         r = np.clip((np.asarray(y) - self.y0) / self.sq, 0, self.n - 1.001)
         c0, r0 = c.astype(int), r.astype(int)
         fc, fr = c - c0, r - r0
-        q = self.q.astype(np.float64)
-        h = (q[r0, c0] * (1 - fc) * (1 - fr) + q[r0, c0 + 1] * fc * (1 - fr) + q[r0 + 1, c0] * (1 - fc) * fr
-             + q[r0 + 1, c0 + 1] * fc * fr)
+        q = lambda r, c: self.q[r, c].astype(np.float64)    # not the whole terrain to float at every call
+        h = (q(r0, c0) * (1 - fc) * (1 - fr) + q(r0, c0 + 1) * fc * (1 - fr) + q(r0 + 1, c0) * (1 - fc) * fr
+             + q(r0 + 1, c0 + 1) * fc * fr)
         return self.z0 + h / 65535.0 * self.maxh
 
     def height(self, x, y):

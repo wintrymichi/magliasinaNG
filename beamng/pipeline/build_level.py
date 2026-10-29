@@ -80,8 +80,14 @@ def stage_terrain(scene, ctx):
         posts.append(lambda H, xs, ys: railway.carve_terrain(H, xs, ys, keep))
 
     def post(H, xs, ys):
-        for fn in posts:
+        for i, fn in enumerate(posts):
+            prev = H.copy()
             H = fn(H, xs, ys)
+            bad = ~np.isfinite(H)
+            if bad.any():                        # zone ti_0_m1: a NaN height made the whole terrain NaN (z0 nan)
+                print("terrain post %d left %d NaN heights: kept the heights before it there" % (i, bad.sum()),
+                      flush=True)
+                H[bad] = prev[bad]
         return H
     # v2.4: no grass (groundcover.py) within a terrain square of the carved road and path surfaces
     no_cover = None
@@ -198,6 +204,43 @@ def ground_fn():
     return smoothed_sampler(Grid.load(os.path.join(WORK, "dtm05.npz")), 0.6)
 
 
+_NET_JOB = None
+
+
+def _mesh_tile_job(k):
+    """One network tile of stage_roads (in a forked worker or in the main process): (triangles, [(tx, ty,
+    MeshBuilder parts)], [(cx, cy, top triangles)])."""
+    import network_mesh
+    net, dtm, xs, ys, surface_parts, tiles = _NET_JOB
+    X0, Y0 = tiles[k]
+    ops, tops = [], []
+
+    def on_mesh(tx, ty, mat, uvt, V, T, S_, ground_):
+        ops.append((tx, ty, surface_parts(mat, uvt, V, T, S_, ground_)))
+    n = network_mesh.mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, lambda cx, cy, tri: tops.append((cx, cy, tri)))
+    return n, ops, tops
+
+
+def carve_corridor(meshed, tops, xs, ys, sq, ov):
+    """The terrain carve under the corridor meshes (stage_roads): ov gets the carve heights."""
+    import shapely
+    import road_mesh
+    from rasterio import features
+    from rasterio.transform import Affine
+    union = shapely.union_all([m.buffer(sq) for m in meshed])
+    bx0, by0, bx1, by1 = union.bounds
+    c0, c1 = max(int(np.searchsorted(xs, bx0)) - 1, 0), min(int(np.searchsorted(xs, bx1)) + 1, len(xs))
+    r0, r1 = max(int(np.searchsorted(ys, by0)) - 1, 0), min(int(np.searchsorted(ys, by1)) + 1, len(ys))
+    tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)  # row 0 = south
+    mask = features.rasterize([(union, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0,
+                              dtype=np.uint8, all_touched=True).astype(bool)
+    rr, cc = np.nonzero(mask)
+    csurf = road_mesh.TriSurface(np.concatenate(tops))
+    zc = road_mesh.carve_window(csurf, xs, ys, r0 + rr, c0 + cc)
+    ok = np.isfinite(zc)
+    ov[r0 + rr[ok], c0 + cc[ok]] = zc[ok] - 0.10
+
+
 def stage_roads(scene, ctx):
     """Collision meshes of every road and path of the area:
     - the cadastral paved surfaces within roadheight.CORRIDOR m of the Street View route (the Strada
@@ -260,11 +303,12 @@ def stage_roads(scene, ctx):
     # within 1 m, as on the rest of the network (network_mesh.py)
     from scipy import ndimage as ndi
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
-    bb = np.array([it[0].bounds for it in items if not it[0].is_empty])
-    win, _, _ = dtm.window(bb[:, 0].min() - 5, bb[:, 1].min() - 5, bb[:, 2].max() + 5, bb[:, 3].max() + 5, pad=4)
-    lo = Grid(ndi.minimum_filter(np.asarray(win.a, np.float32), size=5) - network_mesh.SUNK, win.x_min, win.y_max,
-              win.res)
-    del win
+    bb = np.array([it[0].bounds for it in items if not it[0].is_empty]).reshape(-1, 4)
+    if len(bb):                                      # a Ticino zone away from the Street View route has no corridor
+        win, _, _ = dtm.window(bb[:, 0].min() - 5, bb[:, 1].min() - 5, bb[:, 2].max() + 5, bb[:, 3].max() + 5, pad=4)
+        lo = Grid(ndi.minimum_filter(np.asarray(win.a, np.float32), size=5) - network_mesh.SUNK, win.x_min,
+                  win.y_max, win.res)
+        del win
 
     def z_fn(pid):
         return lambda x, y, comp: np.maximum(S.height(x, y, pid=pid, comp=int(comp)), lo.sample(x, y))
@@ -278,17 +322,28 @@ def stage_roads(scene, ctx):
     import railway
     bed = railway.bed_fn() if "railway" in ctx.get("stages", STAGES) else None
 
-    def add_surface(tx, ty, mat, uvt, V, T, S_, ground_, tops=None):
-        mb = builders.setdefault((tx, ty), bng.MeshBuilder())
-        mb.add(mat, V, uvs=V[:, :2] / uvt, tris=T)
-        if tops is not None:
-            tops.append(V[T])
+    def surface_parts(mat, uvt, V, T, S_, ground_):
+        """The MeshBuilder.add calls of one surface with its skirts: [(material, verts, kwargs)]."""
+        parts = [(mat, V, {"uvs": V[:, :2] / uvt, "tris": T})]
         gr = ground_ if bed is None else (lambda x, y: np.minimum(ground_(x, y), bed(x, y)))
         kerb, wall = road_mesh.skirt_bands(V, T, road_mesh.skirt_depth(V, T, S_, gr))
-        mb.add(mat, kerb, uvs=bng.box_uvs_soup(kerb, uvt), normals=bng.flat_normals_soup(kerb))
+        parts.append((mat, kerb, {"uvs": bng.box_uvs_soup(kerb, uvt), "normals": bng.flat_normals_soup(kerb)}))
         if len(wall):
-            mb.add("mp_road_wall", wall, uvs=bng.box_uvs_soup(wall, 1.6), normals=bng.flat_normals_soup(wall))
-            stats["stone faces"] += len(wall) // 6
+            parts.append(("mp_road_wall", wall, {"uvs": bng.box_uvs_soup(wall, 1.6),
+                                                 "normals": bng.flat_normals_soup(wall)}))
+        return parts
+
+    def add_parts(tx, ty, parts):
+        mb = builders.setdefault((tx, ty), bng.MeshBuilder())
+        for mat_, V_, kw in parts:
+            mb.add(mat_, V_, **kw)
+            if mat_ == "mp_road_wall":
+                stats["stone faces"] += len(V_) // 6
+
+    def add_surface(tx, ty, mat, uvt, V, T, S_, ground_, tops=None):
+        if tops is not None:
+            tops.append(V[T])
+        add_parts(tx, ty, surface_parts(mat, uvt, V, T, S_, ground_))
 
     tops = []
     for gi, mat, cell, uvt, pid in items:
@@ -321,20 +376,11 @@ def stage_roads(scene, ctx):
     sq = xs[1] - xs[0]
     ov = np.full((len(ys), len(xs)), np.nan, np.float32)            # carve height, NaN = none
     cap = np.full((len(ys), len(xs)), np.inf, np.float32)           # highest ground (under decks)
-    corridor = shapely.union_all(meshed)
-    union = shapely.union_all([m.buffer(sq) for m in meshed])
-    bx0, by0, bx1, by1 = union.bounds
-    c0, c1 = max(int(np.searchsorted(xs, bx0)) - 1, 0), min(int(np.searchsorted(xs, bx1)) + 1, len(xs))
-    r0, r1 = max(int(np.searchsorted(ys, by0)) - 1, 0), min(int(np.searchsorted(ys, by1)) + 1, len(ys))
-    tr = Affine(sq, 0, xs[c0] - 0.5 * sq, 0, sq, ys[r0] - 0.5 * sq)  # row 0 = south
-    mask = features.rasterize([(union, 1)], out_shape=(r1 - r0, c1 - c0), transform=tr, fill=0,
-                              dtype=np.uint8, all_touched=True).astype(bool)
-    rr, cc = np.nonzero(mask)
-    csurf = road_mesh.TriSurface(np.concatenate(tops))
-    zc = road_mesh.carve_window(csurf, xs, ys, r0 + rr, c0 + cc)
-    ok = np.isfinite(zc)
-    ov[r0 + rr[ok], c0 + cc[ok]] = zc[ok] - 0.10
-    ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops))
+    corridor = shapely.union_all(meshed) if meshed else shapely.Polygon()
+    tops = tops or [np.zeros((0, 3, 3))]
+    if meshed:
+        carve_corridor(meshed, tops, xs, ys, sq, ov)
+    ctx["road_mesh_fn"] = road_mesh.MeshSampler(np.concatenate(tops)) if len(tops[0]) else None
     # the rest of the network, tile by tile
     net = network_mesh.Network(exclude=corridor)
     ctx["surfaces"] = net.assign_surfaces()
@@ -348,10 +394,28 @@ def stage_roads(scene, ctx):
 
     def on_tops(cx, cy, tri):
         chunk_tops.setdefault((cx, cy), []).append(tri)
-    for k, (X0, Y0) in enumerate(tiles):
-        ntri += network_mesh.mesh_tile(net, dtm, X0, Y0, xs, ys, add_surface, on_tops)
+    # NET_WORKERS > 1 (the Ticino zones): the tiles in forked processes, their meshes added here in tile order,
+    # so the level is the same as with one process
+    global _NET_JOB
+    _NET_JOB = (net, dtm, xs, ys, surface_parts, tiles)
+    nw = int(os.environ.get("NET_WORKERS", "1"))
+    if nw > 1:
+        import multiprocessing as mp
+        pool = mp.get_context("fork").Pool(nw)
+        results = pool.imap(_mesh_tile_job, range(len(tiles)))
+    else:
+        pool, results = None, map(_mesh_tile_job, range(len(tiles)))
+    for k, (n, ops, tt) in enumerate(results):
+        ntri += n
+        for tx, ty, parts in ops:
+            add_parts(tx, ty, parts)
+        for cx, cy, tri in tt:
+            on_tops(cx, cy, tri)
         if k % 25 == 0:
             print("  network tiles %d/%d, %d triangles, %.0f s" % (k + 1, len(tiles), ntri, time.time() - t0), flush=True)
+    if pool is not None:
+        pool.close(); pool.join()
+    _NET_JOB = None
     # the carve once all the meshes exist (a vertex at a tile edge sees the meshes on both sides)
     per = int(round(network_mesh.TILE / CHUNK))
     for X0, Y0 in tiles:
@@ -470,7 +534,7 @@ def stage_roads_reuse(scene, ctx):
     m = np.isfinite(ov)
     ctx["terrain_override"] = (np.nan_to_num(ov), m, None)
     ctx["terrain_cap"] = cap
-    ctx["road_mesh_fn"] = road_mesh.MeshSampler(st["tops"])
+    ctx["road_mesh_fn"] = road_mesh.MeshSampler(st["tops"]) if len(st["tops"]) else None
     ctx["corridor"] = shapely.from_wkb(st["corridor"].tobytes())
     ctx["network"] = network_mesh.Network(exclude=ctx["corridor"])
     if "deck_kind" in st.files:
@@ -747,6 +811,9 @@ def stage_buildings(scene, ctx):
     from config import wgs_to_local
     ground = forest_fill.terrain_sampler()
     near = wgs_to_local(*landmarks.LEMA_BOTTOM)
+    ext = TER_SIZE * TER_SQUARE
+    if not (TER_X0 <= near[0] <= TER_X0 + ext and TER_Y0 <= near[1] <= TER_Y0 + ext):
+        return                                       # a Ticino zone away from the Monte Lema
     for shape, origin, ntri, coll in landmarks.cableway(LEVEL_DIR, LEVEL_NAME, ground, near) + \
             landmarks.summit(LEVEL_DIR, LEVEL_NAME, ground):
         scene.add("MissionGroup/landmarks", bng.tsstatic(shape, origin, collision=coll, decal=False,
@@ -799,12 +866,45 @@ def stage_groundcover(scene, ctx):
     print("groundcover:", ctx["groundcover"], flush=True)
 
 
+def zone_route(ctx):
+    """A Ticino zone (config.ZONE) has no Street View route: the three first spawns go on the main roads nearest
+    to the middle of its core and halfway to two of its corners, as [{'pos': (x, y)}] pairs along the road."""
+    from config import ZONE
+    net = ctx.get("network")
+    x0, y0, x1, y1 = ZONE["core_local"]
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    big = {"10m Strasse", "8m Strasse", "6m Strasse"}
+    open_ = np.array([not net.segs[k]["bridge"] and net.segs[k]["n"] >= 2 for k in net.seg], bool)
+    idx = np.flatnonzero(open_ & np.array([net.segs[k]["class"] in big for k in net.seg], bool))
+    if not len(idx):                                 # a mountain zone with no main road (ti_0_3): any road
+        idx = np.flatnonzero(open_ & np.array(["Strasse" in net.segs[k]["class"] for k in net.seg], bool))
+    if not len(idx):
+        idx = np.flatnonzero(open_)
+    out = []
+    if not len(idx):                                 # no road at all (ti_m4_3): on the ground, facing east
+        for tx, ty in ((cx, cy), ((cx + x0) / 2, (cy + y0) / 2), ((cx + x1) / 2, (cy + y1) / 2)):
+            out += [{"pos": (float(tx), float(ty))}, {"pos": (float(tx) + 5.0, float(ty))}]
+        return out
+    for tx, ty in ((cx, cy), ((cx + x0) / 2, (cy + y0) / 2), ((cx + x1) / 2, (cy + y1) / 2)):
+        i = idx[np.argmin(np.hypot(net.x[idx] - tx, net.y[idx] - ty))]
+        a, n = net.segs[net.seg[i]]["first"], net.segs[net.seg[i]]["n"]
+        i = min(max(i, a), a + n - 2)
+        out += [{"pos": (float(net.x[i]), float(net.y[i]))}, {"pos": (float(net.x[i + 1]), float(net.y[i + 1]))}]
+    return out
+
+
 def stage_spawns(scene, ctx):
-    poses = json.load(open(os.path.join(WORK, "poses.json")))
-    main = [p for p in poses if p.get("main_run", True)]
+    from config import ZONE
+    if ZONE:
+        main = zone_route(ctx)                       # pairs: indices 0, 2, 4 with the next point
+        picks = [0, 2, 4]
+    else:
+        poses = json.load(open(os.path.join(WORK, "poses.json")))
+        main = [p for p in poses if p.get("main_run", True)]
+        picks = [2, len(main) // 2, len(main) - 3]
     g = "MissionGroup/PlayerDropPoints"
     hfn = road_height_fn()
-    for k, idx in enumerate([2, len(main) // 2, len(main) - 3]):
+    for k, idx in enumerate(picks):
         p, q = main[idx], main[idx + 1]
         x, y = p["pos"][0], p["pos"][1]
         z = float(hfn([x], [y])[0]) + 0.8                          # 0.8 m above the road surface
@@ -827,6 +927,8 @@ def stage_spawns(scene, ctx):
     main_cls = {"10m Strasse", "8m Strasse", "6m Strasse", "4m Strasse"}
     ok = np.array([net.segs[k]["class"] in main_cls and not net.segs[k]["bridge"] for k in net.seg])
     idx = np.flatnonzero(ok)
+    if not len(idx):
+        return
     from scipy.spatial import cKDTree
     tree = cKDTree(np.column_stack([net.x[idx], net.y[idx]]))
     taken = [(s[1], s[2]) for s in ctx["spawns"]]
@@ -971,6 +1073,7 @@ FINISH = [
     ("forest_mosaic", "forest_mosaic", "forest_mosaic_step", {"report": True}),   # v3.1: the forest floor as a mosaic
     ("forest_grass", "forest_mosaic", "grass_step", {"report": True}),   # v3.1.1: grass under the crowns too
     ("vineyards_ground", "vineyards", "ground_step", {"report": True}),   # v3.0: vine rows on the final terrain
+    ("tunnels", "tunnels", "tunnels_step", {"report": True}),   # v3.2: tunnels and galleries, holes in the final terrain
     ("ambient_sounds", "ambient_sounds", "ambient_sounds_step", {"report": True}),   # v3.0.40: rivers, streams, the lake
     ("races", "races", "races_step", {"report": True}),          # v3.0.40: time trials over the AI roads
     ("same_textures", "same_textures", "same_textures_step", {"report": True}),   # v3.0.40: one file per texture
@@ -978,22 +1081,86 @@ FINISH = [
 ]
 
 
-def finish(names=None):
-    """The FINISH steps (all, or those named) on the level folder."""
+# not in a Ticino zone (config.ZONE): the time trials follow the Malcantone's named roads
+ZONE_SKIP = {"races"}
+STEP_FORK = hasattr(os, "fork") and os.environ.get("MAGLIASO_STEP_FORK", "1") != "0"
+
+
+def props_group():
+    """A zone with no prop at all (ti_2_0) has no props group: many finish steps add theirs to it, so make it empty."""
+    mg = os.path.join(LEVEL_DIR, "main", "MissionGroup")
+    pf = os.path.join(mg, "props", "items.level.json")
+    if os.path.exists(pf):
+        return
+    os.makedirs(os.path.dirname(pf), exist_ok=True)
+    open(pf, "w").close()
+    top = os.path.join(mg, "items.level.json")
+    rows = [json.loads(l) for l in open(top, encoding="utf-8") if l.strip()] if os.path.exists(top) else []
+    if not any(r.get("name") == "props" for r in rows):
+        rows.append({"name": "props", "class": "SimGroup", "persistentId": bng.pid(), "__parent": "MissionGroup"})
+        with open(top, "w", encoding="utf-8") as f:
+            f.write("\n".join(json.dumps(r, separators=(",", ":")) for r in rows) + "\n")
+    print("props group made (the level had none)", flush=True)
+
+
+def nothing_there(e):
+    """An error of a step that met no data at all (concatenate of nothing, max of an empty array): a sparse Ticino zone
+    (mountains, a strip of Switzerland) has steps with nothing to do, and every such step crashed one at a time. A group
+    the stages never made (no buildings at all in ti_m3_1: no buildings/items.level.json) is nothing there too."""
+    if isinstance(e, KeyError):
+        return "items.level.json" in str(e)
+    return isinstance(e, ValueError) and any(m in str(e) for m in (
+        "need at least one array to concatenate", "zero-size array to reduction operation"))
+
+
+def finish(names=None, after=None):
+    """The FINISH steps (all, or those named, or those after the step `after`) on the level folder."""
     import importlib
     root = os.path.dirname(os.path.dirname(LEVEL_DIR))       # the folder that holds levels/<name>/
     rdir = os.path.join(WORK, "reports")
     os.makedirs(rdir, exist_ok=True)
     os.environ.setdefault("MAGLIASO_OSM_PINNED", "1")        # OpenStreetMap from the extract in beamng/dati
+    props_group()
+    todo = [f[0] for f in FINISH]
+    if after:
+        todo = todo[todo.index(after) + 1:]
     for name, mod, fn, kw in FINISH:
-        if names and name not in names:
+        if (names and name not in names) or name not in todo:
+            continue
+        from config import ZONE
+        if ZONE and name in ZONE_SKIP:
+            print(f"== finish: {name} skipped in a zone", flush=True)
             continue
         kw = dict(kw)
         if kw.get("report"):
             kw["report"] = os.path.join(rdir, f"{name}.json")
         t0 = time.time()
         print(f"== finish: {name} ({mod}.{fn})", flush=True)
-        getattr(importlib.import_module(mod), fn)(root, **kw)
+        if STEP_FORK:
+            # each step in a child process: the memory a step leaves behind added up from one step to the next and the
+            # 14 GB server ran out of it after two hours of steps (Ticino zone ti_1_0)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            pid = os.fork()
+            if pid == 0:
+                code = 0
+                try:
+                    getattr(importlib.import_module(mod), fn)(root, **kw)
+                except BaseException as e:
+                    import traceback
+                    traceback.print_exc()
+                    code = 3 if ZONE and nothing_there(e) else 1
+                sys.stdout.flush()
+                sys.stderr.flush()
+                os._exit(code)
+            status = os.waitpid(pid, 0)[1]
+            if os.WIFEXITED(status) and os.WEXITSTATUS(status) == 3:
+                print(f"== finish: {name} found nothing to work on in this zone, left out", flush=True)
+                continue
+            if status:
+                raise SystemExit(f"finish step {name} failed (wait status {status})")
+        else:
+            getattr(importlib.import_module(mod), fn)(root, **kw)
         print(f"[finish {name}: {time.time() - t0:.0f} s]", flush=True)
 
 
@@ -1001,9 +1168,22 @@ def main():
     if "--finish" in sys.argv[1:]:
         finish([a for a in sys.argv[1:] if not a.startswith("--")])
         return
+    if "--finish-after" in sys.argv[1:]:                 # build_level.py --finish-after <step>: the rest of the chain
+        finish(after=sys.argv[sys.argv.index("--finish-after") + 1])
+        return
     reuse = "--reuse-roads" in sys.argv[1:]
     stages = [a for a in sys.argv[1:] if not a.startswith("--")] or STAGES
-    if set(stages) == set(STAGES) and os.path.exists(LEVEL_DIR):
+    # MAGLIASO_CHECKPOINT=1 keeps (scene, ctx) after every stage in WORK; --resume goes on from there after a crash
+    # (the Ticino zones: a fault in a late stage cost hours of stages before it)
+    import pickle
+    ckpt = os.path.join(WORK, "build_checkpoint.pkl")
+    resume = "--resume" in sys.argv[1:] and os.path.exists(ckpt)
+    if resume:
+        scene, ctx, done = pickle.load(open(ckpt, "rb"))
+        print("resumed after the stages", done, flush=True)
+    else:
+        scene, ctx, done = bng.Scene(), {"stages": stages}, []
+    if set(stages) == set(STAGES) and os.path.exists(LEVEL_DIR) and not resume:
         roads, keep = level_path("art", "shapes", "roads"), LEVEL_DIR + "_roads"
         if reuse:                                   # everything goes except the road meshes
             shutil.rmtree(keep, ignore_errors=True)
@@ -1013,11 +1193,24 @@ def main():
             os.makedirs(os.path.dirname(roads))
             shutil.move(keep, roads)
     os.makedirs(LEVEL_DIR, exist_ok=True)
-    scene, ctx = bng.Scene(), {"stages": stages}
     for st in stages:
+        if st in done:
+            continue
         t0 = time.time()
         globals()["stage_roads_reuse" if st == "roads" and reuse else f"stage_{st}"](scene, ctx)
         print(f"[stage {st}: {time.time() - t0:.0f} s]", flush=True)
+        done.append(st)
+        if os.environ.get("MAGLIASO_CHECKPOINT") == "1":
+            keep = {}
+            for k, v in ctx.items():                 # what does not pickle (functions) is made again on use
+                try:
+                    pickle.dumps(v, protocol=5)
+                    keep[k] = v
+                except Exception:
+                    print("  checkpoint: ctx[%r] left out" % k, flush=True)
+            with open(ckpt + ".part", "wb") as f:
+                pickle.dump((scene, keep, done), f, protocol=5)
+            os.replace(ckpt + ".part", ckpt)
     scene.write(LEVEL_DIR)
     if "vegetation" in stages:
         # crowns out of the clearance profile of the roads, trunks out of walls and buildings, every
@@ -1033,7 +1226,7 @@ def main():
                                  "rivers", "vineyards") if k in ctx}
     if stats:
         json.dump(stats, open(os.path.join(WORK, "build_stats.json"), "w"), indent=1, default=float)
-    if set(stages) == set(STAGES):
+    if set(stages) == set(STAGES) and "--no-finish" not in sys.argv[1:]:
         finish()
     print("level written to", LEVEL_DIR)
 

@@ -19,7 +19,7 @@ the Overpass servers; --pin copies the downloaded files there.
 """
 import gzip, json, os, shutil, sys, time
 import requests
-from config import DATA, local_to_lv95, lv95_to_wgs
+from config import DATA, ZONE, local_to_lv95, lv95_to_wgs
 import area
 
 URLS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
@@ -93,8 +93,40 @@ def overpass(q, attempts=6):
     raise RuntimeError("Overpass failed")
 
 
+def zone_main():
+    """A Ticino zone (config.ZONE): the elements over the area + MARGIN from the Geofabrik extracts (Overpass is not
+    fit for 60 zones in parallel), Switzerland and, where the zone reaches over the border, the north-west of Italy.
+    The Swiss municipalities touching the box come from the Swiss extract (pbf_communes). The extracts in dati are
+    replaced by the zone's: run zone builds only in a scratch checkout (the workflow), never in a working copy."""
+    import download_swisstopo as ds
+    b = bbox()
+    box = tuple(float(v) for v in b.split(","))
+    got = [[], []]
+    seen = [set(), set()]
+    for url in ZONE_PBFS:
+        pbf = ds.fetch(url, os.path.join(DATA, "osm", os.path.basename(url)))[0]
+        for k, els in enumerate(pbf_elements(pbf, box)):
+            for e in els:
+                if (e["type"], e["id"]) not in seen[k]:
+                    seen[k].add((e["type"], e["id"]))
+                    got[k].append(e)
+    comm = pbf_communes(ds.fetch(PBF, os.path.join(DATA, "osm", os.path.basename(PBF)))[0], box)
+    src = "Geofabrik " + ", ".join(map(os.path.basename, ZONE_PBFS)) + time.strftime(" %Y-%m-%d")
+    for path, els in ((OUT, got[0]), (POIS, got[1]), (COMMUNES, comm)):
+        d = {"elements": els, "bbox": b, "source": src}
+        json.dump(d, open(path + ".part", "w"))
+        os.replace(path + ".part", path)
+        # many steps read the extracts in dati directly: in a zone build (a scratch checkout) they become the zone's
+        os.remove(PINNED[path]) if os.path.exists(PINNED[path]) else None
+        with gzip.open(PINNED[path], "wt", encoding="utf-8") as f:
+            json.dump(d, f, separators=(",", ":"))
+        print(os.path.basename(path), len(els), "OSM elements over", b, flush=True)
+
+
 def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    if ZONE:
+        return zone_main()
     for path, query in ((OUT, QUERY), (COMMUNES, QUERY_COMMUNES), (POIS, QUERY_POIS)):
         if os.path.exists(path):
             print(path, "exists")
@@ -117,6 +149,7 @@ def main():
 
 
 PBF = "https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"
+ZONE_PBFS = (PBF, "https://download.geofabrik.de/europe/italy/nord-ovest-latest.osm.pbf")
 # the filters of QUERY and QUERY_POIS: key -> None (any value) or a regex of values
 WAY_TAGS = {"highway": None, "railway": None, "barrier": None, "waterway": None,
             "man_made": "bridge|embankment|pier", "amenity": "parking|bench", "public_transport": None}
@@ -171,6 +204,38 @@ def pbf_elements(pbf, box):
                              "center": {"lat": sum(g["lat"] for g in geom) / len(geom),
                                         "lon": sum(g["lon"] for g in geom) / len(geom)}})
     return area_el, pois
+
+
+def pbf_communes(pbf, box):
+    """The municipalities (admin_level 8 boundaries) of the extract that reach into the WGS84 box (s, w, n, e), in the
+    Overpass "out body geom" form QUERY_COMMUNES returns (members with their geometry): signs_net.communes() reads
+    them (the Swiss ones by their BFS number)."""
+    import subprocess, tempfile
+    import osmium
+    s_, w_, n_, e_ = box
+    adm = os.path.join(tempfile.mkdtemp(), "adm.osm.pbf")
+    subprocess.run(["osmium", "tags-filter", pbf, "r/boundary=administrative", "--overwrite", "-o", adm], check=True)
+    rels, ways = [], {}
+    for o in osmium.FileProcessor(adm).with_locations():
+        if o.is_way():
+            ways[o.id] = [{"lat": n.location.lat, "lon": n.location.lon} for n in o.nodes if n.location.valid()]
+        elif o.is_relation():
+            tags = {t.k: t.v for t in o.tags}
+            if tags.get("admin_level") == "8":
+                rels.append((o.id, tags, [(m.type, m.ref, m.role) for m in o.members]))
+    out = []
+    for rid, tags, members in rels:
+        mem = [{"type": "way", "ref": ref, "role": role, "geometry": ways.get(ref, [])}
+               for t, ref, role in members if t == "w"]
+        pts = [g for m in mem for g in m["geometry"]]
+        if not pts:
+            continue
+        la = [g["lat"] for g in pts]
+        lo = [g["lon"] for g in pts]
+        if min(la) <= n_ and max(la) >= s_ and min(lo) <= e_ and max(lo) >= w_:
+            out.append({"type": "relation", "id": rid, "members": mem, "tags": tags})
+    print("municipalities over the zone:", len(out), flush=True)
+    return out
 
 
 def add():

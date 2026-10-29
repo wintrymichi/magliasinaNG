@@ -51,6 +51,7 @@ def main():
     keep_area = shapely.union_all([area.polygon().buffer(MARGIN)] + landmarks.far_zones())
     shapely.prepare(keep_area)
     blds = {}
+    nouid = 0
     for g in gdbs:
         for lname, key in (("Wall", "walls"), ("Roof", "roofs"), ("Floor", "floors")):
             for props, tris in features(g, lname):
@@ -62,6 +63,11 @@ def main():
                                                         tris[..., 0].max(), tris[..., 1].max())):
                     continue
                 uid = props["UUID"]
+                if not uid:
+                    # a few features of the Lugano sheets have no UUID (zone ti_m1_7): one building per EGID, else
+                    # per feature (all of them under None made one building and buildings_mesh crashed on it)
+                    nouid += 1
+                    uid = f"EGID-{props['EGID']}" if props["EGID"] else f"nouuid-{nouid}"
                 b = blds.setdefault(uid, dict(uuid=uid, egid=props["EGID"], kind=props["OBJEKTART"],
                                               name=props["NAME_KOMPLETT"], walls=[], roofs=[], floors=[],
                                               sheet=os.path.basename(g)))
@@ -77,7 +83,7 @@ def main():
     kinds = {}
     for b in out:
         kinds[b["kind"]] = kinds.get(b["kind"], 0) + 1
-    print(len(out), "buildings in the area;", kinds)
+    print(len(out), "buildings in the area;", kinds, "features without UUID:", nouid)
     pickle.dump(out, open(os.path.join(WORK, "buildings.pkl"), "wb"))
 
 

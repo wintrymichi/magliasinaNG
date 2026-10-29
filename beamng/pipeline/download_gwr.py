@@ -20,7 +20,7 @@ import csv, gzip, io, json, os, sys, time, zipfile
 import numpy as np
 import requests
 import shapely
-from config import DATA, WORK, lv95_to_local
+from config import DATA, WORK, ZONE, lv95_to_local
 import area
 
 URL = "https://public.madd.bfs.admin.ch/ti.zip"
@@ -74,6 +74,7 @@ def read(zpath):
 
 
 def main(pin=False, add=False):
+    pin = pin or ZONE is not None                    # a Ticino zone: the pinned extract is the Malcantone's (scratch checkout)
     if pin or add or not os.path.exists(PINNED):
         rows = read(fetch())
         date = time.strftime("%Y-%m-%d")

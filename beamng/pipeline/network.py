@@ -25,7 +25,7 @@ import numpy as np
 import shapely
 from scipy.ndimage import median_filter
 from scipy.spatial import cKDTree
-from config import DATA, WORK, lv95_to_local
+from config import DATA, WORK, ZONE, lv95_to_local
 import area
 
 STEP = 2.0              # m between stations
@@ -448,10 +448,74 @@ def dry_ends(lines, ends, node_pos):
     return out_l, np.array(out_e).reshape(-1, 2)
 
 
+MOTORWAY_SEP = ("Autobahn", "Autostrasse")
+MEDIAN = 3.0            # m between the two carriageways of a motorway (Lugano, cadastral survey: 2.5-4 m)
+TWIN_REACH = 12.0       # m: the other carriageway's line this close is the twin
+
+
+def separate_carriageways(lines, ends, node_pos):
+    """The two carriageways of a motorway apart (Ticino zones, 2026-10-28). swissTLM3D draws a motorway as one line
+    per carriageway (RICHTUNGSG), but they lie 2.5-4 m apart along the median (the A2 at Lugano: survey carriageways
+    11 m wide at -11.5..-0.5 and 2.5..14.3 m across one line), not in the carriageways' middles: meshed 11 m wide on
+    them, the two overlapped into one 14 m slab and the motorway was half as wide as it is. Each line moves away from
+    its twin until the two are a carriageway + MEDIAN apart (measure_width then centres it on the survey); the end
+    nodes move by the mean of their lines' moves, so the ramps stay joined. Returns the lines (node_pos in place)."""
+    from scipy.ndimage import gaussian_filter1d
+    from scipy.spatial import cKDTree
+    mw = [k for k, (props, L) in enumerate(lines)
+          if props.get("OBJEKTART") in MOTORWAY_SEP and props.get("RICHTUNGSG") == "Wahr" and len(L) >= 2]
+    if len(mw) < 2:
+        return lines
+    dense = {k: densify(lines[k][1], 2.0) for k in mw}
+    pts = np.concatenate([dense[k][:, :2] for k in mw])
+    owner = np.concatenate([np.full(len(dense[k]), k) for k in mw])
+    zs = np.concatenate([dense[k][:, 2] for k in mw])
+    tree = cKDTree(pts)
+    node_moves = {}
+    out = list(lines)
+    moved = 0
+    for k in mw:
+        props, _ = lines[k]
+        Q = dense[k].copy()
+        nominal = CLASSES[props["OBJEKTART"]][0]
+        T = np.gradient(Q[:, :2], axis=0)
+        T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+        N = np.column_stack([-T[:, 1], T[:, 0]])
+        shift = np.zeros(len(Q))
+        for i, lst in enumerate(tree.query_ball_point(Q[:, :2], TWIN_REACH)):
+            best = None
+            for j in lst:
+                if owner[j] == k or abs(zs[j] - Q[i, 2]) > 3.0:
+                    continue
+                d = pts[j] - Q[i, :2]
+                if abs(float(d @ T[i])) > 0.5 * TWIN_REACH:
+                    continue
+                n = float(d @ N[i])
+                if best is None or abs(n) < abs(best):
+                    best = n
+            if best is not None:
+                need = max(0.0, (nominal + MEDIAN - abs(best)) / 2)
+                shift[i] = -np.sign(best) * min(need, nominal / 2)
+        if not shift.any():
+            continue
+        shift = gaussian_filter1d(shift, 4.0, mode="nearest")
+        Q[:, :2] += N * shift[:, None]
+        out[k] = (props, Q)
+        moved += 1
+        for e, i in ((0, 0), (1, -1)):
+            node_moves.setdefault(int(ends[k][e]), []).append(N[i] * shift[i])
+    for nd, v in node_moves.items():
+        node_pos[nd] = node_pos[nd] + np.mean(v, axis=0)
+    print("motorway carriageways moved apart: %d of %d lines" % (moved, len(mw)), flush=True)
+    return out
+
+
 def build():
     lines = load_lines()
     ends, node_pos = nodes_of(lines)
     lines, ends = dry_ends(lines, ends, node_pos)
+    if ZONE:
+        lines = separate_carriageways(lines, ends, node_pos)
     polys = av_carriageway()
     bpolys = av_bridges()
     over = bridge_overrides()
