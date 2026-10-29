@@ -1371,6 +1371,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - warmup_shapes.json of all Ticino lists every tile shape (hundreds of thousands): the warm-up of the 4-zone region
   had 13,707 (10,212 took 968 s on michi's PC). region_base writes warmup/<zone>.json and stream.json zoneCores;
   warmup.lua warms only the zones within RADIUS_M (3 km) of the camera.
+- First run of the 87 zones (run 40830705580, 2026-10-29): 78 slices in about 45 min (20 at a time, the densest
+  ti_1_0 19 min), 9 stopped in collision.write_cell ("a vertex out of the cell's range"): triangles with a corner up
+  to 560 m from their 64 m cell (the 4 Magliaso zones never had one). write_cell now leaves such triangles out and
+  counts them (colStats tris_out_of_cell_range: ti_0_5 20,799 of 10.5 M, ti_m3_9 272, ti_1_2 100). Which meshes they
+  are is not looked at yet: if a car falls through something in those zones, look there first.
+- The base of 87 zones took 2 min (86 s of HTTP range reads): 452 spawns, 57,051 AI roads (4,737 km), 1,534 welded
+  cut ends, the main AI piece 1,879 -> 2,944 km, 122,091 parking spots, 306,957 collision cells in stream.json.
+  89 zips, 51.8 GB. The old ticino_region_*.zip hold the same levels/ticino paths: never install both.
+- `gh api --paginate` on release assets follows a next link with repositories/<id>/..., which the cloud proxy refuses
+  (403): page by hand (&page=N).
 
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
