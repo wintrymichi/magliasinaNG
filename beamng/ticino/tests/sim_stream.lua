@@ -6,7 +6,7 @@ package.path = here .. '../mod/lua/ge/extensions/?.lua;' .. package.path
 local root, seconds = arg[1], tonumber(arg[2] or '120')
 
 -- ---- stubs of the game API (only what stream.lua, objects.lua and terwin.lua call)
-local function mapPath(p) return (p:gsub('^/levels/', root .. '/levels/'):gsub('^/temp/', root .. '/temp/')) end
+local function mapPath(p) return (p:gsub('^/levels/', root .. '/levels/'):gsub('^/temp/', root .. '/temp/'):gsub('^/settings/', root .. '/settings/')) end
 local realOpen = io.open
 io.open = function(p, mode) return realOpen(mapPath(p), mode) end
 function readFile(p) local f = io.open(p, 'rb'); if not f then return nil end; local s = f:read('*a'); f:close(); return s end

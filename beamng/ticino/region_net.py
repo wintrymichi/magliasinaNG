@@ -399,6 +399,23 @@ def _site_xy(e):
     return None
 
 
+# BeamNG 0.40 freezes in the first frame of the level (one core at 100 %, minutes, then Windows closes it) when
+# city.sites.json holds all 122,111 parking spots of Ticino; the 5-zone region with a few thousand ran. Keep at most
+# this many, an even share of every zone's (michi's PC, 2026-10-29).
+MAX_PARKING = 6000
+
+
+def thin_spots(spots, limit=MAX_PARKING):
+    """Every k-th spot (the list runs zone by zone, so every zone keeps its share), oldIds renumbered."""
+    if len(spots) <= limit:
+        return spots
+    step = len(spots) / limit
+    out = [dict(spots[int(i * step)]) for i in range(limit)]
+    for i, e in enumerate(out):
+        e["oldId"] = i + 1
+    return out
+
+
 def merge_sites(srcs, fname, level):
     """A sites file (city.sites.json, facilities.sites.json) of every zone as one: the spots, zones and locations
     whose position (a zone's: the middle of its vertices) lies in their zone's core, renumbered (the game wants an
@@ -435,6 +452,9 @@ def merge_sites(srcs, fname, level):
             k = str(name) if str(name) not in out["locations"] else f"{s.name}_{name}"
             out["locations"][k] = e
             n["locations"] += 1
+    if out is not None and len(out["parkingSpots"]) > MAX_PARKING:
+        out["parkingSpots"] = thin_spots(out["parkingSpots"])
+        n["parkingSpots_kept"] = len(out["parkingSpots"])
     return out, dict(n)
 
 

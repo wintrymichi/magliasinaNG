@@ -89,6 +89,23 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   other threads yourself. `list_events`/`interrupt_session` do not reach it, and a message waits until its current
   long step ends.
 
+- 88 Ticino zips (ticino-all, ~596,000 files, 49 GB) in mods (2026-10-29, 0.40.4): the first start after installing
+  them blocked the main thread while core_modmanager.initDB mounted the new mods; after ~70 s Windows reported it as
+  "not responding" and it was closed (launcher log: exit 0xCFFFFFFF STATUS_APPLICATION_HANG; beamng.log cut off in
+  the middle of the mountEntry lines, so it reads like a crash). Not a crash: started again, it reached the menu
+  (michi). Wait through "not responding" on the first start with many new mods; read beamng-launcher.log for the exit
+  code before hunting a crash in beamng.log. Fewer, bigger files per zone would shorten it (5 region zips with 31,896
+  files mounted in under 1 s).
+
+- All Ticino (ticino-all base, 2026-10-29, 0.40.4): the level loaded, then the game froze for good in its first frame
+  after the vehicle spawn (one core at 100 %, no disk, ~5 min, then Windows closed it: "Application Hang"). Cause:
+  city.sites.json with 122,111 parking spots (58 MB); with the spots removed the level ran. region_net.merge_sites
+  keeps MAX_PARKING. Found by elimination with empty user-folder overrides (AI roads, SFX emitters, water, vegetation
+  all innocent) after the streamer itself was cleared twice: tests/sim_stream.lua with the zones' real files (the
+  first jump took 2.3 s of Lua) and a traced copy of the streamer whose onUpdate never ran. beamng.log is buffered
+  and cut off at a freeze: write a trace file of your own (rewrite it after every step) instead of trusting its
+  last line. A user-folder file of 0 bytes replaces a level's items.level.json for such a test.
+
 - Replays keep the time of day they were recorded at; core_environment.setTimeOfDay during playback works only with the
   replay paused. For sunset or night shots record the replay at that hour (tod 0.245 golden sunset, 0.27 dusk, 0.29
   lamps on with an orange sky, 0.5 full night, 0.85 morning) ("Video cinematico con pianoforte", 2026-10-21).
@@ -1493,6 +1510,34 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   - The PC keeps user-folder overrides (lua/ge/extensions/ticino/, levels/ticino/{info.json, ticino_preview.jpg,
     stream.json, col64/, blocks/}) that win over any zip: run D:\ticino_tools\pulizia_override.ps1 before new zips.
 
+## Ticino as a product (branch ticino, install/, settings, 2026-10-29)
+
+- The branch `ticino` holds all Ticino work (n0o5te + wave loading + helper + parking cap); thread branches open PRs
+  against it, not main. beamng/ticino/diag (test overrides) was dropped from it: get it from history if needed.
+- The traffic signal errors of the full Ticino ("Map node could not be set", 4,020 of 4,065 instances, each logged
+  twice: at the load and at the jump's map.reset) are the AI map's z 0 nodes: the 45 that worked all lie within
+  ~2.5 km of the spawn (the only terrain at load). trafficSignals.getBestRoad uses map.findClosestRoad, a 3D
+  distance searched up to 200 m. Checked against the json first: every signal is 0.6-4.3 m from an AI road node in
+  xy and within 0.1 m in z, so the data is right and the game's graph is not. In 0.40 map.reset IS loadMap and takes
+  ready nodes (loadMap(customMapNodes): only convertToSingleSided, no linkMap): the way out without DecalRoads.
+- ticino_perf.csv of the first jump on the full map: posMs 1,711 + terMs 1,811 (the 57,298 AI DecalRoads re-clip on
+  the block move), next1Ms 11,684 (frame after the swap), then a 30.5 s frame (the map.reset of the jump).
+- stream.lua reads <user>/settings/ticino.json (preset, helper, diagnostics, field overrides); the csv files are off
+  unless "diagnostics": true. A PC test that reads ticino_perf.csv must write that file first.
+- The installer's helper and installer zips must not be called ticino_*.zip: the installer (and the game's mods
+  folder logic of every earlier script) treats every ticino_*.zip as a level zip. They are helper_ticino.zip and
+  installer_ticino.zip.
+- The cloud session could not run a downloaded pwsh to check the PowerShell scripts (auto mode refused code from
+  outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
+- `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,
+  403): page by hand with &page=N.
+- Pushing a branch for the first time (or the same commit to a second branch) starts every workflow whose push
+  paths the branch's commits touch, as if every file changed: the first push of claude/project-thread-361hr5 (a
+  merge of n0o5te) started zone_build.yml for the 59 zones of zone_list.txt, ticino_region.yml, ticino_all.yml and
+  ticino_test.yml (2026-10-29 19:28Z); pushing ticino's commits also to claude/project-thread-mfvmk9 doubled
+  ticino_all/ticino_tools (both write the same draft release). The zone build and region run were cancelled after
+  25 min (19 runners busy). Push Ticino work only to `ticino`; check `actions/runs?branch=<new branch>` after any
+  first push and cancel what was not meant.
 ## Ticino server (thread "Studiare la mod tutta nel server", 2026-10-29)
 
 - With the 88 Ticino packs in mods the game spends 75-81 s at EVERY start in initDB (beamng.log: the last
