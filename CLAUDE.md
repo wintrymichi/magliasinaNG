@@ -1538,3 +1538,23 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ticino_all/ticino_tools (both write the same draft release). The zone build and region run were cancelled after
   25 min (19 runners busy). Push Ticino work only to `ticino`; check `actions/runs?branch=<new branch>` after any
   first push and cancel what was not meant.
+## Ticino server (thread "Studiare la mod tutta nel server", 2026-10-29)
+
+- With the 88 Ticino packs in mods the game spends 75-81 s at EVERY start in initDB (beamng.log: the last
+  "mountEntry" at 5 s, "took ... to reorganise 596326 files" at 80-86 s): mounting is per file or per byte, not free.
+  Runtime FS:mount of one zone pack would cost about 1 s on the game thread: the server puts loose files under temp
+  instead. Read the game's own log for a cost before guessing it.
+- The game's .cdae cache of our zone DAEs lives at temp/<same path>.cdae (12 GB after four zones on michi's PC).
+  dae2cdae.py output vs those files: same geometry; the engine keeps the DAE node tree (base00, start01) and names
+  the details detail<size>, sets smallestVisibleSize to the smallest detail (a shape is hidden below it: cdae.encode
+  drew everything down to 2 px), takes the LOD meshes' own normals (encode ignored them), stores colours truncated
+  (floor(c * 255)) and reflectanceMap = the material's index. Device files more than 7 folders deep cannot be staged:
+  copy them to a shallow folder first (temp/claude_cmp on michi's PC, left there).
+- raw.githubusercontent.com is blocked from michi's PC device shell too (403): files reach it only through the thread.
+- The pkill self-kill again (exit 144): `pkill -f "[t]icino_server.py"` in a command that also ran
+  `server/ticino_server.py`. Kill by PID in a call of its own.
+- Server mode, first try: re-asking for late tiles called forest.retarget at every ready.json change; the forest queue
+  restarted each time and the far ground (made only when objects and forest are idle) was never made (10 far tiles
+  instead of 1,155). Ask again only for tiles that were late and are ready now, at most once a second.
+- The "packs in mods" probe must not test one tile file: the first key of stream.json tiles may be a zone that a test
+  install does not have.
