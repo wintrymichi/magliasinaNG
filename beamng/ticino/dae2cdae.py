@@ -83,8 +83,11 @@ def mesh(g, bind, matlist):
     sems = ["POSITION", "NORMAL", "TEXCOORD", "TEXCOORD2", "COLOR"]
     have = [s for s in sems if all(s in o for _, o in corners)]
     keys = np.concatenate([p[:, [o[s][0] for s in have]] for p, o in corners])
-    uniq, inv = np.unique(keys, axis=0, return_inverse=True)
-    inv = inv.reshape(-1)
+    uniq, first, inv = np.unique(keys, axis=0, return_index=True, return_inverse=True)
+    rank = np.empty(len(first), np.int64)             # vertices in the order the file first uses them, as the engine
+    rank[np.argsort(first, kind="stable")] = np.arange(len(first))
+    uniq = uniq[np.argsort(first, kind="stable")]
+    inv = rank[inv.reshape(-1)]
     srcid = {s: corners[0][1][s][1] for s in have}
     out = dict(tris=inv.reshape(-1, 3), tri_materials=np.concatenate(tm))
     col = dict(zip(have, range(len(have))))
@@ -99,10 +102,11 @@ def mesh(g, bind, matlist):
         c = g["src"][srcid["COLOR"]][uniq[:, col["COLOR"]]]
         if c.shape[1] == 3:
             c = np.concatenate([c, np.ones((len(c), 1))], 1)
-        out["colors"] = np.clip(np.round(c * 255), 0, 255).astype(np.uint8)
+        out["colors"] = np.clip(np.floor(c * 255 + COLOR_ROUND), 0, 255).astype(np.uint8)
     return out
 
 
+COLOR_ROUND = 0.0
 _SIZE = re.compile(r'^(.*?)(-?\d+)$')
 
 
@@ -118,11 +122,11 @@ def convert(text):
     if len({d[1] for d in details}) > 1:
         raise ValueError("more than one object: %s" % sorted({d[1] for d in details}))
     size0, base, top = details[0]
-    # cdae.encode: the main mesh is drawn from lods[0]'s size up, each lod from the next one's size up
-    lods = [(details[i][0], details[i + 1][2]) for i in range(len(details) - 1)]
+    lods = [(d[0], d[2]) for d in details[1:]]
     return cdae.encode(top["positions"], top["tris"], normals=top.get("normals"), uvs=top.get("uvs"),
                        uvs2=top.get("uvs2"), material=matlist, tri_materials=top["tri_materials"],
-                       colors=top.get("colors"), object_name=base, lods=lods or None)
+                       colors=top.get("colors"), object_name=base, lods=lods or None,
+                       detail_sizes=[float(d[0]) for d in details])
 
 
 def main():
