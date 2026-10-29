@@ -1,5 +1,2 @@
 # zones for ticino_all.yml: "all" (every zone of zones/ticino_plan.json) or zone names, one a line
-ti_0_m1
-ti_1_m1
-ti_0_0
-ti_1_0
+all
