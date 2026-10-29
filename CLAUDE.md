@@ -50,6 +50,18 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - `git commit` during an unfinished rebase folds the new commit into the one being picked: run
   `git rebase --continue` (check `git status`) before committing anything else.
 
+## Downloading the Ticino zips (beamng/ticino/tools/scarica_ticino.ps1, 2026-10-29)
+
+- The draft release ticino-all has 89 zips (51.7 GB) and 90 logs; a draft is invisible without login, so the script
+  takes the token from gh and downloads with curl.exe from api.github.com/.../releases/assets/<id> (Accept:
+  application/octet-stream, -C - to resume), checking each zip against the asset's `digest` (sha256). Look the release
+  up by tag_name in the release list: a draft's html_url is `untagged-...`, and its id changes when it is recreated.
+- `gh api --paginate` through the cloud proxy failed (the Link header points at repositories/<id>/..., refused):
+  page by hand (`?per_page=100&page=N`).
+- No PowerShell in the cloud container, and downloading pwsh from GitHub was refused by the permission check: a .ps1
+  written here is not run before michi runs it. Keep it Windows PowerShell 5.1 safe: ASCII only (no BOM -> ANSI),
+  `${var}:` in strings, no `2>&1` on a native command under ErrorActionPreference Stop (stderr becomes an error).
+
 ## Testing in the game on the PC
 
 - The monitor may be off (OLED, black window on top): run the game in a virtual KWin session, it renders on the RTX:
