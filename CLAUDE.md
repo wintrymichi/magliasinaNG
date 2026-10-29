@@ -1531,3 +1531,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
 - `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,
   403): page by hand with &page=N.
+- Pushing a branch for the first time (or the same commit to a second branch) starts every workflow whose push
+  paths the branch's commits touch, as if every file changed: the first push of claude/project-thread-361hr5 (a
+  merge of n0o5te) started zone_build.yml for the 59 zones of zone_list.txt, ticino_region.yml, ticino_all.yml and
+  ticino_test.yml (2026-10-29 19:28Z); pushing ticino's commits also to claude/project-thread-mfvmk9 doubled
+  ticino_all/ticino_tools (both write the same draft release). The zone build and region run were cancelled after
+  25 min (19 runners busy). Push Ticino work only to `ticino`; check `actions/runs?branch=<new branch>` after any
+  first push and cancel what was not meant.

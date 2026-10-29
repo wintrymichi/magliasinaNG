@@ -330,7 +330,8 @@ if (Test-Path $db) {
         }
         if ($changed) {
             Copy-Item $db (Join-Path $work 'db.json.bak') -Force
-            $j | ConvertTo-Json -Depth 50 | Set-Content -Path $db -Encoding UTF8
+            $json = $j | ConvertTo-Json -Depth 50
+            [IO.File]::WriteAllText($db, $json, (New-Object System.Text.UTF8Encoding $false))   # no BOM
             Say "Turned $changed Ticino mods back on in mods\db.json (copy of the old file in $work)." 'Yellow'
         }
     } catch { Say "mods\db.json not read ($($_.Exception.Message)): check in the game's Mods menu that the Ticino mods are on." 'Yellow' }
