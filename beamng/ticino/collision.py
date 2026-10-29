@@ -225,11 +225,16 @@ def materials(types):
     return out
 
 
-def build(zone, tiles, level_dir, src_level, out_dir, workers=4):
+def build(zone, tiles, level_dir, src_level, out_dir, workers=4, types=None, gtypes_dir=None, bounds=None):
     """Moves the collision of the level's own shapes into the cells; returns (sorted cell keys "i_j", ground types,
-    stats)."""
+    stats). types: a fixed list of ground types (the plan's, region_slice.py: the cells of every zone index one list);
+    gtypes_dir: the folder whose material files give the ground types (default level_dir); bounds (x0, y0, x1, y1):
+    a triangle goes to the nearest cell inside them (a zone writes the cells of its own core only)."""
     os.makedirs(out_dir, exist_ok=True)
-    gtypes = ground_types(level_dir)
+    gtypes = ground_types(gtypes_dir or level_dir)
+    if bounds is not None:
+        lo_i, lo_j = int(np.floor((bounds[0] - zone.x0) / CELL_M + 1e-9)), int(np.floor((bounds[1] - zone.y0) / CELL_M + 1e-9))
+        hi_i, hi_j = int(np.ceil((bounds[2] - zone.x0) / CELL_M - 1e-9)) - 1, int(np.ceil((bounds[3] - zone.y0) / CELL_M - 1e-9)) - 1
     prefix = "/levels/ticino/"
     jobs, owners = [], []
     for objs in tiles.values():
@@ -268,6 +273,16 @@ def build(zone, tiles, level_dir, src_level, out_dir, workers=4):
                 c = P[T].mean(1)
                 ci = np.floor((c[:, 0] - zone.x0) / CELL_M).astype(np.int64)
                 cj = np.floor((c[:, 1] - zone.y0) / CELL_M).astype(np.int64)
+                if bounds is not None:
+                    far = (ci < lo_i - 1) | (ci > hi_i + 1) | (cj < lo_j - 1) | (cj > hi_j + 1)
+                    if far.any():               # more than 64 m beyond the core: maybe out of a cell's range
+                        stats["tris_dropped_far"] = stats.get("tris_dropped_far", 0) + int(far.sum())
+                        keep = np.nonzero(~far)[0]
+                        T = T[keep]
+                        c, ci, cj = c[keep], ci[keep], cj[keep]
+                        if not len(T):
+                            continue
+                    ci, cj = np.clip(ci, lo_i, hi_i), np.clip(cj, lo_j, hi_j)
                 key = (ci + 50000) * 100000 + (cj + 50000)
                 order = np.argsort(key, kind="stable")
                 ks, starts = np.unique(key[order], return_index=True)
@@ -280,7 +295,13 @@ def build(zone, tiles, level_dir, src_level, out_dir, workers=4):
             if (k + 1) % 200 == 0:
                 log(f"{k + 1}/{len(jobs)} shapes, {stats['tris_in'] / 1e6:.1f} M -> {stats['tris_out'] / 1e6:.1f} M "
                     f"triangles, {time.time() - t0:.0f} s")
-    types = sorted({g for parts in cells.values() for g in parts})
+    have = sorted({g for parts in cells.values() for g in parts})
+    if types is None:
+        types = have
+    else:
+        missing = [g for g in have if g not in types]
+        if missing:
+            raise KeyError(f"ground types {missing} are not in the plan: run region_plan.py --add")
     with open(os.path.join(out_dir, "col.materials.json"), "w") as f:
         json.dump(materials(types), f, indent=1)
     keys, per, npieces = [], {}, []

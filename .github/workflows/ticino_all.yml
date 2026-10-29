@@ -1,0 +1,148 @@
+# Ticino: every zone of beamng/ticino/zones/ticino_plan.json (built by zone_build.yml, zips on the DRAFT release
+# "ticino-zones") as one streaming level `ticino`, on the DRAFT release "ticino-all" (not public):
+#   slice   one job per zone (region_slice.py): its terrain blocks, far ground, clipped shapes, tiles, forest and
+#           collision cells -> ticino_<zone>_<n>.zip. The jobs never see each other: the plan fixes what they share.
+#   base    after them (region_base.py): the scene with the welded AI roads, signals, sites, materials, info.json and
+#           stream.json, reading the zones' small files and the slices' slice.json by HTTP range -> ticino_base_<n>.zip.
+# A zone with no slice (failed) is left out of the base. Started by a change of beamng/ticino/all_stamp.txt on a push
+# (the cloud session cannot dispatch a workflow off the default branch). beamng/ticino/all_list.txt: the zones to slice
+# ("all" = the whole plan); "[all base]" in the commit message: no slices, only the base (on the slices there are).
+name: ticino all
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/all_stamp.txt
+
+concurrency:
+  group: ticino-all-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-24.04
+    outputs:
+      zones: ${{ steps.z.outputs.zones }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: z
+        run: |
+          L=$(grep -v '^\s*#' beamng/ticino/all_list.txt | grep -v '^\s*$' | awk '{print $1}')
+          if [ "$L" = "all" ]; then
+            Z=$(python3 -c 'import json; print(json.dumps(json.load(open("beamng/ticino/zones/ticino_plan.json"))["zones"]))')
+          else
+            Z=$(printf '%s\n' $L | python3 -c 'import sys, json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
+          fi
+          ${{ contains(github.event.head_commit.message, '[all base]') }} && Z='[]'
+          echo "zones=$Z" >> "$GITHUB_OUTPUT"
+          echo "$Z"
+          gh release view ticino-all >/dev/null 2>&1 || \
+            gh release create ticino-all --draft --target "$GITHUB_SHA" --title "Ticino: all zones in one level (draft, not a release)" \
+              --notes "The streaming level ticino of branch $GITHUB_REF_NAME: put ticino_base_*.zip and every ticino_<zone>_*.zip into mods/. Not a release."
+
+  slice:
+    needs: setup
+    if: needs.setup.outputs.zones != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        zone: ${{ fromJson(needs.setup.outputs.zones) }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PYTHONUNBUFFERED: "1"
+      W: ${{ github.workspace }}/../w
+      Z: ${{ matrix.zone }}
+    steps:
+      - name: Disk space and swap
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo swapoff -a || true
+          sudo fallocate -l 8G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          df -h .
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependencies
+        run: pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0 fast_simplification==0.2.0
+      - name: Zone zip
+        run: |
+          mkdir -p "$W/src" "$W/out" "$W/dist"
+          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq '.[] | select(.tag_name == "ticino-zones") | .id')
+          aid=$(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq ".[] | select(.name == \"$Z.zip\") | .id")
+          [ -n "$aid" ] || { echo "no zip for $Z"; exit 1; }
+          curl -sSL --retry 5 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+            "https://api.github.com/repos/$GH_REPO/releases/assets/$aid" -o "$W/$Z.zip"
+          ls -la "$W/$Z.zip"
+          unzip -q "$W/$Z.zip" "levels/$Z/*" -d "$W/src"
+          rm "$W/$Z.zip"
+          df -h "$W"
+      - name: Slice
+        working-directory: beamng/ticino
+        run: |
+          python region_slice.py --zone "$Z" --src "$W/src" --out "$W/out" --dist "$W/dist" --workers 4 2>&1 | tee "$W/slice_$Z.log"
+          du -sh "$W/out"
+      - name: Upload to the draft release "ticino-all"
+        run: |
+          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq '.[] | select(.tag_name == "ticino-all") | .id')
+          # the zone's zips of an earlier run first (a slice of more parts would leave a stale part behind)
+          for old in $(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq ".[] | select(.name | test(\"^ticino_${Z}_[0-9]+\\\\.zip$\")) | .id"); do
+            gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+          done
+          for f in "$W"/dist/*.zip; do gh release upload ticino-all "$f" --clobber; done
+          gh release upload ticino-all "$W/slice_$Z.log" --clobber
+
+  base:
+    needs: [setup, slice]
+    if: always() && needs.setup.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PYTHONUNBUFFERED: "1"
+      W: ${{ github.workspace }}/../w
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Dependencies
+        run: pip install --progress-bar off numpy==2.4.6 scipy==1.17.1 pillow==12.3.0 fast_simplification==0.2.0
+      - name: Base
+        working-directory: beamng/ticino
+        run: |
+          mkdir -p "$W/out" "$W/dist"
+          python region_base.py --out "$W/out" --dist "$W/dist" --cache "$W/cache" 2>&1 | tee "$W/base.log"
+          cp "$W/out/region_report.json" "$W/dist/"
+          (cd "$W/dist" && sha256sum *.zip > ticino_base.sha256 && cat ticino_base.sha256)
+      - name: Upload to the draft release "ticino-all"
+        run: |
+          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq '.[] | select(.tag_name == "ticino-all") | .id')
+          for old in $(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq '.[] | select(.name | test("^ticino_base_[0-9]+\\.zip$")) | .id'); do
+            gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+          done
+          for f in "$W"/dist/*.zip "$W/dist/ticino_base.sha256" "$W/dist/region_report.json" "$W/base.log"; do
+            gh release upload ticino-all "$f" --clobber
+          done

@@ -56,7 +56,8 @@ WARM_MATERIALS = ("mp_ch_", "mp_fuel_")   # sign and fuel station materials (412
 class Src:
     """One built zone: its level folder, its terrain, its core."""
 
-    def __init__(self, name, root, grid):
+    def __init__(self, name, root, grid, light=False):
+        """light: no terrain heights and layers (region_base.py has only the zone's scene and small files)."""
         self.name = name
         self.cfg = json.load(open(os.path.join(ZONE_DIR, name + ".json")))
         self.dir = os.path.join(root, "levels", self.cfg["level"])
@@ -64,7 +65,11 @@ class Src:
         self.scene = scene_files(self.dir)
         self.tb = next(o for objs in self.scene.values() for o in objs if o.get("class") == "TerrainBlock")
         self.z0, self.maxh = float(self.tb["position"][2]), float(self.tb["maxHeight"])
-        self.n, self.H, self.L, self.materials = blocks.read_ter(self.dir, self.tb)
+        if light:
+            tj = json.load(open(os.path.join(self.dir, "theTerrain.terrain.json")))
+            self.n, self.H, self.L, self.materials = int(tj["size"]), None, None, tj["materials"]
+        else:
+            self.n, self.H, self.L, self.materials = blocks.read_ter(self.dir, self.tb)
         self.mats = json.load(open(os.path.join(self.dir, "art", "terrains", "main.materials.json")))
         x0, y0, x1, y1 = self.cfg["core_local"]
         self.core = (x0, y0, x1, y1)
@@ -80,6 +85,15 @@ class Src:
     def in_core(self, x, y):
         x0, y0, x1, y1 = self.core
         return x0 <= x < x1 and y0 <= y < y1
+
+    def core_cell(self, cx, cy):
+        """The 384 m tile (cx, cy) moved into the core: a zone writes only the tiles of its own core (an object in the
+        core whose shape's box centre lies beyond it, region_slice.py)."""
+        x0, y0, x1, y1 = self.core
+        g = self.grid
+        lo = g.cell_of(x0 + 1e-6, y0 + 1e-6)
+        hi = g.cell_of(x1 - 1e-6, y1 - 1e-6)
+        return min(max(cx, lo[0]), hi[0]), min(max(cy, lo[1]), hi[1])
 
     def path(self, level_path):
         """The file of a level path of this zone (None if not one of its own)."""
@@ -105,18 +119,20 @@ def layer_list(srcs):
     return out
 
 
-def write_blocks(grid, srcs, Z0, MAXH, layers, out_dir):
-    """The blocks of every zone's core, then the border blocks of their terrains no core covers. {(bx, by): src}."""
+def write_blocks(grid, srcs, Z0, MAXH, layers, out_dir, owner=None):
+    """The blocks of every zone's core, then the border blocks of their terrains no core covers. {(bx, by): src}.
+    owner: the blocks to write and their zone, given (region_slice.py: the plan decides)."""
     os.makedirs(out_dir, exist_ok=True)
     B = grid.B
-    owner = {}
-    for s in srcs:
-        for k in s.core_blocks:
-            owner[k] = s
-    for s in srcs:                           # the border: whole blocks inside the zone's terrain
-        for by in range(math.ceil(s.oy / B), (s.oy + s.n) // B):
-            for bx in range(math.ceil(s.ox / B), (s.ox + s.n) // B):
-                owner.setdefault((bx, by), s)
+    if owner is None:
+        owner = {}
+        for s in srcs:
+            for k in s.core_blocks:
+                owner[k] = s
+        for s in srcs:                           # the border: whole blocks inside the zone's terrain
+            for by in range(math.ceil(s.oy / B), (s.oy + s.n) // B):
+                for bx in range(math.ceil(s.ox / B), (s.ox + s.n) // B):
+                    owner.setdefault((bx, by), s)
     for (bx, by), s in sorted(owner.items()):
         r = by * B - s.oy + np.arange(B)
         c = bx * B - s.ox + np.arange(B)
@@ -377,9 +393,12 @@ def entry(o, rel, r, level_path):
     return e
 
 
-def stream_zone(grid, s, dst, tiles, kept, stats, roads):
+def stream_zone(grid, s, dst, tiles, kept, stats, roads, shapes=True):
     """The zone's objects in its core: streamed ones into tiles, the others into kept {group path: [objects]}, the
-    DecalRoads cut to the core into roads [(group path, object, zone, cut at start, cut at end)] (welded later)."""
+    DecalRoads cut to the core into roads [(group path, object, zone, cut at start, cut at end)] (welded later).
+    shapes False (region_base.py: the zone's scene only): the streamed objects are left out, no shape is written, an
+    object of a static group keeps the path its zone's slice gives its shape. The tile of a streamed object is always
+    one of the core's (Src.core_cell): every zone of the slices writes the tiles of its own core only."""
     stale = region_net.stale_cantonale([o for objs in s.scene.values() for o in objs], s, grid)
     if stale:
         log(s.name, "carries the Malcantone's Street View route beyond its terrain: left out")
@@ -400,9 +419,19 @@ def stream_zone(grid, s, dst, tiles, kept, stats, roads):
             shape = o.get("shapeName", "")
             lp = None
             x, y = pos[0], pos[1]
+            if not shapes and r is not None and cls in STREAMED:
+                continue
             if cls == "TSStatic" and shape.startswith(s.prefix):
                 relp = shape[len(s.prefix):]
-                if uses[shape] > 1:
+                if r is None:
+                    # a static group (landmarks): the whole shape by the object's position, in the slices and the base
+                    if not s.in_core(x, y):
+                        continue
+                    lp = f"/levels/{LEVEL}/z/{s.name}/{relp}"
+                    if shapes:
+                        link_or_copy(s.path(shape), os.path.join(dst, "z", s.name, *relp.split("/")))
+                        own_shapes.add(shape)
+                elif uses[shape] > 1:
                     if not s.in_core(x, y):
                         continue
                     lp = f"/levels/{LEVEL}/{relp}"
@@ -439,7 +468,7 @@ def stream_zone(grid, s, dst, tiles, kept, stats, roads):
                 if not s.in_core(x, y):
                     continue
             if r is not None and cls in STREAMED:
-                cx, cy = grid.cell_of(x, y)
+                cx, cy = s.core_cell(*grid.cell_of(x, y))
                 tiles.setdefault((cx, cy), []).append(entry(o, rel, r, lp or (
                     shape.replace(s.prefix, f"/levels/{LEVEL}/") if shape else None)))
                 stats["streamed"] += 1
@@ -463,8 +492,9 @@ def clip_box(o, core):
 
 
 # ------------------------------------------------------------------ forest
-def forest_zone(grid, s, types, tiles, item_data):
-    """The zone's forest items in its core into tiles {(cx, cy): [rows]}; rows [type, x, y, z, yaw deg, scale]."""
+def forest_zone(grid, s, types, tiles, item_data, fixed=False):
+    """The zone's forest items in its core into tiles {(cx, cy): [rows]}; rows [type, x, y, z, yaw deg, scale].
+    fixed: types is the plan's list (region_plan.py) and a type not in it is an error, not a new index."""
     p = os.path.join(s.dir, "art", "forest", "managedItemData.json")
     if os.path.exists(p):
         for k, v in json.load(open(p)).items():
@@ -483,6 +513,8 @@ def forest_zone(grid, s, types, tiles, item_data):
                 continue
             t = it["type"]
             if t not in types:
+                if fixed:
+                    raise KeyError(f"forest type {t} of {s.name} is not in the plan: run region_plan.py --add")
                 types[t] = len(types)
             R = it.get("rotationMatrix") or [1, 0, 0, 0, 1, 0, 0, 0, 1]
             yaw = math.degrees(math.atan2(R[1], R[0]))

@@ -32,6 +32,31 @@ def ordered(out):
     return base, [zones[z] for z in sorted(zones)]
 
 
+def pack(files, dist, name, limit_gb=LIMIT_GB, level=6):
+    """files [(path, name in the mod)] into dist/<name>_<n>.zip, a new zip whenever one would pass the limit.
+    Returns the zips made (region_slice / region_base: one set per zone and one for the base)."""
+    os.makedirs(dist, exist_ok=True)
+    limit = limit_gb * 1e9
+    made, z, path = [], None, None
+    for p, n in files:
+        if z is None or z.fp.tell() + os.path.getsize(p) > limit:
+            if z:
+                z.close()
+                os.replace(path + ".part", path)
+                made.append(path)
+            path = os.path.join(dist, "%s_%d.zip" % (name, len(made) + 1))
+            z = zipfile.ZipFile(path + ".part", "w", zipfile.ZIP_DEFLATED, compresslevel=level, allowZip64=True)
+        z.write(p, n, compress_type=zipfile.ZIP_STORED if n.lower().endswith(package.STORED) or "/blocks/" in n
+                else None)
+    if z:
+        z.close()
+        os.replace(path + ".part", path)
+        made.append(path)
+    for p in made:
+        print("%s %.2f GB" % (os.path.basename(p), os.path.getsize(p) / 1e9), flush=True)
+    return made
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", required=True)

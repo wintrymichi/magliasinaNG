@@ -1353,6 +1353,24 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   The rebuild (run 40723783273) showed the source: "terrain post 0 left 909 NaN heights", i.e. walls.carve_terrain /
   adjust_terrain_roadside (post 0) writes NaN at 909 vertices of ti_0_m1; not looked into yet (z0 240, maxHeight 874).
 
+## All of Ticino in one level (region_plan / region_slice / region_base, 2026-10-29)
+
+- region.py loaded every zone at once: 87 zone zips are 65.6 GB (not 120), too much for one runner anyway. Now one
+  GitHub job per zone (ticino_all.yml, region_slice.py) writes the zone's blocks, far ground, clipped shapes, tiles,
+  forest and collision cells, and one small job (region_base.py) the scene, roads, signals, materials, info.json and
+  stream.json from the zones' small files read by HTTP range (87 zips' scenes + materials in about 1 min).
+- What the slices share is fixed in zones/ticino_plan.json (region_plan.py, lists only grow with --add): heights
+  150..3650 m (5.3 cm a step; the Malcantone alone had 1 cm), 21 layers, 43 forest types, 15 ground types. The zones'
+  own z0 went down to -116 m (ti_1_2, ti_1_3) and -704 m (ti_m3_9): carved lake beds / bad ground, clipped at 150.
+- No level shape of any zone is used by more than one TSStatic (all single-use merged chunks): every zone's shapes go
+  under z/<zone>/. Same path, different content across zones: 15,000 shapes (roads, buildings, skin...) and 7 sign
+  PNGs (osm_stop/timetable) and material files: shapes are per zone, the PNGs first zone wins, materials merged by name.
+- A slice writes only the tiles and 64 m collision cells of its own core (Src.core_cell, collision.build bounds): a
+  clipped DAE keeps all its vertices, so dae_center (the box of the first geometry) can lie outside the core, and two
+  zones would have written the same tiles/o_*.json or col/c_*.bin (one file wins in the game's mount).
+- warmup_shapes.json of all Ticino lists every tile shape (hundreds of thousands): the warm-up of the 4-zone region
+  had 13,707. Not usable as it is for all Ticino: warm up per zone or ship .cdae.
+
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
 - Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py
