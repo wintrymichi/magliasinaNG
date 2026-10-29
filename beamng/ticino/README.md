@@ -1,121 +1,166 @@
-# Ticino a blocchi
+# Ticino for BeamNG.drive
 
-The second map of this repository: all of Canton Ticino, streamed around the car in terrain blocks. It lives beside
-the Malcantone map (`levels/magliaso_pura`, built by `beamng/pipeline`) and changes nothing of it: its own level
-(`levels/ticino`), its own mod zip, its own release tags (`ticino-v0.x`). The two mods can be installed together.
+The second map of this repository: all of Canton Ticino (87 zones of 7.7 x 7.7 km, about 62 x 93 km) in one
+BeamNG level, `ticino`, streamed around the car. It is built by the same pipeline as the Malcantone map
+(`beamng/pipeline`, level `magliaso_pura`) with the same detail: swissALTI3D terrain at 1.5 m, swissBUILDINGS3D
+buildings, the survey's roads, walls, pavements, bridges, tunnels, motorways, forest, signs and traffic signals.
+The two maps are separate mods and can be installed together: nothing here changes the Malcantone level.
 
-Plan: the doc "Piano: Ticino a blocchi di terreno da 4 km2" (2026-10-26). Phase 1 here: the Malcantone of v3.1.1,
-cut into blocks and streamed, must look and drive like v3.1.1.
+Branch: `ticino`. Status: draft release, not public yet (see "State" at the end).
+
+## Install (Windows)
+
+Needs BeamNG.drive 0.40.x from Steam, about **52 GB** free on the disk of the BeamNG user folder for the mod and
+about 15 GB more that the game fills with its cache of the level as you drive, 16 GB of RAM (32 GB recommended) and
+a GPU with 8 GB of video memory or more.
+
+1. Download `installer_ticino.zip` from the release and unpack it anywhere.
+2. Close BeamNG and double-click **`Install Ticino.bat`**.
+
+The installer (`install/install_ticino.ps1`):
+
+- downloads the 88 zips of the release (`ticino_base_<n>.zip` with the scene and the streaming mod, one
+  `ticino_<zone>_<n>.zip` per zone) into `mods`, resumes a broken download where it stopped and checks every zip
+  by its sha256 before it goes into `mods` (a zip already there and checked is skipped: an update downloads only
+  the zips that changed);
+- moves Ticino zips the release no longer has to `ticino_download\old` (or deletes them with `-DeleteOld`);
+- moves any user-folder files of the level (`levels\ticino`, `lua\ge\extensions\ticino`, left by tests or older
+  versions: they would win over the zips) to `ticino_download\overrides_<date>`;
+- clears the game's cache of the level (`temp\levels\ticino`) when the base zip changed;
+- turns the Ticino mods back on in `mods\db.json` (BeamNG turns every mod off after a game update);
+- installs the streaming helper (`ticino_tools\ticino_helper.exe`), writes `settings\ticino.json` if there is none,
+  and puts a **Start Ticino (BeamNG)** shortcut on the desktop.
+
+Options: `-ListOnly` (show what it would do), `-DeleteOld`, `-NoHelper`, `-NoShortcut`, `-KeepCache`,
+`-UserFolder <path>` (another BeamNG user folder), `-GameFolder <path>` (BeamNG not in a Steam library),
+`-Tag <release>`, `-Uninstall` (removes the zips, the cache, the tools and the shortcut; keeps the settings).
+A draft release can only be downloaded with the GitHub CLI logged in (`gh auth login`); a published one needs nothing.
+
+Run the installer again to update. Linux or by hand: put every `ticino_*.zip` of the release into
+`<user folder>/mods`, nothing else is needed (the helper runs with `python3 helper/ticino_helper.py`).
+
+## Play
+
+Start with the desktop shortcut (BeamNG goes straight into the map, the helper starts beside it and stops with the
+game), or in the game: Freeroam > Ticino. There are spawn points in every zone (villages and towns).
+
+The **first start** after an install mounts about 600,000 new files: the game can show "not responding" for one or
+two minutes before the main menu. Wait; it is not a crash. The first time a place is seen the game converts its
+shapes and textures (stutters in a new area); the second time they come from its cache. To convert them before
+driving, run the warm-up (below, "How it works").
+
+## Settings
+
+`<user folder>\settings\ticino.json` (default `%LOCALAPPDATA%\BeamNG\BeamNG.drive\current\settings\ticino.json`), read
+when the level starts:
+
+```json
+{ "preset": "standard", "helper": true, "diagnostics": false }
+```
+
+| Field | Values | What it does |
+|---|---|---|
+| `preset` | `standard` (default), `light` | `standard` is the level as built and tested. `light` is for PCs with little video memory or a slow CPU: trees shown within 3 tiles (1.2 km) instead of 4, fewer of them at a distance, far ground to 10 tiles instead of 16. The near scene (roads, buildings, collision) stays the same. |
+| `helper` | `true` (default), `false` | use the helper process when it runs |
+| `diagnostics` | `false` (default), `true` | write `ticino_perf.csv` (every terrain move, timings) and `ticino_frames.csv` (frame times every 5 s) to the user folder |
+| `stream`, `objects`, `forest` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
+| `level` | object of numbers | advanced: numbers of the level's `stream.json`, e.g. `{"level": {"farRadius": 20}}` |
+
+A file that is not valid JSON is ignored (the log says so). Tables indexed from 0 (`forest.SHARE`) cannot be set from
+JSON. `ticino_stream_cfg.json` in the user folder root still overrides everything (tests only).
 
 ## How it works
 
-| What | Size | Where |
+| What | Size | Where in the zips |
 |---|---|---|
-| Terrain block (data and build unit) | 1,280 x 1,280 samples at 1.5 m = 1,920 m (3.7 km2) | `blocks/terrain/t_<bx>_<by>.bin` |
-| Tile (objects, window step) | 256 samples = 384 m | `tiles/o_<cx>_<cy>.json` |
+| Zone (build unit) | 4 x 4 terrain blocks = 7,680 m, built by the full pipeline with an overlap | one `ticino_<zone>_<n>.zip` |
+| Terrain block (data unit) | 1,280 x 1,280 samples at 1.5 m = 1,920 m | `blocks/terrain/t_<bx>_<by>.bin` |
+| Tile (objects, trees, window step) | 256 samples = 384 m | `tiles/o_<cx>_<cy>.json`, `tiles/t_<cx>_<cy>.trees.json` |
 | Terrain window in the game | one TerrainBlock of 2,048 x 2,048 samples (3.07 km) | written to `<user>/temp/ticino/` |
-| Base colour of the open ground | 4 samples a pixel (6 m), 512 px over the window | `blocks/base/<texture>_<bx>_<by>.rgb` |
-| Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, no collision | `far/f_<cx>_<cy>.cdae` |
-| Collision cell | 128 m, the level's own meshes as collision only (roads exact, skin and houses simplified), pieces of at most 1,200 triangles per ground type, made in the game as ProceduralMesh that is not drawn | `col/c_<i>_<j>.bin`, `col/col.materials.json` |
+| Base colour of the open ground | 4 samples a pixel, one combined map for the window | `blocks/base/<texture>_<bx>_<by>.rgb` |
+| Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, no collision, 16 tiles round the car | `far/f_<cx>_<cy>.cdae` |
+| Collision cell | 64 m, the level's own meshes as collision only (roads exact, skin and houses simplified), ProceduralMesh pieces of at most 1,200 triangles per ground type, 3 x 3 cells round the car | `col/c_<i>_<j>.bin` |
 
-- The window keeps the car's tile the 4th or 5th of its 8, so the car is always at least 1,152 m from its edge. When
-  the car crosses a tile, the next window is written over about 15-20 frames (4 ms of Lua a frame) and swapped in by
-  `terrainFile` + `postApply`, the way BeamNG.Earth moves its block (92 ms for 2048^2 measured there).
-- Objects are shown within a radius per group (`zones/malcantone.json`: street props 2 tiles, roads and walls 5,
-  buildings 6). Every `be:reloadCollision` rebuilds all collision, at about 3 us per unique triangle (in game: the
-  3 x 3 tiles round the car, 1.12 M triangles, froze the physics 3.4 s at every tile). So the level's own shapes do
-  not collide with what is drawn: `collision.py` puts their triangles, welded, the terrain skin cut to 7 % and the
-  houses to 40 % (roads, sidewalks and railway exact), into collision cells of 128 m (a small binary file each), made in
-  the game as ProceduralMesh pieces that are not drawn, a piece a frame (EarthNG measured a ProceduralMesh at 0.27 ms
-  per 1,000 triangles in a rebuild, ten times less than our shapes), one material per ground type so the tyres feel
-  asphalt, gravel or grass as before; only the 3 x 3 cells round the car collide (`col_radius`; `ticino_stream.setColRadius(r)` in the console). The game's own props (lamps,
-  poles) are instanced and keep their own collision within `collision_radius` tiles. No rebuild runs within 3
-  frames and 150 ms of a terrain swap (BeamNG.Earth: a car fell through the block taken before its heights).
-- The forest, ground cover, water planes, AI roads, spawn points, sky and sounds stay in the level as today.
-- A spawn or teleport far away is a jump: the game pauses, the window and the near objects are made at once, then it
-  goes on.
+The streamer is the GE extension `ticino_stream` (`mod/lua/ge/extensions/ticino/`, loaded by
+`mod/scripts/ticino/modScript.lua`; it does nothing outside the level `ticino`):
 
-## Files
+- **Terrain.** One TerrainBlock follows the car. The window moves when the car's tile leaves the places 2..5 of its
+  8, by 4 tiles, so a straight drive moves it about every 1.5 km. The next window (`.ter` and base map) is put
+  together from the blocks over 15-30 frames (4 ms of Lua a frame, `terwin.lua`, `png.lua`), or by the helper on
+  another core, and swapped in by `terrainFile` + `postApply` (the way BeamNG.Earth moves its block).
+- **Objects.** Each object is shown within its group's radius in tiles (street props 2, roads and walls 5,
+  buildings 6). They come in a wave: the tiles next to the car first, the far ones after, at most one heavy object
+  a frame (`objects.lua`). Heavy shapes are cut into 192 m pieces at build time so a piece is cheap to make.
+- **Collision.** `be:reloadCollision` costs about 0.15 us a ProceduralMesh triangle, so the drawn shapes do not collide;
+  the 3 x 3 collision cells of 64 m round the car do, with the right ground type for the tyres. Small street clutter
+  never collides. No rebuild runs within 3 frames and 150 ms of a terrain swap.
+- **Forest.** Every tile's trees are made within 4 tiles of the car, all of them near, a share far (`forest.lua`).
+- **Jumps.** A spawn or a teleport far away pauses the game, makes the window and the near objects at once, and goes
+  on.
+- **Warm-up.** Optional, from the console inside the level: `extensions.load('ticino_warmup')` loads once every shape
+  of the zones within 3 km and cooks the sign textures, so the game writes its cache now instead of stuttering the
+  first time it sees them (about 15 min a region; drive elsewhere and run it again there).
+- **Helper.** `helper/ticino_helper.py` (or `ticino_helper.exe`) makes the terrain windows with numpy, byte for byte
+  what the Lua makes (`tests/test_helper.py`), and keeps the 8 the next move can need ready. It talks to the mod only
+  through files in `<user>/temp/ticino/helper/` (`ticino/helper.lua`). Without it the Lua makes them, as before.
+  Only data can be made outside the game: everything in the scene (terrain swap, objects, forest, collision, the AI
+  map) has to run on the game's own thread.
 
-- `blocks.py`: cuts a built level (the released zip unpacked) into the files above, plus the level `ticino` with the
-  rest of the scene. Nothing is rebuilt: the window holds the source terrain's own samples.
-- `package.py`: the mod zip (or an unpacked folder).
-- `pc_prepare.sh <disk>`: on the Linux PC, all of the above on the data disk.
-- `mod/lua/ge/extensions/ticino/`: `stream.lua` (the extension `ticino_stream`), `terwin.lua` (window and base maps
-  from the blocks), `png.lua`, `objects.lua`. `mod/scripts/ticino/modScript.lua` keeps the extension loaded.
-- `collision.py`: the collision cells (needs `fast_simplification`); `cdae.py`: the far ground as `.cdae` (writer from BeamNG.Earth).
-- `tests/test_cdae.py` (the writer against shapes the game compiled), `tests/check_blocks.py`, `tests/test_lua.py` (needs `luajit`), `tests/sim_stream.lua` (the mod driven at 120 km/h
-  outside the game, with the game API stubbed).
+## Build
 
-## Checked in the cloud (2026-10-26, v3.1.1 zip)
+All builds run on GitHub Actions (the cloud sessions cannot reach swisstopo), on the branch `ticino`:
 
-- `blocks.py` on the released level: 49 blocks, 22,821 objects in 467 tiles, 1,024 far tiles, 37 s.
-- 16 windows (corners, edges, random) put together from the blocks: every sample on the source terrain identical
-  (heights and layers). The Lua window is byte-identical to the Python one; its base PNGs decode to the block maps.
-- Lua cost (LuaJIT, container CPU): window .ter about 50 ms, 7 base PNGs about 45 ms, spread over about 17 frames.
-- Simulated drive, 8 km at 120 km/h: a window move every 320 m, worst Lua frame about 20 ms (reading a new tile's
-  JSON with the test's slow stub decoder).
+| Workflow | Started by (push of) | Does |
+|---|---|---|
+| `zone_build.yml` | `zone_stamp.txt` (zones in `zone_list.txt`) | the full pipeline for each zone (`MAGLIASO_ZONE`), zips on the draft `ticino-zones` |
+| `ticino_all.yml` | `all_stamp.txt` (zones in `all_list.txt`; `[all base]` in the commit message: base only) | per zone `region_slice.py` -> `ticino_<zone>_<n>.zip`, then `region_base.py` -> `ticino_base_<n>.zip` (scene, welded AI roads, signals, at most 6,000 parking spots, materials, info.json with every spawn, stream.json), on the draft `ticino-all` |
+| `ticino_tools.yml` | `install/**`, `helper/**`, `tools_release.txt` | `helper_ticino.zip` (exe) and `installer_ticino.zip` on the release named in `tools_release.txt` |
+| `ticino_helper.yml` | `helper/**` | test pack of the helper with the Lua as user-folder override, draft `ticino-helper` |
 
-Not checked (needs the game): everything in the next section.
+The zone grid and what every zone shares (terrain heights, layers, forest and ground types) are fixed in
+`zones/ticino_plan.json` (`region_plan.py`; lists append only), so the slice jobs never need each other.
 
-## Phase 0 test on the PC (what to measure)
+Files: `zones.py` (the grid), `region_plan.py`, `region_slice.py`, `region_base.py`, `region_net.py` (AI road
+welding across zone edges, signals, sites), `collision.py`, `cdae.py` (the `.cdae` writer, from BeamNG.Earth),
+`zipremote.py` (zips read by HTTP range), `blocks.py`, `region.py`, `pack_region.py` (the older one-job region),
+`helper/`, `install/`, `mod/`, `tests/` (`sim_stream.lua`: the mod driven outside the game with the game API stubbed,
+`python tests/luajit.py tests/sim_stream.lua <level folder> <seconds>`; `test_helper.py`, `test_cdae.py`,
+`test_region_net.py`, `wave_order.lua`).
 
-Game closed while preparing; 30 fps cap except where FPS is measured; remove the test files at the end.
+## Measured
 
-1. `bash pc_prepare.sh /mnt/<6TB disk>` (about 15 min with the download).
-2. Put `ticino_test.zip` in `mods/`, start the level `ticino` (`-level ticino/main.level.json`), check the game log for
-   `ticino` lines and errors (`ticino_stream`, missing materials, `Failed to load`).
-3. At the spawn: does the terrain have its colours, does grass grow, are buildings and roads where they were in v3.1.1
-   (rotated props facing the right way: the quaternion convention is BeamNG.Earth's, not tested on our objects).
-4. Drive 5-10 km on the Cantonale at 80-120 km/h, then the AI drives (scenario: the same route as the v3.1.1 test).
-   `<user>/ticino_perf.csv` logs every window move and tile change: build ms, swap ms, grass flush ms, worst frame
-   after it, collision rebuild ms, objects in the scene. Pass: no fall through the ground, swap frame under 150 ms.
-5. Load time, RAM and VRAM peak against v3.1.1 (152 s, 20.0 GB, 6.5 GB).
-6. Open questions to answer there:
-   - base colour size unit: the window's maps assume samples (BeamNG.Earth). If the open-ground colours look 1.5 x
-     too large or shifted against v3.1.1, set `base_size_unit` to `metres` in the zone and cut again;
-   - `io.open(path, 'wb')` into the user folder from GE Lua (the window files): if it fails the log says
-     "window files failed";
-   - the 3,451 AI DecalRoads re-clip on every terrain change (BeamNG.Earth: ~37 us each, ~130 ms here): compare a move
-     before and after `ticino_stream.dropAIRoads()` in the console;
-   - first use of a shape converts its DAE in the game (the cut-slope tiles are 3 MB each): hitches the first time a
-     tile is seen, none the second time?
-   - AI traffic cars that drive out of the window have no ground (no guard yet).
+On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 
-After the test: remove `mods/ticino_test.zip`, `<user>/temp/ticino/`, `<user>/ticino_perf.csv` (copy it off first).
+| Run | Result |
+|---|---|
+| Lugano, free camera at 20 m/s, 64 m collision cells | collision rebuilds 25 ms (max 35), terrain move 0.23 s every ~1.5 km |
+| Motorway Lamone-Maroggia, 33 m/s | 8 of 65 five-second spans with a frame over 100 ms, all of them terrain moves |
+| AI car round Magliaso, up to 166 km/h | 1 of 61 spans with a frame over 100 ms |
+| All Ticino, after the spawn | about 1 min of stutter (12 s first window, 28-30 s AI map), then 100 fps |
 
-## Helper process (optional, 2026-10-29)
+## Troubleshooting
 
-`helper/ticino_helper.py` (or `ticino_helper.exe`, built by `.github/workflows/ticino_helper.yml` into the draft
-release `ticino-helper`) runs beside the game and puts the terrain window together with numpy on another core: the
-2048 x 2048 `.ter` and the combined base colour map, byte for byte what `terwin.lua` and `stream.lua` make
-(`tests/test_helper.py`). It reads the same files the game reads (loose `<user>/levels/ticino/` first, then the
-`ticino_*.zip` in `<user>/mods`) and talks to the mod through files in `<user>/temp/ticino/helper/` (`ticino/helper.lua`):
-the mod writes the car's position every 250 ms, the helper keeps the 8 windows the next move can go to ready (the
-one ahead of the car first), and the streamer takes them instead of making them. At a jump the mod waits up to
-`HELPER_WAIT_MS` for the helper's window. Without a helper (not started, closed, `alive.json` older than 4 s)
-nothing changes. Only the window's files move off the game thread: the swap (`terrainFile` + `postApply`), objects,
-forest, collision and the AI map stay where they are, the engine makes them on its own thread.
+- **The game loads West Coast USA instead**: an old `levels\ticino\info.json` in the user folder; run the installer
+  (it moves user-folder overrides out).
+- **Not responding at the first start**: see "Play". `beamng-launcher.log` has the exit code if Windows closed it.
+- **Missing textures or grey objects after an update**: run the installer (it clears the level's cache on a new
+  base), or delete `<user>\temp\levels\ticino` by hand.
+- **Is the streamer running?** `beamng.log` has `ticino` lines (`streaming on`, `settings: ...`, `jump: window at`).
+  In the console: `ticino_stream.status()`.
 
-    avvia_helper.bat                     (Windows: before the game, leave the window open)
-    python helper/ticino_helper.py --user <BeamNG user folder>
-    python helper/ticino_helper.py --user <dir> --once <wx> <wy> --out <dir>      one window, with timings
+## State and open work (2026-10-29)
 
-Simulator (`tests/sim_stream.lua`, `REALTIME=1` runs it in real time so the helper can work beside it; no luajit in
-the cloud: `python tests/luajit.py tests/sim_stream.lua <level folder> 150`), zone ti_0_0, 120 km/h for 5 km:
-without the helper the jump's window took 333 ms and a move 181 ms of Lua over 33 frames (worst Lua frame 151 ms);
-with it every move used the helper's files (0 ms of Lua, worst Lua frame 36-108 ms, that is objects and collision
-now), the jump waited 122-382 ms for it (a cold helper reads the blocks from the zips), a window took the helper
-30-130 ms. Helper killed halfway: the next moves were made in Lua again, as before.
+Done: all 87 zones in one level, the streamer with wave loading, 64 m collision cells, the helper, settings, the
+installer. Open, each in its own thread:
 
-## Not done yet (phase 1 and later)
+- **AI map.** The game builds the AI map from the 57,298 AI roads, which take their heights from the terrain: only
+  the window has terrain, so outside it the AI nodes sit at height 0, 4,020 of the 4,065 traffic signals find no road
+  and AI traffic works only round the spawn; the same roads cost the 12 s first window and the 30 s map read. Fix in
+  progress: a precomputed AI map loaded with `map.reset(nodes)` and no AI roads in the scene.
+- **Shapes converted on first sight.** 13,707 `.dae` files are imported by the game the first time they are seen.
+  Fix in progress: ship them already converted.
+- Floating origin (coordinates reach 75 km from the origin: no jitter seen so far), AI traffic guard at the window edge.
 
-- Floating origin (rebase every ~15 km): not needed for the Malcantone (12 km), needed for Ticino (62 x 93 km).
-- Forest streaming (840k items are one Forest today), AI navgraph clipped to the window and a traffic guard.
-- The pipeline building a zone block by block (today: cut a finished level), new zones, the detail modules of the plan
-  (guard rails and walls from LiDAR, lamps, tunnels).
-- `.cdae` shipped in the zip instead of DAE (no conversion in the game).
-- Big map, time trials and spawn points of a zone set in the mod.
-
-Credits: the terrain swap, ground cover flush, runtime objects and pause follow BeamNG.Earth (TecnaGamer, MIT,
-`mod/THIRD_PARTY.md`).
+Credits: the terrain swap, ground cover flush, runtime objects, pause and the `.cdae` writer follow BeamNG.Earth
+(TecnaGamer, MIT, `mod/THIRD_PARTY.md`). Data: swisstopo, the cadastral survey of Ticino, OpenStreetMap
+contributors. Licence of the map: CC BY-NC 4.0, as the rest of the repository.
