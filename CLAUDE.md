@@ -24,6 +24,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
   buildings thread (2026-10-23). Kill by PID (`ps aux | grep "[n]ame"` first, then `kill <pid>` in a separate call).
   `ps aux | grep "[c]ompare.py" | xargs kill` is no better: it lists the shell whose command line holds the name
   further on (a third kill). `pgrep -af "^python3 compare"` anchors on the process's own command.
+  Again 2026-10-29 (helper thread): `pkill -f "[t]icino_helper.py"` followed by a heredoc that named
+  helper/ticino_helper.py killed the shell before the heredoc ran (its edits were lost silently): one kill per call.
 - Push work often. An earlier session lost the fuel stations module because it was never pushed.
 
 - The cloud container cannot upload release assets (uploads.github.com answered 415 through the gateway) and cannot
@@ -817,6 +819,20 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   340 tubes. Checked in the cloud on the pack alone (a plan view of the junction, no face in a driving envelope), not
   in the game. Look at the lines of a tunnel in tunnels_tlm.json.gz (the pieces, their classes, which ends touch)
   before blaming the tube geometry.
+
+## Streaming helper process (beamng/ticino/helper, 2026-10-29)
+
+- michi asked for a separate local process that streams to the game. Only DATA can come from outside: the terrain
+  window (.ter + base map) is made by ticino_helper.py with numpy and handed over as files (temp/ticino/helper). The
+  scene work (terrainFile/postApply, TSStatic, Forest, ProceduralMesh, reloadCollision, map.reset) has no API from
+  outside the game thread; BeamNGpy would run its commands in the same Lua. A .exe cannot ship in a repository mod.
+- In the simulator the Lua window was ~1/3 of the first jump's frame (382 of 1,106 ms); the in-game freeze at that
+  jump (5 min, a core at 100 %) was in an engine call, not the Lua (thread "Far partire BeamNG con il Ticino
+  completo"): the helper cannot fix such a freeze, check where the time goes before promising a gain.
+- tests/sim_stream.lua had no TerrainBlock:getPosition stub (stream.lua checks the block after the swap) and crashed
+  at the first jump; there is no luajit in the cloud: `python tests/luajit.py <file.lua> args` (lupa). `REALTIME=1`
+  runs the sim in real time, else a helper beside it never keeps up with simulated driving.
+- The perf csv of the sim is written 10 frames after a swap: a sim of 0.02 s writes none.
 
 ## Data from the cloud sessions
 

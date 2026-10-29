@@ -1,0 +1,47 @@
+# Ticino streaming helper (beamng/ticino/helper): a Windows .exe of ticino_helper.py (PyInstaller, numpy inside, no
+# Python needed on the PC) packed with the streamer's Lua files of the same commit, on the DRAFT release
+# "ticino-helper" (not public) as helper_ticino.zip. Started by a push that changes beamng/ticino/helper/ (the cloud
+# session cannot dispatch a workflow off the default branch).
+name: ticino helper
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/helper/**
+
+permissions:
+  contents: write
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        shell: bash
+        run: |
+          python -m pip install --progress-bar off numpy pyinstaller
+          cd beamng/ticino/helper
+          pyinstaller --onefile --name ticino_helper ticino_helper.py
+          ./dist/ticino_helper.exe --help > /dev/null
+      - name: Pack
+        shell: bash
+        run: |
+          mkdir -p pkg/lua/ge/extensions/ticino
+          cp beamng/ticino/helper/dist/ticino_helper.exe beamng/ticino/helper/avvia_helper.bat beamng/ticino/helper/ticino_helper.py pkg/
+          cp beamng/ticino/mod/lua/ge/extensions/ticino/*.lua pkg/lua/ge/extensions/ticino/
+          echo "commit ${GITHUB_SHA}" > pkg/VERSION.txt
+          cd pkg && 7z a -tzip ../helper_ticino.zip . > /dev/null
+      - name: Upload
+        shell: bash
+        run: |
+          gh release view ticino-helper > /dev/null 2>&1 || \
+            gh release create ticino-helper --draft --target "$GITHUB_SHA" --title "Ticino streaming helper (test)" --notes "Draft: helper_ticino.zip for in-game tests."
+          gh release upload ticino-helper helper_ticino.zip --clobber

@@ -30,6 +30,7 @@ local terwin = require('ticino/terwin')
 local objects = require('ticino/objects')
 local forest = require('ticino/forest')
 local png = require('ticino/png')
+local helper = require('ticino/helper')
 
 local M = {}
 
@@ -67,6 +68,8 @@ M.MAP_RESET_FRAMES = nil  -- frames after a terrain swap to read the AI map agai
 M.TEMP = '/temp/ticino/'
 M.PERF_FILE = '/ticino_perf.csv'
 M.TERRAIN_NAME = 'theTerrain'
+M.HELPER = true            -- use the helper process's window files when it runs (ticino/helper.lua)
+M.HELPER_WAIT_MS = 8000    -- at a jump, wait this long for the helper's window before making it in Lua
 M.GROUP = 'ticino_stream'
 
 local st = nil
@@ -136,9 +139,12 @@ end
 
 -- the window's tile origin that keeps tile c within the places FOLLOW_LO..FOLLOW_HI of n from wc; when it has to move,
 -- c lands at the other end of them. Never nearer than 1 tile to the edge: closer is a jump (onUpdate).
+local function followPlaces(n)
+  return math.max(1, math.min(M.FOLLOW_LO, n / 2 - 1)), math.min(n - 2, math.max(M.FOLLOW_HI, n / 2))
+end
+
 local function follow(c, wc, n)
-  local lo = math.max(1, math.min(M.FOLLOW_LO, n / 2 - 1))
-  local hi = math.min(n - 2, math.max(M.FOLLOW_HI, n / 2))
+  local lo, hi = followPlaces(n)
   if c - wc < lo then return c - hi end
   if c - wc > hi then return c - lo end
   return wc
@@ -182,7 +188,7 @@ local function perfLine(t)
   st.perf[#st.perf + 1] = t
   local cols = { 'time', 'kind', 'wx', 'wy', 'buildMs', 'buildFrames', 'applyMs', 'grassMs', 'farMs', 'worstFrameMs',
                  'objsQueued', 'reloadMs', 'live', 'colliders', 'colCells', 'afterReloadWorstMs', 'afterReloadSlowFrames',
-                 'baseMs', 'posMs', 'terMs', 'postMs', 'next1Ms', 'next2Ms', 'next3Ms', 'next4Ms', 'nearMs' }
+                 'baseMs', 'posMs', 'terMs', 'postMs', 'next1Ms', 'next2Ms', 'next3Ms', 'next4Ms', 'nearMs', 'helper', 'helperWaitMs' }
   local lines = { table.concat(cols, ',') }
   for _, r in ipairs(st.perf) do
     local v = {}
@@ -275,6 +281,13 @@ local function makeJob(wx, wy)
   st.serial = st.serial + 1
   local serial = st.serial
   local job = { wx = wx, wy = wy, serial = serial, ms = 0, frames = 0 }
+  -- the helper's files, if it has the window ready (only the combined base map: the helper makes no other)
+  local h = M.HELPER and M.BASE_COMBINED and st.layerKey and helper.take(wx, wy)
+  if h then
+    job.ter, job.base, job.helper = h.ter, { combined = h.base }, true
+    job.co = coroutine.create(function() return true end)
+    return job
+  end
   job.co = coroutine.create(function(yieldFn)
     local parts = terwin.terParts(yieldingCache(st.tcache, yieldFn), st.cfg, wx, wy, yieldFn)
     job.ter = M.TEMP .. 'w' .. serial .. '.ter'
@@ -394,9 +407,9 @@ local function apply(job, kind)
   if M.MAP_RESET_FRAMES then st.mapResetIn = M.MAP_RESET_FRAMES end
   st.watch = { frames = 10, worst = 0, rec = { time = os.date('%H:%M:%S'), kind = kind, wx = job.wx, wy = job.wy,
     buildMs = job.ms, buildFrames = job.frames, applyMs = tApply, grassMs = tGrass, farMs = tFar,
-    baseMs = tBase, posMs = tPos, terMs = tTer, postMs = tPost } }
+    baseMs = tBase, posMs = tPos, terMs = tTer, postMs = tPost, helper = job.helper and 1 or 0, helperWaitMs = job.waitMs } }
   st.afterSwap = { rec = st.watch.rec, n = 0 }
-  log('I', 'ticino', string.format('%s: window at (%d, %d): files %.0f ms in %d frames, swap %.1f ms (base %.1f, '
+  log('I', 'ticino', string.format('%s: window at (%d, %d): files %.0f ms in %d frames' .. (job.helper and ' (helper)' or '') .. ', swap %.1f ms (base %.1f, '
     .. 'position %.1f, terrainFile %.1f, postApply %.1f), grass %.1f ms', kind, job.wx, job.wy, job.ms, job.frames,
     tApply, tBase, tPos, tTer, tPost, tGrass))
 end
@@ -408,8 +421,16 @@ local function jump(x, y)
   local cx, cy = cellOf(x, y)
   local wcx, wcy = cx - (n / 2 - 1), cy - (n / 2 - 1)
   pause(true)
+  if st.job then removeFiles(st.job) end
   st.job = nil
+  if M.HELPER and M.BASE_COMBINED and helper.alive(true) then
+    local w = { wcx * cfg.cell, wcy * cfg.cell }
+    local lo, hi = followPlaces(n)
+    helper.request(x, y, w, lo, hi, n, w)
+    helper.wait(w[1], w[2], M.HELPER_WAIT_MS)
+  end
   local job = makeJob(wcx * cfg.cell, wcy * cfg.cell)
+  if M.HELPER then job.waitMs = helper.stats().lastWaitMs end
   runJob(job, nil)
   st.cell = { cx, cy }
   if not job.failed then apply(job, 'jump') end
@@ -498,6 +519,7 @@ local function start()
   if M.TB_BASE_TEX_SIZE > 0 then tb:setField('baseTexSize', 0, tostring(M.TB_BASE_TEX_SIZE)) end
   st.layerKey = {}                    -- terrain material (.ter name) -> its streamed base map (BASE_COMBINED)
   for _, bm in ipairs(cfg.baseMaterials or {}) do st.layerKey[bm[2]] = bm[3] end
+  if M.HELPER then helper.init(cfg, clock) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
@@ -513,6 +535,7 @@ local function stop()
   removeFiles(st.prevJob)
   removeFiles(st.curJob)
   if st.job then removeFiles(st.job) end
+  helper.stop()
   st = nil
 end
 
@@ -599,6 +622,10 @@ local function onUpdate(dtReal)
   if not x then return end
   local cfg = st.cfg
   local n = cfg.window / cfg.cell
+  if M.HELPER then
+    local lo, hi = followPlaces(n)
+    helper.tick(x, y, st.window, lo, hi, n)
+  end
   local cx, cy = cellOf(x, y)
   local wcx, wcy = st.window[1] / cfg.cell, st.window[2] / cfg.cell
   -- a jump: the first frame, or the car more than a tile out of its place in the window
@@ -707,7 +734,7 @@ function M.status()
   if not st then return 'off' end
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
-           objects = s, forest = forest.stats(), last = st.perf[#st.perf], tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+           objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
 end
 
 -- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).
