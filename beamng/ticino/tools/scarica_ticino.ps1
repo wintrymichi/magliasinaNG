@@ -152,7 +152,7 @@ foreach ($v in $vecchi) { Scrivi "  vecchio: $($v.Name) ($(GB $v.Length))" }
 $disco = (Get-Item $ModsDir).PSDrive
 $serve = $daScaricare - $giaParziale
 if ($CancellaVecchi) { $serve -= ($vecchi | Measure-Object Length -Sum).Sum }
-Scrivi ("Spazio libero su {0}: {1}, serve circa {2}" -f $disco.Name, (GB $disco.Free), (GB ([math]::Max(0, $serve))))
+Scrivi ("Spazio libero su {0}: {1}, serve circa {2}" -f $disco.Name, (GB $disco.Free), (GB ([math]::Max([double]0, [double]$serve))))
 
 if ($SoloElenco) {
     foreach ($a in $daFare) { Scrivi ("  scaricherei {0} ({1})" -f $a.name, (GB $a.size)) }

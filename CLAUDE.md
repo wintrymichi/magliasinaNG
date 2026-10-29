@@ -61,6 +61,8 @@ Mistakes made in earlier sessions and what to do instead. Add to this list when 
 - No PowerShell in the cloud container, and downloading pwsh from GitHub was refused by the permission check: a .ps1
   written here is not run before michi runs it. Keep it Windows PowerShell 5.1 safe: ASCII only (no BOM -> ANSI),
   `${var}:` in strings, no `2>&1` on a native command under ErrorActionPreference Stop (stderr becomes an error).
+  First run on the PC failed at once: `[math]::Max(0, $bytes)` took the Int32 overload from the literal 0 and could
+  not convert 51 GB. Give both arguments a type (`[math]::Max([double]0, [double]$x)`) when sizes go into math calls.
 
 ## Testing in the game on the PC
 
