@@ -66,6 +66,7 @@ Obj.__index = Obj
 function Obj:setField(k, _, v) self.f[k] = v end
 function Obj:getField(k) return self.f[k] end
 function Obj:setPosition(p) self.pos = p end
+function Obj:getPosition() return self.pos or vec3(0, 0, 0) end
 function Obj:setPosRot(x, y, z) self.pos = vec3(x, y, z) end
 function Obj:setScale() end
 function Obj:registerObject(name) self.name = name end
@@ -113,6 +114,7 @@ while t < seconds do
   local c0 = os.clock()
   stream.onUpdate(dt, dt)
   local ms = (os.clock() - c0) * 1000
+  if os.getenv('REALTIME') then while os.clock() - c0 < dt do end end   -- real time (helper tests: it runs beside)
   frames = frames + 1
   if frames > 3 then worstLua = math.max(worstLua, ms) end
   if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end

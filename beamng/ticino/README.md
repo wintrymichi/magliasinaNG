@@ -84,6 +84,30 @@ Game closed while preparing; 30 fps cap except where FPS is measured; remove the
 
 After the test: remove `mods/ticino_test.zip`, `<user>/temp/ticino/`, `<user>/ticino_perf.csv` (copy it off first).
 
+## Helper process (optional, 2026-10-29)
+
+`helper/ticino_helper.py` (or `ticino_helper.exe`, built by `.github/workflows/ticino_helper.yml` into the draft
+release `ticino-helper`) runs beside the game and puts the terrain window together with numpy on another core: the
+2048 x 2048 `.ter` and the combined base colour map, byte for byte what `terwin.lua` and `stream.lua` make
+(`tests/test_helper.py`). It reads the same files the game reads (loose `<user>/levels/ticino/` first, then the
+`ticino_*.zip` in `<user>/mods`) and talks to the mod through files in `<user>/temp/ticino/helper/` (`ticino/helper.lua`):
+the mod writes the car's position every 250 ms, the helper keeps the 8 windows the next move can go to ready (the
+one ahead of the car first), and the streamer takes them instead of making them. At a jump the mod waits up to
+`HELPER_WAIT_MS` for the helper's window. Without a helper (not started, closed, `alive.json` older than 4 s)
+nothing changes. Only the window's files move off the game thread: the swap (`terrainFile` + `postApply`), objects,
+forest, collision and the AI map stay where they are, the engine makes them on its own thread.
+
+    avvia_helper.bat                     (Windows: before the game, leave the window open)
+    python helper/ticino_helper.py --user <BeamNG user folder>
+    python helper/ticino_helper.py --user <dir> --once <wx> <wy> --out <dir>      one window, with timings
+
+Simulator (`tests/sim_stream.lua`, `REALTIME=1` runs it in real time so the helper can work beside it; no luajit in
+the cloud: `python tests/luajit.py tests/sim_stream.lua <level folder> 150`), zone ti_0_0, 120 km/h for 5 km:
+without the helper the jump's window took 333 ms and a move 181 ms of Lua over 33 frames (worst Lua frame 151 ms);
+with it every move used the helper's files (0 ms of Lua, worst Lua frame 36-108 ms, that is objects and collision
+now), the jump waited 122-382 ms for it (a cold helper reads the blocks from the zips), a window took the helper
+30-130 ms. Helper killed halfway: the next moves were made in Lua again, as before.
+
 ## Not done yet (phase 1 and later)
 
 - Floating origin (rebase every ~15 km): not needed for the Malcantone (12 km), needed for Ticino (62 x 93 km).
