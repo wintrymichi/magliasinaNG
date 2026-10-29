@@ -1,0 +1,76 @@
+# Ticino: the player's tools on the Ticino release named in beamng/ticino/tools_release.txt (a draft until michi
+# publishes it): helper_ticino.zip (ticino_helper.exe, PyInstaller with numpy, no Python needed on the PC) and
+# installer_ticino.zip (Install Ticino.bat, install_ticino.ps1, Start Ticino.bat, start_ticino.ps1, release.txt with
+# the tag, so the installer finds its own release). Started by a push that changes the helper, the installer or
+# tools_release.txt (the cloud session cannot dispatch a workflow off the default branch).
+name: ticino tools
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/helper/**
+      - beamng/ticino/install/**
+      - beamng/ticino/tools_release.txt
+
+permissions:
+  contents: write
+
+jobs:
+  tools:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the PowerShell scripts parse
+        shell: pwsh
+        run: |
+          $bad = 0
+          foreach ($f in Get-ChildItem beamng/ticino/install -Filter *.ps1) {
+            $errs = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errs)
+            foreach ($e in $errs) { Write-Host "$($f.Name): $e"; $bad++ }
+          }
+          if ($bad) { exit 1 }
+      - name: Check the PowerShell scripts parse in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $bad = 0
+          foreach ($f in Get-ChildItem beamng/ticino/install -Filter *.ps1) {
+            $errs = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errs)
+            foreach ($e in $errs) { Write-Host "$($f.Name): $e"; $bad++ }
+          }
+          if ($bad) { exit 1 }
+      - name: Helper exe
+        shell: bash
+        run: |
+          python -m pip install --progress-bar off numpy pyinstaller
+          cd beamng/ticino/helper
+          pyinstaller --onefile --name ticino_helper ticino_helper.py
+          ./dist/ticino_helper.exe --help > /dev/null
+      - name: Pack
+        shell: bash
+        run: |
+          TAG=$(tr -d ' \r\n' < beamng/ticino/tools_release.txt)
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          mkdir -p helper installer
+          cp beamng/ticino/helper/dist/ticino_helper.exe beamng/ticino/helper/avvia_helper.bat beamng/ticino/helper/ticino_helper.py helper/
+          echo "commit ${GITHUB_SHA}" > helper/VERSION.txt
+          cp beamng/ticino/install/* installer/
+          printf '%s\n' "$TAG" > installer/release.txt
+          echo "commit ${GITHUB_SHA}" > installer/VERSION.txt
+          (cd helper && 7z a -tzip ../helper_ticino.zip . > /dev/null)
+          (cd installer && 7z a -tzip ../installer_ticino.zip . > /dev/null)
+          ls -l *.zip
+      - name: Upload
+        shell: bash
+        run: |
+          gh release view "$TAG" > /dev/null 2>&1 || \
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "Ticino ($TAG, draft)" --notes "Draft."
+          gh release upload "$TAG" helper_ticino.zip installer_ticino.zip --clobber
