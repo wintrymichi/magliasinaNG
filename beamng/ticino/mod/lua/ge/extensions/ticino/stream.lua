@@ -40,9 +40,9 @@ M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
 M.NEAR_RINGS = 1           -- the objects of the tiles this near the car's (Chebyshev) come before the window's files
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
-M.FOREST_JUMP_MS = 3000    -- forest items made at a jump, while the game is paused
+M.FOREST_JUMP_MS = 1000    -- forest items made at a jump, while the game is paused (3000 made the jump frame 6-7 s)
 M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains round the new place; the rest comes after)
-M.OBJ_JUMP_MS = 2500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
+M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
@@ -434,6 +434,9 @@ local function jump(x, y)
   local n = cfg.window / cfg.cell
   local cx, cy = cellOf(x, y)
   local wcx, wcy = cx - (n / 2 - 1), cy - (n / 2 - 1)
+  local T = { t0 = clock() }
+  local function mark(k) T[k] = clock() - T.t0 end
+  log('I', 'ticino', string.format('jump to (%.0f, %.0f), tile (%d, %d), window (%d, %d)', x, y, cx, cy, wcx, wcy))
   pause(true)
   if st.job then removeFiles(st.job) end
   st.job = nil
@@ -446,6 +449,7 @@ local function jump(x, y)
   local job = makeJob(wcx * cfg.cell, wcy * cfg.cell)
   if M.HELPER then job.waitMs = helper.stats().lastWaitMs end
   runJob(job, nil)
+  mark('files')
   -- a jump farther than the objects reach (Manno -> Bellinzona, PC 2026-10-30): the old place has nothing the new one
   -- needs. Its objects and trees go at once here, while paused; else their deletions queued behind the new rings and
   -- the new place filled in for minutes.
@@ -455,8 +459,10 @@ local function jump(x, y)
   if far and st.cell then
     dropped, felled = objects.dropAll(), forest.clear()
   end
+  mark('drop')
   st.cell = { cx, cy }
-  if not job.failed then apply(job, 'jump') end
+  if not job.failed then apply(job, 'jump') else log('W', 'ticino', 'jump: the window files failed, terrain not moved') end
+  mark('swap')
   objects.retarget(cx, cy)
   -- ring 0 whole, then the near rings up to OBJ_JUMP_MS: with no cap the paused jump frame grew to 8-9 s (PC test of
   -- 79f0e61, every shape of a new zone is a COLLADA import); what is left comes in the next frames, nearest first
@@ -464,13 +470,19 @@ local function jump(x, y)
   local tObj = clock()
   while not objects.step(clock, math.max(1, M.OBJ_JUMP_MS - (clock() - tObj)), M.NEAR_RINGS)
     and clock() - tObj < M.OBJ_JUMP_MS and objects.nearPending(M.NEAR_RINGS) do end
+  mark('objects')
   objects.updateCols(x, y, true)
   objects.stepCols(clock, nil)
+  mark('cols')
   forest.retarget(cx, cy)
   forest.step(clock, M.FOREST_JUMP_MS, 1e9)
+  mark('forest')
   objects.stepFar(clock, M.FAR_JUMP_MS)
+  mark('far')
   log('I', 'ticino', string.format('jump to tile (%d, %d)%s: %d objects and %d trees of the old place removed, far ground '
-    .. '%s', cx, cy, far and ' (far)' or '', dropped, felled, objects.farPending() and 'still queued' or 'made'))
+    .. '%s; ms files %.0f, drop %.0f, swap %.0f, objects %.0f, cols %.0f, forest %.0f, far %.0f', cx, cy,
+    far and ' (far)' or '', dropped, felled, objects.farPending() and 'still queued' or 'made', T.files, T.drop - T.files,
+    T.swap - T.drop, T.objects - T.swap, T.cols - T.objects, T.forest - T.cols, T.far - T.forest))
   -- the collision rebuild waits for the swapped terrain (SWAP_QUIET_FRAMES), the game stays paused till after it
   st.jumpReload = true
   st.resumeIn = M.SWAP_QUIET_FRAMES + 2

@@ -867,6 +867,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Now ring 0 is made whole at a jump, rings up to NEAR_RINGS only for OBJ_JUMP_MS (2.5 s), FAR_JUMP_MS 2000 -> 500 (the
   rest in the next frames, nearest first). "base 0.0 ms" is expected (setField only stores the path, the engine
   reads the texture later): setBase now logs a base map file missing at a swap and an empty list of base materials.
+  PC test of b45a209: jump frame 6.55 s (spawn) and 7.35 s (Bellinzona), swap 110 ms, no "base colour map" line (the
+  file was there): the near rings were not the cost. The jump frame is the SUM of its budgets: FOREST_JUMP_MS was
+  3000, then OBJ_JUMP_MS 2500 and FAR_JUMP_MS 500. Now forest 1000, objects 1500, and the "jump to tile" line gives
+  the ms of each part (files, drop, swap, objects, cols, forest, far). Airolo's jump wrote no "jump: window" line
+  twice: jump() now logs its start and a failed window job, read those lines next time.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
