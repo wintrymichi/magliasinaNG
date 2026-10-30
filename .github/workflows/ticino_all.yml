@@ -109,10 +109,12 @@ jobs:
           id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq ".[] | select(.tag_name == \"$TAG\") | .id")
           # the zone's zips of an earlier run first (a slice of more parts would leave a stale part behind)
           for old in $(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq ".[] | select(.name | test(\"^ticino_${Z}_[0-9]+\\\\.zip$\")) | .id"); do
-            gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+            # a 502 of the API lost a whole slice (ti_0_7, run 41142809094): try again
+            for t in 1 2 3 4 5; do gh api -X DELETE "repos/$GH_REPO/releases/assets/$old" && break; [ $t = 5 ] && exit 1; sleep $((t * 10)); done
           done
-          for f in "$W"/dist/*.zip; do gh release upload "$TAG" "$f" --clobber; done
-          gh release upload "$TAG" "$W/slice_$Z.log" --clobber
+          up() { for t in 1 2 3 4 5; do gh release upload "$TAG" "$1" --clobber && return 0; sleep $((t * 10)); done; return 1; }
+          for f in "$W"/dist/*.zip; do up "$f"; done
+          up "$W/slice_$Z.log"
 
   base:
     needs: [setup, slice]
@@ -151,8 +153,9 @@ jobs:
         run: |
           id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq ".[] | select(.tag_name == \"$TAG\") | .id")
           for old in $(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq '.[] | select(.name | test("^ticino_base_[0-9]+\\.zip$")) | .id'); do
-            gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
+            # a 502 of the API lost a whole slice (ti_0_7, run 41142809094): try again
+            for t in 1 2 3 4 5; do gh api -X DELETE "repos/$GH_REPO/releases/assets/$old" && break; [ $t = 5 ] && exit 1; sleep $((t * 10)); done
           done
           for f in "$W"/dist/*.zip "$W/dist/ticino_base.sha256" "$W/dist/region_report.json" "$W/base.log"; do
-            gh release upload "$TAG" "$f" --clobber
+            for t in 1 2 3 4 5; do gh release upload "$TAG" "$f" --clobber && break; [ $t = 5 ] && exit 1; sleep $((t * 10)); done
           done

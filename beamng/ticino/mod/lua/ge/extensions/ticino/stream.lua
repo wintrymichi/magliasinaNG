@@ -805,9 +805,9 @@ local function onUpdate(dtReal)
     st.act = 'burst'
     local t0 = clock()
     objects.BURSTING = true
-    -- the trees get their share of the burst (they waited for the whole object queue: PC test F1)
-    local objMs = forest.pending() and M.BURST_MS * 0.6 or M.BURST_MS
-    if objects.pending() then objects.step(clock, objMs) end
+    -- the objects take the whole burst, the trees what is left: giving the trees a share (and one Forest a burst)
+    -- made more slow bursts of ~220 ms (each frame that touches a Forest costs that much: PC tests H1, H2)
+    if objects.pending() then objects.step(clock, M.BURST_MS) end
     objects.BURSTING = false
     local left = M.BURST_MS - (clock() - t0)
     if left > 0 and forest.pending() then forest.step(clock, 1000, nil, left) end

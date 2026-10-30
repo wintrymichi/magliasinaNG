@@ -228,11 +228,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
         left = left - 1
       end
       i = i + 1
-      if i % M.CHECK_EVERY == 0 then
-        if burstMs then
-          if clock() - t0 > burstMs then break end
-        elseif budgetMs and not M.ONE_FOREST and clock() - t0 > budgetMs then break end
-      end
+      if budgetMs and not M.ONE_FOREST and i % M.CHECK_EVERY == 0 and clock() - t0 > budgetMs then break end
     end
     op.pos = i
     if i <= #rows then return false end
@@ -246,8 +242,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
     if touched then forests = forests + 1 end
     if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
     if burstMs then
-      -- one Forest a burst: a frame that changes several cost up to 711 ms in a flight (PC test H2)
-      if forests >= M.FORESTS_PER_FRAME or clock() - t0 > burstMs then break end
+      if clock() - t0 > burstMs then break end
     else
       local limit = (M.FORESTS_PER_FRAME > 1 and budgetMs and budgetMs < 1000) and M.BATCH_MAX_MS or budgetMs
       if limit and clock() - t0 > limit then break end
