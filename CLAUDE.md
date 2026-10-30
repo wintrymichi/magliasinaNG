@@ -864,6 +864,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   near rings and FAR_JUMP_MS are made inside it. Still seen: 2 object frames of ~0.9 s 60 s after a jump and 25 of
   ~215 ms at 100 s (the traffic starting). The ticino stream.lua without PR #105's aimap hook gives 12,849 "Map node
   could not be set" again: expected until #105 is merged. "base 0.0" at every jump, grey ground not confirmed.
+  Now ring 0 is made whole at a jump, rings up to NEAR_RINGS only for OBJ_JUMP_MS (2.5 s), FAR_JUMP_MS 2000 -> 500 (the
+  rest in the next frames, nearest first). "base 0.0 ms" is expected (setField only stores the path, the engine
+  reads the texture later): setBase now logs a base map file missing at a swap and an empty list of base materials.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.

@@ -41,7 +41,8 @@ M.NEAR_RINGS = 1           -- the objects of the tiles this near the car's (Cheb
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
 M.FOREST_JUMP_MS = 3000    -- forest items made at a jump, while the game is paused
-M.FAR_JUMP_MS = 2000       -- far ground tiles made at a jump (the mountains round the new place)
+M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains round the new place; the rest comes after)
+M.OBJ_JUMP_MS = 2500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
@@ -361,9 +362,11 @@ local function setBase(job, list)
   local cfg = st.cfg
   local unit = cfg.baseSizeUnit == 'metres' and cfg.square or 1
   local size = tostring(cfg.window * unit)
+  if #st.baseMats == 0 then log('W', 'ticino', 'no terrain material takes the base colour map') end
   for _, bm in ipairs(list or st.baseMats) do
     local p = job.base.combined or job.base[bm.key]
     if p then
+      if list == nil and not FS:fileExists(p) then log('W', 'ticino', 'base colour map missing: ' .. p) end
       bm.obj:setField('baseColorBaseTex', 0, p)
       bm.obj:setField('baseColorBaseTexSize', 0, size)
     end
@@ -455,7 +458,12 @@ local function jump(x, y)
   st.cell = { cx, cy }
   if not job.failed then apply(job, 'jump') end
   objects.retarget(cx, cy)
-  objects.step(clock, nil, M.NEAR_RINGS)
+  -- ring 0 whole, then the near rings up to OBJ_JUMP_MS: with no cap the paused jump frame grew to 8-9 s (PC test of
+  -- 79f0e61, every shape of a new zone is a COLLADA import); what is left comes in the next frames, nearest first
+  objects.step(clock, nil, 0)
+  local tObj = clock()
+  while not objects.step(clock, math.max(1, M.OBJ_JUMP_MS - (clock() - tObj)), M.NEAR_RINGS)
+    and clock() - tObj < M.OBJ_JUMP_MS and objects.nearPending(M.NEAR_RINGS) do end
   objects.updateCols(x, y, true)
   objects.stepCols(clock, nil)
   forest.retarget(cx, cy)
