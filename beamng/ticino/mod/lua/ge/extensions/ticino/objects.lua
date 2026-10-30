@@ -27,6 +27,10 @@ M.NO_COLLISION_SHAPES = { 'clutter_pallet', 'clutter_metal_bin', 'clutter_big_du
 -- (suspected cause of 13 fps standing still against Italy's 81, PC test pending). Static, the map is redrawn only in
 -- the frames that add objects.
 M.DYNAMIC = false
+-- SETTLE_MS > 0 (with DYNAMIC false): objects are made dynamic and turned static together once no object was made for
+-- SETTLE_MS (at most 4 x SETTLE_MS after the first), so the cached shadow map is redrawn once per batch, not in every
+-- frame that adds objects. Turning dynamic -> static at runtime works (PC test 2026-10-30: 14 -> 83 fps).
+M.SETTLE_MS = 0
 M.COL_LAZY = 0             -- 1 tried: 25 cells of 128 m were 1.1 M triangles, a rebuild 170-250 ms in Lugano
 M.SLOW_SPAWN_MS = 40       -- an object (or far tile) that takes longer to make is logged with its shape
 M.CACHE_TILES = 400
@@ -58,7 +62,7 @@ local S = nil     -- state: cfg, level, group, tiles (cache), live, farLive, que
 function M.init(cfg, level, group)
   S = { cfg = cfg, level = level, group = group, tiles = {}, tileOrder = {}, live = {}, farLive = {},
         queue = {}, qpos = 1, colDirty = false, maxR = 0,
-        stats = { created = 0, deleted = 0, failed = 0, tilesRead = 0 } }
+        stats = { created = 0, deleted = 0, failed = 0, tilesRead = 0 }, fresh = {} }
   S.maxR = cfg.maxRadius or 6
   S.noCol = {}                      -- groups that never collide (setCollision)
   S.farQueue, S.farPos = {}, 1
@@ -127,6 +131,33 @@ function M.setDynamic(on)
   return n
 end
 
+local function wantDynamic() return M.DYNAMIC or M.SETTLE_MS > 0 end
+local function fresh(id)
+  if M.DYNAMIC or M.SETTLE_MS <= 0 or not id then return end
+  S.fresh[#S.fresh + 1] = id
+end
+
+-- the fresh dynamic objects turned static in one frame: true when it did (stream.lua calls it every frame)
+function M.settle(clock)
+  local f = S and S.fresh
+  if not f or #f == 0 then return false end
+  local t = clock()
+  if #f ~= S.freshSeen then                 -- made one since the last call
+    if (S.freshSeen or 0) == 0 then S.freshT0 = t end
+    S.freshSeen, S.freshLast = #f, t
+  end
+  if t - (S.freshLast or t) < M.SETTLE_MS and t - (S.freshT0 or t) < 4 * M.SETTLE_MS then return false end
+  local n = 0
+  for _, id in ipairs(f) do
+    local o = scenetree.findObjectById(id)
+    if o then o:setField('dynamic', 0, 'false'); n = n + 1 end
+  end
+  S.fresh, S.freshSeen = {}, 0
+  S.stats.settled = (S.stats.settled or 0) + n
+  S.stats.settles = (S.stats.settles or 0) + 1
+  return true, n
+end
+
 local function spawn(e, col)
   local o = createObject(e.class)
   if not o then return nil end
@@ -139,7 +170,7 @@ local function spawn(e, col)
   end
   if e.class == 'TSStatic' then
     o:setField('collisionType', 0, col and (e.collisionType or 'Visible Mesh Final') or 'None')
-    o:setField('dynamic', 0, M.DYNAMIC and 'true' or 'false')
+    o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
   end
   o.canSave = false
   local p = e.p
@@ -148,6 +179,7 @@ local function spawn(e, col)
   if e.q then o:setPosRot(p[1], p[2], p[3], e.q[1], e.q[2], e.q[3], e.q[4]) end
   if e.s then o:setScale(vec3(e.s[1], e.s[2], e.s[3])) end
   S.group:addObject(o)
+  if e.class == 'TSStatic' then fresh(o:getID()) end
   return o:getID()
 end
 
@@ -600,12 +632,13 @@ function M.stepFar(clock, budgetMs)
       o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
-      o:setField('dynamic', 0, M.DYNAMIC and 'true' or 'false')
+      o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
       o.canSave = false
       local cfg = S.cfg
       o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
       o:registerObject('')
       S.group:addObject(o)
+      fresh(o:getID())
       local f = { id = o:getID(), cx = tx, cy = ty, hidden = false }
       S.farLive[key] = f
       M._farHide(f)

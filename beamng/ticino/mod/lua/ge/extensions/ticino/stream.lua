@@ -544,12 +544,20 @@ local function readSettings(cfg)
     log('W', 'ticino', 'unknown preset "' .. preset .. '": standard')
     preset = 'standard'
   end
+  local W = cfg.window
   applyFields(M.PRESETS[preset], cfg, 'preset ' .. preset .. ':')
   if type(s.helper) == 'boolean' then M.HELPER = s.helper end
   if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
   if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
+  -- a window size of the settings (level.window, tiles of cfg.cell): the helper writes the built size only
+  -- 4 tiles were too few: every move came too late and was a jump (sim, 2026-10-30)
+  if cfg.window % cfg.cell ~= 0 or cfg.window / cfg.cell < 6 or cfg.window > W then
+    if cfg.window ~= W then log('W', 'ticino', 'window ' .. cfg.window .. ' not usable: ' .. W) end
+    cfg.window = W
+  end
+  if cfg.window ~= W then M.HELPER = false end
   log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s', preset, tostring(M.HELPER),
     tostring(M.DIAG)))
 end
@@ -616,6 +624,8 @@ end
 local function onUpdate(dtReal)
   if not st then return end
   frameStats()
+  local settled, nSettled = objects.settle(clock)
+  if settled and M.DIAG then log('D', 'ticino', nSettled .. ' objects made static') end
   if st.basePending then              -- BASE_MODE 'split': one terrain material's base colour map a frame
     local bp = st.basePending
     local bm = st.baseMats[bp.i]
