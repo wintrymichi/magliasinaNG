@@ -31,6 +31,7 @@ local objects = require('ticino/objects')
 local forest = require('ticino/forest')
 local png = require('ticino/png')
 local helper = require('ticino/helper')
+local aimap = require('ticino/aimap')
 
 local M = {}
 
@@ -413,7 +414,7 @@ local function apply(job, kind)
   st.curJob = job
   st.moves = st.moves + 1
   st.quiet = { frames = M.SWAP_QUIET_FRAMES, ms = M.SWAP_QUIET_MS }
-  if M.MAP_RESET_FRAMES then st.mapResetIn = M.MAP_RESET_FRAMES end
+  if M.MAP_RESET_FRAMES and not aimap.active() then st.mapResetIn = M.MAP_RESET_FRAMES end
   st.watch = { frames = 10, worst = 0, rec = { time = os.date('%H:%M:%S'), kind = kind, wx = job.wx, wy = job.wy,
     buildMs = job.ms, buildFrames = job.frames, applyMs = tApply, grassMs = tGrass, farMs = tFar,
     baseMs = tBase, posMs = tPos, terMs = tTer, postMs = tPost, helper = job.helper and 1 or 0, helperWaitMs = job.waitMs } }
@@ -603,13 +604,13 @@ local function onUpdate(dtReal)
       -- the window it was read with lie at z 0. Read it again here, hidden in the jump's pause (never on the fly:
       -- 2 s frozen at every window move, laptop run 4; control points instead of subdivisions crashed map.lua or,
       -- with that fixed, kept z 0 too and drove the AI a third as far, runs 5-7)
-      if M.MAP_RESET_ON_JUMP and not st.aiDropped then
+      if M.MAP_RESET_ON_JUMP and not st.aiDropped and not aimap.active() then
         local t0 = clock()
         local ok = pcall(function() map.reset() end)
         if st.watch then st.watch.rec.mapResetMs = clock() - t0 end
         log('I', 'ticino', string.format('AI map read again at the jump: %.1f ms%s', clock() - t0, ok and '' or ' (failed)'))
       end
-      if M.DROP_AI_ROADS and not st.aiDropped then
+      if M.DROP_AI_ROADS and not st.aiDropped and not aimap.active() then
         local ok, res = pcall(M.dropAIRoads)
         if ok and type(res) == 'string' and res:find('deleted', 1, true) then st.aiDropped = true end
         log('I', 'ticino', 'AI roads after the jump: ' .. tostring(res))
@@ -766,6 +767,12 @@ end
 
 local function onClientEndMission()
   stop()
+  aimap.onClientEndMission()
+end
+
+-- the level's AI graph comes from levels/ticino/ai/aimap.bin (aimap.lua), not from AI DecalRoads clipped to the window
+local function onNavgraphReloaded()
+  aimap.onNavgraphReloaded()
 end
 
 -- ------------------------------------------------------------------ console
@@ -773,7 +780,7 @@ function M.status()
   if not st then return 'off' end
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
-           objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+           objects = s, forest = forest.stats(), aimap = aimap.stats(), last = st.perf[#st.perf], helper = helper.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
 end
 
 -- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).
@@ -822,7 +829,9 @@ end
 M.onUpdate = onUpdate
 M.onClientPostStartMission = onClientPostStartMission
 M.onClientEndMission = onClientEndMission
-M.onExtensionUnloaded = stop
+M.onNavgraphReloaded = onNavgraphReloaded
+M.onExtensionLoaded = function() aimap.install() end
+M.onExtensionUnloaded = function() stop(); aimap.uninstall() end
 -- for tests
 M._follow = follow
 

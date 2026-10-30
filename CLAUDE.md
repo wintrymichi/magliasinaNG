@@ -1449,6 +1449,38 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   <triangles> block with NO triangles in the source shape asked for the placeholder's nearest corner. An empty block
   now stays empty.
 
+## Precomputed AI map of the Ticino level (aimap.py, ticino/aimap.lua, 2026-10-30)
+
+- map.lua (0.40.4) M.reset = loadMap(customMapNodes): with nodes it skips linkMap (no DecalRoad read) and calls
+  convertToSingleSided on them, so it wants the DOUBLE-sided graph (each edge table in both nodes' links, edge fields
+  as loadJsonDecalMap writes them: inNode/outNode, inPos/outPos = the nodes' own vec3, radii, drivability, speedLimit,
+  lanes, oneWay, type 'private' + gatedRoad from processPrivateRoads). It still runs per node getTerrainDrivability
+  and surfaceNormal (3 getSurfaceHeightBelow), then fires onNavgraphReloaded, on which core_trafficSignals re-binds
+  every signal (findClosestRoad: 2D kd box, 3D distance, at most 200 m). Mload / assureLoad call the local loadMap
+  directly: wrapping map.reset alone misses the level load, so aimap.lua wraps map.load and map.assureLoad too and
+  puts the graph back from onNavgraphReloaded when the map came out empty.
+- The tunnels' roads are DecalRoads in main/MissionGroup/tunnels, not in AIRoads: a graph from AIRoads alone fell into
+  396 pieces (north and south Ticino apart at every tunnel); with them 315, 97 % of the nodes in one.
+- One AI road of ti_m3_9 has a control point at -700 m (outside the DTM): aimap.Z_MIN leaves such roads out.
+- A force-push of a thread branch rebased onto a newer `ticino` started ticino_all.yml with NO "[all base]" (all 87
+  slices, which overwrite the zips on ticino-all), ticino_tools and ticino_helper: the pushed range held all_stamp.txt
+  and the helper/install changes of `ticino`. Cancelled within a minute (no slice uploaded; the base job runs on
+  `always()` even in a cancelled run). After any force-push, list `actions/runs?branch=` at once and cancel.
+- First PC test of the AI map (2026-10-30): FATAL LUA ERROR aimap.lua:33 "attempt to perform arithmetic on local 'base'
+  (a string value)": in the game `ffi.cast('const uint8_t *', s)` of a Lua string gave back the STRING (lupa's LuaJIT
+  gives a pointer, so the test passed). Same family as the collision cells (laptop runs 1-2: a cast of the string and
+  arithmetic on an ffi array both failed in the game). parse now only does ffi.copy(array, string, n) and indexes
+  (no cast, no pointer arithmetic), with a plain-table path if the ffi fails; test_aimap.py stubs ffi.cast the game's
+  way and runs both paths. The error came 4 times: graph stayed nil after a throw and every call parsed again; a
+  failed file now sets graph = false until the next level. Never cast a Lua string to a pointer in game Lua.
+  Measured by the PC thread in the GE of 0.40.4: `ffi.cast('const uint8_t *', 'abc')` returns the string 'abc' (and
+  ffi.typeof then says "declaration specifier expected near 'abc'"); with ffi.new('uint8_t[?]', #data) + ffi.copy,
+  `base + o` raised "bad argument #1 to '__add' (invalid C type)" (aimap.lua:36). No ffi pointers over strings in
+  GE: read with string.byte (or another file format). The fix on the branch (ffi.copy into typed arrays, indexing
+  only, pcall'd plain-table path) is NOT tested in the game; the AI map is paused (michi, 2026-10-30 18:00Z).
+- In lupa's LuaJIT making the 516k node tables took 3.7-5.4 s (plain table creation is slow there: 0.43 s for 516k
+  empty tables); the game's figure is not measured yet.
+
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
 - Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py

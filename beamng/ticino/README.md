@@ -97,6 +97,14 @@ The streamer is the GE extension `ticino_stream` (`mod/lua/ge/extensions/ticino/
 - **Forest.** Every tile's trees are made within 4 tiles of the car, all of them near, a share far (`forest.lua`).
 - **Jumps.** A spawn or a teleport far away pauses the game, makes the window and the near objects at once, and goes
   on.
+- **AI map.** Made at build time, not in the game: `aimap.py` (run by `region_base.py`) turns the AI roads and the
+  tunnels' roads into the graph map.lua would make (road ends merged, roads ending on another joined to it, straight
+  runs thinned with map.lua's tolerances), with the roads' true heights, into `levels/ticino/ai/aimap.bin` (516,027
+  nodes, 4,972 km, 14 MB), and the AI DecalRoads stay out of the scene. `ticino/aimap.lua` wraps `map.load`,
+  `map.assureLoad` and `map.reset` in this level so they load that file with `map.reset(nodes)` (map.lua then skips
+  its own road reading, `linkMap`); traffic signals bind to it through the game's `onNavgraphReloaded`. The game's
+  graph from DecalRoads would put every node outside the terrain window at height 0. `region_base.py
+  --keep-ai-roads` builds the old way.
 - **Warm-up.** Optional, from the console inside the level: `extensions.load('ticino_warmup')` loads once every shape
   of the zones within 3 km and cooks the sign textures, so the game writes its cache now instead of stuttering the
   first time it sees them (about 15 min a region; drive elsewhere and run it again there).
@@ -120,12 +128,12 @@ All builds run on GitHub Actions (the cloud sessions cannot reach swisstopo), on
 The zone grid and what every zone shares (terrain heights, layers, forest and ground types) are fixed in
 `zones/ticino_plan.json` (`region_plan.py`; lists append only), so the slice jobs never need each other.
 
-Files: `zones.py` (the grid), `region_plan.py`, `region_slice.py`, `region_base.py`, `region_net.py` (AI road
+Files: `zones.py` (the grid), `aimap.py` (the AI graph), `region_plan.py`, `region_slice.py`, `region_base.py`, `region_net.py` (AI road
 welding across zone edges, signals, sites), `collision.py`, `cdae.py` (the `.cdae` writer, from BeamNG.Earth),
 `zipremote.py` (zips read by HTTP range), `blocks.py`, `region.py`, `pack_region.py` (the older one-job region),
 `helper/`, `install/`, `mod/`, `tests/` (`sim_stream.lua`: the mod driven outside the game with the game API stubbed,
 `python tests/luajit.py tests/sim_stream.lua <level folder> <seconds>`; `test_helper.py`, `test_cdae.py`,
-`test_region_net.py`, `wave_order.lua`).
+`test_region_net.py`, `wave_order.lua`, `test_aimap.py`: aimap.py + aimap.lua on a small network with map.lua stubbed).
 
 ## Measured
 
@@ -153,10 +161,10 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 Done: all 87 zones in one level, the streamer with wave loading, 64 m collision cells, the helper, settings, the
 installer. Open, each in its own thread:
 
-- **AI map.** The game builds the AI map from the 57,298 AI roads, which take their heights from the terrain: only
-  the window has terrain, so outside it the AI nodes sit at height 0, 4,020 of the 4,065 traffic signals find no road
-  and AI traffic works only round the spawn; the same roads cost the 12 s first window and the 30 s map read. Fix in
-  progress: a precomputed AI map loaded with `map.reset(nodes)` and no AI roads in the scene.
+- **AI map.** Precomputed (see How it works): every one of the 4,065 signals lies within 7 m of the graph (before: 45
+  bound, the rest at nodes of height 0), 97 % of the network is one piece. Not yet measured in the game: the load
+  time of `map.reset(nodes)` with 516,027 nodes (map.lua still raycasts a normal for each node) and traffic away
+  from the spawn.
 - **Shapes converted on first sight.** 13,707 `.dae` files are imported by the game the first time they are seen.
   Fix in progress: ship them already converted.
 - Floating origin (coordinates reach 75 km from the origin: no jitter seen so far), AI traffic guard at the window edge.

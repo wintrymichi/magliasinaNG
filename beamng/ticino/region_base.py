@@ -26,6 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import aimap  # noqa: E402
 import blocks  # noqa: E402
 import collision  # noqa: E402
 import region  # noqa: E402
@@ -143,6 +144,8 @@ def main():
     ap.add_argument("--cache", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "ticino_base_cache"))
     ap.add_argument("--dist", help="pack the base into <dist>/ticino_base_<n>.zip")
     ap.add_argument("--plan", default=PLAN)
+    ap.add_argument("--keep-ai-roads", action="store_true",
+                    help="leave the AI DecalRoads in the scene and write no ai/aimap.bin (the game builds its own graph)")
     a = ap.parse_args()
     t0 = time.time()
     plan = json.load(open(a.plan))
@@ -263,6 +266,15 @@ def main():
     tb_new["terrainFile"] = f"/levels/{LEVEL}/start.ter"
     tb_new["materialTextureSet"] = LEVEL + "TerrainMaterialTextureSet"
     blocks.bng.write_terrain_json(os.path.join(dst, "start.terrain.json"), LEVEL, "start", grid.W, layers)
+    # the AI graph made here (aimap.py) and loaded by ticino/aimap.lua: the AI DecalRoads (AIRoads and the tunnels'
+    # roads) stay out of the scene, the game's own graph of them lay at z 0 outside the terrain window
+    if not a.keep_ai_roads:
+        ai = [o for objs in kept.values() for o in objs if aimap.is_ai_road(o)]
+        report["aimap"] = aimap.build(roads=ai, out=os.path.join(dst, "ai", "aimap.bin"))
+        kept = {p: [o for o in objs if not aimap.is_ai_road(o)] for p, objs in kept.items()}
+        kept = {p: objs for p, objs in kept.items() if objs}
+        with wopen(os.path.join(a.out, "region_report.json"), "w") as f:
+            json.dump(report, f, indent=1)
     region.write_scene(kept, dst, tb_new)
 
     info["title"] = "Ticino"
