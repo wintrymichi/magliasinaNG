@@ -1473,6 +1473,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (no cast, no pointer arithmetic), with a plain-table path if the ffi fails; test_aimap.py stubs ffi.cast the game's
   way and runs both paths. The error came 4 times: graph stayed nil after a throw and every call parsed again; a
   failed file now sets graph = false until the next level. Never cast a Lua string to a pointer in game Lua.
+  Measured by the PC thread in the GE of 0.40.4: `ffi.cast('const uint8_t *', 'abc')` returns the string 'abc' (and
+  ffi.typeof then says "declaration specifier expected near 'abc'"); with ffi.new('uint8_t[?]', #data) + ffi.copy,
+  `base + o` raised "bad argument #1 to '__add' (invalid C type)" (aimap.lua:36). No ffi pointers over strings in
+  GE: read with string.byte (or another file format). The fix on the branch (ffi.copy into typed arrays, indexing
+  only, pcall'd plain-table path) is NOT tested in the game; the AI map is paused (michi, 2026-10-30 18:00Z).
 - In lupa's LuaJIT making the 516k node tables took 3.7-5.4 s (plain table creation is slow there: 0.43 s for 516k
   empty tables); the game's figure is not measured yet.
 
