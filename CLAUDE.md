@@ -1538,6 +1538,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ticino_all/ticino_tools (both write the same draft release). The zone build and region run were cancelled after
   25 min (19 runners busy). Push Ticino work only to `ticino`; check `actions/runs?branch=<new branch>` after any
   first push and cancel what was not meant.
+  Again 2026-10-30: merging origin/ticino into claude/project-thread-qgsibb (.cdae) and pushing started ticino_all
+  (4-zone retry list + base), ticino_tools and ticino_helper on the thread branch; cancelled at once (the base job had
+  to be force-cancelled: a plain cancel left it running; it stopped at its first step, nothing uploaded). Before
+  pushing a merge of ticino, check whether it brings changes to all_stamp.txt, helper/** or install/**.
 
 ## Shapes compiled to .cdae (beamng/ticino/dae2cdae.py, 2026-10-29)
 
