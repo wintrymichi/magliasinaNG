@@ -889,8 +889,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   queues empty 13 fps against 50; an object flipped at runtime stays costly. Off by default, kept for tests.
 - The queues while standing: an object costs ~8 ms of engine in the game; at 3 ms a frame the ~4,500 objects of Lugano
   took minutes, and every frame that changed the scene was slow (14-20 fps the whole time). Bursts (BURST_MS 40 once
-  a second, every 200 ms below SLOW_MPS) made the flight 47 -> 94 fps; a burst must touch at most one Forest and check
-  the clock inside a tile (bursts of up to 711 ms in flight when the trees got a share without that).
+  a second, every 200 ms below SLOW_MPS) made the flight 47 -> 94 fps. Giving the trees 40 % of each burst made 91
+  slow bursts (up to 711 ms, 89 fps); "one Forest a burst + a clock check inside the tile" was WORSE (204 bursts of
+  ~220 ms, 80.5 fps): a frame that touches a Forest costs ~200 ms whatever it adds, so more partial touches = more
+  hitches. The objects take the whole burst and the trees only what is left (93.5 fps, debf2f8).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
