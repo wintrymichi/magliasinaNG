@@ -1449,6 +1449,22 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   <triangles> block with NO triangles in the source shape asked for the placeholder's nearest corner. An empty block
   now stays empty.
 
+## Precomputed AI map of the Ticino level (aimap.py, ticino/aimap.lua, 2026-10-30)
+
+- map.lua (0.40.4) M.reset = loadMap(customMapNodes): with nodes it skips linkMap (no DecalRoad read) and calls
+  convertToSingleSided on them, so it wants the DOUBLE-sided graph (each edge table in both nodes' links, edge fields
+  as loadJsonDecalMap writes them: inNode/outNode, inPos/outPos = the nodes' own vec3, radii, drivability, speedLimit,
+  lanes, oneWay, type 'private' + gatedRoad from processPrivateRoads). It still runs per node getTerrainDrivability
+  and surfaceNormal (3 getSurfaceHeightBelow), then fires onNavgraphReloaded, on which core_trafficSignals re-binds
+  every signal (findClosestRoad: 2D kd box, 3D distance, at most 200 m). Mload / assureLoad call the local loadMap
+  directly: wrapping map.reset alone misses the level load, so aimap.lua wraps map.load and map.assureLoad too and
+  puts the graph back from onNavgraphReloaded when the map came out empty.
+- The tunnels' roads are DecalRoads in main/MissionGroup/tunnels, not in AIRoads: a graph from AIRoads alone fell into
+  396 pieces (north and south Ticino apart at every tunnel); with them 315, 97 % of the nodes in one.
+- One AI road of ti_m3_9 has a control point at -700 m (outside the DTM): aimap.Z_MIN leaves such roads out.
+- In lupa's LuaJIT making the 516k node tables took 3.7-5.4 s (plain table creation is slow there: 0.43 s for 516k
+  empty tables); the game's figure is not measured yet.
+
 ## Motorways and missing textures in the Ticino zones (2026-10-28, first region test)
 
 - Street lamps, benches and delineators were red "missing texture" models in the region: a zone never runs props.py
