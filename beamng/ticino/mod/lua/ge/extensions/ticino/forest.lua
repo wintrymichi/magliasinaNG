@@ -19,6 +19,9 @@ M.PER_FRAME = 4000                    -- items made or removed a frame at most (
 M.ONE_FOREST = true                   -- a frame finishes the pass of ONE tile and stops: a frame that touches a Forest
                                       -- costs ~185-200 ms in the engine whatever the number of items (PC 2026-10-30:
                                       -- 250 items a frame 118 slow frames, 64 a frame 110), so fewer frames, not fewer items
+M.FORESTS_PER_FRAME = 1              -- Forests (tiles) a frame may change: each changed frame may redraw the cached sun
+                                      -- shadow map (static scene), so a few big batches may beat many single tiles
+M.BATCH_MAX_MS = 60                   -- with FORESTS_PER_FRAME > 1: the time a frame may spend on its batch
 M.CHECK_EVERY = 8                     -- items between two looks at the clock (budget, ONE_FOREST off)
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
@@ -178,6 +181,7 @@ function M.step(clock, budgetMs, perFrame)
   local t0 = clock()
   local left = perFrame or M.PER_FRAME
   local q = S.queue
+  local forests = 0
   while S.qpos <= #q do
     local op = q[S.qpos]
     local t = S.tiles[op.key]
@@ -235,8 +239,10 @@ function M.step(clock, budgetMs, perFrame)
       S.tiles[op.key] = nil
     end
     S.qpos = S.qpos + 1
-    if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 then break end
-    if budgetMs and clock() - t0 > budgetMs then break end
+    if touched then forests = forests + 1 end
+    if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
+    local limit = (M.FORESTS_PER_FRAME > 1 and budgetMs and budgetMs < 1000) and M.BATCH_MAX_MS or budgetMs
+    if limit and clock() - t0 > limit then break end
   end
   return S.qpos > #q
 end
