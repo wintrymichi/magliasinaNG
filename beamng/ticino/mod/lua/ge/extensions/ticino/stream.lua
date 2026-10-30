@@ -44,6 +44,7 @@ M.FOREST_JUMP_MS = 1000    -- forest items made at a jump, while the game is pau
 M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains round the new place; the rest comes after)
 M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
+M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
 M.BURST_EVERY_MS = 0       -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
 M.BURST_MS = 40            -- many ms, not a few ms in every frame (each frame that changes the scene may cost the
                            -- engine a fixed amount: PC test 2026-10-30, 14 fps while the queues ran, 50 after)
@@ -604,6 +605,7 @@ local function start()
   if M.TB_BASE_TEX_SIZE > 0 then tb:setField('baseTexSize', 0, tostring(M.TB_BASE_TEX_SIZE)) end
   st.layerKey = {}                    -- terrain material (.ter name) -> its streamed base map (BASE_COMBINED)
   for _, bm in ipairs(cfg.baseMaterials or {}) do st.layerKey[bm[2]] = bm[3] end
+  if M.NO_DYNAMIC_CUBEMAP then M.dynamicCubemaps(false) end
   if M.HELPER then helper.init(cfg, clock) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
@@ -862,6 +864,27 @@ end
 
 function M.followCamera(on)
   if st then st.useCamera = on and true or false end
+end
+
+-- the materials with dynamicCubemap: listed (nil), or turned off (false), with a fixed cubemap so metal still shines
+function M.dynamicCubemaps(on)
+  local names = {}
+  for _, n in ipairs(scenetree.findClassObjects('Material') or {}) do
+    local m = scenetree.findObject(n)
+    local v = m and m:getField('dynamicCubemap', 0)
+    if v == '1' or v == 'true' then
+      names[#names + 1] = n
+      if on == false then
+        m:setField('dynamicCubemap', 0, '0')
+        if (m:getField('cubemap', 0) or '') == '' then m:setField('cubemap', 0, 'global_cubemap_metalblurred') end
+        if m.flush then pcall(function() m:flush() end) end
+        if m.reload then pcall(function() m:reload() end) end
+      end
+    end
+  end
+  log('I', 'ticino', string.format('%d materials with dynamicCubemap%s: %s', #names,
+    on == false and ' turned off' or '', table.concat(names, ', ')))
+  return names
 end
 
 function M.setDynamic(on)
