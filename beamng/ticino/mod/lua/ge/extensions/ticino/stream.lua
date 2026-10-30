@@ -45,9 +45,11 @@ M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains rou
 M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
 M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
-M.BURST_EVERY_MS = 0       -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
-M.BURST_MS = 40            -- many ms, not a few ms in every frame (each frame that changes the scene may cost the
-                           -- engine a fixed amount: PC test 2026-10-30, 14 fps while the queues ran, 50 after)
+M.BURST_EVERY_MS = 1000    -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
+M.BURST_MS = 40            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
+                           -- PC test 2026-10-30, Lugano flight 47 fps with 3 ms a frame, 94 with 40 ms bursts a second)
+M.BURST_EVERY_SLOW_MS = 200  -- bursts this often while the car is slower than SLOW_MPS (standing: the queue of a
+M.SLOW_MPS = 4               -- new place, ~8 ms an object in the game, took minutes at one burst a second)
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
@@ -709,6 +711,11 @@ local function onUpdate(dtReal)
   end
   local x, y = focus()
   if not x then return end
+  if st.lastXY and dtReal and dtReal > 0 then        -- the car's speed, smoothed over ~1 s
+    local v = math.sqrt((x - st.lastXY[1]) ^ 2 + (y - st.lastXY[2]) ^ 2) / dtReal
+    st.speed = (st.speed or v) + (v - (st.speed or v)) * math.min(1, dtReal)
+  end
+  st.lastXY = { x, y }
   local cfg = st.cfg
   local n = cfg.window / cfg.cell
   if M.HELPER then
@@ -792,12 +799,15 @@ local function onUpdate(dtReal)
   end
   -- the objects
   if M.BURST_EVERY_MS > 0 and (objects.pending() or forest.pending() or objects.farPending()) then
-    if clock() - (st.lastBurst or -1e9) < M.BURST_EVERY_MS then st.act = 'wait burst'; return end
+    local every = (st.speed or 0) < M.SLOW_MPS and M.BURST_EVERY_SLOW_MS or M.BURST_EVERY_MS
+    if clock() - (st.lastBurst or -1e9) < every then st.act = 'wait burst'; return end
     st.lastBurst = clock()
     st.act = 'burst'
     local t0 = clock()
     objects.BURSTING = true
-    if objects.pending() then objects.step(clock, M.BURST_MS) end
+    -- the trees get their share of the burst (they waited for the whole object queue: PC test F1)
+    local objMs = forest.pending() and M.BURST_MS * 0.6 or M.BURST_MS
+    if objects.pending() then objects.step(clock, objMs) end
     objects.BURSTING = false
     local left = M.BURST_MS - (clock() - t0)
     if left > 0 and forest.pending() then forest.step(clock, 1000, nil, left) end

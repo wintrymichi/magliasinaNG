@@ -1,6 +1,7 @@
 -- Outside the game: stream.lua driven along a straight line at 120 km/h with the game's API stubbed, to catch Lua
 -- errors and count what it does (jumps, moves, objects made and kept, far tiles hidden).
 --   luajit sim_stream.lua <out dir of blocks.py> [seconds]
+-- env: SPEED (km/h, 0 stands still), SPAWN_MS (engine cost of a shape to emulate), EVERY (frames between status lines)
 local here = arg[0]:gsub('[^/]*$', '')
 package.path = here .. '../mod/lua/ge/extensions/?.lua;' .. package.path
 local root, seconds = arg[1], tonumber(arg[2] or '120')
@@ -69,7 +70,7 @@ function Obj:setPosition(p) self.pos = p end
 function Obj:getPosition() return self.pos or vec3(0, 0, 0) end
 function Obj:setPosRot(x, y, z) self.pos = vec3(x, y, z) end
 function Obj:setScale() end
-function Obj:registerObject(name) self.name = name end
+function Obj:registerObject(name) self.name = name; local w = tonumber(os.getenv('SPAWN_MS') or '0') / 1000; if w > 0 and self.f.shapeName then local c = os.clock(); while os.clock() - c < w do end end end
 function Obj:getID() return self.id end
 function Obj:delete() objs[self.id] = nil; counts.deleted = counts.deleted + 1 end
 function Obj:setHidden(h) self.hidden = h end
@@ -106,7 +107,7 @@ stream.PERF_FILE = '/ticino_perf_sim.csv'   -- (root/temp/ticino_perf_sim.csv)
 car.x, car.y = 747, -1094
 stream.onClientPostStartMission('/levels/ticino/main.level.json')
 local dt = 1 / 60
-local v = 120 / 3.6
+local v = tonumber(os.getenv('SPEED') or '120') / 3.6
 local dir = { -0.94, 0.34 }
 local worstLua, t = 0, 0
 local tele = os.getenv('TELEPORT') and {}
@@ -118,6 +119,10 @@ while t < seconds do
   local ms = (os.clock() - c0) * 1000
   if os.getenv('REALTIME') then while os.clock() - c0 < dt do end end   -- real time (helper tests: it runs beside)
   frames = frames + 1
+  if os.getenv('EVERY') and frames % tonumber(os.getenv('EVERY')) == 0 then
+    local q = stream.status()
+    print(string.format('t %.1f queued %d live %d far %d forest %s', t, q.objects.queued, q.objects.live, q.objects.far, tostring(q.forest and (q.forest.queued or q.forest.items))))
+  end
   if frames > 3 then worstLua = math.max(worstLua, ms) end
   if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
   if not paused then car.x, car.y = car.x + dir[1] * v * dt, car.y + dir[2] * v * dt; t = t + dt end
