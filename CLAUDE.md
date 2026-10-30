@@ -1462,6 +1462,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - The tunnels' roads are DecalRoads in main/MissionGroup/tunnels, not in AIRoads: a graph from AIRoads alone fell into
   396 pieces (north and south Ticino apart at every tunnel); with them 315, 97 % of the nodes in one.
 - One AI road of ti_m3_9 has a control point at -700 m (outside the DTM): aimap.Z_MIN leaves such roads out.
+- A force-push of a thread branch rebased onto a newer `ticino` started ticino_all.yml with NO "[all base]" (all 87
+  slices, which overwrite the zips on ticino-all), ticino_tools and ticino_helper: the pushed range held all_stamp.txt
+  and the helper/install changes of `ticino`. Cancelled within a minute (no slice uploaded; the base job runs on
+  `always()` even in a cancelled run). After any force-push, list `actions/runs?branch=` at once and cancel.
 - In lupa's LuaJIT making the 516k node tables took 3.7-5.4 s (plain table creation is slow there: 0.43 s for 516k
   empty tables); the game's figure is not measured yet.
 
