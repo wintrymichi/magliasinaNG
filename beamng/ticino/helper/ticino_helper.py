@@ -42,6 +42,28 @@ HELPER_DIR = "temp/ticino/helper"
 GAME_DIR = "/" + HELPER_DIR + "/"          # the same folder as the game sees it
 VERSION = 1
 POLL_S = 0.03
+PID_CHECK_S = 2.0      # how often --game-pid is checked
+
+
+def process_alive(pid):
+    """Is the process pid still running? (Windows: OpenProcess + GetExitCodeProcess, else signal 0)"""
+    if os.name == "nt":
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.OpenProcess(0x1000, False, pid)            # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return False
+        code = ctypes.c_ulong()
+        ok = k.GetExitCodeProcess(h, ctypes.byref(code))
+        k.CloseHandle(h)
+        return bool(ok) and code.value == 259            # STILL_ACTIVE
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 ALIVE_EVERY_S = 1.0
 PNG_LEVEL = 1                              # zlib level of the base map: 1 is fast and still 3-4x smaller than stored
 
@@ -357,10 +379,16 @@ class Helper:
         log("window %d,%d ready: .ter %.0f ms, base map %.0f ms, block cache %d MB (%d reads)" % (
             wx, wy, ms_ter, ms_png, self.wins.cache.size // 2 ** 20, self.wins.cache.misses))
 
-    def run(self):
+    def run(self, game_pid=None):
         log("helper ready in %s" % self.dir)
         self.alive(force=True)
+        next_pid = 0.0
         while True:
+            if game_pid and time.time() >= next_pid:
+                next_pid = time.time() + PID_CHECK_S
+                if not process_alive(game_pid):
+                    log("the game (pid %d) has ended" % game_pid)
+                    return
             self.alive()
             self.read_req()
             self.consumed()
@@ -384,6 +412,7 @@ def main():
     ap.add_argument("--ahead", type=int, default=8, help="windows of the next move kept ready (1-8)")
     ap.add_argument("--once", nargs=2, type=int, metavar=("WX", "WY"), help="write one window and stop")
     ap.add_argument("--out", help="folder for --once")
+    ap.add_argument("--game-pid", type=int, help="stop when this process (the game) ends")
     a = ap.parse_args()
     files = LevelFiles(a.user, a.zip)
     wins = Windows(files, a.cache_mb)
@@ -403,7 +432,7 @@ def main():
         if hasattr(signal, name):
             signal.signal(getattr(signal, name), stop)
     try:
-        h.run()
+        h.run(a.game_pid)
     except KeyboardInterrupt:
         pass
     finally:

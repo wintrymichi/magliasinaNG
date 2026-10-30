@@ -24,7 +24,7 @@
 --   ticino_stream.followCamera(true)  stream around the camera (free camera flights)
 --   ticino_stream.dropAIRoads()       delete the AI DecalRoads once the AI map is built (each re-clips on every
 --                                     terrain change: to measure)
--- Every move is logged to <user folder>/ticino_perf.csv.
+-- With "diagnostics": true in <user folder>/settings/ticino.json every move is logged to <user folder>/ticino_perf.csv.
 
 local terwin = require('ticino/terwin')
 local objects = require('ticino/objects')
@@ -59,6 +59,15 @@ M.BASE_COMBINED = true     -- one base colour map for all the streamed materials
 M.DROP_AI_ROADS = true     -- delete the 12,639 invisible AI DecalRoads once the first jump has read the AI map: each
                            -- re-clipped itself at every terrain move (0.1-0.35 s of the swap); later jumps keep that map
 M.CFG_FILE = '/ticino_stream_cfg.json'   -- optional: { "stream": {..}, "objects": {..}, "forest": {..} } fields to override
+M.SETTINGS_FILE = '/settings/ticino.json' -- the player's settings (README "Settings"): preset, helper, diagnostics, ...
+M.DIAG = false             -- write ticino_frames.csv and ticino_perf.csv (settings "diagnostics"; the log lines stay)
+-- Presets of the settings file. "standard" is the level as built and tested; "light" is for PCs with little VRAM or
+-- a slow CPU: trees drawn nearer, far ground less far (the near scene stays the same).
+M.PRESETS = {
+  standard = {},
+  light = { forest = { RADIUS = 3, SHARE = { [0] = 1.0, 1.0, 0.5, 0.25 }, CACHE_TILES = 80 },
+            objects = { CACHE_TILES = 250 }, level = { farRadius = 10 } },
+}
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
 M.MAP_RESET_ON_JUMP = true -- read the AI map again at a jump, while the game is paused (1.9-2.5 s on the laptop)
@@ -180,7 +189,7 @@ local function frameStats()
   f.lines[#f.lines + 1] = string.format('%s,%.1f,%.1f,%.0f,%d,%d,%d,%d', os.date('%H:%M:%S'), span / 1000,
     f.n * 1000 / span, f.worst, f.over50, f.over100, st.moves - f.moves, st.reloads - f.reloads)
   if #f.lines > 2000 then table.remove(f.lines, 2) end
-  pcall(writeFile, M.FRAMES_FILE, table.concat(f.lines, '\n') .. '\n')
+  if M.DIAG then pcall(writeFile, M.FRAMES_FILE, table.concat(f.lines, '\n') .. '\n') end
   f.t0, f.n, f.worst, f.over50, f.over100, f.moves, f.reloads = now, 0, 0, 0, 0, st.moves, st.reloads
 end
 
@@ -195,7 +204,7 @@ local function perfLine(t)
     for i, k in ipairs(cols) do v[i] = r[k] ~= nil and (type(r[k]) == 'number' and string.format('%.2f', r[k]) or tostring(r[k])) or '' end
     lines[#lines + 1] = table.concat(v, ',')
   end
-  pcall(writeFile, M.PERF_FILE, table.concat(lines, '\n') .. '\n')
+  if M.DIAG then pcall(writeFile, M.PERF_FILE, table.concat(lines, '\n') .. '\n') end
 end
 
 -- ------------------------------------------------------------------ window files
@@ -465,28 +474,58 @@ local function tryReload(rec)
 end
 
 -- ------------------------------------------------------------------ hooks
--- the optional overrides of CFG_FILE (tests): only fields that exist, of the same type
-local function readOverrides()
-  local okC, over = pcall(jsonDecode, readFile(M.CFG_FILE) or '')
-  if not okC or type(over) ~= 'table' then return end
+-- Fields of the settings file and of CFG_FILE (tests): only fields that exist, of the same type. "level" fields
+-- override stream.json (numbers only, e.g. farRadius).
+local function applyFields(over, cfg, what)
+  if type(over) ~= 'table' then return end
   for name, mod in pairs({ stream = M, objects = objects, forest = forest }) do
-    for k, v in pairs(over[name] or {}) do
+    for k, v in pairs(type(over[name]) == 'table' and over[name] or {}) do
       if mod[k] ~= nil and type(mod[k]) == type(v) then
         mod[k] = v
-        log('I', 'ticino', 'override ' .. name .. '.' .. k .. ' = ' .. (type(v) == 'table' and 'table' or tostring(v)))
+        log('I', 'ticino', what .. ' ' .. name .. '.' .. k .. ' = ' .. (type(v) == 'table' and 'table' or tostring(v)))
       end
+    end
+  end
+  for k, v in pairs(type(over.level) == 'table' and over.level or {}) do
+    if type(cfg[k]) == 'number' and type(v) == 'number' then
+      cfg[k] = v
+      log('I', 'ticino', what .. ' level.' .. k .. ' = ' .. tostring(v))
     end
   end
 end
 
+local function readJson(path)
+  local text = readFile(path)
+  if not text then return nil end
+  local ok, t = pcall(jsonDecode, text)
+  if ok and type(t) == 'table' then return t end
+  log('W', 'ticino', path .. ' is not valid JSON: ignored')
+end
+
+-- The player's settings (SETTINGS_FILE), then the test overrides (CFG_FILE), over the built stream.json (cfg)
+local function readSettings(cfg)
+  local s = readJson(M.SETTINGS_FILE) or {}
+  local preset = type(s.preset) == 'string' and s.preset or 'standard'
+  if not M.PRESETS[preset] then
+    log('W', 'ticino', 'unknown preset "' .. preset .. '": standard')
+    preset = 'standard'
+  end
+  applyFields(M.PRESETS[preset], cfg, 'preset ' .. preset .. ':')
+  if type(s.helper) == 'boolean' then M.HELPER = s.helper end
+  if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
+  applyFields(s, cfg, 'setting')
+  applyFields(readJson(M.CFG_FILE), cfg, 'override')
+  log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s', preset, tostring(M.HELPER),
+    tostring(M.DIAG)))
+end
+
 local function start()
-  readOverrides()
-  local cfgText = readFile('/levels/' .. M.LEVEL .. '/stream.json')
-  local ok, cfg = pcall(jsonDecode, cfgText or '')
-  if not ok or type(cfg) ~= 'table' then
+  local cfg = readJson('/levels/' .. M.LEVEL .. '/stream.json')
+  if not cfg then
     log('E', 'ticino', 'stream.json not readable: streaming off')
     return
   end
+  readSettings(cfg)
   local tb = scenetree.findObject(M.TERRAIN_NAME)
   if not tb then
     log('E', 'ticino', 'no TerrainBlock ' .. M.TERRAIN_NAME .. ': streaming off')
