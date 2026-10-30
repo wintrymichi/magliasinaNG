@@ -131,7 +131,10 @@ if ($ghExe) {
 function Api([string]$path) {
     $headers = @{ 'User-Agent' = 'magliasina-ticino-installer'; 'Accept' = 'application/vnd.github+json' }
     if ($token) { $headers['Authorization'] = "Bearer $token" }
-    return Invoke-RestMethod -Uri "https://api.github.com/$path" -Headers $headers
+    # Windows PowerShell 5.1 returns a JSON array as ONE object when it is returned straight from the call
+    # (@(...) then has Count 1 and the asset pages stopped after the first): assign it first.
+    $r = Invoke-RestMethod -Uri "https://api.github.com/$path" -Headers $headers
+    return $r
 }
 
 Say "Looking for the release '$Tag' of $Repo ..."

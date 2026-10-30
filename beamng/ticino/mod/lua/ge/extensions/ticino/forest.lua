@@ -15,7 +15,8 @@ local M = {}
 
 M.RADIUS = 4                          -- tiles (Chebyshev) round the car's tile that get trees
 M.SHARE = { [0] = 1.0, 1.0, 0.6, 0.35, 0.2 }   -- share of a tile's rows shown at that distance
-M.PER_FRAME = 250                     -- items made or removed a frame at most
+M.PER_FRAME = 64                      -- items made or removed a frame at most (250: frames of ~190 ms after a spawn, PC 2026-10-30)
+M.CHECK_EVERY = 8                     -- items between two looks at the clock
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
 M.CACHE_TILES = 120
@@ -218,7 +219,7 @@ function M.step(clock, budgetMs, perFrame)
         left = left - 1
       end
       i = i + 1
-      if budgetMs and i % 64 == 0 and clock() - t0 > budgetMs then break end
+      if budgetMs and i % M.CHECK_EVERY == 0 and clock() - t0 > budgetMs then break end
     end
     op.pos = i
     if i <= #rows then return false end

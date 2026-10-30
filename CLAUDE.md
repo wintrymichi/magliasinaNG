@@ -1527,6 +1527,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - The installer's helper and installer zips must not be called ticino_*.zip: the installer (and the game's mods
   folder logic of every earlier script) treats every ticino_*.zip as a level zip. They are helper_ticino.zip and
   installer_ticino.zip.
+- Windows PowerShell 5.1 (Win11 5.1.26100) returns a JSON array as ONE object when a function returns
+  Invoke-RestMethod straight (`return Invoke-RestMethod ...`): @(Api ...) had Count 1, the asset pages stopped after
+  the first and the installer said "no ticino_base zip" (PC test 2026-10-30). Assign the result first (`$r = ...;
+  return $r`). The pwsh parse check of ticino_tools.yml cannot see this: run -ListOnly in 5.1 after any change to Api.
+- Helper test on DESKTOP-OUPOLOA (2026-10-30, 4 flights Manno -> north at 33 m/s, warm cache): the helper works
+  (window wait at a jump 62-72 ms) but changes nothing in the frames (28.1 vs 28.4 fps at the 30 cap). The real
+  hitches: the terrain swap frame 207-256 ms at every window move (terrainFile ~105 ms + the frame after), the forest
+  after a spawn (~75 frames of ~190 ms for ~100 s at PER_FRAME 250, the budget was looked at only every 64 items) and
+  the AI map read at a jump (25.6 s, PR #105). forest.PER_FRAME is 64 now and the clock is read every 8 items: not
+  measured in the game yet.
 - The cloud session could not run a downloaded pwsh to check the PowerShell scripts (auto mode refused code from
   outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
 - `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,
