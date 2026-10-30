@@ -28,25 +28,45 @@ function M.parse(data)
   local o = 20
   local need = o + n * 16 + m * 12 + 4
   if #data < need then return nil, 'aimap file cut short' end
-  local base = ffi.cast('const uint8_t *', data)
-  local pos = ffi.new('float[?]', n * 4)
-  ffi.copy(pos, base + o, n * 16)
-  o = o + n * 16
-  local ein, eout = ffi.new('uint32_t[?]', m), ffi.new('uint32_t[?]', m)
-  local etype, eflags = ffi.new('uint16_t[?]', m), ffi.new('uint16_t[?]', m)
-  local ep = ffi.cast('const uint8_t *', base + o)
-  for k = 0, m - 1 do
-    local q = ep + k * 12
-    ein[k] = ffi.cast('const uint32_t *', q)[0]
-    eout[k] = ffi.cast('const uint32_t *', q + 4)[0]
-    etype[k] = ffi.cast('const uint16_t *', q + 8)[0]
-    eflags[k] = ffi.cast('const uint16_t *', q + 10)[0]
+  -- No ffi.cast of the string and no pointer arithmetic: in the game ffi.cast('const uint8_t *', s) gave back the
+  -- string (FATAL LUA ERROR "arithmetic on local 'base' (a string value)", 2026-10-30) and arithmetic on an ffi array
+  -- raised "invalid C type" (collision cells, laptop run 2). ffi.copy from a string and indexing only; plain Lua
+  -- tables if the ffi path fails at all.
+  local pos, ein, eout, etype, eflags
+  local ok = pcall(function()
+    local p = ffi.new('float[?]', n * 4)
+    ffi.copy(p, data:sub(o + 1, o + n * 16), n * 16)
+    local e = ffi.new('uint32_t[?]', m * 3)
+    ffi.copy(e, data:sub(o + n * 16 + 1, o + n * 16 + m * 12), m * 12)
+    local a, b, t, f = ffi.new('uint32_t[?]', m), ffi.new('uint32_t[?]', m), ffi.new('uint16_t[?]', m),
+      ffi.new('uint16_t[?]', m)
+    for k = 0, m - 1 do
+      local w = e[3 * k + 2]
+      a[k], b[k], t[k], f[k] = e[3 * k], e[3 * k + 1], w % 65536, math.floor(w / 65536)
+    end
+    pos, ein, eout, etype, eflags = p, a, b, t, f
+  end)
+  if not ok then
+    pos, ein, eout, etype, eflags = {}, {}, {}, {}, {}
+    for i = 0, n * 4 - 1 do
+      local a, b, c, d = data:byte(o + 4 * i + 1, o + 4 * i + 4)
+      local bits = a + b * 256 + c * 65536 + d * 16777216
+      local e = math.floor(bits / 8388608) % 256
+      local mant = bits % 8388608
+      local v = e == 0 and mant * 2 ^ -149 or (1 + mant / 8388608) * 2 ^ (e - 127)
+      pos[i] = bits >= 2147483648 and -v or v
+    end
+    for k = 0, m - 1 do
+      local q = o + n * 16 + 12 * k
+      local w = u32(data, q + 8)
+      ein[k], eout[k], etype[k], eflags[k] = u32(data, q), u32(data, q + 4), w % 65536, math.floor(w / 65536)
+    end
   end
-  o = o + m * 12
+  o = o + n * 16 + m * 12
   local ln = u32(data, o)
   local types = (jsonDecode or require('json').decode)(data:sub(o + 5, o + 4 + ln))
   if type(types) ~= 'table' or #types ~= nt then return nil, 'aimap types unreadable' end
-  return { n = n, m = m, pos = pos, ein = ein, eout = eout, etype = etype, eflags = eflags, types = types }
+  return { n = n, m = m, ffi = ok, pos = pos, ein = ein, eout = eout, etype = etype, eflags = eflags, types = types }
 end
 
 
@@ -115,7 +135,9 @@ function M.active()
       graph = false
       log('W', 'ticino', 'no ' .. M.FILE .. ': the AI map comes from the scene\'s DecalRoads')
     else
-      local g, err = M.parse(data)
+      -- a failed file is not read again until the next level (graph false, not nil)
+      local ok, g, err = pcall(M.parse, data)
+      if not ok then g, err = nil, g end
       graph = g or false
       if g then
         stats.parseMs = clock() - t0
@@ -192,7 +214,7 @@ end
 
 function M.stats()
   return { loads = stats.loads, parseMs = stats.parseMs, buildMs = stats.buildMs, loadMs = stats.loadMs,
-           nodes = graph and graph.n or 0, edges = graph and graph.m or 0 }
+           nodes = graph and graph.n or 0, ffi = graph and graph.ffi, edges = graph and graph.m or 0 }
 end
 
 return M

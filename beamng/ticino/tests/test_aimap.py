@@ -56,6 +56,15 @@ def scene(folder):
 
 LUA_STUBS = r"""
 package.path = EXT .. '/?.lua;' .. package.path
+-- the game's ffi: ffi.cast of a Lua string gives the string back (aimap.lua:33 crashed on it, 2026-10-30), and with
+-- FFI_MODE 'none' the ffi fails outright (the plain-table path)
+do
+  local real = require('ffi')
+  local fake = setmetatable({}, { __index = real })
+  fake.cast = function(ct, v) if type(v) == 'string' then return v end return real.cast(ct, v) end
+  if FFI_MODE == 'none' then fake.new = function() error('no ffi here') end end
+  package.loaded.ffi = fake
+end
 LOGS = {}
 function log(l, t, m) LOGS[#LOGS + 1] = l .. ' ' .. m end
 local V = {}
@@ -96,9 +105,10 @@ map = { reset = loadMap, load = function() loadMap() end, assureLoad = function(
 """
 
 
-def runtime(files):
+def runtime(files, ffi_mode="game"):
     rt = luajit21.LuaRuntime()
     g = rt.globals()
+    g.FFI_MODE = ffi_mode
     g.EXT = EXT
     g.FILES = rt.table_from(files)
     g.jsonDecode = lambda s: rt.table_from(json.loads(s), recursive=True)
@@ -106,13 +116,13 @@ def runtime(files):
     return rt
 
 
-def check_small():
+def check_small(ffi_mode):
     with tempfile.TemporaryDirectory() as tmp:
         scene(tmp)
         out = os.path.join(tmp, "ai", "aimap.bin")
         rep = aimap.build(tmp, out)
         assert rep["pieces"] == 2, rep            # the network + the bridge road over it
-        rt = runtime({"/levels/ticino/ai/aimap.bin": out})
+        rt = runtime({"/levels/ticino/ai/aimap.bin": out}, ffi_mode)
         res = rt.execute(r"""
 local aimap = require('ticino/aimap')
 aimap.install()
@@ -131,6 +141,11 @@ map._edges = {}; map._nodes = {}
 for _, h in ipairs(HOOKS) do h() end
 r.afterHook = #map._edges
 r.loads = aimap.stats().loads
+r.ffi = aimap.stats().ffi
+-- the nodes match the file (both parse paths)
+local sumz = 0
+for _, n in pairs(map._nodes) do sumz = sumz + n.pos.z + n.radius end
+r.sumz = sumz
 -- the graph's content
 local nodes = map._nodes
 local deg, priv, gated, oneway, lanes = {}, 0, 0, 0, {}
@@ -156,13 +171,35 @@ r.otherLevel = #map._edges
 return r
 """)
         r = {k: res[k] for k in res}
-        print("small network:", r)
+        print("small network (%s ffi):" % ffi_mode, r)
+        nodes = aimap.read(out)[0]
+        assert abs(r["sumz"] - float((nodes[:, 2].astype(float) + nodes[:, 3]).sum())) < 1e-3, r
+        assert r["ffi"] == (ffi_mode == "game"), r
         assert r["afterLoad"] > 0 and r["secondLoad"] == 0 and r["afterReset"] == r["afterLoad"], r
         assert r["afterHook"] == r["afterLoad"] and r["loads"] == 3, r
         assert r["junctions"] == 2, r            # the T at (40,0) and the drive at (100,10)
         assert r["priv"] == 1 and r["gated"] >= 1, r
         assert r["oneway"] >= 1 and r["lanes"].startswith("++@140>120"), r
         assert r["otherLevel"] == 0, r
+
+
+def check_broken():
+    """A file that cannot be read is read once per level, not at every call."""
+    with tempfile.TemporaryDirectory() as tmp:
+        bad = os.path.join(tmp, "aimap.bin")
+        with open(bad, "wb") as f:
+            f.write(b"TAIM" + (1).to_bytes(4, "little") + (5).to_bytes(4, "little") * 3 + b"x" * 200)
+        rt = runtime({"/levels/ticino/ai/aimap.bin": bad})
+        r = rt.execute(r"""
+local aimap = require('ticino/aimap')
+local reads = 0
+local rf = readFile
+readFile = function(p) reads = reads + 1; return rf(p) end
+local a = { aimap.active(), aimap.active(), aimap.active() }
+return reads, a[1], #LOGS
+""")
+        print("broken file:", r)
+        assert r[0] == 1 and r[1] is False, r
 
 
 def check_file(path):
@@ -184,7 +221,9 @@ return { parse = (t1 - t0) * 1000, tables = (t2 - t1) * 1000, nodes = n, links =
 
 
 if __name__ == "__main__":
-    check_small()
+    check_small("game")
+    check_small("none")
+    check_broken()
     if len(sys.argv) > 1:
         check_file(sys.argv[1])
     print("ok")

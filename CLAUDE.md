@@ -1466,6 +1466,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   slices, which overwrite the zips on ticino-all), ticino_tools and ticino_helper: the pushed range held all_stamp.txt
   and the helper/install changes of `ticino`. Cancelled within a minute (no slice uploaded; the base job runs on
   `always()` even in a cancelled run). After any force-push, list `actions/runs?branch=` at once and cancel.
+- First PC test of the AI map (2026-10-30): FATAL LUA ERROR aimap.lua:33 "attempt to perform arithmetic on local 'base'
+  (a string value)": in the game `ffi.cast('const uint8_t *', s)` of a Lua string gave back the STRING (lupa's LuaJIT
+  gives a pointer, so the test passed). Same family as the collision cells (laptop runs 1-2: a cast of the string and
+  arithmetic on an ffi array both failed in the game). parse now only does ffi.copy(array, string, n) and indexes
+  (no cast, no pointer arithmetic), with a plain-table path if the ffi fails; test_aimap.py stubs ffi.cast the game's
+  way and runs both paths. The error came 4 times: graph stayed nil after a throw and every call parsed again; a
+  failed file now sets graph = false until the next level. Never cast a Lua string to a pointer in game Lua.
 - In lupa's LuaJIT making the 516k node tables took 3.7-5.4 s (plain table creation is slow there: 0.43 s for 516k
   empty tables); the game's figure is not measured yet.
 
