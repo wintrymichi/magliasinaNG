@@ -1,0 +1,2 @@
+# draft release for ticino_all.yml (default ticino-all). Test build of the .cdae shapes: remove this file before merging into ticino.
+ticino-all-cdae

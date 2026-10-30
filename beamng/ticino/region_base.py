@@ -34,7 +34,7 @@ import zipremote  # noqa: E402
 from blocks import LEVEL, log, wopen  # noqa: E402
 
 PLAN = os.path.join(HERE, "zones", "ticino_plan.json")
-ZONES_TAG, SLICES_TAG = "ticino-zones", "ticino-all"
+ZONES_TAG, SLICES_TAG = "ticino-zones", os.environ.get("TICINO_ALL_TAG") or "ticino-all"
 START_ZONE = "ti_0_m1"                  # Magliaso: the level starts at its default spawn point
 SMALL = ("theTerrain.terrain.json", "info.json", "art/forest/managedItemData.json", "signals.json",
          "signalControllerDefinitions.json", "city.sites.json", "facilities.sites.json", "main.decals.json")
