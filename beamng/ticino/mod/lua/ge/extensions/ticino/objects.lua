@@ -43,7 +43,9 @@ M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
 M.COL_FILE = '/levels/%s/col/c_%d_%d.bin'
 M.COL_XY_OFF_CM = 16384     -- collision.XY_OFF_CM
 M.COL_HYST_M = 16          -- the car's collision cell changes only this far past its edge
-M.WAVE_DEL_AT = 1.5        -- objects that went out of range are deleted after the new ones of the rings 0 and 1 are made
+M.WAVE_DEL_AT = 99         -- objects that went out of range (and only drew) are deleted after every new one is made:
+                           -- at 33 m/s the deletions took their share of the bursts while 2,776 objects waited (PC
+                           -- flight 2026-10-30, 1,620 live of ~3,400); was 1.5 (after the rings 0 and 1)
 
 -- keys of an entry that are not engine fields
 local SKIP = { class = true, p = true, q = true, s = true, g = true, r = true, name = true }
@@ -720,6 +722,7 @@ function M.stats()
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+function M.queued() return S and (#S.queue - S.qpos + 1) or 0 end
 -- Are objects of the rings up to d (tiles from the car's) still queued? (the queue is sorted by ring: the head tells)
 function M.nearPending(d)
   if not S or S.qpos > #S.queue then return false end

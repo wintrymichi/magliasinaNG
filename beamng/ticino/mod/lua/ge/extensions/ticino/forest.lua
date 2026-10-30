@@ -14,7 +14,13 @@
 local M = {}
 
 M.RADIUS = 4                          -- tiles (Chebyshev) round the car's tile that get trees
-M.SHARE = { [0] = 1.0, 1.0, 0.6, 0.35, 0.2 }   -- share of a tile's rows shown at that distance
+M.SHARE = { [0] = 1.0, 1.0, 1.0, 0.25, 0.25 }  -- share of a tile's rows shown at that distance. Was 1/1/0.6/0.35/0.2:
+                                      -- ring 2 whole means no pass when a tile comes into ring 1 (the "near" frames of
+                                      -- the PC flight, ~200 ms each), rings 3 and 4 alike one pass fewer on the way in;
+                                      -- with HYST about 30 % fewer passes a tile crossed, ~35 % more trees live
+M.HYST = 1                            -- a tile keeps its share (and its collision) until it is this many rings beyond
+                                      -- the ring that share belongs to: no pass on the way out for every ring crossed
+                                      -- (PC flight 2026-10-30: 141 tiles queued at 33 m/s, each pass a ~200 ms frame)
 M.PER_FRAME = 4000                    -- items made or removed a frame at most (a safety cap: see ONE_FOREST)
 M.ONE_FOREST = true                   -- a frame finishes the pass of ONE tile and stops: a frame that touches a Forest
                                       -- costs ~185-200 ms in the engine whatever the number of items (PC 2026-10-30:
@@ -134,6 +140,17 @@ function M.retarget(cx, cy)
     if not want[key] then want[key] = { share = 0, solid = false } end
   end
   local keys = {}
+  -- hysteresis: a tile already at a share it would have HYST rings closer keeps it (and its collision while within
+  -- SOLID_RADIUS + HYST); only a higher share, a tile that must collide now, or one beyond that is passed again
+  for key, w in pairs(want) do
+    local t = S.tiles[key]
+    if t and not t.dirty and M.HYST > 0 then
+      local d = dist(key, c)
+      local keep = M.SHARE[math.max(0, d - M.HYST)] or 0
+      if w.share < t.share and t.share <= keep then w.share = t.share end
+      if t.solid and not w.solid and d <= M.SOLID_RADIUS + M.HYST then w.solid = true end
+    end
+  end
   for key, w in pairs(want) do
     local t = S.tiles[key]
     if t then

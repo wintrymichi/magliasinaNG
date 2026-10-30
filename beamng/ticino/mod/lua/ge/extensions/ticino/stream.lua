@@ -50,6 +50,7 @@ M.BURST_MS = 40            -- many ms, not a few ms in every frame (each frame t
                            -- PC test 2026-10-30, Lugano flight 47 fps with 3 ms a frame, 94 with 40 ms bursts a second)
 M.BURST_EVERY_SLOW_MS = 200  -- bursts this often while the car is slower than SLOW_MPS (standing: the queue of a
 M.SLOW_MPS = 4               -- new place, ~8 ms an object in the game, took minutes at one burst a second)
+M.BURST_QUEUE_REF = 300      -- objects queued over this shorten the time between bursts in proportion
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
@@ -800,6 +801,10 @@ local function onUpdate(dtReal)
   -- the objects
   if M.BURST_EVERY_MS > 0 and (objects.pending() or forest.pending() or objects.farPending()) then
     local every = (st.speed or 0) < M.SLOW_MPS and M.BURST_EVERY_SLOW_MS or M.BURST_EVERY_MS
+    -- a long queue gets bursts more often (down to BURST_EVERY_SLOW_MS): at 33 m/s one a second left 2,776 objects
+    -- waiting and the motorway without them (PC flight 2026-10-30)
+    local nq = objects.queued()
+    if nq > M.BURST_QUEUE_REF then every = math.max(M.BURST_EVERY_SLOW_MS, every * M.BURST_QUEUE_REF / nq) end
     if clock() - (st.lastBurst or -1e9) < every then st.act = 'wait burst'; return end
     st.lastBurst = clock()
     st.act = 'burst'
