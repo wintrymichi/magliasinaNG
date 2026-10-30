@@ -147,6 +147,8 @@ def _mesh(geo, binds, mat_name, materials, mindex):
         if kinds[k][0] not in src:
             raise Unsupported("source " + kinds[k][0].decode())
     corners = np.concatenate(corner_rows)
+    if not len(corners):
+        raise Unsupported("no triangles")
     for j, k in enumerate(order):
         if corners[:, j].min() < 0 or corners[:, j].max() >= len(src[kinds[k][0]]):
             raise Unsupported("index out of range")
@@ -190,6 +192,8 @@ def _job(args):
         n = convert(src, dst)
     except Unsupported as e:
         return src, None, str(e)
+    except Exception as e:      # anything else the parser lets through: the shape stays .dae (listed as kept)
+        return src, None, f"{type(e).__name__}: {e}"
     if not keep:
         os.remove(src)
     return src, n, None

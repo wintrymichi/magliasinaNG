@@ -1567,3 +1567,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   normals, colours, primitives and triangles; tangents differ on 2.5 % of the vertices, all with degenerate uvs. Ten
   pairs came from another version of the shape (the cache was older than the zips): compare positions first and drop
   such pairs before calling the converter wrong.
+- First full .cdae build (run 41095920457): slice ti_1_m2 stopped in compile_level (min of an empty array): a shape whose
+  <triangles> blocks are all empty. parse now refuses it (stays .dae), and any other error of one shape keeps that
+  shape as .dae (listed in cdae.kept) instead of stopping the slice.
