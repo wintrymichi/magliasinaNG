@@ -176,7 +176,7 @@ function M.retarget(cx, cy)
 end
 
 -- Work on the queue: at most perFrame items made or removed (nil: PER_FRAME) and budgetMs (nil: no limit).
-function M.step(clock, budgetMs, perFrame)
+function M.step(clock, budgetMs, perFrame, burstMs)
   if not S then return true end
   local t0 = clock()
   local left = perFrame or M.PER_FRAME
@@ -241,8 +241,12 @@ function M.step(clock, budgetMs, perFrame)
     S.qpos = S.qpos + 1
     if touched then forests = forests + 1 end
     if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
-    local limit = (M.FORESTS_PER_FRAME > 1 and budgetMs and budgetMs < 1000) and M.BATCH_MAX_MS or budgetMs
-    if limit and clock() - t0 > limit then break end
+    if burstMs then
+      if clock() - t0 > burstMs then break end
+    else
+      local limit = (M.FORESTS_PER_FRAME > 1 and budgetMs and budgetMs < 1000) and M.BATCH_MAX_MS or budgetMs
+      if limit and clock() - t0 > limit then break end
+    end
   end
   return S.qpos > #q
 end

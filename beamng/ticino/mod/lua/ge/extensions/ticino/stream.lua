@@ -44,6 +44,9 @@ M.FOREST_JUMP_MS = 1000    -- forest items made at a jump, while the game is pau
 M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains round the new place; the rest comes after)
 M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
+M.BURST_EVERY_MS = 0       -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
+M.BURST_MS = 40            -- many ms, not a few ms in every frame (each frame that changes the scene may cost the
+                           -- engine a fixed amount: PC test 2026-10-30, 14 fps while the queues ran, 50 after)
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
@@ -786,6 +789,20 @@ local function onUpdate(dtReal)
     return            -- the objects wait for a frame without window work
   end
   -- the objects
+  if M.BURST_EVERY_MS > 0 and (objects.pending() or forest.pending() or objects.farPending()) then
+    if clock() - (st.lastBurst or -1e9) < M.BURST_EVERY_MS then st.act = 'wait burst'; return end
+    st.lastBurst = clock()
+    st.act = 'burst'
+    local t0 = clock()
+    objects.BURSTING = true
+    if objects.pending() then objects.step(clock, M.BURST_MS) end
+    objects.BURSTING = false
+    local left = M.BURST_MS - (clock() - t0)
+    if left > 0 and forest.pending() then forest.step(clock, 1000, nil, left) end
+    left = M.BURST_MS - (clock() - t0)
+    if left > 0 and objects.farPending() then objects.stepFar(clock, left) end
+    return
+  end
   if objects.pending() then
     st.act = 'objects'
     objects.step(clock, M.OBJ_BUDGET_MS)

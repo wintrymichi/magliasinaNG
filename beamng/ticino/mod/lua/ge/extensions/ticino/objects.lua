@@ -357,7 +357,7 @@ function M.step(clock, budgetMs, untilRing)
     end
     -- one heavy object a frame: a second one after it would add its cost to the same frame (with no budget, at a
     -- jump while the game is paused, the step goes on: it made one object of a new zone and left the rest crawling)
-    if budgetMs and (heavy or clock() - t0 > budgetMs) then break end
+    if budgetMs and ((heavy and not M.BURSTING) or clock() - t0 > budgetMs) then break end
   end
   return S.qpos > #q
 end
