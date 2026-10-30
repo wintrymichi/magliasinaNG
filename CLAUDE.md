@@ -878,6 +878,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   TSStatics: 14.0 -> 83.2 fps. objects.DYNAMIC is false now (settings "dynamicObjects": true for the old way). Setting
   dynamic back to true at runtime did NOT bring the cost back: an A/B test must reload the level, not flip the field.
   The base scene's 57k AI DecalRoads and 4,343 SFXEmitters were not the cost (127 and 327 left near Lugano after a jump).
+- After the static fix (2026-10-30 evening, PC sweeps at Lugano with the queues empty): 49 fps against Italy's 81, and
+  hiding the 103 props TSStatics alone gave 85 (all TSStatics hidden: 116). No single prop shape mattered (hiding one
+  at a time: nothing) and dynamicCubemap off on the 1,146 materials did nothing: the cost was material blocks.
+  region.split_dae / clip_dae kept EVERY <triangles> block of the source in every piece, an empty one as a triangle of
+  no area; the merged sign/prop shapes have hundreds of materials, so each 192 m piece was hundreds of draw calls per
+  frame and shadow cascade. _write_kept now drops the blocks it keeps nothing of (60 materials split into 23 pieces:
+  1,380 -> 222 blocks). Count the <triangles> blocks of a cut shape, not only its triangles.
+- SETTLE_MS (objects made dynamic, then flipped to static in batches) was worse than static from the start: with the
+  queues empty 13 fps against 50; an object flipped at runtime stays costly. Off by default, kept for tests.
+- The queues while standing: an object costs ~8 ms of engine in the game; at 3 ms a frame the ~4,500 objects of Lugano
+  took minutes, and every frame that changed the scene was slow (14-20 fps the whole time). Bursts (BURST_MS 40 once
+  a second, every 200 ms below SLOW_MPS) made the flight 47 -> 94 fps; a burst must touch at most one Forest and check
+  the clock inside a tile (bursts of up to 711 ms in flight when the trees got a share without that).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
