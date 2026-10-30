@@ -31,6 +31,10 @@ M.DYNAMIC = false
 -- SETTLE_MS (at most 4 x SETTLE_MS after the first), so the cached shadow map is redrawn once per batch, not in every
 -- frame that adds objects. Turning dynamic -> static at runtime works (PC test 2026-10-30: 14 -> 83 fps).
 M.SETTLE_MS = 0
+-- the largest radius (tiles) of a group, under the build's own r: small clutter at 2 tiles (up to 960 m) was 2,609 of
+-- the 5,640 objects round a dense tile, each a draw call for something a few pixels high (render CPU-bound, 2026-10-30)
+M.GROUP_R = { ['props/street_life'] = 1, ['props/delineators'] = 1, ['props/shopfronts'] = 1,
+              ['props/osm/furniture'] = 1, ['roads/markings'] = 2 }
 M.COL_LAZY = 0             -- 1 tried: 25 cells of 128 m were 1.1 M triangles, a rebuild 170-250 ms in Lugano
 M.SLOW_SPAWN_MS = 40       -- an object (or far tile) that takes longer to make is logged with its shape
 M.CACHE_TILES = 400
@@ -89,6 +93,12 @@ local function tile(cx, cy)
   end
   local ok, data = pcall(jsonDecode, readFile(string.format(M.TILE_FILE, S.level, cx, cy)) or '')
   t = (ok and type(data) == 'table') and data or false
+  if t then
+    for _, e in ipairs(t) do
+      local cap = e.g and M.GROUP_R[e.g]
+      if cap and (e.r or 0) > cap then e.r = cap end
+    end
+  end
   S.tiles[key] = t
   S.tileOrder[#S.tileOrder + 1] = key
   S.stats.tilesRead = S.stats.tilesRead + 1
