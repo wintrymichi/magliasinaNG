@@ -34,12 +34,11 @@ jobs:
           pyinstaller --onefile --name ticino_server --paths ../helper --paths .. \
             --hidden-import dae2cdae --hidden-import cdae --hidden-import ticino_helper ticino_server.py
           ./dist/ticino_server.exe --help > /dev/null
-      - name: Check the exe converts a shape
+      - name: Check the .cdae writer
         shell: bash
         run: |
           cd beamng/ticino
-          python -m pip install --progress-bar off pytest > /dev/null
-          python -m pytest -q tests/test_cdae.py
+          python tests/test_cdae.py
       - name: Pack
         shell: bash
         run: |
