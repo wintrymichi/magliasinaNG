@@ -1,3 +1,4 @@
 # zones for ticino_all.yml: "all" (every zone of zones/ticino_plan.json) or zone names, one a line
-# 2026-10-30: all zones with .cdae shapes, on ticino-all-cdae
-all
+# 2026-10-30: retry of the 2 slices that stopped on a shape with no triangle (run 41095920457), on ticino-all-cdae
+ti_1_m2
+ti_m1_8
