@@ -833,6 +833,34 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   at the first jump; there is no luajit in the cloud: `python tests/luajit.py <file.lua> args` (lupa). `REALTIME=1`
   runs the sim in real time, else a helper beside it never keeps up with simulated driving.
 - The perf csv of the sim is written 10 frames after a swap: a sim of 0.02 s writes none.
+- In-game test on DESKTOP-OUPOLOA (2026-10-30, camera flight from ti_0_0_spawn_manno north, 33 m/s, 10 km, 7 moves,
+  4 runs): the helper works (every move helper=1, buildMs 0, 52-104 ms wait at a jump, a window 5-16 ms .ter +
+  17-28 ms base map) but the game is NOT smoother: 28.1 vs 28.4 fps mean at 30 fps with warm caches. Without it the
+  Lua made the window in 104-307 ms spread over 25-37 frames at its 4 ms budget, so no frame was long because of it.
+  The hitches are engine work: the swap frame (terrainFile ~105 ms, 207-256 ms frame), the forest after a spawn
+  (~75 frames of ~190 ms) and the AI map re-read at a jump (25.6 s). Measure where the frame time goes first.
+- The first pair of runs was useless: run 1 (helper) found the shape cache cold, run 2 (no helper) warm, and the
+  game ran up to 105 fps. Run the A/B pair twice and compare the warm pair. The FPS cap is
+  settings.setValue('fpsLimitEnabled', true) + settings.setValue('fpsLimit', 30) ('FPSLimiter*' does nothing).
+- forest.PER_FRAME 250 -> 64 (ticino 12c25f3) did not remove the ~190 ms frames after a spawn (118 -> 110 forest
+  slow frames, max 223 -> 202 ms): the cost is per frame that touches a Forest, not per item. Try touching fewer
+  Forests / fewer frames (a whole tile's items in one frame), not fewer items a frame.
+  Now forest.ONE_FOREST: a frame finishes the pass of one tile and stops (PER_FRAME only a cap of 4,000), and a far
+  tile gets one pass, not the wave's two (each pass is a frame touching its Forest). Not measured in the game yet.
+- Teleport bug (2026-10-30, spawn.safeTeleport from Manno to ti_1_3_spawn_bellinzona): the jump swaps the terrain
+  (right window, heights right, spawn z 227.3 = terrain) but the ground stays plain grey and no object of Bellinzona
+  comes for ~65 s: the objects queue keeps importing the ti_0_0/ti_1_0 shapes of Manno after the jump, the forest of
+  the old place hangs on the horizon. A jump must drop the old queue and put the new place first. michi saw it.
+  In the code: at a jump objects.step(clock, nil) broke after the first spawn over SLOW_SPAWN_MS (every shape of a
+  zone never seen is a COLLADA import), so the paused jump made ONE object; the far ground (the mountains) was made
+  only when the object and forest queues were both empty; and the old place's deletions sat behind the new rings.
+  Now (ticino): a jump farther than twice the objects/forest radius deletes every streamed object and tree at once
+  (objects.dropAll, forest.clear, while paused), makes the near rings whole (step untilRing, no heavy break without
+  a budget) and FAR_JUMP_MS of far ground, and the far ground also gets FAR_EVERY_MS each frame beside the objects.
+  The grey ground (base colour map, log "base 0.0 ms") is not explained yet: read the jump's log lines.
+- BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
+  an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
+  precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
 
 ## Data from the cloud sessions
 
@@ -1541,8 +1569,7 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (window wait at a jump 62-72 ms) but changes nothing in the frames (28.1 vs 28.4 fps at the 30 cap). The real
   hitches: the terrain swap frame 207-256 ms at every window move (terrainFile ~105 ms + the frame after), the forest
   after a spawn (~75 frames of ~190 ms for ~100 s at PER_FRAME 250, the budget was looked at only every 64 items) and
-  the AI map read at a jump (25.6 s, PR #105). forest.PER_FRAME is 64 now and the clock is read every 8 items: not
-  measured in the game yet.
+  the AI map read at a jump (25.6 s, PR #105). forest.PER_FRAME 64 did not help (see Streaming helper process).
 - The cloud session could not run a downloaded pwsh to check the PowerShell scripts (auto mode refused code from
   outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
 - `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,
