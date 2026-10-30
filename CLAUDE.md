@@ -872,6 +872,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   3000, then OBJ_JUMP_MS 2500 and FAR_JUMP_MS 500. Now forest 1000, objects 1500, and the "jump to tile" line gives
   the ms of each part (files, drop, swap, objects, cols, forest, far). Airolo's jump wrote no "jump: window" line
   twice: jump() now logs its start and a failed window job, read those lines next time.
+- 13 fps standing still in Lugano against Italy's 81 (2026-10-30, CPU-bound, GPU ~30 %): every streamed TSStatic was
+  created with dynamic = true (copied from BeamNG.Earth, to spare the cached sun shadow map a redraw per added object),
+  and a dynamic object is sent once per shadow cascade every frame. setField('dynamic', 0, 'false') on the 5,392 live
+  TSStatics: 14.0 -> 83.2 fps. objects.DYNAMIC is false now (settings "dynamicObjects": true for the old way). Setting
+  dynamic back to true at runtime did NOT bring the cost back: an A/B test must reload the level, not flip the field.
+  The base scene's 57k AI DecalRoads and 4,343 SFXEmitters were not the cost (127 and 327 left near Lugano after a jump).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
