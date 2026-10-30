@@ -233,15 +233,16 @@ function M.retarget(cx, cy)
   return #q
 end
 
--- Work through the queue for at most budgetMs (clock: ms function; nil: all of it). Each entry brings one object
--- to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing left to do).
--- Returns true when the queue is empty.
-function M.step(clock, budgetMs)
+-- Work through the queue for at most budgetMs (clock: ms function; nil: all of it, or up to the ring untilRing).
+-- Each entry brings one object to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing
+-- left to do). Returns true when the queue is empty.
+function M.step(clock, budgetMs, untilRing)
   local t0 = clock()
   local q = S.queue
   local colR = S.cfg.collisionRadius or 1
   while S.qpos <= #q do
     local op = q[S.qpos]
+    if untilRing and (op[5] or 0) > untilRing then break end
     S.qpos = S.qpos + 1
     local key, e = op[1], op[2]
     local heavy = false
@@ -272,8 +273,9 @@ function M.step(clock, budgetMs)
         if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
       end
     end
-    -- one heavy object a frame: a second one after it would add its cost to the same frame
-    if heavy or (budgetMs and clock() - t0 > budgetMs) then break end
+    -- one heavy object a frame: a second one after it would add its cost to the same frame (with no budget, at a
+    -- jump while the game is paused, the step goes on: it made one object of a new zone and left the rest crawling)
+    if budgetMs and (heavy or clock() - t0 > budgetMs) then break end
   end
   return S.qpos > #q
 end
@@ -620,6 +622,21 @@ function M.clear()
   S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
   S.farQueue, S.farPos = {}, 1
 end
+
+-- A long jump: delete every streamed object at once (the far ground and the collision cells stay: updateFar and
+-- updateCols handle them) and forget the queue, instead of deleting the old place's objects one queue entry at a time
+-- after the new ones. Returns the number deleted.
+function M.dropAll()
+  if not S then return 0 end
+  local n = 0
+  for _, l in pairs(S.live) do delete(l.id); n = n + 1 end
+  if n > 0 then S.colDirty = true end
+  S.live, S.queue, S.qpos, S.colQEnd, S.cell = {}, {}, 1, 0, nil
+  S.stats.deleted = S.stats.deleted + n
+  return n
+end
+
+function M.maxRadius() return S and S.maxR or 0 end
 
 function M.stats()
   if not S then return nil end

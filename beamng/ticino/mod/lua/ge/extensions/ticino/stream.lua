@@ -42,6 +42,8 @@ M.NEAR_RINGS = 1           -- the objects of the tiles this near the car's (Cheb
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
 M.FOREST_JUMP_MS = 3000    -- forest items made at a jump, while the game is paused
+M.FAR_JUMP_MS = 2000       -- far ground tiles made at a jump (the mountains round the new place)
+M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
@@ -444,15 +446,27 @@ local function jump(x, y)
   local job = makeJob(wcx * cfg.cell, wcy * cfg.cell)
   if M.HELPER then job.waitMs = helper.stats().lastWaitMs end
   runJob(job, nil)
+  -- a jump farther than the objects reach (Manno -> Bellinzona, PC 2026-10-30): the old place has nothing the new one
+  -- needs. Its objects and trees go at once here, while paused; else their deletions queued behind the new rings and
+  -- the new place filled in for minutes.
+  local far = not st.cell or math.max(math.abs(cx - st.cell[1]), math.abs(cy - st.cell[2]))
+    > math.max(objects.maxRadius(), forest.RADIUS) * 2
+  local dropped, felled = 0, 0
+  if far and st.cell then
+    dropped, felled = objects.dropAll(), forest.clear()
+  end
   st.cell = { cx, cy }
   if not job.failed then apply(job, 'jump') end
   if files.serving() then job.serveWaitMs = files.waitNear(cx, cy, M.SERVE_RINGS, cfg.tiles or {}, M.SERVE_WAIT_MS) end
   objects.retarget(cx, cy)
-  objects.step(clock, nil)
+  objects.step(clock, nil, M.NEAR_RINGS)
   objects.updateCols(x, y, true)
   objects.stepCols(clock, nil)
   forest.retarget(cx, cy)
   forest.step(clock, M.FOREST_JUMP_MS, 1e9)
+  objects.stepFar(clock, M.FAR_JUMP_MS)
+  log('I', 'ticino', string.format('jump to tile (%d, %d)%s: %d objects and %d trees of the old place removed, far ground '
+    .. '%s', cx, cy, far and ' (far)' or '', dropped, felled, objects.farPending() and 'still queued' or 'made'))
   -- the collision rebuild waits for the swapped terrain (SWAP_QUIET_FRAMES), the game stays paused till after it
   st.jumpReload = true
   st.resumeIn = M.SWAP_QUIET_FRAMES + 2
@@ -759,6 +773,7 @@ local function onUpdate(dtReal)
   if objects.pending() then
     st.act = 'objects'
     objects.step(clock, M.OBJ_BUDGET_MS)
+    if objects.farPending() then objects.stepFar(clock, M.FAR_EVERY_MS) end
   elseif forest.pending() then
     st.act = 'forest'
     forest.step(clock, M.FOREST_BUDGET_MS)

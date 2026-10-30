@@ -112,6 +112,8 @@ local v = 120 / 3.6
 local dir = { -0.94, 0.34 }
 if os.getenv('DIR') then local a, b = os.getenv('DIR'):match('^(%-?[%d.]+),(%-?[%d.]+)$'); dir = { tonumber(a), tonumber(b) } end
 local worstLua, t = 0, 0
+local tele = os.getenv('TELEPORT') and {}
+if tele then for v in os.getenv('TELEPORT'):gmatch('[^,]+') do tele[#tele + 1] = tonumber(v) end end
 local frames = 0
 while t < seconds do
   local c0 = os.clock()
@@ -122,6 +124,12 @@ while t < seconds do
   if frames > 3 then worstLua = math.max(worstLua, ms) end
   if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
   if not paused then car.x, car.y = car.x + dir[1] * v * dt, car.y + dir[2] * v * dt; t = t + dt end
+  -- TELEPORT="x,y,s": put the car at (x, y) after s seconds (a long jump, e.g. Manno -> Bellinzona)
+  if tele and t >= tele[3] then
+    car.x, car.y = tele[1], tele[2]
+    print(string.format('teleport to %.0f, %.0f at %.1f s', car.x, car.y, t))
+    tele = nil
+  end
 end
 local s = stream.status()
 if os.getenv("SLOW") then print(string.format("car at %.0f, %.0f", car.x, car.y)) end

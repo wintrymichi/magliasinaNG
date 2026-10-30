@@ -17,7 +17,11 @@ local M = {}
 
 M.RADIUS = 4                          -- tiles (Chebyshev) round the car's tile that get trees
 M.SHARE = { [0] = 1.0, 1.0, 0.6, 0.35, 0.2 }   -- share of a tile's rows shown at that distance
-M.PER_FRAME = 250                     -- items made or removed a frame at most
+M.PER_FRAME = 4000                    -- items made or removed a frame at most (a safety cap: see ONE_FOREST)
+M.ONE_FOREST = true                   -- a frame finishes the pass of ONE tile and stops: a frame that touches a Forest
+                                      -- costs ~185-200 ms in the engine whatever the number of items (PC 2026-10-30:
+                                      -- 250 items a frame 118 slow frames, 64 a frame 110), so fewer frames, not fewer items
+M.CHECK_EVERY = 8                     -- items between two looks at the clock (budget, ONE_FOREST off)
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
 M.CACHE_TILES = 120
@@ -149,6 +153,8 @@ function M.retarget(cx, cy)
       passes[#passes + 1] = { key, w.share, w.solid, 0, d }
     elseif w.share <= cur then
       passes[#passes + 1] = { key, w.share, w.solid, 2, d }
+    elseif M.ONE_FOREST then          -- one pass a tile: each pass is a frame that touches its Forest
+      passes[#passes + 1] = { key, w.share, w.solid, 1, d }
     elseif w.share * M.WAVE_PART <= cur then
       passes[#passes + 1] = { key, w.share, w.solid, 3, d }
     else
@@ -220,16 +226,18 @@ function M.step(clock, budgetMs, perFrame)
         left = left - 1
       end
       i = i + 1
-      if budgetMs and i % 64 == 0 and clock() - t0 > budgetMs then break end
+      if budgetMs and not M.ONE_FOREST and i % M.CHECK_EVERY == 0 and clock() - t0 > budgetMs then break end
     end
     op.pos = i
     if i <= #rows then return false end
+    local touched = fd ~= nil
     t.share, t.solid, t.dirty = op.share, op.solid, nil
     if t.n == 0 then
       if t.forestId then S.pool[#S.pool + 1] = t.forestId end
       S.tiles[op.key] = nil
     end
     S.qpos = S.qpos + 1
+    if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 then break end
     if budgetMs and clock() - t0 > budgetMs then break end
   end
   return S.qpos > #q
@@ -257,14 +265,21 @@ function M.prefetch(cx, cy, n)
   return done
 end
 
+-- Remove every item and forget the queue (a long jump, or the end); the tiles' Forest objects go back to the pool.
+-- Returns the number of items removed.
 function M.clear()
-  if not S then return end
+  if not S then return 0 end
+  local n = 0
   for _, t in pairs(S.tiles) do
     local f = t.forestId and scenetree.findObjectById(t.forestId)
     local fd = f and f:getData()
-    if fd then for _, it in pairs(t.items) do pcall(function() fd:removeItem(it) end) end end
+    if fd then for _, it in pairs(t.items) do pcall(function() fd:removeItem(it) end); n = n + 1 end end
+    if t.forestId then S.pool[#S.pool + 1] = t.forestId end
+    if t.solid and S.markDirty then S.markDirty() end
   end
   S.tiles, S.queue, S.qpos = {}, {}, 1
+  S.stats.removed = S.stats.removed + n
+  return n
 end
 
 function M.stats()

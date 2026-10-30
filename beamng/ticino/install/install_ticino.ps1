@@ -131,7 +131,10 @@ if ($ghExe) {
 function Api([string]$path) {
     $headers = @{ 'User-Agent' = 'magliasina-ticino-installer'; 'Accept' = 'application/vnd.github+json' }
     if ($token) { $headers['Authorization'] = "Bearer $token" }
-    return Invoke-RestMethod -Uri "https://api.github.com/$path" -Headers $headers
+    # Windows PowerShell 5.1 returns a JSON array as ONE object when it is returned straight from the call
+    # (@(...) then has Count 1 and the asset pages stopped after the first): assign it first.
+    $r = Invoke-RestMethod -Uri "https://api.github.com/$path" -Headers $headers
+    return $r
 }
 
 Say "Looking for the release '$Tag' of $Repo ..."
@@ -161,6 +164,18 @@ $base = $zips | Where-Object { $_.name -like 'ticino_base_*' } | Select-Object -
 if (-not $base) { throw "The release '$Tag' has no ticino_base zip." }
 $total = ($zips | Measure-Object size -Sum).Sum
 Say ("Release '{0}': {1} zips, {2}" -f $Tag, $zips.Count, (GiB $total)) 'Cyan'
+
+# Read the release's assets again: a workflow can replace an asset while the installer runs (new id, the old one
+# answers 404).
+function Get-Assets {
+    $list = @()
+    for ($page = 1; $page -le 20; $page++) {
+        $part = @(Api "repos/$Repo/releases/$($release.id)/assets?per_page=100&page=$page")
+        $list += $part
+        if ($part.Count -lt 100) { break }
+    }
+    return ,$list
+}
 
 function Sha([object]$a) {
     if ($a.digest -and "$($a.digest)" -like 'sha256:*') { return "$($a.digest)".Substring(7).ToLower() }
@@ -273,6 +288,14 @@ function Get-Asset([object]$a, [string]$dest) {
             if ($LASTEXITCODE -ne 0) {
                 Say ("  curl error {0} (try {1}/{2}), again in {3} s" -f $LASTEXITCODE, $t, $Retries, (15 * $t)) 'Yellow'
                 Start-Sleep -Seconds (15 * $t)
+                $fresh = $null
+                try { $fresh = (Get-Assets) | Where-Object { $_.name -eq $a.name } | Select-Object -First 1 } catch { }
+                if ($fresh -and $fresh.id -ne $a.id) {
+                    Say '  the asset was replaced on the release: downloading the new one' 'Yellow'
+                    if ($fresh.size -ne $a.size -or (Sha $fresh) -ne $want) { Remove-Item $part -Force -ErrorAction SilentlyContinue }
+                    $a = $fresh
+                    $want = Sha $a
+                }
                 continue
             }
         }
