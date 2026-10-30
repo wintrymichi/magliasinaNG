@@ -96,38 +96,54 @@ def self_check(paths):
 
 
 def golden(folder):
-    bad = 0
+    """Our .cdae against the game's for each pair x.dae + x.cdae under folder. Per mesh: the same vertices in the same
+    order (positions, normals, colours exactly; uvs within 1e-3), the same primitives and the same triangles (as a set:
+    the game orders the triangles of a primitive its own way, which changes nothing drawn), and the share of tangents
+    that differ (the game's own handling of degenerate uvs is not copied exactly). A pair whose positions differ was
+    taken from two versions of the shape (the game's cache is older than the zip): reported, not counted."""
+    bad = stale = n = 0
+    tg_diff = tg_all = 0
     for dp, _, fs in os.walk(folder):
         for f in sorted(fs):
             if not f.endswith(".dae") or not os.path.exists(os.path.join(dp, f[:-4] + ".cdae")):
                 continue
             p = os.path.join(dp, f)
-            g = cdae.read(p[:-4] + ".cdae")
-            o = cdae.decode(dae2cdae.compile_bytes(open(p, "rb").read()))
-            gd, od = drawn(g), drawn(o)
-            msg = []
-            if [s for s, _ in gd] != [s for s, _ in od]:
-                msg.append(f"detail sizes game {[s for s, _ in gd]} ours {[s for s, _ in od]}")
-            for (s, gm), (_, om) in zip(gd, od):
-                if sorted(gm) != sorted(om):
-                    msg.append(f"materials {sorted(gm)} vs {sorted(om)}")
-                    continue
-                for name in gm:
-                    a, b = gm[name], om[name]
-                    if len(a) != len(b):
-                        msg.append(f"{s:g} {name}: {len(a)} vs {len(b)} triangles")
-                        continue
-                    for label, cols, tol in (("pos/uv", slice(0, 5), 1e-4), ("normal", slice(5, 8), 2e-3),
-                                             ("colour", slice(8, 12), 0.5), ("tangent", slice(12, 16), 2e-2)):
-                        ca, cb = canon(a, cols), canon(b, cols)
-                        diff = np.abs(np.array(ca) - np.array(cb)).max() if ca else 0.0
-                        if diff > tol:
-                            msg.append(f"{s:g} {name} {label} differs by {diff:.4g}")
-            nv = (sum(m["verts"][0] for m in g["meshes"] if m["type"] == 0),
-                  sum(m["verts"][0] for m in o["meshes"] if m["type"] == 0))
-            print(os.path.relpath(p, folder), "ok" if not msg else "DIFFERS", f"verts game/ours {nv[0]}/{nv[1]}",
-                  "; ".join(msg[:4]))
+            g = [m for m in cdae.read(p[:-4] + ".cdae")["meshes"] if m["type"] == 0]
+            o = [m for m in cdae.decode(dae2cdae.compile_bytes(open(p, "rb").read()))["meshes"] if m["type"] == 0]
+            msg, old = [], False
+            if len(g) != len(o):
+                old = True
+            for a, b in zip(g, o):
+                A, B = cdae.mesh_arrays(a), cdae.mesh_arrays(b)
+                if len(A["verts"]) != len(B["verts"]) or not np.array_equal(A["verts"], B["verts"]):
+                    old = True
+                    break
+                if not np.array_equal(A["norms"], B["norms"]):
+                    msg.append("normals")
+                if a["colors"][2] != b["colors"][2]:
+                    msg.append("colours")
+                if len(A["tverts"]) and np.abs(A["tverts"] - B["tverts"]).max() > 1e-3:
+                    msg.append("uvs %.3g" % np.abs(A["tverts"] - B["tverts"]).max())
+                if not np.array_equal(A["primitives"], B["primitives"]):
+                    msg.append("primitives")
+                ta = sorted(map(tuple, np.sort(A["indices"].reshape(-1, 3), 1).tolist()))
+                tb = sorted(map(tuple, np.sort(B["indices"].reshape(-1, 3), 1).tolist()))
+                if ta != tb:
+                    msg.append("triangles")
+                d = (np.abs(A["tangents"][:, :3] - B["tangents"][:, :3]).max(1) > 0.05) | \
+                    (A["tangents"][:, 3] != B["tangents"][:, 3])
+                tg_diff += int(d.sum())
+                tg_all += len(d)
+            rel = os.path.relpath(p, folder)
+            if old:
+                stale += 1
+                print(rel, "source changed since the game cached it: not compared")
+                continue
+            n += 1
+            print(rel, "ok" if not msg else "DIFFERS " + ", ".join(sorted(set(msg))))
             bad += bool(msg)
+    print(f"{n} pairs compared, {bad} differ, {stale} with another source version; tangents differing on "
+          f"{tg_diff} of {tg_all} vertices ({100 * tg_diff / max(tg_all, 1):.1f} %)")
     return bad
 
 

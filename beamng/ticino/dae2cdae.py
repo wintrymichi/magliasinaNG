@@ -163,7 +163,8 @@ def _mesh(geo, binds, mat_name, materials, mindex):
         c = src[kinds[b"COLOR"][0]][col[b"COLOR"]]
         if c.shape[1] == 3:
             c = np.concatenate([c, np.ones((len(c), 1))], 1)
-        mesh["colors"] = np.clip(np.floor(c[:, :4] * 255 + 0.5), 0, 255).astype(np.uint8)
+        # truncated, as the game does (its cache files of the same .dae: floor, never round)
+        mesh["colors"] = np.clip(np.floor(c[:, :4] * 255), 0, 255).astype(np.uint8)
     return mesh
 
 
