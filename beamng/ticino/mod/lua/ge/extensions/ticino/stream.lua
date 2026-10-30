@@ -547,6 +547,7 @@ local function readSettings(cfg)
   applyFields(M.PRESETS[preset], cfg, 'preset ' .. preset .. ':')
   if type(s.helper) == 'boolean' then M.HELPER = s.helper end
   if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
+  if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
   log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s', preset, tostring(M.HELPER),
@@ -834,6 +835,23 @@ end
 
 function M.followCamera(on)
   if st then st.useCamera = on and true or false end
+end
+
+function M.setDynamic(on)
+  local n = objects.setDynamic(on)
+  log('I', 'ticino', string.format('%d streamed objects made %s', n, on and 'dynamic' or 'static'))
+  return n
+end
+
+-- objects of the base scene by class, for a render test: ticino_stream.sceneCount()
+function M.sceneCount()
+  local out = {}
+  for _, c in ipairs({ 'DecalRoad', 'SFXEmitter', 'WaterBlock', 'GroundCover', 'TSStatic', 'ProceduralMesh', 'Forest',
+                       'SpawnSphere', 'BeamNGGameplayArea', 'BeamNGPointOfInterest' }) do
+    out[c] = #(scenetree.findClassObjects(c) or {})
+  end
+  dump(out)
+  return out
 end
 
 function M.dropAIRoads()

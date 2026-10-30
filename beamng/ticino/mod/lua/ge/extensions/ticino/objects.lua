@@ -21,6 +21,12 @@ local M = {}
 M.NO_COLLISION_SHAPES = { 'clutter_pallet', 'clutter_metal_bin', 'clutter_big_dustbin', 'clutter_metal_drum',
   'clutter_mailboxstand', 'clutter_plastic_chair', 'clutter_metal_chair', 'clutter_round_ptable',
   'clutter_round_mtable', 'clutter_pwood_table', 'clutter_sorting_bin', 'clutter_convexmirror' }
+-- DYNAMIC: a dynamic TSStatic is drawn into every sun shadow cascade at every frame (no cached shadow map); a static
+-- one only when the cached map is redrawn, which an added static object asks for (~6 ms, BeamNG.Earth farfield.lua).
+-- Up to 2026-10-30 every streamed object was dynamic: ~5,600 objects in Lugano drawn into every cascade each frame
+-- (suspected cause of 13 fps standing still against Italy's 81, PC test pending). Static, the map is redrawn only in
+-- the frames that add objects.
+M.DYNAMIC = false
 M.COL_LAZY = 0             -- 1 tried: 25 cells of 128 m were 1.1 M triangles, a rebuild 170-250 ms in Lugano
 M.SLOW_SPAWN_MS = 40       -- an object (or far tile) that takes longer to make is logged with its shape
 M.CACHE_TILES = 400
@@ -108,6 +114,19 @@ local function shapeFile(name)
 end
 M.shapeFile = function(name) return shapeFile(name) end
 
+-- every live object and far tile static or dynamic (A/B test from the console: ticino_stream.setDynamic(true/false))
+function M.setDynamic(on)
+  M.DYNAMIC = on and true or false
+  local n = 0
+  local function set(id)
+    local o = id and scenetree.findObjectById(id)
+    if o and o:getClassName() == 'TSStatic' then o:setField('dynamic', 0, M.DYNAMIC and 'true' or 'false'); n = n + 1 end
+  end
+  for _, l in pairs(S.live or {}) do set(l.id) end
+  for _, f in pairs(S.farLive or {}) do set(f.id) end
+  return n
+end
+
 local function spawn(e, col)
   local o = createObject(e.class)
   if not o then return nil end
@@ -120,8 +139,7 @@ local function spawn(e, col)
   end
   if e.class == 'TSStatic' then
     o:setField('collisionType', 0, col and (e.collisionType or 'Visible Mesh Final') or 'None')
-    -- dynamic: an added static object redraws the sun's cached shadow map (BeamNG.Earth farfield.lua)
-    o:setField('dynamic', 0, 'true')
+    o:setField('dynamic', 0, M.DYNAMIC and 'true' or 'false')
   end
   o.canSave = false
   local p = e.p
@@ -582,7 +600,7 @@ function M.stepFar(clock, budgetMs)
       o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
-      o:setField('dynamic', 0, 'true')
+      o:setField('dynamic', 0, M.DYNAMIC and 'true' or 'false')
       o.canSave = false
       local cfg = S.cfg
       o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
