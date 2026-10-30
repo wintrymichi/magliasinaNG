@@ -1531,6 +1531,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   Invoke-RestMethod straight (`return Invoke-RestMethod ...`): @(Api ...) had Count 1, the asset pages stopped after
   the first and the installer said "no ticino_base zip" (PC test 2026-10-30). Assign the result first (`$r = ...;
   return $r`). The pwsh parse check of ticino_tools.yml cannot see this: run -ListOnly in 5.1 after any change to Api.
+- Installer test on DESKTOP-OUPOLOA (2026-10-30, 12c25f3): 5 zips downloaded, 84 sha256 checked, overrides moved,
+  cache cleared, settings and shortcut written; the shortcut starts the game and the helper, which ends with the game
+  (level 2.4 s, first jump swap 125 ms). One fault: ticino_tools.yml replaced helper_ticino.zip on the release while
+  the installer ran (new asset id) and curl got 404 (error 22) six times on the old id. Get-Asset now reads the
+  assets again after a failed try and takes the new one. Run from PowerShell with `*>&1`, curl's progress bar on
+  stderr shows as NativeCommandError (not from the .bat): cosmetic, not changed.
 - Helper test on DESKTOP-OUPOLOA (2026-10-30, 4 flights Manno -> north at 33 m/s, warm cache): the helper works
   (window wait at a jump 62-72 ms) but changes nothing in the frames (28.1 vs 28.4 fps at the 30 cap). The real
   hitches: the terrain swap frame 207-256 ms at every window move (terrainFile ~105 ms + the frame after), the forest
