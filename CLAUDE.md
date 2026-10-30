@@ -858,6 +858,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (objects.dropAll, forest.clear, while paused), makes the near rings whole (step untilRing, no heavy break without
   a budget) and FAR_JUMP_MS of far ground, and the far ground also gets FAR_EVERY_MS each frame beside the objects.
   The grey ground (base colour map, log "base 0.0 ms") is not explained yet: read the jump's log lines.
+  PC test of 79f0e61 (spawn Manno, jumps to Bellinzona and Airolo, 30 fps, warm cache): Bellinzona's jump removed
+  4,330 objects and 14,647 trees at once; slow forest frames 110 -> 0 (ONE_FOREST), frames over 100 ms 139-249 -> 96,
+  mean 25.4 fps. The paused jump frame is longer (spawn 8.1 s, Bellinzona 8.7 s, was 3.9-5.2 s; Airolo ~4 s): the
+  near rings and FAR_JUMP_MS are made inside it. Still seen: 2 object frames of ~0.9 s 60 s after a jump and 25 of
+  ~215 ms at 100 s (the traffic starting). The ticino stream.lua without PR #105's aimap hook gives 12,849 "Map node
+  could not be set" again: expected until #105 is merged. "base 0.0" at every jump, grey ground not confirmed.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
