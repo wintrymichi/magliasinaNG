@@ -1595,3 +1595,35 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ticino_all/ticino_tools (both write the same draft release). The zone build and region run were cancelled after
   25 min (19 runners busy). Push Ticino work only to `ticino`; check `actions/runs?branch=<new branch>` after any
   first push and cancel what was not meant.
+  Again 2026-10-30: merging origin/ticino into claude/project-thread-qgsibb (.cdae) and pushing started ticino_all
+  (4-zone retry list + base), ticino_tools and ticino_helper on the thread branch; cancelled at once (the base job had
+  to be force-cancelled: a plain cancel left it running; it stopped at its first step, nothing uploaded). Before
+  pushing a merge of ticino, check whether it brings changes to all_stamp.txt, helper/** or install/**.
+
+## Shapes compiled to .cdae (beamng/ticino/dae2cdae.py, 2026-10-29)
+
+- The zones' shapes are all bng.write_dae files (one node `<name>_a<size>` per detail level, one <triangles> per
+  material, VERTEX/NORMAL/TEXCOORD/COLOR with the same index for every input): dae2cdae parses only that and refuses
+  the rest (trees' bb_autobillboard, transforms, polylists), which stays .dae. Forest shapes (managedItemData) and
+  shapes with prebaked imposters beside them (x.dae.imposter.dds) are never compiled: the imposter names follow the
+  shape file's name.
+- cdae.encode's `lods` follow BeamNG.Earth's convention (the main mesh drawn from lods[0]'s size up), NOT Collada's
+  (each node's trailing number is its OWN size, nothing drawn under the smallest): cdae.encode_details writes our DAEs.
+- First self-check failed on 6 of 709 shapes: the test flipped v in float64, the writer (as the engine) in float32
+  (2048.0325 vs 2048.0322 on large building uvs). Compare in the writer's precision before suspecting the writer.
+- region_slice compiles AFTER collision.build (it reads the .dae) and rewrites the tiles itself; the base cannot see the
+  slices' files, so the shared shapes are decided on both sides by the same test (dae2cdae.compilable) and the
+  slices list what they left as .dae (slice.json "cdae.kept"). objects.lua falls back to the .dae if a .cdae is missing.
+- The proxy blocks `gh api --paginate` on a release's assets (it follows a repositories/<id> URL: 403): page by hand
+  with `?per_page=100&page=N` (a draft release with 178 assets showed only 100).
+- `rm -rf zsrc/*` after a `cd` in the same command was blocked by the safety check (relative glob): use absolute paths.
+- Golden check against 43 .cdae the game wrote on DESKTOP-OUPOLOA (tests/test_dae2cdae.py --golden, 2026-10-30): the
+  game TRUNCATES vertex colours (floor(c*255), our first writer rounded: off by 1), computes tangents in float32, skips
+  triangles of zero uv area and falls back to (0,0,1) for a zero tangent (not orthogonalised); it orders the triangles of
+  a primitive its own way (same set, same picture). After matching that: 33 comparable pairs identical in positions,
+  normals, colours, primitives and triangles; tangents differ on 2.5 % of the vertices, all with degenerate uvs. Ten
+  pairs came from another version of the shape (the cache was older than the zips): compare positions first and drop
+  such pairs before calling the converter wrong.
+- First full .cdae build (run 41095920457): slice ti_1_m2 stopped in compile_level (min of an empty array): a shape whose
+  <triangles> blocks are all empty. parse now refuses it (stays .dae), and any other error of one shape keeps that
+  shape as .dae (listed in cdae.kept) instead of stopping the slice.

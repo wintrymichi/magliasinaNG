@@ -7,6 +7,7 @@
 # A zone with no slice (failed) is left out of the base. Started by a change of beamng/ticino/all_stamp.txt on a push
 # (the cloud session cannot dispatch a workflow off the default branch). beamng/ticino/all_list.txt: the zones to slice
 # ("all" = the whole plan); "[all base]" in the commit message: no slices, only the base (on the slices there are).
+# beamng/ticino/all_release.txt (optional): another draft release tag for a test build beside ticino-all.
 name: ticino all
 
 on:
@@ -27,6 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       zones: ${{ steps.z.outputs.zones }}
+      tag: ${{ steps.z.outputs.tag }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
@@ -43,8 +45,12 @@ jobs:
           ${{ contains(github.event.head_commit.message, '[all base]') }} && Z='[]'
           echo "zones=$Z" >> "$GITHUB_OUTPUT"
           echo "$Z"
-          gh release view ticino-all >/dev/null 2>&1 || \
-            gh release create ticino-all --draft --target "$GITHUB_SHA" --title "Ticino: all zones in one level (draft, not a release)" \
+          TAG=ticino-all
+          [ -s beamng/ticino/all_release.txt ] && TAG=$(grep -v '^\s*#' beamng/ticino/all_release.txt | awk 'NF {print $1; exit}')
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release $TAG"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "Ticino: all zones in one level (draft, not a release)" \
               --notes "The streaming level ticino of branch $GITHUB_REF_NAME: put ticino_base_*.zip and every ticino_<zone>_*.zip into mods/. Not a release."
 
   slice:
@@ -65,6 +71,8 @@ jobs:
       GH_REPO: ${{ github.repository }}
       PYTHONUNBUFFERED: "1"
       W: ${{ github.workspace }}/../w
+      TAG: ${{ needs.setup.outputs.tag }}
+      TICINO_ALL_TAG: ${{ needs.setup.outputs.tag }}
       Z: ${{ matrix.zone }}
     steps:
       - name: Disk space and swap
@@ -98,13 +106,13 @@ jobs:
           du -sh "$W/out"
       - name: Upload to the draft release "ticino-all"
         run: |
-          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq '.[] | select(.tag_name == "ticino-all") | .id')
+          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq ".[] | select(.tag_name == \"$TAG\") | .id")
           # the zone's zips of an earlier run first (a slice of more parts would leave a stale part behind)
           for old in $(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq ".[] | select(.name | test(\"^ticino_${Z}_[0-9]+\\\\.zip$\")) | .id"); do
             gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
           done
-          for f in "$W"/dist/*.zip; do gh release upload ticino-all "$f" --clobber; done
-          gh release upload ticino-all "$W/slice_$Z.log" --clobber
+          for f in "$W"/dist/*.zip; do gh release upload "$TAG" "$f" --clobber; done
+          gh release upload "$TAG" "$W/slice_$Z.log" --clobber
 
   base:
     needs: [setup, slice]
@@ -119,6 +127,8 @@ jobs:
       GH_REPO: ${{ github.repository }}
       PYTHONUNBUFFERED: "1"
       W: ${{ github.workspace }}/../w
+      TAG: ${{ needs.setup.outputs.tag }}
+      TICINO_ALL_TAG: ${{ needs.setup.outputs.tag }}
     steps:
       - name: Disk space
         run: |
@@ -139,10 +149,10 @@ jobs:
           (cd "$W/dist" && sha256sum *.zip > ticino_base.sha256 && cat ticino_base.sha256)
       - name: Upload to the draft release "ticino-all"
         run: |
-          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq '.[] | select(.tag_name == "ticino-all") | .id')
+          id=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq ".[] | select(.tag_name == \"$TAG\") | .id")
           for old in $(gh api --paginate "repos/$GH_REPO/releases/$id/assets?per_page=100" --jq '.[] | select(.name | test("^ticino_base_[0-9]+\\.zip$")) | .id'); do
             gh api -X DELETE "repos/$GH_REPO/releases/assets/$old"
           done
           for f in "$W"/dist/*.zip "$W/dist/ticino_base.sha256" "$W/dist/region_report.json" "$W/base.log"; do
-            gh release upload ticino-all "$f" --clobber
+            gh release upload "$TAG" "$f" --clobber
           done

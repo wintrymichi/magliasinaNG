@@ -367,33 +367,31 @@ def first_use(T, nverts):
 
 
 def tangents(V, UV, N, I):
-    """Per-vertex tangents (xyz, w) by Lengyel's method, as the engine computes them (matches
-    engine output to 1e-7 for regular UVs). V, UV, N, I in the stored (engine) convention."""
-    V, UV, N = (np.asarray(a, np.float64) for a in (V, UV, N))
-    I = np.asarray(I, np.int64).reshape(-1, 3)
-    e1, e2 = V[I[:, 1]] - V[I[:, 0]], V[I[:, 2]] - V[I[:, 0]]
-    d1, d2 = UV[I[:, 1]] - UV[I[:, 0]], UV[I[:, 2]] - UV[I[:, 0]]
-    den = d1[:, 0] * d2[:, 1] - d2[:, 0] * d1[:, 1]
-    r = np.where(np.abs(den) > 0, 1.0 / np.where(den == 0, 1.0, den), 0.0)[:, None]
-    sd = (e1 * d2[:, 1:2] - e2 * d1[:, 1:2]) * r
-    td = (e2 * d1[:, 0:1] - e1 * d2[:, 0:1]) * r
-    t1, t2 = np.zeros_like(V), np.zeros_like(V)
-    for c in range(3):
-        np.add.at(t1, I[:, c], sd)
-        np.add.at(t2, I[:, c], td)
-    d = (N * t1).sum(1, keepdims=True)
-    t = t1 - N * d
-    tl = np.linalg.norm(t, axis=1)
-    for axis in range(2):
-        bad = tl < 1e-12
-        if not bad.any():
-            break
-        e = np.zeros(3)
-        e[axis] = 1.0
-        t[bad] = e - N[bad] * N[bad, axis:axis + 1]
-        tl[bad] = np.linalg.norm(t[bad], axis=1)
-    t = t / np.where(tl > 0, tl, 1.0)[:, None]
-    s = (np.cross(N, t) * t2).sum(1)
+    """Per-vertex tangents (xyz, w) by Lengyel's method, as the engine computes them: in float32, a triangle whose uvs
+    span no area adds nothing, and a vertex with no tangent left takes (0, 0, 1) (Torque's normalize of a zero
+    vector) unorthogonalised. Matches the game's cache files of our shapes on all but ~3 % of the vertices, those
+    with degenerate uvs (tests/test_dae2cdae.py --golden), and engine output to 1e-7 for regular uvs.
+    V, UV, N, I in the stored (engine) convention."""
+    f = np.float32
+    with np.errstate(all="ignore"):
+        V, UV, N = (np.asarray(a, f) for a in (V, UV, N))
+        I = np.asarray(I, np.int64).reshape(-1, 3)
+        e1, e2 = V[I[:, 1]] - V[I[:, 0]], V[I[:, 2]] - V[I[:, 0]]
+        d1, d2 = UV[I[:, 1]] - UV[I[:, 0]], UV[I[:, 2]] - UV[I[:, 0]]
+        den = d1[:, 0] * d2[:, 1] - d2[:, 0] * d1[:, 1]
+        r = f(1) / den
+        r = np.where(np.isfinite(r), r, f(0))[:, None]
+        sd = (e1 * d2[:, 1:2] - e2 * d1[:, 1:2]) * r
+        td = (e2 * d1[:, 0:1] - e1 * d2[:, 0:1]) * r
+        t1, t2 = np.zeros_like(V), np.zeros_like(V)
+        for c in range(3):
+            np.add.at(t1, I[:, c], sd)
+            np.add.at(t2, I[:, c], td)
+        t = t1 - N * (N * t1).sum(1, keepdims=True)
+        sq = (t * t).sum(1)
+        ok = (sq != 0) & np.isfinite(sq)
+        t = np.where(ok[:, None], t / np.sqrt(np.where(ok, sq, f(1)))[:, None], np.array([0, 0, 1], f))
+        s = (np.cross(N, t1) * t2).sum(1)
     return np.concatenate([t, np.where(s < 0, -1.0, 1.0)[:, None]], 1)
 
 
@@ -581,6 +579,63 @@ def encode(positions, tris, normals=None, uvs=None, material="bngEarthDae", uvs2
         for v in (name, MAT_S_WRAP | MAT_T_WRAP, 0, 0xFFFFFFFF, 0xFFFFFFFF, 1.0, 1.0):
             _pack(out, v)
 
+    header = packb({"info": INFO, "compression": False, "bodysize": len(out), "objectNames": [object_name]})
+    return struct.pack("<II", VERSION_WORD, len(header)) + header + bytes(out)
+
+
+def encode_details(details, materials, object_name="mesh", smallest=None):
+    """Shape bytes for one object drawn at several detail levels, each at its OWN pixel size (the Collada convention:
+    the trailing number of a mesh node, bng.write_dae's '<name>_a<size>'; the game draws the finest detail whose size
+    is at most the shape's size on screen, nothing under the smallest). details: [(size_px, dict of positions, tris,
+    tri_materials and optional normals / uvs / colors (n, 4) uint8)], any order; materials: the names the
+    tri_materials index. The meshes are laid out as encode() lays out one (and as the engine writes them)."""
+    details = sorted(details, key=lambda d: -float(d[0]))
+    nmat = len(materials)
+    levels, lo, hi = [], None, None
+    for size, d in details:
+        P = np.asarray(d["positions"], np.float64).reshape(-1, 3)
+        T, TM = _sorted_tris(d["tris"], d.get("tri_materials"), nmat)
+        body, l, h, ntri = _mesh_data(P, T, TM, nmat, d.get("normals"), d.get("uvs"), None, None, d.get("colors"))
+        lo = l if lo is None else np.minimum(lo, l)
+        hi = h if hi is None else np.maximum(hi, h)
+        levels.append((float(size), body, ntri))
+    center = ((lo + hi) * np.float32(0.5)).astype(np.float32)
+    half = ((hi - lo) * np.float32(0.5)).astype(np.float32)
+    radius = float(np.sqrt(np.float32((half * half).sum(dtype=np.float32))))
+    names = [object_name] + [f"detail{int(sz)}" for sz, _, _ in levels]
+    details_v = _vec(b"".join(struct.pack("<3i3fi2i2IfI", 1 + k, 0, k, levels[k][0], -1.0, -1.0, levels[k][2],
+                                          0, 0, 0, 0, 0.0, 0) for k in range(len(levels))), len(levels), 52)
+    shape_vecs = {
+        "nodes": _vec(struct.pack("<5i", 0, -1, 0, -1, -1), 1, 20),
+        "objects": _vec(struct.pack("<6i", 0, len(levels), 0, 0, -1, -1), 1, 24),
+        "subShapeFirstNode": _vec(struct.pack("<i", 0), 1, 4),
+        "subShapeFirstObject": _vec(struct.pack("<i", 0), 1, 4),
+        "subShapeNumNodes": _vec(struct.pack("<i", 1), 1, 4),
+        "subShapeNumObjects": _vec(struct.pack("<i", 1), 1, 4),
+        "defaultRotations": _vec(struct.pack("<4h", 0, 0, 0, 0x7FFF), 1, 8),
+        "defaultTranslations": _vec(struct.pack("<3f", 0, 0, 0), 1, 12),
+        "objectStates": _vec(struct.pack("<fii", 1.0, 0, 0), 1, 12),
+        "details": details_v,
+    }
+    out = bytearray()
+    smallest = levels[-1][0] if smallest is None else float(smallest)
+    for v in (smallest, len(levels) - 1, radius, radius, [float(x) for x in center],
+              [float(x) for x in lo] + [float(x) for x in hi]):
+        _pack(out, v)
+    for name in SHAPE_VECTORS:
+        n, size, data = shape_vecs.get(name, _empty(SHAPE_VECTOR_ELEM[name]))
+        _pack(out, n), _pack(out, size), _pack(out, data)
+    _pack(out, len(names))
+    for s_ in names:
+        _pack(out, s_)
+    _pack(out, len(levels))
+    for _, body, _ in levels:
+        out += body
+    _pack(out, 0)                                          # sequences
+    _pack(out, nmat)
+    for name in materials:
+        for v in (name, MAT_S_WRAP | MAT_T_WRAP, 0, 0xFFFFFFFF, 0xFFFFFFFF, 1.0, 1.0):
+            _pack(out, v)
     header = packb({"info": INFO, "compression": False, "bodysize": len(out), "objectNames": [object_name]})
     return struct.pack("<II", VERSION_WORD, len(header)) + header + bytes(out)
 

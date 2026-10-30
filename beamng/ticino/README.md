@@ -122,10 +122,33 @@ The zone grid and what every zone shares (terrain heights, layers, forest and gr
 
 Files: `zones.py` (the grid), `region_plan.py`, `region_slice.py`, `region_base.py`, `region_net.py` (AI road
 welding across zone edges, signals, sites), `collision.py`, `cdae.py` (the `.cdae` writer, from BeamNG.Earth),
+`dae2cdae.py` (every zone shape compiled to `.cdae`, see "Shapes shipped compiled"),
 `zipremote.py` (zips read by HTTP range), `blocks.py`, `region.py`, `pack_region.py` (the older one-job region),
 `helper/`, `install/`, `mod/`, `tests/` (`sim_stream.lua`: the mod driven outside the game with the game API stubbed,
 `python tests/luajit.py tests/sim_stream.lua <level folder> <seconds>`; `test_helper.py`, `test_cdae.py`,
-`test_region_net.py`, `wave_order.lua`).
+`test_region_net.py`, `test_dae2cdae.py`, `shape_file.lua`, `wave_order.lua`).
+
+## Shapes shipped compiled (.cdae, 2026-10-29)
+
+The game imports a Collada `.dae` the first time it shows it (about 0.1 s, the biggest up to 46 s) and keeps a
+compiled copy in `<user>/temp/.../*.cdae`. With 13,707 `.dae` (27 GB of XML) in the zones that was 30 s of stutter in
+every new zone, or a warm-up of 968 s for one region (HANDOFF of 2026-10-28, point 3). Now `region_slice.py` compiles
+every shape of a zone with `dae2cdae.py` after the collision cells have read them, and ships only the `.cdae`; the
+base compiles the shared shapes and points the scene at the slices' `.cdae`. The game loads a `.cdae` as it loads its
+own cache: no import, no warm-up (`warmup/<zone>.json` lists only what is left as `.dae`: the game's own props).
+
+- What is compiled: the shapes `bng.write_dae` writes (one node per detail level `<name>_a<size>`, one triangle list per
+  material, normals, uvs, vertex colours): all the zones' shapes. Left as `.dae`: forest shapes (`managedItemData.json`)
+  and shapes with prebaked imposters beside them (`x.dae.imposter.dds`), anything else the parser does not know.
+- Same picture: the same triangles, detail levels and sizes, materials, normals, uvs and colours (`tests/test_dae2cdae.py`
+  on a whole zone: 709 of 709 identical), laid out as the game lays out its own cache (`cdae.py`). Against 33 `.cdae`
+  the game itself wrote (`--golden`): identical positions, normals, colours and triangles; tangents differ on 2.5 % of
+  the vertices, all where the uvs are degenerate (no texture gradient to follow).
+- Smaller: zone ti_0_8, 396 MB of `.dae` -> 190 MB of `.cdae` (in the zip 74 -> 86 MB: binary floats compress less).
+  709 shapes in 8 s on 4 cores.
+- Mixed installs: `objects.lua` takes the `.cdae` when it is there and the `.dae` when a tile names a `.cdae` that is not
+  installed (an older zone zip beside a newer base).
+- By hand: `python dae2cdae.py <level folder>` (or `--one in.dae out.cdae`).
 
 ## Measured
 
@@ -157,8 +180,6 @@ installer. Open, each in its own thread:
   the window has terrain, so outside it the AI nodes sit at height 0, 4,020 of the 4,065 traffic signals find no road
   and AI traffic works only round the spawn; the same roads cost the 12 s first window and the 30 s map read. Fix in
   progress: a precomputed AI map loaded with `map.reset(nodes)` and no AI roads in the scene.
-- **Shapes converted on first sight.** 13,707 `.dae` files are imported by the game the first time they are seen.
-  Fix in progress: ship them already converted.
 - Floating origin (coordinates reach 75 km from the origin: no jitter seen so far), AI traffic guard at the window edge.
 
 Credits: the terrain swap, ground cover flush, runtime objects, pause and the `.cdae` writer follow BeamNG.Earth
