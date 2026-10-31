@@ -56,14 +56,15 @@ public static class Installer
         return Directory.Exists(def) ? def : null;
     }
 
-    /// <summary>First start of the app on a PC the installer has set up: take over its packs folder, release and game
-    /// folder, so the app and "Start Ticino" use one set of zips. Returns true when the settings changed.</summary>
+    /// <summary>First start of the app on a PC the installer has set up: take over its packs folder (server mode
+    /// only: in packs mode the zones are in mods), release and game folder, so the app and "Start Ticino" use one
+    /// set of zips. Returns true when the settings changed.</summary>
     public static bool Adopt(AppConfig c, bool newSettings)
     {
         var i = Read(c);
         if (i is null) return false;
         bool changed = false;
-        if (c.DataFolder is null && DataFolder(c) is { } d && Directory.Exists(d))
+        if (c.DataFolder is null && i.Mode == "server" && DataFolder(c) is { } d && Directory.Exists(d))
         {
             c.DataFolder = d;
             changed = true;
@@ -104,6 +105,18 @@ public static class Installer
             });
         if (Present(c) && c.DataFolder != null && Read(c)?.Data != c.DataFolder)
             Merge(InstallJson(c), o => o["data"] = c.DataFolder);
+    }
+
+    /// <summary>The zones moved out of mods (or back): "Start Ticino" starts the server only in mode "server".</summary>
+    public static void SetMode(AppConfig c, string mode, string? data)
+    {
+        if (!Present(c) || Read(c)?.Mode == mode) return;
+        Merge(InstallJson(c), o =>
+        {
+            o["mode"] = mode;
+            if (data != null) o["data"] = data;
+        });
+        Log.Write($"install.json: mode {mode}");
     }
 
     static void Merge(string path, Action<JsonObject> set)

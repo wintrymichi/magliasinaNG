@@ -16,11 +16,14 @@ public static class Files
 
     public static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-GB");
 
+    /// <summary>Sizes as Windows Explorer and install_ticino.ps1 show them: units of 1024, called GB/MB/KB (the map's
+    /// 56.1e9 bytes are "52.2 GB" there; 1.0.0 printed 56.1 GB).</summary>
     public static string Size(double bytes)
     {
-        if (bytes >= 1e9) return (bytes / 1e9).ToString("0.0", Culture) + " GB";
-        if (bytes >= 1e6) return (bytes / 1e6).ToString("0", Culture) + " MB";
-        if (bytes >= 1e3) return (bytes / 1e3).ToString("0", Culture) + " kB";
+        const double K = 1024, M = K * K, G = M * K;
+        if (bytes >= G) return (bytes / G).ToString("0.0", Culture) + " GB";
+        if (bytes >= M) return (bytes / M).ToString("0", Culture) + " MB";
+        if (bytes >= K) return (bytes / K).ToString("0", Culture) + " KB";
         return bytes.ToString("0", Culture) + " B";
     }
 

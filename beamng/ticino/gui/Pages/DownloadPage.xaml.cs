@@ -45,8 +45,8 @@ public partial class DownloadPage : UserControl, ITickable
         LastCheckText.Text = C.LastCheck is { } t ? $"Last check: {t:d MMM yyyy HH:mm}" : "";
         ErrorBar.Visibility = P.Error != null ? Visibility.Visible : Visibility.Collapsed;
         ErrorBar.Message = P.Error ?? "";
-        FolderBar.Visibility = P.DataFolder is null ? Visibility.Visible : Visibility.Collapsed;
-        if (P.DataFolder is null && !P.Checking) suggested = P.SuggestDataFolder();
+        FolderBar.Visibility = P.ZoneHome is null ? Visibility.Visible : Visibility.Collapsed;
+        if (P.ZoneHome is null && !P.Checking) suggested = P.SuggestDataFolder();
         FolderBar.Message = $"The zones take about 52 GB. Suggested: {suggested} ({Files.Size(Files.FreeSpace(suggested))} free).";
         string? why = P.ApplyBlocker();
         ReadyBar.Visibility = P.ReadyCount > 0 && !P.Busy ? Visibility.Visible : Visibility.Collapsed;
@@ -55,13 +55,15 @@ public partial class DownloadPage : UserControl, ITickable
             : $"{P.ReadyCount} zips ready: they install themselves {(why.StartsWith("BeamNG") ? "when you close BeamNG" : "when the server stops")}.";
         ReadyBar.Severity = why is null ? "Info" : "Warning";
 
-        DataCard.Description = P.DataFolder is null
+        DataCard.Description = P.PacksMode
+            ? $"Packs mode: the zones are in {BeamNG.Mods(C)} · {Files.Size(Files.FreeSpace(BeamNG.Mods(C)))} free"
+            : P.DataFolder is null
             ? "Not chosen yet."
             : $"{P.DataFolder} · {Files.Size(Files.FreeSpace(P.DataFolder))} free";
         BaseCard.Description = $"{BeamNG.Mods(C)} (BeamNG's mods folder)";
 
         CheckButton.IsEnabled = !P.Checking && !P.Busy;
-        DownloadButton.IsEnabled = P.Busy || (P.NeedCount > 0 && P.DataFolder != null && !P.Checking);
+        DownloadButton.IsEnabled = P.Busy || (P.NeedCount > 0 && P.ZoneHome != null && !P.Checking);
         DownloadLabel.Text = P.Busy ? "Pause" : P.Items.Any(i => i.State == PackState.Update) ? "Update" : "Download";
         DownloadGlyph.Text = P.Busy ? "" : "";
         ProgressPanel.Visibility = P.Busy || P.ProgressText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -118,7 +120,7 @@ public partial class DownloadPage : UserControl, ITickable
         Refresh();
     }
 
-    void OpenData_Click(object sender, RoutedEventArgs e) => Ui.Open(P.DataFolder);
+    void OpenData_Click(object sender, RoutedEventArgs e) => Ui.Open(P.PacksMode ? BeamNG.Mods(C) : P.DataFolder);
 
     void Options_Click(object sender, RoutedEventArgs e)
     {

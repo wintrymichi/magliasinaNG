@@ -66,6 +66,39 @@ public static class BeamNG
         return null;
     }
 
+    public const string HelperProcess = "ticino_helper";
+
+    /// <summary>Packs mode, as start_ticino.ps1: the streaming helper of the installer's tools beside the game, when it
+    /// is installed and settings\ticino.json does not turn it off. It ends with the game (--game-pid). Steam may start
+    /// the game again in a process of its own: the helper follows the BeamNG process that runs after a few seconds.</summary>
+    public static async Task StartHelper(AppConfig c)
+    {
+        string exe = Path.Combine(Installer.ToolsDir(c), HelperProcess + ".exe");
+        if (!File.Exists(exe)) { Log.Write("no helper installed: the map works without it"); return; }
+        if (!GameSettings.Load(SettingsFile(c)).Helper) return;
+        if (Process.GetProcessesByName(HelperProcess).Length > 0) return;
+        Process? live = null;
+        for (int i = 0; i < 30 && live is null; i++)
+        {
+            await Task.Delay(3000);
+            live = Process.GetProcessesByName(ProcessName).FirstOrDefault();
+        }
+        if (live is null) { Log.Write("BeamNG is not running after 90 s: no helper started"); return; }
+        try
+        {
+            var psi = new ProcessStartInfo(exe)
+            {
+                WorkingDirectory = Installer.ToolsDir(c),
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            foreach (var a in new[] { "--user", UserFolder(c), "--game-pid", live.Id.ToString() }) psi.ArgumentList.Add(a);
+            Process.Start(psi);
+            Log.Write($"helper started beside the game (pid {live.Id})");
+        }
+        catch (Exception e) { Log.Write("helper not started: " + e.Message); }
+    }
+
     /// <summary>Starts the game straight into the Ticino map (as start_ticino.ps1).</summary>
     public static Process? Start(AppConfig c)
     {

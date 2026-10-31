@@ -49,6 +49,48 @@ jobs:
           Get-ChildItem $shots | Format-Table Name, Length
           if (Test-Path "$shots/error.txt") { Get-Content "$shots/error.txt"; exit 1 }
           if (Test-Path "$env:TICINO_APP_DIR/app.log") { Get-Content "$env:TICINO_APP_DIR/app.log" }
+      # A PC installed in packs mode (the PC test of 1.0.0: 90 zips in mods, hashed by the installer): a user folder
+      # with every zip of the release in mods as a sparse file of its size (no disk space), the installer's
+      # install.json ("mode": "packs") and checked.json, one zone left out. The app must count the zones in mods,
+      # trust checked.json and offer only that zone: the log line "zones in place" says it, the pages show it.
+      - name: Screenshots in packs mode
+        shell: pwsh
+        run: |
+          $user = Join-Path $env:RUNNER_TEMP 'bng_user'
+          $mods = Join-Path $user 'mods'
+          New-Item -ItemType Directory -Force -Path $mods, (Join-Path $user 'ticino_tools'), (Join-Path $user 'ticino_download') | Out-Null
+          $rel = gh api "repos/$env:GH_REPO/releases?per_page=100" | ConvertFrom-Json | Where-Object tag_name -eq 'ticino-all' | Select-Object -First 1
+          if (-not $rel) { Write-Host 'no ticino-all release: skipped'; exit 0 }
+          $assets = @(gh api --paginate "repos/$env:GH_REPO/releases/$($rel.id)/assets?per_page=100" --jq '.[] | {name, size, digest}' | ForEach-Object { $_ | ConvertFrom-Json })
+          $zips = @($assets | Where-Object { $_.name -like 'ticino_*.zip' } | Sort-Object name)
+          $left = ($zips | Where-Object { $_.name -notlike 'ticino_base_*' } | Select-Object -Last 1).name
+          $checked = [ordered]@{}
+          foreach ($a in $zips) {
+            if ($a.name -eq $left) { continue }
+            $p = Join-Path $mods $a.name
+            [System.IO.File]::Create($p).Close()
+            fsutil sparse setflag $p | Out-Null
+            if ((fsutil sparse queryflag $p) -notmatch 'is set|ist festgelegt') { throw "not sparse: $p" }
+            $fs = [System.IO.File]::OpenWrite($p); $fs.SetLength([int64]$a.size); $fs.Close()
+            $sha = "$($a.digest)" -replace '^sha256:', ''
+            $checked[$a.name] = "$sha|$($a.size)|$((Get-Item $p).LastWriteTimeUtc.Ticks)"
+          }
+          $checked | ConvertTo-Json | Set-Content (Join-Path $user 'ticino_download/checked.json') -Encoding ASCII
+          [ordered]@{ tag = 'ticino-all'; user = $user; mode = 'packs'; data = (Join-Path $user 'ticino_data') } |
+            ConvertTo-Json | Set-Content (Join-Path $user 'ticino_tools/install.json') -Encoding ASCII
+          Write-Host "$($checked.Count) sparse zips in $mods, left out: $left"
+          $env:TICINO_APP_DIR = Join-Path $env:RUNNER_TEMP 'appdir_packs'
+          New-Item -ItemType Directory -Force -Path $env:TICINO_APP_DIR | Out-Null
+          @{ UserFolder = $user } | ConvertTo-Json | Set-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Encoding ASCII
+          $shots = Join-Path $PWD 'shots/packs'
+          $p = Start-Process -FilePath out/TicinoServer.exe -ArgumentList @('--screenshots', $shots) -PassThru
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); Write-Host 'timeout' }
+          Get-ChildItem $shots | Format-Table Name, Length
+          if (Test-Path "$shots/error.txt") { Get-Content "$shots/error.txt"; exit 1 }
+          $log = Get-Content "$env:TICINO_APP_DIR/app.log"
+          $log
+          $line = $log | Where-Object { $_ -match 'zones in place' } | Select-Object -Last 1
+          if ($line -notmatch ', 1 to download or check .*packs mode') { throw "packs mode not recognised: $line" }
       - name: Pack
         shell: bash
         run: |

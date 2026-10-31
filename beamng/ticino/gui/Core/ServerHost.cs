@@ -79,6 +79,9 @@ public sealed class ServerHost : Observable
     public bool GameConnected { get => gameConnected; private set => Set(ref gameConnected, value); }
 
     public string? LastError { get; private set; }
+
+    /// <summary>Set by the app: the zones are in mods (<see cref="PackManager.PacksMode"/>), no server to start.</summary>
+    public Func<bool> PacksMode { get; set; } = () => false;
     int polls;
 
     void Append(string line)
@@ -96,6 +99,7 @@ public sealed class ServerHost : Observable
     {
         if (IsRunning) return null;
         if (FindExternal()) return null;
+        if (PacksMode()) return "The map is installed in packs mode: the game loads the zones from mods by itself, no server needed. Move the zones to a packs folder (Home page) to use the server.";
         string? exe = PackManager.ServerExe(cfg);
         if (exe is null) return "The server program is not downloaded yet (Downloads page).";
         if (string.IsNullOrWhiteSpace(cfg.DataFolder) || !Directory.Exists(cfg.DataFolder))

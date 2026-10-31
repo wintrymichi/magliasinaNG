@@ -14,7 +14,8 @@ public sealed class AppConfig
     public string? GameFolder { get; set; }
 
     public bool CheckOnStart { get; set; } = true;
-    public bool AutoDownload { get; set; } = true;
+    // off until the user turns it on: a first start must never begin a 52 GB download by itself
+    public bool AutoDownload { get; set; } = false;
     public bool DeleteOld { get; set; } = false;
     public int ParallelDownloads { get; set; } = 3;
 

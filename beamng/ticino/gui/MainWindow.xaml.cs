@@ -63,7 +63,7 @@ public partial class MainWindow : Window
     async Task OnFirstLoad()
     {
         if (App.ShotMode) return;
-        if (App.Config.StartServerWithApp && App.Packs.DataFolder != null)
+        if (App.Config.StartServerWithApp && App.Packs.DataFolder != null && !App.Packs.PacksMode)
         {
             await App.Packs.ApplyPending();
             App.Server.Start();
@@ -75,7 +75,8 @@ public partial class MainWindow : Window
     public async Task CheckForUpdates(bool startup)
     {
         await App.Packs.Refresh();
-        if (App.Config.AutoDownload && App.Packs.DataFolder != null && App.Packs.NeedCount > 0 && App.Packs.Error is null)
+        // only to a folder the user has chosen (or mods in packs mode): never 52 GB to a suggestion
+        if (App.Config.AutoDownload && App.Packs.ZoneHome != null && App.Packs.NeedCount > 0 && App.Packs.Error is null)
         {
             Log.Write($"automatic update: {App.Packs.NeedCount} zip");
             await App.Packs.DownloadAll();

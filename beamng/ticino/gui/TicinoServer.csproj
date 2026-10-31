@@ -15,6 +15,8 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.0.0</Version>
+    <!-- the workflow sets InformationalVersion 1.0.0+<short sha>: without this the SDK added the full sha again -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Ticino Server</Product>
     <Company>MagliasinaNG</Company>
     <Copyright>CC BY-NC 4.0</Copyright>

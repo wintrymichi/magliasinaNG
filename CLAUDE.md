@@ -1168,6 +1168,21 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ticino_server process runs, and the app treats such a process as a running server of its own (no second start; on
   "game closed" it does not send Ctrl+C, the server stops itself). Count processes by name: a PyInstaller onefile exe is
   two processes, and only one Ctrl+C per console (a second one cuts the server's clean-up).
+- PC test of the app 1.0.0 (2026-10-31, DESKTOP-OUPOLOA, installed in packs mode: 90 zips in mods, hashed by the
+  installer): the app looked for zones only in its packs folder and showed 0/89 and "90 to download, 56.1 GB"; with
+  "download automatically" on by default it could have started 52 GB on its own. A zone now counts in the packs
+  folder or in mods (as the installer's Find-Zip), the installer's ticino_download\checked.json is trusted (same key
+  sha|length|ticks), AutoDownload is off by default and never downloads to a suggested folder. Packs mode (install.json
+  "mode": "packs", or zones only in mods) keeps new zones in mods and Play starts the game and the helper as Start
+  Ticino does; 1.0.0 asked for the server there ("not downloaded yet") and started nothing. Moving the zones out of mods
+  sets install.json "mode": "server" (else Start Ticino would not start the server for them).
+- Same test: app.log said "0 to download" while the page said 90 (Refresh logged before UpdateSummary ran); the
+  About page showed the commit twice (the SDK appends +<full sha> to InformationalVersion on top of the workflow's
+  +<short sha>: IncludeSourceRevisionInInformationalVersion false); sizes were decimal GB (56.1) against the
+  installer's 52.5 (units of 1024): one unit everywhere, as Explorer.
+- settings\ticino.json: the app wrote every field (BURST_MS, GROUP_R...) with the values it took for the mod's defaults,
+  which would pin them when a mod changes a default. It writes only what differs from the mod's own values now, and a
+  "light" file without GROUP_R loads with the build's radii (light changes forest and far ground, not GROUP_R).
 
 ## Working with cat (the owner)
 

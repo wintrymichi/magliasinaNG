@@ -109,7 +109,8 @@ public sealed class GameSettings
     {
         var root = ReadRoot(path);
         string preset = Str(root["preset"]) ?? "standard";
-        var s = preset == "light" ? Preset(Quality.Medium) : Preset(Quality.High);
+        // what the mod itself runs with for a key the file does not have ("light" leaves GROUP_R at the build's)
+        var s = ModDefaults(preset == "light");
         var forest = root["forest"] as JsonObject;
         var stream = root["stream"] as JsonObject;
         var level = root["level"] as JsonObject;
@@ -131,25 +132,53 @@ public sealed class GameSettings
         return s;
     }
 
+    /// <summary>What the mod does with no key in the file (stream.lua: the built level, PRESETS.light over it).</summary>
+    static GameSettings ModDefaults(bool light) => new()
+    {
+        ForestRadius = light ? 3 : 4, FarRadius = light ? 10 : 16, Buildings = 6, Roads = 5, Details = 1,
+        Helper = true, Diagnostics = false, BurstEveryMs = 1000, BurstMs = 20, ForestBlock = 3, ForestHyst = 1,
+    };
+
+    /// <summary>Writes only what differs from the mod's own values (the key goes when it is back at the mod's value),
+    /// so a later mod with new defaults is not held back by a file the app wrote; keys the app does not know stay.</summary>
     public void Save(string path)
     {
         var root = ReadRoot(path);
         // "light" also thins the far trees (forest.SHARE, which JSON cannot set: a Lua table from 0)
-        root["preset"] = Quality is Quality.Low or Quality.Medium ? "light" : "standard";
-        root["helper"] = Helper;
-        root["diagnostics"] = Diagnostics;
-        var forest = Obj(root, "forest");
-        forest["RADIUS"] = ForestRadius;
-        forest["BLOCK"] = ForestBlock;
-        forest["HYST"] = ForestHyst;
-        Obj(root, "level")["farRadius"] = FarRadius;
-        var stream = Obj(root, "stream");
-        stream["BURST_EVERY_MS"] = BurstEveryMs;
-        stream["BURST_MS"] = BurstMs;
-        var caps = new JsonObject();
-        foreach (var (k, v) in GroupCaps()) caps[k] = v;
-        Obj(root, "objects")["GROUP_R"] = caps;
-        Obj(root, "app")["quality"] = Quality.ToString().ToLowerInvariant();
+        bool light = Quality is Quality.Low or Quality.Medium;
+        var d = ModDefaults(light);
+        Set(root, null, "preset", light ? "light" : null);
+        Set(root, null, "helper", Helper == d.Helper ? null : Helper);
+        Set(root, null, "diagnostics", Diagnostics == d.Diagnostics ? null : Diagnostics);
+        Set(root, "forest", "RADIUS", ForestRadius == d.ForestRadius ? null : ForestRadius);
+        Set(root, "forest", "BLOCK", ForestBlock == d.ForestBlock ? null : ForestBlock);
+        Set(root, "forest", "HYST", ForestHyst == d.ForestHyst ? null : ForestHyst);
+        Set(root, "level", "farRadius", FarRadius == d.FarRadius ? null : FarRadius);
+        Set(root, "stream", "BURST_EVERY_MS", BurstEveryMs == d.BurstEveryMs ? null : BurstEveryMs);
+        Set(root, "stream", "BURST_MS", BurstMs == d.BurstMs ? null : BurstMs);
+        // the mod takes GROUP_R as a whole table (applyFields replaces it): all of it, or none
+        JsonObject? caps = null;
+        if (Buildings != d.Buildings || Roads != d.Roads || Details != d.Details)
+        {
+            caps = new JsonObject();
+            foreach (var (k, v) in GroupCaps()) caps[k] = v;
+        }
+        Set(root, "objects", "GROUP_R", caps);
+        Set(root, "app", "quality", Quality == Quality.High ? null : Quality.ToString().ToLowerInvariant());
         Files.WriteAtomic(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    /// <summary>root[section][key] = value; null removes the key, and the section when it is left empty.</summary>
+    static void Set(JsonObject root, string? section, string key, JsonNode? value)
+    {
+        JsonObject? o = section is null ? root : root[section] as JsonObject;
+        if (value is null)
+        {
+            o?.Remove(key);
+            if (section != null && o is { Count: 0 }) root.Remove(section);
+            return;
+        }
+        if (o is null) o = Obj(root, section!);
+        o[key] = value;
     }
 }

@@ -47,6 +47,8 @@ public partial class App : Application
         Packs = new PackManager(Config);
         Server = new ServerHost(Config);
         Packs.ServerRunning = () => Server.IsRunning;
+        Server.PacksMode = () => Packs.PacksMode;
+        if (!ShotMode) Packs.ScanMods();
         Log.Write($"Ticino Server {typeof(App).Assembly.GetName().Version} started");
 
         var w = new MainWindow();

@@ -44,7 +44,7 @@ public partial class ServerPage : UserControl, ITickable
     {
         bool? baseLua = App.Packs.BaseHasServerLua();
         bool have = LuaOverrideInstalled();
-        LuaBar.Visibility = baseLua == false || have ? Visibility.Visible : Visibility.Collapsed;
+        LuaBar.Visibility = baseLua == false && !App.Packs.PacksMode || have ? Visibility.Visible : Visibility.Collapsed;
         LuaBar.Severity = "Warning";
         LuaBar.Title = have ? "Server test Lua" : "Old base pack";
         if (have)
@@ -58,7 +58,9 @@ public partial class ServerPage : UserControl, ITickable
             LuaButton.Content = "Downloads";
         }
         string? exe = PackManager.ServerExe(C);
-        ExeCard.Description = exe is null ? "Not downloaded yet (Downloads page)."
+        ExeCard.Description = App.Packs.PacksMode && !App.Server.IsRunning
+            ? "Not used: the map is installed in packs mode (the zones in mods). Move them to a packs folder on the Home page to use the server."
+            : exe is null ? "Not downloaded yet (Downloads page)."
             : App.Server.External ? $"{exe} · running, started by Start Ticino" : exe;
     }
 
