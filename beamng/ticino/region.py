@@ -742,7 +742,8 @@ def copy_shared(srcs, dst, skip_shapes):
             json.dump(d, f, indent=1)
     # the materials whose textures the game cooked while driving (0.05-0.14 s each, 2026-10-28): ticino/warmup.lua
     warm = sorted({k for d in mats.values() for k in d if k.startswith(WARM_MATERIALS)})
-    with wopen(os.path.join(dst, "warmup_materials.json"), "w") as f:
+    # not *.materials.json: the game reads every such file of the level as material definitions (log error)
+    with wopen(os.path.join(dst, "warmup_mats.json"), "w") as f:
         json.dump(warm, f)
     log("shared files:", n, "material files:", len(mats), "game model materials added:", added)
 

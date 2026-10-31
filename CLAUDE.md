@@ -1551,7 +1551,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   of the level as old-format forest data (ForestData::readAppendJsonV23Format "string pointer is null" on
   tiles/t_10_0.forest.json, the streamer's row format). The tile files are now t_<cx>_<cy>.trees.json (region.py,
   forest.lua M.FILE). Never give a file of our own a name ending the game claims (.forest.json, .materials.json,
-  items.level.json...). michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
+  items.level.json...). warmup_materials.json (region.py) broke the same rule: "loadJsonMaterialsFile| unable to
+  deserialize" at every load of all Ticino (2026-10-31); now warmup_mats.json. michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
   %LOCALAPPDATA%\BeamNG\ticino_backup\ticino_region_1.orig.zip).
 - First region drive on DESKTOP-OUPOLOA (2026-10-28 evening, fixes tried there as user-folder overrides, then ported):
   - Shipping .dae: the game imports each COLLADA file on first use (~0.1 s, up to 46 s for bld_*/river_*) -> 30 s of

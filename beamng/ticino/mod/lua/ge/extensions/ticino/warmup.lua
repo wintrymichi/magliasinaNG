@@ -4,7 +4,7 @@
 --     game writes its .cdae cache now: unwarmed, each new zone stuttered for ~30 s (0.1 s a shape, up to 46 s).
 --     Never from the main menu: there the importer writes grey stub main.materials.json next to the shapes in the
 --     user folder (the level's materials are not loaded).
--- (2) One small double-sided quad per sign/fuel material (warmup_materials.json) in front of the camera for
+-- (2) One small double-sided quad per sign/fuel material (warmup_mats.json) in front of the camera for
 --     TEX_FRAMES frames, so the game cooks their textures (412 sign PNGs, 0.05-0.14 s each, ~4 s in all).
 -- Tried on michi's PC (2026-10-28): 10,212 shapes in 968 s, 0 errors; 424 materials in ~4 s.
 -- Since 2026-10-29 the zones ship their shapes compiled (.cdae, dae2cdae.py): the lists hold only what is left as .dae
@@ -136,7 +136,7 @@ local function onExtensionLoaded()
     log('E', 'ticino', 'warm-up: load the level ticino first (the shapes need its materials), now: ' .. tostring(lvl))
     return false
   end
-  S = { shapes = shapeList(), mats = readList('warmup_materials.json'), pos = 1, done = 0,
+  S = { shapes = shapeList(), mats = readList('warmup_mats.json'), pos = 1, done = 0,
         failed = 0, t0 = clock(), texState = 'waiting' }
   log('I', 'ticino', string.format('warm-up: %d shapes, %d materials', #S.shapes, #S.mats))
   progress('START')
