@@ -28,6 +28,11 @@ M.ONE_FOREST = true                   -- a frame finishes the pass of ONE tile a
 M.FORESTS_PER_FRAME = 1              -- Forests (tiles) a frame may change: each changed frame may redraw the cached sun
                                       -- shadow map (static scene), so a few big batches may beat many single tiles
 M.BATCH_MAX_MS = 60                   -- with FORESTS_PER_FRAME > 1: the time a frame may spend on its batch
+M.BLOCK = 1                           -- tiles of a BLOCK x BLOCK square share one Forest, and a frame does the passes
+                                      -- of all of them at once: a frame that touches a Forest costs ~185-230 ms whatever
+                                      -- it adds (PC flight 2026-10-31: +140 items 185 ms, +1,305 228 ms), so fewer
+                                      -- Forests touched, fewer such frames (emulated: 31 a tile crossed with 1, 18 with 2,
+                                      -- 11 with 3). Whether a Forest's own size adds to the cost is to be measured.
 M.CHECK_EVERY = 8                     -- items between two looks at the clock (budget, ONE_FOREST off)
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
@@ -39,7 +44,7 @@ local S = nil
 
 function M.init(cfg, level, markDirty)
   S = { cfg = cfg, level = level, has = cfg.forestTiles or {}, typeNames = cfg.forestTypes or {}, types = {},
-        rows = {}, rowOrder = {}, tiles = {}, pool = {}, nForest = 0, queue = {}, qpos = 1, markDirty = markDirty,
+        rows = {}, rowOrder = {}, tiles = {}, pool = {}, nForest = 0, blocks = {}, fn = {}, queue = {}, qpos = 1, markDirty = markDirty,
         stats = { made = 0, removed = 0, failed = 0, missingTypes = 0 } }
 end
 
@@ -95,7 +100,16 @@ local function itemType(i, solid)
   return d
 end
 
-local function forestOf(t)
+local function blockOf(key)
+  if M.BLOCK <= 1 then return nil end
+  local tx, ty = key:match('^(%-?%d+)_(%-?%d+)$')
+  return math.floor(tonumber(tx) / M.BLOCK) .. '_' .. math.floor(tonumber(ty) / M.BLOCK)
+end
+
+local function forestOf(t, key)
+  local bk = not t.forestId and blockOf(key)
+  local b = bk and S.blocks[bk]
+  if b then t.forestId, t.block = b.id, bk; b.tiles = b.tiles + 1 end
   local f = t.forestId and scenetree.findObjectById(t.forestId)
   while not f and #S.pool > 0 do f = scenetree.findObjectById(table.remove(S.pool)) end
   if not f then
@@ -106,6 +120,7 @@ local function forestOf(t)
     if scenetree.MissionGroup then scenetree.MissionGroup:addObject(f) end
   end
   t.forestId = f:getID()
+  if bk and not b then S.blocks[bk] = { id = t.forestId, tiles = 1 }; t.block = bk end
   return f
 end
 
@@ -185,6 +200,19 @@ function M.retarget(cx, cy)
     if a[5] ~= b[5] then return a[5] < b[5] end
     return a[1] < b[1]
   end)
+  if M.BLOCK > 1 then             -- the passes of one block's tiles next to each other (same class): one frame for them
+    local out, done = {}, {}
+    for i, p in ipairs(passes) do
+      if not done[i] then
+        local bk = blockOf(p[1])
+        for j = i, #passes do
+          local o = passes[j]
+          if not done[j] and o[4] == p[4] and blockOf(o[1]) == bk then out[#out + 1] = o; done[j] = true end
+        end
+      end
+    end
+    passes = out
+  end
   S.queue, S.qpos = {}, 1
   for _, p in ipairs(passes) do
     S.queue[#S.queue + 1] = { key = p[1], share = p[2], solid = p[3], pos = 1, near = p[4] == 0 }
@@ -198,7 +226,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
   local t0 = clock()
   local left = perFrame or M.PER_FRAME
   local q = S.queue
-  local forests = 0
+  local forests, ids = 0, {}
   while S.qpos <= #q do
     local op = q[S.qpos]
     local t = S.tiles[op.key]
@@ -217,9 +245,10 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       local want = shown(i, op.share)
       local it = t.items[i]
       if it and (not want or t.itemSolid[i] ~= op.solid) then
-        fd = fd or forestOf(t):getData()
+        fd = fd or forestOf(t, op.key):getData()
         pcall(function() fd:removeItem(it) end)
         t.items[i], t.n = nil, t.n - 1
+        S.fn[t.forestId] = (S.fn[t.forestId] or 1) - 1
         S.stats.removed = S.stats.removed + 1
         left = left - 1
         it = nil
@@ -228,13 +257,14 @@ function M.step(clock, budgetMs, perFrame, burstMs)
         local r = rows[i]
         local d = itemType(r[1], op.solid)
         if d then
-          fd = fd or forestOf(t):getData()
+          fd = fd or forestOf(t, op.key):getData()
           local m = MatrixF(true)
           m:setFromEuler(vec3(0, 0, -math.rad(r[5] or 0)))
           m:setPosition(vec3(r[2], r[3], r[4]))
           local ok, made = pcall(function() return fd:createNewItem(d, m, r[6] or 1) end)
           if ok and made then
             t.items[i], t.n = made, t.n + 1
+            S.fn[t.forestId] = (S.fn[t.forestId] or 0) + 1
             t.itemSolid = t.itemSolid or {}
             t.itemSolid[i] = op.solid
             S.stats.made = S.stats.made + 1
@@ -251,14 +281,35 @@ function M.step(clock, budgetMs, perFrame, burstMs)
     if i <= #rows then return false end
     local touched = fd ~= nil
     t.share, t.solid, t.dirty = op.share, op.solid, nil
+    local fid = t.forestId
     if t.n == 0 then
-      if t.forestId then S.pool[#S.pool + 1] = t.forestId end
+      local b = t.block and S.blocks[t.block]
+      if b then
+        b.tiles = b.tiles - 1
+        if b.tiles <= 0 then S.pool[#S.pool + 1] = b.id; S.blocks[t.block] = nil end
+      elseif t.forestId then
+        S.pool[#S.pool + 1] = t.forestId
+      end
       S.tiles[op.key] = nil
     end
     S.qpos = S.qpos + 1
-    if touched then forests = forests + 1; S.stats.touched = (S.stats.touched or 0) + 1; S.stats.lastKey = op.key end
-    if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
-    if burstMs then
+    if touched and not ids[fid] then
+      ids[fid] = true
+      forests = forests + 1
+      S.stats.touched = (S.stats.touched or 0) + 1
+    end
+    if touched then S.stats.lastKey = string.format('%s, %d in its Forest', op.key, S.fn[fid] or 0) end
+    -- the next pass in the queue on the same Forest (a block) goes in this frame too: it costs the frame little more
+    local nx = q[S.qpos]
+    local same = nx and fid and S.tiles[nx.key] and S.tiles[nx.key].forestId == fid
+    if not same and nx and fid and M.BLOCK > 1 and not (S.tiles[nx.key] and S.tiles[nx.key].forestId) then
+      local b = S.blocks[blockOf(nx.key) or '']
+      same = b and b.id == fid
+    end
+    if M.ONE_FOREST and touched and not same and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
+    if same then
+      -- (no time limit between the passes of one block: a second frame on the same Forest costs as much again)
+    elseif burstMs then
       if clock() - t0 > burstMs then break end
     else
       local limit = (M.FORESTS_PER_FRAME > 1 and budgetMs and budgetMs < 1000) and M.BATCH_MAX_MS or budgetMs
@@ -299,15 +350,15 @@ end
 -- Returns the number of items removed.
 function M.clear()
   if not S then return 0 end
-  local n = 0
+  local n, seen = 0, {}
   for _, t in pairs(S.tiles) do
     local f = t.forestId and scenetree.findObjectById(t.forestId)
     local fd = f and f:getData()
     if fd then for _, it in pairs(t.items) do pcall(function() fd:removeItem(it) end); n = n + 1 end end
-    if t.forestId then S.pool[#S.pool + 1] = t.forestId end
+    if t.forestId and not seen[t.forestId] then seen[t.forestId] = true; S.pool[#S.pool + 1] = t.forestId end
     if t.solid and S.markDirty then S.markDirty() end
   end
-  S.tiles, S.queue, S.qpos = {}, {}, 1
+  S.tiles, S.queue, S.qpos, S.blocks, S.fn = {}, {}, 1, {}, {}
   S.stats.removed = S.stats.removed + n
   return n
 end
