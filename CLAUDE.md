@@ -1605,6 +1605,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   hitches: the terrain swap frame 207-256 ms at every window move (terrainFile ~105 ms + the frame after), the forest
   after a spawn (~75 frames of ~190 ms for ~100 s at PER_FRAME 250, the budget was looked at only every 64 items) and
   the AI map read at a jump (25.6 s, PR #105). forest.PER_FRAME 64 did not help (see Streaming helper process).
+- Installer on an incomplete release (2026-10-31, ticino-all-cdae while two slices were rebuilt): every ticino_*.zip in
+  mods not named in the release counted as old, so the valid ti_2_4 zip was moved out, and the Move-Item error
+  ($ErrorActionPreference Stop) ended the install (the PC run discarded stderr, so no message). Now only zips of a zone
+  the release has under other names are old, the others are kept with a warning, and a failed move does not stop it.
+  Capture stderr (`*>&1`) when running the installer in a test.
 - The cloud session could not run a downloaded pwsh to check the PowerShell scripts (auto mode refused code from
   outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
 - `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,

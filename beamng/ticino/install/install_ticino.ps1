@@ -193,6 +193,12 @@ if (Test-Path $checkedFile) {
 }
 function Save-Checked { $checked | ConvertTo-Json | Set-Content -Path $checkedFile -Encoding ASCII }
 
+# The zone of a Ticino zip: ticino_<zone>_<n>.zip -> <zone> (ticino_base_<n>.zip -> base)
+function Zone-Of([string]$name) {
+    if ($name -match '^ticino_(.+)_\d+\.zip$') { return $Matches[1] }
+    return $name
+}
+
 # A zip in mods is in place when it has the size and the sha256 of the release (checked once, then remembered).
 function Test-Installed([object]$a, [bool]$hashNow) {
     $dest = Join-Path $mods $a.name
@@ -213,8 +219,14 @@ function Test-Installed([object]$a, [bool]$hashNow) {
 }
 
 $names = @{}
-foreach ($a in $zips) { $names[$a.name] = $true }
-$old = @(Get-ChildItem $mods -Filter 'ticino_*.zip' -File | Where-Object { -not $names.ContainsKey($_.Name) })
+$relZones = @{}
+foreach ($a in $zips) { $names[$a.name] = $true; $relZones[(Zone-Of $a.name)] = $true }
+# A zip is old only when the release has zips of its zone (base or a zone) under other names. A zone the release does
+# not have at all (a build still uploading, PC test 2026-10-31: ti_2_4 was moved out and the install stopped) is kept.
+$notInRelease = @(Get-ChildItem $mods -Filter 'ticino_*.zip' -File | Where-Object { -not $names.ContainsKey($_.Name) })
+$old = @($notInRelease | Where-Object { $relZones.ContainsKey((Zone-Of $_.Name)) })
+$kept = @($notInRelease | Where-Object { -not $relZones.ContainsKey((Zone-Of $_.Name)) })
+foreach ($k in $kept) { Say "  kept: $($k.Name) (its zone is not in the release: the release may be incomplete)" 'Yellow' }
 $todo = @()
 $toHash = 0
 foreach ($a in $zips) {
@@ -256,14 +268,19 @@ if (Test-Path $stateFile) { try { $prevState = Get-Content $stateFile -Raw | Con
 $baseSha = Sha $base
 if (-not $KeepCache -and (-not $prevState -or $prevState.base -ne "$($base.name)|$baseSha")) { Clear-LevelCache }
 foreach ($o in $old) {
-    if ($DeleteOld) {
-        Say "Deleting $($o.Name)"
-        Remove-Item $o.FullName -Force
-    } else {
-        $oldDir = Join-Path $work 'old'
-        New-Item -ItemType Directory -Force -Path $oldDir | Out-Null
-        Say "Moving $($o.Name) to $oldDir"
-        Move-Item $o.FullName (Join-Path $oldDir $o.Name) -Force
+    try {
+        if ($DeleteOld) {
+            Say "Deleting $($o.Name)"
+            Remove-Item $o.FullName -Force -ErrorAction Stop
+        } else {
+            $oldDir = Join-Path $work 'old'
+            New-Item -ItemType Directory -Force -Path $oldDir | Out-Null
+            Say "Moving $($o.Name) to $oldDir"
+            Move-Item $o.FullName (Join-Path $oldDir $o.Name) -Force -ErrorAction Stop
+        }
+    } catch {
+        # one old zip that cannot be moved must not stop the install (the game would load it beside the new ones)
+        Say "  could not move $($o.Name): $($_.Exception.Message) (move it out of mods by hand)" 'Red'
     }
 }
 
