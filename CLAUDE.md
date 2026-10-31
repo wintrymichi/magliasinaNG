@@ -913,6 +913,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   2-8 objects each (road_wear, road_m3, skin pieces, slowest spawn 10-36 ms). The slow-frame line now gives the sum
   of the spawns and the streamer's own Lua time of that frame (st.luaMs): frame minus Lua = engine, to tell before
   guessing (shadow cache redraw, material first use, collision).
+- PC tests of d945d41 (2026-10-31): sun shadows off (113 fps) and NEAR_BURST_MS 150 (worse, a 579 ms frame) did not
+  remove the 2-3 frames of 450-580 ms that add 3-7 objects (Lua 40-50 ms, the rest engine). Hypothesis "PNG textures
+  cooked on first sight" (1,838 PNGs, 578 Mpx outside the warm-up's mp_ch_/mp_fuel_) was WRONG on disk: the flights
+  wrote only temp/art/terrainMaterialCache/<hash>.dds (one per terrain swap, part of its ~230 ms). The slow frames are
+  a first use per SESSION: gone on a second flight in the same session, back after a restart. Next: tell material
+  first use from shape first use (jump to another zone first, then fly).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
