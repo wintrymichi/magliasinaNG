@@ -908,6 +908,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ~250 ms, the jump (swap 2.35 s: position 1.16 s + terrainFile 1.19 s). The object frames were the near ring after the
   jump, ONE building a frame (OBJ_BUDGET_MS 3 and the one-heavy-object break) with spawns of only 4-42 ms: the frame cost
   is the engine's per frame that adds a building. The near rings now get NEAR_BURST_MS (40) a frame with no heavy break.
+- PC flight of ef915d5 (2026-10-31): 93.1 / 95.1 fps, frames over 50 ms 171 / 124 (83fabe4: 87): the near bursts
+  work (225 objects in one 188 ms frame), but ~38 s after the jump 6 "near objects" frames of 122-461 ms added only
+  2-8 objects each (road_wear, road_m3, skin pieces, slowest spawn 10-36 ms). The slow-frame line now gives the sum
+  of the spawns and the streamer's own Lua time of that frame (st.luaMs): frame minus Lua = engine, to tell before
+  guessing (shadow cache redraw, material first use, collision).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.

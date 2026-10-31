@@ -347,6 +347,7 @@ local function apply(op)
       log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
     end
     if dts > (S.stats.maxSpawn or 0) then S.stats.maxSpawn, S.stats.maxShape = dts, e.shapeName or e.class end
+    S.stats.spawnMs = (S.stats.spawnMs or 0) + dts
     if ok and id then
       S.live[key] = { id = id, col = col }
       if col then S.colDirty = true; S.stats.colMade = (S.stats.colMade or 0) + 1 end
@@ -764,8 +765,8 @@ function M.delsPending() return S and #S.queue >= math.max(S.delFrom or #S.queue
 function M.counts()
   if not S then return nil end
   local c = { created = S.stats.created, deleted = S.stats.deleted, colMade = S.stats.colMade or 0,
-              maxSpawn = S.stats.maxSpawn or 0, maxShape = S.stats.maxShape }
-  S.stats.maxSpawn, S.stats.maxShape = 0, nil
+              maxSpawn = S.stats.maxSpawn or 0, maxShape = S.stats.maxShape, spawnMs = S.stats.spawnMs or 0 }
+  S.stats.maxSpawn, S.stats.maxShape, S.stats.spawnMs = 0, nil, 0
   return c
 end
 -- Are objects of the rings up to d (tiles from the car's) still queued? (the queue is sorted by ring: the head tells)

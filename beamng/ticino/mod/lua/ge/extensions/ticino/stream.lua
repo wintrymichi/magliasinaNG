@@ -180,7 +180,12 @@ local function frameWork()
   local s = string.format(' | objects +%d -%d (colliders +%d), forest passes %d items +%d -%d, reloads %d',
     o.created - o0.created, o.deleted - o0.deleted, o.colMade - o0.colMade, f.touched - f0.touched,
     f.made - f0.made, f.removed - f0.removed, (st.reloads or 0) - (st.reloadsAt or 0))
-  if o.maxSpawn > 0 then s = s .. string.format(', slowest spawn %.0f ms %s', o.maxSpawn, tostring(o.maxShape)) end
+  if o.maxSpawn > 0 then
+    s = s .. string.format(', spawns %.0f ms, slowest %.0f ms %s', o.spawnMs or 0, o.maxSpawn, tostring(o.maxShape))
+  end
+  -- the streamer's own Lua time in that frame: the rest of the frame is the engine (PC flight of ef915d5: frames of
+  -- 120-460 ms adding 2-8 objects whose spawns took 10 ms at most)
+  if st.luaMs then s = s .. string.format(', lua %.0f ms', st.luaMs) end
   if f.touched > f0.touched then s = s .. ' (tile ' .. tostring(f.lastKey) .. ')' end
   return s
 end
@@ -959,7 +964,12 @@ function M.dropAIRoads()
   return n .. ' AI roads deleted (the AI map stays as it was built)'
 end
 
-M.onUpdate = onUpdate
+-- onUpdate with its own time kept for the slow-frame line of the next frame
+M.onUpdate = function(dtReal)
+  local t = clock()
+  onUpdate(dtReal)
+  if st then st.luaMs = clock() - t end
+end
 M.onClientPostStartMission = onClientPostStartMission
 M.onClientEndMission = onClientEndMission
 M.onExtensionUnloaded = stop
