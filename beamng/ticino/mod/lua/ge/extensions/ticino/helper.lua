@@ -54,6 +54,7 @@ function M.alive(force)
   S.lastCheck = now
   local a = decode(readAll(M.DIR .. 'alive.json'))
   local on = a and a.t and math.abs(os.time() - a.t) <= M.ALIVE_S or false
+  S.info = on and a or nil
   if on ~= S.on then
     log('I', 'ticino', on and ('helper process found (pid ' .. tostring(a.pid) .. ')') or 'no helper process')
   end
@@ -119,6 +120,9 @@ function M.wait(wx, wy, ms)
   log('W', 'ticino', string.format('helper: window %d,%d not ready after %d ms, made in Lua', wx, wy, ms))
   return false
 end
+
+-- The helper's alive.json while it runs (the Ticino server adds serve = true and root), else nil.
+function M.info() return S and S.info end
 
 function M.stats()
   if not S then return 'off' end

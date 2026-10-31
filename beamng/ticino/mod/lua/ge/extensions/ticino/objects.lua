@@ -16,6 +16,8 @@
 -- the cells from one for props or trees only (stream.lua lets those wait). COL_LAZY > 0 re-centres the cells only when
 -- the car's cell is more than COL_LAZY from their centre (tried with 1: too many triangles).
 
+local files = require('ticino/files')
+
 local M = {}
 
 M.NO_COLLISION_SHAPES = { 'clutter_pallet', 'clutter_metal_bin', 'clutter_big_dustbin', 'clutter_metal_drum',
@@ -93,7 +95,8 @@ local function tile(cx, cy)
     S.tiles[key] = false
     return nil
   end
-  local ok, data = pcall(jsonDecode, readFile(string.format(M.TILE_FILE, S.level, cx, cy)) or '')
+  if not files.near(key) then return nil end          -- served and not there yet: asked again at refresh()
+  local ok, data = pcall(jsonDecode, readFile(files.map(string.format(M.TILE_FILE, S.level, cx, cy))) or '')
   t = (ok and type(data) == 'table') and data or false
   if t then
     for _, e in ipairs(t) do
@@ -406,7 +409,7 @@ function M.prefetch(n)
   for ty = c[2] - R, c[2] + R do
     for tx = c[1] - R, c[1] + R do
       local key = tx .. '_' .. ty
-      if S.has[key] and S.tiles[key] == nil then
+      if S.has[key] and S.tiles[key] == nil and files.ready(key) then
         tile(tx, ty)
         done = done + 1
         if done >= n then return done end
@@ -445,13 +448,14 @@ function M.updateCols(x, y, force)
     if x >= x0 - h and x < x0 + span + h and y >= y0 - h and y < y0 + span + h then return false end
   end
   C.cell = { i, j }
+  S.colXY = { x, y }
   local R = C.R
   local want = {}
   if R >= 0 then
     for b = j - R, j + R do
       for a = i - R, i + R do
         local k = a .. '_' .. b
-        if C.has[k] then want[k] = { a, b } end
+        if C.has[k] and files.near(files.serving() and files.colTile(a, b, C.size) or k) then want[k] = { a, b } end
       end
     end
   end
@@ -565,7 +569,7 @@ function M.stepCols(clock, budgetMs)
       local k = table.remove(C.queue or {}, 1)
       if not k then return true end
       local ab = C.want and C.want[k]
-      local data = ab and readFile(string.format(M.COL_FILE, S.level, ab[1], ab[2]))
+      local data = ab and readFile(files.map(string.format(M.COL_FILE, S.level, ab[1], ab[2])))
       if data and data:sub(1, 4) == 'TCC1' then
         local b1, b2, b3, b4 = data:byte(5, 8)
         local z0 = b1 + 256 * b2 + 65536 * b3 + 16777216 * b4
@@ -639,13 +643,14 @@ function M.updateFar(cx, cy, wcx, wcy, n)
   for ty = cy - R, cy + R do
     for tx = cx - R, cx + R do
       local key = tx .. '_' .. ty
-      if S.farHas[key] and not S.farLive[key] then
+      if S.farHas[key] and not S.farLive[key] and files.far(key) then
         want[#want + 1] = { key, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) }
       end
     end
   end
   table.sort(want, function(a, b) return a[4] < b[4] end)
   S.farQueue, S.farPos = want, 1
+  S.farArgs = { cx, cy, wcx, wcy, n }
   S.farWin = { wcx, wcy, n }
   for _, f in pairs(S.farLive) do M._farHide(f) end
   return deleted
@@ -673,7 +678,7 @@ function M.stepFar(clock, budgetMs)
     if not S.farLive[key] then
       local ts = clock()
       local o = createObject('TSStatic')
-      o:setField('shapeName', 0, string.format(M.FAR_SHAPE, S.level, tx, ty))
+      o:setField('shapeName', 0, files.map(string.format(M.FAR_SHAPE, S.level, tx, ty)))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
       o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
@@ -696,6 +701,22 @@ function M.stepFar(clock, budgetMs)
 end
 
 function M.farPending() return S and S.farPos <= #S.farQueue end
+
+-- The Ticino server finished tiles that were skipped (files.lua): queue what the car's tile wants of them, the
+-- collision cells and the far ground again. Objects already made are left as they are.
+function M.refresh(cols)
+  if not S or not S.cell then return 0 end
+  local c = S.cell
+  S.cell = nil
+  local q = M.retarget(c[1], c[2])
+  if cols ~= false and S.colXY then M.updateCols(S.colXY[1], S.colXY[2], true) end
+  if S.farArgs then M.updateFar(unpack(S.farArgs)) end
+  return q
+end
+
+function M.refreshFar()
+  if S and S.farArgs then M.updateFar(unpack(S.farArgs)) end
+end
 
 -- Collision settings at run time (tests): the collision radius in tiles and the groups that never collide. Every
 -- object of the tiles around is checked again through the queue.

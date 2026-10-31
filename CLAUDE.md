@@ -1674,3 +1674,38 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - First full .cdae build (run 41095920457): slice ti_1_m2 stopped in compile_level (min of an empty array): a shape whose
   <triangles> blocks are all empty. parse now refuses it (stays .dae), and any other error of one shape keeps that
   shape as .dae (listed in cdae.kept) instead of stopping the slice.
+## Ticino server (thread "Studiare la mod tutta nel server", 2026-10-29)
+
+- With the 88 Ticino packs in mods the game spends 75-81 s at EVERY start in initDB (beamng.log: the last
+  "mountEntry" at 5 s, "took ... to reorganise 596326 files" at 80-86 s): mounting is per file or per byte, not free.
+  Runtime FS:mount of one zone pack would cost about 1 s on the game thread: the server puts loose files under temp
+  instead. Read the game's own log for a cost before guessing it.
+- The game's .cdae cache of our zone DAEs lives at temp/<same path>.cdae (12 GB after four zones on michi's PC).
+  dae2cdae.py output vs those files: same geometry; the engine keeps the DAE node tree (base00, start01) and names
+  the details detail<size>, sets smallestVisibleSize to the smallest detail (a shape is hidden below it: cdae.encode
+  drew everything down to 2 px), takes the LOD meshes' own normals (encode ignored them), stores colours truncated
+  (floor(c * 255)) and reflectanceMap = the material's index. Device files more than 7 folders deep cannot be staged:
+  copy them to a shallow folder first (temp/claude_cmp on michi's PC, left there).
+- raw.githubusercontent.com is blocked from michi's PC device shell too (403): files reach it only through the thread.
+- The pkill self-kill again (exit 144): `pkill -f "[t]icino_server.py"` in a command that also ran
+  `server/ticino_server.py`. Kill by PID in a call of its own.
+- Server mode, first try: re-asking for late tiles called forest.retarget at every ready.json change; the forest queue
+  restarted each time and the far ground (made only when objects and forest are idle) was never made (10 far tiles
+  instead of 1,155). Ask again only for tiles that were late and are ready now, at most once a second.
+- The "packs in mods" probe must not test one tile file: the first key of stream.json tiles may be a zone that a test
+  install does not have.
+- ticino's own dae2cdae.py (build-time .cdae, PR #103) replaced the server's: the server calls compile_bytes(bytes).
+  A shape it raises Unsupported on is counted as failed and NOT served (the tile names it as .cdae): watch "failed" in
+  the server's status line. Zone packs built with the .cdae already are copied as they are.
+- PC test of the server (2026-10-31, kit c77c2de): game start 85 s -> 4 s, level load the same, flight 94 fps, but
+  standing still in Lugano from an empty cache the scene never settled (live 1,357 -> 6,943, 27 fps after 6 min). In
+  the simulator: every tile the server finished made the streamer re-queue its objects and trees and force a collision
+  rebuild (68 rebuilds against 1 with the packs). files.poll now holds the tiles that came until none came for
+  SETTLE_MS (at most SETTLE_MAX_MS, at once within URGENT_RING of the car), and a refresh rebuilds the collision only
+  for a tile within one ring and touches the forest only within its radius: 5 rebuilds, the scene still in ~40 s.
+- tests/sim_stream.lua without REALTIME=1 runs its clock on CPU time: with SPEED=0 the bursts wait forever ("wait
+  burst") in BOTH modes. Compare server and packs standing still only with REALTIME=1.
+- adopt with shutil.move hit WinError 32 on a zone zip held by a ticino_helper.exe left running (a PyInstaller onefile
+  child survives Stop-Process of its parent): the 1.85 GB copy was made and the original stayed. adopt now probes every
+  pack with a rename first and moves nothing while one is open, and a cross-disk copy goes to .part and is removed
+  again if the original cannot be.

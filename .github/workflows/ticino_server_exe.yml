@@ -1,0 +1,57 @@
+# Ticino server for a test on the PC: server_ticino.zip on the draft release ticino-all with ticino_server.exe
+# (PyInstaller with numpy, no Python needed on the PC), the mod's Lua of this commit (lua/ge/extensions/ticino/, to put
+# into the BeamNG user folder as an override until a base pack carries it) and LEGGIMI.txt. Started by a change of
+# beamng/ticino/server/exe_stamp.txt (the cloud session cannot dispatch a workflow off the default branch). The zip is
+# not called ticino_*.zip: the installer and the server take every ticino_*.zip for a level pack.
+name: ticino server exe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/server/exe_stamp.txt
+
+permissions:
+  contents: write
+
+jobs:
+  server:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ticino-all
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Server exe
+        shell: bash
+        run: |
+          python -m pip install --progress-bar off numpy pyinstaller
+          cd beamng/ticino/server
+          pyinstaller --onefile --name ticino_server --paths ../helper --paths .. \
+            --hidden-import dae2cdae --hidden-import cdae --hidden-import ticino_helper ticino_server.py
+          ./dist/ticino_server.exe --help > /dev/null
+      - name: Check the .cdae writer
+        shell: bash
+        run: |
+          cd beamng/ticino
+          python tests/test_cdae.py
+      - name: Pack
+        shell: bash
+        run: |
+          mkdir -p pack/lua/ge/extensions/ticino
+          cp beamng/ticino/server/dist/ticino_server.exe pack/
+          cp beamng/ticino/mod/lua/ge/extensions/ticino/*.lua pack/lua/ge/extensions/ticino/
+          cp beamng/ticino/server/LEGGIMI.txt pack/
+          echo "commit ${GITHUB_SHA}" > pack/VERSION.txt
+          (cd pack && 7z a -tzip ../server_ticino.zip . > /dev/null)
+          ls -l server_ticino.zip
+      - name: Upload
+        shell: bash
+        run: |
+          gh release view "$TAG" > /dev/null 2>&1 || \
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "Ticino ($TAG, draft)" --notes "Draft."
+          gh release upload "$TAG" server_ticino.zip --clobber
