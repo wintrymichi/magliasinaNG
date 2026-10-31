@@ -22,7 +22,7 @@ public partial class MainWindow : Window
         tick.Tick += (_, _) => Tick();
         tick.Start();
         autoCheck.Tick += async (_, _) => await CheckForUpdates(false);
-        autoCheck.Start();
+        if (!App.ShotMode) autoCheck.Start();
         Loaded += async (_, _) => await OnFirstLoad();
         App.Server.PropertyChanged += (_, _) => Dispatcher.BeginInvoke(UpdateStatus);
         App.Packs.PropertyChanged += (_, e) =>
@@ -62,6 +62,7 @@ public partial class MainWindow : Window
 
     async Task OnFirstLoad()
     {
+        if (App.ShotMode) return;
         if (App.Config.StartServerWithApp && App.Packs.DataFolder != null)
         {
             await App.Packs.ApplyPending();

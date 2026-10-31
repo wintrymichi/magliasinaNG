@@ -28,6 +28,8 @@ static class Screenshots
             w.Show();
             await Idle();
             await App.Packs.Refresh();
+            // Refresh returns at once while another check runs: wait for it (at most a minute)
+            for (int i = 0; i < 300 && App.Packs.Checking; i++) await Task.Delay(200);
             foreach (var theme in new[] { ThemeMode.Light, ThemeMode.Dark })
             {
                 Application.Current.ThemeMode = theme;

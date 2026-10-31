@@ -10,6 +10,9 @@ public partial class App : Application
     Mutex? single;
 
     /// <summary>The app's state, shared by every page.</summary>
+    /// <summary>Started with --screenshots: no startup check, no timers that change the pages.</summary>
+    public static bool ShotMode { get; private set; }
+
     public static AppConfig Config { get; private set; } = null!;
     public static PackManager Packs { get; private set; } = null!;
     public static ServerHost Server { get; private set; } = null!;
@@ -26,6 +29,7 @@ public partial class App : Application
         for (int i = 0; i < e.Args.Length; i++)
             if (e.Args[i] == "--screenshots" && i + 1 < e.Args.Length) shots = e.Args[++i];
 
+        ShotMode = shots != null;
         if (shots is null)
         {
             single = new Mutex(true, @"Local\TicinoServer.App", out bool first);
