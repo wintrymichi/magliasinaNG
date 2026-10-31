@@ -1679,6 +1679,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   pacer (settings "pacing"), engine subsystems in the slow-frame lines (Engine.Debug.getLastPerformanceMetrics), the
   helper/server write_atomic with staging + warm read, terrainShadows as a setting (default still on: mountain
   shadows must be checked in screenshots first). The window job's files and its swap are now in different frames.
+- Forest frames (~200 ms a touch "whatever it adds", PC 2026-10-30/31) fit BeamNG.Earth trees.lua: a frame adding or
+  removing Forest items costs the engine ~0.5 us for every item in the level of each SHAPE touched (any Forest), and a
+  pass touches nearly all 43 tree shapes. Earth splits the populations with SHAPE_VARIANTS path spellings
+  (dir/./name). forest.SHAPE_VARIANTS (default 1 = off) does it per block; to be checked on the PC with 4 (frames, and
+  no imposter squares: a respelled path may need its own imposter bake).
 - tests/sim_stream.lua cannot judge the gate: its frame "wall time" is the Lua's CPU time, so every frame is calm;
   it only proves no Lua error and the same throughput (2,402 vs 2,406 objects in 120 s with SPAWN_MS=30).
   tests/pace_test.lua emulates the engine's filter for the effect. sim_stream needs a level: curl ticino_base_1.zip
