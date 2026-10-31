@@ -37,6 +37,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.0.0+$($env:GITHUB_SHA.Substring(0,7))"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem out | Format-Table Name, Length
       - name: Screenshots
         shell: pwsh
