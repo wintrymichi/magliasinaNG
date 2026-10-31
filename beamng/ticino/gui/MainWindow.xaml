@@ -22,12 +22,42 @@
                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="Ticino Server" FontSize="16" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                    <TextBlock Text="MagliasinaNG per BeamNG.drive" Style="{StaticResource CaptionText}" />
+                    <TextBlock Text="MagliasinaNG · BeamNG" Style="{StaticResource CaptionText}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </StackPanel>
 
             <ListBox x:Name="Nav" Grid.Row="1" Margin="8,0,8,0" Background="Transparent" BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="Nav_SelectionChanged">
+                <!-- as the NavigationView of Windows 11: a quiet fill and an accent pill on the selected item -->
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <Setter Property="Margin" Value="0,2" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Grid>
+                                        <Border x:Name="Bg" CornerRadius="4" Background="Transparent" />
+                                        <Border x:Name="Pill" Width="3" Height="16" CornerRadius="1.5" HorizontalAlignment="Left"
+                                                Background="{DynamicResource AccentFillColorDefaultBrush}" Visibility="Collapsed" />
+                                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                            <Setter TargetName="Pill" Property="Visibility" Value="Visible" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
                 <ListBoxItem Tag="home" Padding="12,9">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Icon}" Text="&#xE80F;" Margin="0,0,14,0" />
