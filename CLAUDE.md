@@ -858,6 +858,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   BeamNG, deleting the level cache and uploading files until michi writes his yes in the thread itself (a yes relayed by
   the coordinator does not count). An installer run against a release missing a zone moved the installed zone to old\
   and stopped (stderr was discarded, so the error was lost): capture stderr; fixed in ticino 39dd1ae ("kept").
+- 2026-10-31 PC tests: ticino_helper.exe / ticino_server.exe are PyInstaller onefile: Stop-Process on the PID that
+  Start-Process returned kills only the bootloader, the child keeps running and keeps the zips in mods open. A helper
+  left from a flight made `ticino_server.exe adopt` fail (WinError 32 on mods\ticino_ti_0_0_1.zip) after shutil.move
+  had already COPIED that 1.85 GB zip into ticino_data (adopt then probe-renames first, 0a41b7c). Stop helpers by name
+  and start time, and check with tasklist before moving zips. Two sessions ended mid-chain overnight: check for
+  leftover helpers/servers (no --game-pid on the command line = a test's) before the next run.
+- Server mode (0a41b7c): menu 4 s instead of ~85 s (packs: "reorganise 596431 files" 85 s after the last mount),
+  Lugano standing 80 fps, flight 93.5 fps with 15 frames >100 ms. The first kit (c77c2de) re-queued every arriving
+  tile: the scene never settled (6,943 live objects, 27 fps).
+- The 450-580 ms "near objects" frames with few objects appear only the first time a place is loaded in a game
+  session (gone on a second lap in the same session, back after a restart with the temp .dds still there): first use of
+  shapes/materials in memory, not texture cooking (only temp\art\terrainMaterialCache\*.dds is written, one per
+  terrain swap). Sun shadows off: +18 fps but the same slow frames.
 
 ## Data from the cloud sessions
 
