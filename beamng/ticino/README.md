@@ -6,7 +6,8 @@ BeamNG level, `ticino`, streamed around the car. It is built by the same pipelin
 buildings, the survey's roads, walls, pavements, bridges, tunnels, motorways, forest, signs and traffic signals.
 The two maps are separate mods and can be installed together: nothing here changes the Malcantone level.
 
-Branch: `ticino`. Status: draft release, not public yet (see "State" at the end).
+Branch: `ticino`. Status: public pre-release **`ticino-v1`** (releases/tag/ticino-v1; the Malcantone v3.1.1 stays the
+latest release). See "State" at the end for what is still open.
 
 ## Install (Windows)
 
@@ -14,7 +15,8 @@ Needs BeamNG.drive 0.40.x from Steam, about **52 GB** free on the disk of the Be
 about 15 GB more that the game fills with its cache of the level as you drive, 16 GB of RAM (32 GB recommended) and
 a GPU with 8 GB of video memory or more.
 
-1. Download `installer_ticino.zip` from the release and unpack it anywhere.
+1. Download `installer_ticino.zip` from the release [ticino-v1](https://github.com/wintrymichi/magliasinaNG/releases/tag/ticino-v1)
+   and unpack it anywhere (or use the Ticino app, `TicinoServer.exe`, from the same release).
 2. Close BeamNG and double-click **`Install Ticino.bat`**.
 
 The installer (`install/install_ticino.ps1`):
@@ -41,7 +43,8 @@ Options: `-Mode auto|server|packs`, `-DataFolder <path>` (server mode: where the
 it would do), `-DeleteOld`, `-NoHelper`, `-NoShortcut`, `-KeepCache`,
 `-UserFolder <path>` (another BeamNG user folder), `-GameFolder <path>` (BeamNG not in a Steam library),
 `-Tag <release>`, `-Uninstall` (removes the zips, the cache, the tools and the shortcut; keeps the settings).
-A draft release can only be downloaded with the GitHub CLI logged in (`gh auth login`); a published one needs nothing.
+The public release needs nothing; a draft (`-Tag ticino-all-cdae`, test builds) only with the GitHub CLI logged in
+(`gh auth login`).
 
 Run the installer again to update. Linux or by hand: put every `ticino_*.zip` of the release into
 `<user folder>/mods`, nothing else is needed (the helper runs with `python3 helper/ticino_helper.py`).
@@ -137,6 +140,7 @@ All builds run on GitHub Actions (the cloud sessions cannot reach swisstopo), on
 | `ticino_all.yml` | `all_stamp.txt` (zones in `all_list.txt`; `[all base]` in the commit message: base only) | per zone `region_slice.py` -> `ticino_<zone>_<n>.zip`, then `region_base.py` -> `ticino_base_<n>.zip` (scene, welded AI roads, signals, at most 6,000 parking spots, materials, info.json with every spawn, stream.json), on the draft `ticino-all` |
 | `ticino_tools.yml` | `install/**`, `helper/**`, `tools_release.txt` | `helper_ticino.zip` (exe) and `installer_ticino.zip` on the release named in `tools_release.txt` |
 | `ticino_helper.yml` | `helper/**` | test pack of the helper with the Lua as user-folder override, draft `ticino-helper` |
+| `ticino_publish.yml` | `publish.txt` | copies the 90 zips of the draft `ticino-all-cdae`, the installer (pointed at `ticino-v1`), helper, server and app to the public pre-release `ticino-v1` (not latest); change `publish.txt` and rerun to update it |
 
 The zone grid and what every zone shares (terrain heights, layers, forest and ground types) are fixed in
 `zones/ticino_plan.json` (`region_plan.py`; lists append only), so the slice jobs never need each other.
