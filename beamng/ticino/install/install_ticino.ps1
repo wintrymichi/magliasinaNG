@@ -9,10 +9,22 @@
   settings file (settings\ticino.json) if there is none. The Malcantone map (magliaso_pura) is never touched.
   Run it again to update: only what changed is downloaded.
 
+  Server mode (the default when the release has server_ticino.zip and its base pack can be served): only the base
+  zip goes into mods, the zone zips into the data folder (<user folder>\ticino_data), and "Start Ticino" starts the
+  Ticino server (ticino_server.exe) beside the game instead of the helper. The game then starts in seconds instead
+  of mounting the zone zips for a minute and a half at every start (beamng/ticino/README.md). Zone zips already in
+  the other folder are moved, never downloaded again (same disk: a rename).
+
   Double-click "Install Ticino.bat", or in PowerShell:
     powershell -ExecutionPolicy Bypass -File install_ticino.ps1                 install or update
     powershell -ExecutionPolicy Bypass -File install_ticino.ps1 -ListOnly       show what it would do
     powershell -ExecutionPolicy Bypass -File install_ticino.ps1 -Uninstall      remove the Ticino map
+
+.PARAMETER Mode
+  auto (server when the release can do it, else packs), server, or packs (every zip in mods, as before).
+
+.PARAMETER DataFolder
+  Server mode: where the zone zips go. Default <user folder>\ticino_data (on the same disk as mods).
 
 .PARAMETER Tag
   The release to install. Default: the tag in release.txt beside this script (the release the installer came with),
@@ -23,6 +35,8 @@ param(
     [string]$Repo = 'wintrymichi/magliasinaNG',
     [string]$UserFolder = (Join-Path $env:LOCALAPPDATA 'BeamNG\BeamNG.drive\current'),
     [string]$GameFolder = '',
+    [ValidateSet('auto', 'server', 'packs')][string]$Mode = 'auto',
+    [string]$DataFolder = '',
     [switch]$ListOnly,
     [switch]$Uninstall,
     [switch]$DeleteOld,
@@ -53,12 +67,87 @@ $tools = Join-Path $UserFolder 'ticino_tools'
 $stateFile = Join-Path $work 'installed.json'
 $checkedFile = Join-Path $work 'checked.json'
 $settingsFile = Join-Path $UserFolder 'settings\ticino.json'
+$dataDir = $DataFolder
+if (-not $dataDir) {
+    $prevInfo = Join-Path $tools 'install.json'
+    if (Test-Path $prevInfo) { try { $dataDir = (Get-Content $prevInfo -Raw | ConvertFrom-Json).data } catch { $dataDir = '' } }
+}
+if (-not $dataDir) { $dataDir = Join-Path $UserFolder 'ticino_data' }
 $shortcutPath = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Start Ticino (BeamNG).lnk'
 
 if (-not (Test-Path $mods)) {
     throw "BeamNG mods folder not found: $mods. Start the game once, or give the user folder with -UserFolder <path>."
 }
 $gameRunning = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like 'BeamNG*' }
+
+# Our own tools hold zips open (the helper the ones in mods, the server the ones in the data folder): a leftover
+# ticino_helper.exe made a move fail with "file in use" (PC test 2026-10-31). With the game closed they have nothing
+# to do: stop them (a PyInstaller exe is two processes of the same name, both go).
+function Stop-TicinoTools {
+    $procs = @(Get-Process -Name 'ticino_helper', 'ticino_server' -ErrorAction SilentlyContinue)
+    if ($procs.Count -eq 0) { return }
+    Say ("Stopping {0} Ticino helper/server processes (the game is closed) ..." -f $procs.Count) 'Yellow'
+    foreach ($p in $procs) { try { Stop-Process -Id $p.Id -Force -ErrorAction Stop } catch { } }
+    Start-Sleep -Seconds 2
+}
+
+# Moves one zip between mods and the data folder without ever losing it or leaving two copies: a rename on the same
+# disk; else a copy to .part that becomes the zip when it is whole, then the original goes (if it cannot, the copy
+# goes again). Returns $true when the zip is at $dst.
+function Move-Zip([string]$src, [string]$dst) {
+    $srcLen = (Get-Item $src).Length
+    if (Test-Path $dst) {
+        if ((Get-Item $dst).Length -eq $srcLen) { Remove-Item $src -Force; return $true }
+        Remove-Item $dst -Force
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path $dst -Parent) | Out-Null
+    try {
+        if ([IO.Path]::GetPathRoot($src) -eq [IO.Path]::GetPathRoot($dst)) {
+            [IO.File]::Move($src, $dst)
+            return $true
+        }
+        $part = $dst + '.part'
+        try {
+            [IO.File]::Copy($src, $part, $true)
+            if ((Get-Item $part).Length -ne $srcLen) { throw "the copy of $src is incomplete" }
+            [IO.File]::Move($part, $dst)
+        } catch {
+            if (Test-Path $part) { Remove-Item $part -Force -ErrorAction SilentlyContinue }
+            throw
+        }
+        try { [IO.File]::Delete($src) } catch {
+            Remove-Item $dst -Force -ErrorAction SilentlyContinue
+            throw
+        }
+        return $true
+    } catch {
+        Say "  could not move $src to ${dst}: $($_.Exception.Message) (close the program that holds it and run again)" 'Red'
+        return $false
+    }
+}
+
+# Does the base zip carry the mod Lua that loads served tiles (lua/ge/extensions/ticino/files.lua)?
+function Test-BaseServes([string]$zipPath) {
+    if (-not (Test-Path $zipPath)) { return $null }
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $z = [IO.Compression.ZipFile]::OpenRead($zipPath)
+        try {
+            # zips made by .NET Framework store '\' in entry names
+            foreach ($e in $z.Entries) { if (($e.FullName -replace '\\', '/') -eq 'lua/ge/extensions/ticino/files.lua') { return $true } }
+            return $false
+        } finally { $z.Dispose() }
+    } catch { return $null }
+}
+
+# JSON files as ASCII with every other character as \uXXXX: Set-Content -Encoding ASCII turned a user folder with
+# an accent (C:\Users\Michele with a grave e) into "?", and UTF-8 without a BOM is read as ANSI by Get-Content in 5.1.
+# Python, PowerShell 5.1 and the Ticino app all read \u escapes.
+function Write-Json([object]$obj, [string]$path) {
+    $json = $obj | ConvertTo-Json -Depth 20
+    $json = [regex]::Replace($json, '[^\x00-\x7F]', { param($m) '\u{0:x4}' -f [int][char]$m.Value })
+    [IO.File]::WriteAllText($path, $json, (New-Object System.Text.ASCIIEncoding))
+}
 
 # ------------------------------------------------------------------------------------------------ user folder
 # Files of the level in the user folder win over the zips: any left from tests or older versions must go.
@@ -96,9 +185,11 @@ function Clear-LevelCache {
 if ($Uninstall) {
     if ($gameRunning) { throw 'BeamNG is running: close it first (the game keeps the zips in mods open).' }
     $zips = @(Get-ChildItem $mods -Filter 'ticino_*.zip' -File)
-    Say ("Removing {0} Ticino zips ({1}), the level cache, the helper and the shortcut." -f $zips.Count,
+    if (Test-Path $dataDir) { $zips += @(Get-ChildItem $dataDir -Filter 'ticino_*.zip' -File) }
+    Say ("Removing {0} Ticino zips ({1}), the level cache, the helper, the server and the shortcut." -f $zips.Count,
         (GiB (($zips | Measure-Object Length -Sum).Sum))) 'Cyan'
     if ($ListOnly) { Say 'List only: nothing changed.' 'Green'; exit 0 }
+    Stop-TicinoTools
     foreach ($z in $zips) { Remove-Item $z.FullName -Force }
     Move-Overrides
     Clear-LevelCache
@@ -159,11 +250,32 @@ for ($page = 1; $page -le 20; $page++) {
 }
 $zips = @($assets | Where-Object { $_.name -like 'ticino_*.zip' } | Sort-Object name)
 $helperAsset = $assets | Where-Object { $_.name -eq 'helper_ticino.zip' } | Select-Object -First 1
+$serverAsset = $assets | Where-Object { $_.name -eq 'server_ticino.zip' } | Select-Object -First 1
+if ($Mode -eq 'server' -and -not $serverAsset) { throw "The release '$Tag' has no server_ticino.zip: install with -Mode packs." }
 if ($zips.Count -eq 0) { throw "The release '$Tag' has no ticino_*.zip." }
 $base = $zips | Where-Object { $_.name -like 'ticino_base_*' } | Select-Object -First 1
 if (-not $base) { throw "The release '$Tag' has no ticino_base zip." }
 $total = ($zips | Measure-Object size -Sum).Sum
 Say ("Release '{0}': {1} zips, {2}" -f $Tag, $zips.Count, (GiB $total)) 'Cyan'
+
+# Server mode needs the server and a base whose Lua loads served tiles. The base in mods is looked at now; a base still
+# to download is looked at when it is there (the zone zips come after it), and without that Lua the install falls
+# back to packs mode (a base without it would find no zone at all).
+$serveMode = ($Mode -ne 'packs') -and [bool]$serverAsset
+function Set-ServeFromBase([string]$zipPath) {
+    if (-not $script:serveMode) { return }
+    $ok = Test-BaseServes $zipPath
+    if ($ok -eq $false) {
+        Say ("The base zip {0} cannot be served yet (no files.lua): installing in packs mode, every zip in mods." -f `
+            (Split-Path $zipPath -Leaf)) 'Yellow'
+        $script:serveMode = $false
+    }
+}
+Set-ServeFromBase (Join-Path $mods $base.name)
+function Zone-Dir([string]$name) {
+    if ($script:serveMode -and $name -notlike 'ticino_base_*') { return $script:dataDir }
+    return $script:mods
+}
 
 # Read the release's assets again: a workflow can replace an asset while the installer runs (new id, the old one
 # answers 404).
@@ -191,7 +303,7 @@ if (Test-Path $checkedFile) {
         foreach ($prop in $read.PSObject.Properties) { $checked[$prop.Name] = $prop.Value }
     } catch { Say 'checked.json unreadable: checking every zip again.' 'Yellow' }
 }
-function Save-Checked { $checked | ConvertTo-Json | Set-Content -Path $checkedFile -Encoding ASCII }
+function Save-Checked { Write-Json $checked $checkedFile }
 
 # The zone of a Ticino zip: ticino_<zone>_<n>.zip -> <zone> (ticino_base_<n>.zip -> base)
 function Zone-Of([string]$name) {
@@ -200,9 +312,16 @@ function Zone-Of([string]$name) {
 }
 
 # A zip in mods is in place when it has the size and the sha256 of the release (checked once, then remembered).
+function Find-Zip([string]$name) {
+    foreach ($d in @($mods, $dataDir)) {
+        $p = Join-Path $d $name
+        if (Test-Path $p) { return $p }
+    }
+    return $null
+}
 function Test-Installed([object]$a, [bool]$hashNow) {
-    $dest = Join-Path $mods $a.name
-    if (-not (Test-Path $dest)) { return $false }
+    $dest = Find-Zip $a.name
+    if (-not $dest) { return $false }
     $f = Get-Item $dest
     if ($f.Length -ne [int64]$a.size) { return $false }
     $want = Sha $a
@@ -210,7 +329,7 @@ function Test-Installed([object]$a, [bool]$hashNow) {
     $key = "$want|$($f.Length)|$($f.LastWriteTimeUtc.Ticks)"
     if ($checked[$a.name] -eq $key) { return $true }
     if (-not $hashNow) { return $null }
-    Say "  checking the sha256 of $($a.name) already in mods ..."
+    Say "  checking the sha256 of $($a.name) already there ..."
     $h = (Get-FileHash -Algorithm SHA256 -Path $dest).Hash.ToLower()
     if ($h -ne $want) { return $false }
     $checked[$a.name] = $key
@@ -223,7 +342,9 @@ $relZones = @{}
 foreach ($a in $zips) { $names[$a.name] = $true; $relZones[(Zone-Of $a.name)] = $true }
 # A zip is old only when the release has zips of its zone (base or a zone) under other names. A zone the release does
 # not have at all (a build still uploading, PC test 2026-10-31: ti_2_4 was moved out and the install stopped) is kept.
-$notInRelease = @(Get-ChildItem $mods -Filter 'ticino_*.zip' -File | Where-Object { -not $names.ContainsKey($_.Name) })
+$present = @(Get-ChildItem $mods -Filter 'ticino_*.zip' -File)
+if (Test-Path $dataDir) { $present += @(Get-ChildItem $dataDir -Filter 'ticino_*.zip' -File) }
+$notInRelease = @($present | Where-Object { -not $names.ContainsKey($_.Name) })
 $old = @($notInRelease | Where-Object { $relZones.ContainsKey((Zone-Of $_.Name)) })
 $kept = @($notInRelease | Where-Object { -not $relZones.ContainsKey((Zone-Of $_.Name)) })
 foreach ($k in $kept) { Say "  kept: $($k.Name) (its zone is not in the release: the release may be incomplete)" 'Yellow' }
@@ -240,11 +361,17 @@ foreach ($a in $todo) {
     $p = Join-Path $work ($a.name + '.part')
     if (Test-Path $p) { $partial += (Get-Item $p).Length }
 }
+$modeText = 'packs (every zip in mods)'
+if ($serveMode) { $modeText = "server (base in mods, zones in $dataDir)" }
+Say "Mode: $modeText" 'Cyan'
 Say ("To download: {0} zips, {1} (already partly downloaded: {2}); sha256 to check: {3}; old Ticino zips to move out: {4}" -f `
     $todo.Count, (GiB $need), (GiB $partial), $toHash, $old.Count) 'Cyan'
 foreach ($o in $old) { Say "  old: $($o.Name) ($(GiB $o.Length))" }
 
-$drive = (Get-Item $mods).PSDrive
+$zoneRoot = $mods
+if ($serveMode -and -not $ListOnly) { New-Item -ItemType Directory -Force -Path $dataDir | Out-Null }
+if ($serveMode -and (Test-Path $dataDir)) { $zoneRoot = $dataDir }
+$drive = (Get-Item $zoneRoot).PSDrive
 $space = $need - $partial
 if ($DeleteOld) { $space -= ($old | Measure-Object Length -Sum).Sum }
 Say ("Free on {0}: {1}, needed about {2} (+ about 15 GB the game uses for its cache of the level)" -f $drive.Name,
@@ -262,6 +389,7 @@ if ($drive.Free -lt $space + 2GB) {
 if ($gameRunning) { throw 'BeamNG is running: close it first (the game keeps the zips in mods open).' }
 
 # ------------------------------------------------------------------------------------------------ clean up
+Stop-TicinoTools
 Move-Overrides
 $prevState = $null
 if (Test-Path $stateFile) { try { $prevState = Get-Content $stateFile -Raw | ConvertFrom-Json } catch { $prevState = $null } }
@@ -333,13 +461,24 @@ $done = 0
 $skipped = 0
 $failed = @()
 $i = 0
+$moveFailed = @()
 foreach ($a in $zips) {
     $i++
     $title = "[{0}/{1}] {2} ({3})" -f $i, $zips.Count, $a.name, (GiB $a.size)
-    if (Test-Installed $a $true) { Say "$title in place" 'DarkGray'; $skipped++; continue }
+    $dest = Join-Path (Zone-Dir $a.name) $a.name
+    if (Test-Installed $a $true) {
+        $at = Find-Zip $a.name
+        if ($at -ne $dest -and (Test-Path $at) -and -not (Test-Path $dest)) {
+            Say "$title in place, moving it to $(Split-Path $dest -Parent)" 'DarkGray'
+            if (-not (Move-Zip $at $dest)) { $moveFailed += $a.name }
+        } else { Say "$title in place" 'DarkGray' }
+        $skipped++
+        if ($a.name -eq $base.name) { Set-ServeFromBase (Join-Path $mods $a.name) }
+        continue
+    }
     Say $title 'Cyan'
-    $dest = Join-Path $mods $a.name
     if (Get-Asset $a $dest) {
+        if ($a.name -eq $base.name) { Set-ServeFromBase $dest }
         $f = Get-Item $dest
         $want = Sha $a
         if ($want) { $checked[$a.name] = "$want|$($f.Length)|$($f.LastWriteTimeUtc.Ticks)"; Save-Checked }
@@ -348,6 +487,15 @@ foreach ($a in $zips) {
     } else {
         $failed += $a.name
         Say "  FAILED after $Retries tries (the .part stays: run the installer again to resume)" 'Red'
+    }
+}
+# zones downloaded before the mode fell back to packs (or left from an earlier install in the other mode)
+foreach ($a in $zips) {
+    $dest = Join-Path (Zone-Dir $a.name) $a.name
+    $at = Find-Zip $a.name
+    if ($at -and $at -ne $dest -and -not (Test-Path $dest)) {
+        Say "Moving $($a.name) to $(Split-Path $dest -Parent)" 'DarkGray'
+        if (-not (Move-Zip $at $dest)) { $moveFailed += $a.name }
     }
 }
 
@@ -423,15 +571,50 @@ if (-not $NoHelper -and $helperAsset) {
         } else { Say '  helper not downloaded: the map works without it (a bit slower at terrain moves).' 'Yellow' }
     }
 }
+if ($serveMode) {
+    $skey = Sha $serverAsset
+    $sstamp = Join-Path $tools 'server.sha256'
+    $have = $null
+    if (Test-Path $sstamp) { $have = (Get-Content $sstamp -Raw).Trim() }
+    if ($have -ne $skey -or -not (Test-Path (Join-Path $tools 'ticino_server.exe'))) {
+        Say 'Ticino server ...' 'Cyan'
+        $szip = Join-Path $work 'server_ticino.zip'
+        if (Get-Asset $serverAsset $szip) {
+            $sdir = Join-Path $work 'server_unpacked'
+            if (Test-Path $sdir) { Remove-Item $sdir -Recurse -Force }
+            Expand-Archive -Path $szip -DestinationPath $sdir -Force
+            # only the exe: the zip's lua folder is a test override that would win over the base pack
+            Copy-Item (Join-Path $sdir 'ticino_server.exe') (Join-Path $tools 'ticino_server.exe') -Force
+            Remove-Item $sdir -Recurse -Force
+            Remove-Item $szip -Force
+            if ($skey) { Set-Content -Path $sstamp -Value $skey -Encoding ASCII }
+            Say '  ok' 'Green'
+        } else {
+            Say '  server not downloaded: run the installer again (the map cannot find its zones without it).' 'Red'
+            $failed += 'server_ticino.zip'
+        }
+    }
+    $srvCfg = Join-Path $tools 'ticino_server.json'
+    $sc = [ordered]@{}
+    if (Test-Path $srvCfg) {
+        try { $read = Get-Content $srvCfg -Raw | ConvertFrom-Json; foreach ($prop in $read.PSObject.Properties) { $sc[$prop.Name] = $prop.Value } } catch { }
+    }
+    $sc['user'] = $UserFolder
+    $sc['data'] = $dataDir
+    $sc['tag'] = $Tag
+    Write-Json $sc $srvCfg
+}
+$modeName = 'packs'
+if ($serveMode) { $modeName = 'server' }
 $installInfo = [ordered]@{ tag = $Tag; base = "$($base.name)|$baseSha"; game = $game; user = $UserFolder
-                            installed = (Get-Date).ToString('s') }
-$installInfo | ConvertTo-Json | Set-Content -Path $stateFile -Encoding ASCII
-$installInfo | ConvertTo-Json | Set-Content -Path (Join-Path $tools 'install.json') -Encoding ASCII
+                            mode = $modeName; data = $dataDir; installed = (Get-Date).ToString('s') }
+Write-Json $installInfo $stateFile
+Write-Json $installInfo (Join-Path $tools 'install.json')
 
 if (-not (Test-Path $settingsFile)) {
     New-Item -ItemType Directory -Force -Path (Split-Path $settingsFile -Parent) | Out-Null
     $defaults = [ordered]@{ preset = 'standard'; helper = $true; diagnostics = $false }
-    $defaults | ConvertTo-Json | Set-Content -Path $settingsFile -Encoding ASCII
+    Write-Json $defaults $settingsFile
     Say "Settings written to $settingsFile (preset 'standard'; 'light' for weaker PCs)." 'Cyan'
 }
 
@@ -449,6 +632,8 @@ if (-not $NoShortcut -and $game -and (Test-Path (Join-Path $tools 'Start Ticino.
 Say ''
 Say ("Done: {0} downloaded, {1} already in place, {2} failed." -f $done, $skipped, $failed.Count) $(if ($failed.Count) { 'Red' } else { 'Green' })
 foreach ($n in $failed) { Say "  failed: $n" 'Red' }
+foreach ($n in $moveFailed) { Say "  not moved: $n" 'Red' }
+if ($moveFailed.Count) { $failed += $moveFailed }
 if ($old.Count -and -not $DeleteOld) { Say "The old zips are in $work\old: delete them once the new version runs." 'Yellow' }
 if ($failed.Count) { exit 1 }
 Say 'Start the map with "Start Ticino (BeamNG)" on the desktop, or in the game: Freeroam > Ticino.' 'Green'

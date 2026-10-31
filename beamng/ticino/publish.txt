@@ -1,0 +1,11 @@
+# ticino_publish.yml copies a draft build to the public release. Change a line (or the stamp) and push to publish
+# again: zips already there with the same sha256 are skipped, changed ones replaced, then the release is published.
+tag=ticino-v1
+title=Ticino v1 (pre-release)
+# the level: ticino_base_*.zip, every ticino_<zone>_*.zip and ticino_base.sha256
+zips=ticino-all-cdae
+# installer_ticino.zip (its release.txt is rewritten to the tag above), helper_ticino.zip, server_ticino.zip
+tools=ticino-all
+# app_ticino.zip, built by ticino_gui.yml from the same commit as this file
+app=ticino-app
+stamp=2026-10-31 1

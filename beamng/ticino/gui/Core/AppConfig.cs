@@ -8,7 +8,7 @@ namespace TicinoServer.Core;
 public sealed class AppConfig
 {
     public string Repo { get; set; } = "wintrymichi/magliasinaNG";
-    public string Tag { get; set; } = "ticino-all";
+    public string Tag { get; set; } = "ticino-v1";             // the public pre-release (ticino_publish.yml)
     public string? DataFolder { get; set; }
     public string? UserFolder { get; set; }
     public string? GameFolder { get; set; }

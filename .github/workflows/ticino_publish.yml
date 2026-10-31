@@ -1,0 +1,170 @@
+# Ticino: copies a draft build to the public release named in beamng/ticino/publish.txt (michi's choice of
+# 2026-10-31: the Ticino public as a pre-release, the app downloading from it by default). The level's zips come from
+# one draft (zips=), the installer, helper and server from another (tools=), the app from the app's draft (app=, the
+# build of this same commit). The release stays a draft while the zips are copied (six jobs, each zip downloaded,
+# checked against its sha256 and uploaded again: GitHub has no copy of an asset) and is published as a pre-release
+# only when every zip is there with the source's size and sha256; it is never made "latest" (that stays the
+# Malcantone). Zips already there with the same sha256 are skipped, so running it again only updates what changed.
+# Started by a change of publish.txt (the cloud session cannot dispatch a workflow off the default branch). The drafts
+# it reads are left as they are.
+name: ticino publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-9w6q31]
+    paths:
+      - beamng/ticino/publish.txt
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ticino-publish
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.c.outputs.tag }}
+      title: ${{ steps.c.outputs.title }}
+      zips: ${{ steps.c.outputs.zips }}
+      tools: ${{ steps.c.outputs.tools }}
+      app: ${{ steps.c.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: c
+        name: Read publish.txt
+        run: |
+          get() { grep -E "^$1=" beamng/ticino/publish.txt | head -1 | cut -d= -f2- | tr -d '\r'; }
+          for k in tag title zips tools app; do v=$(get $k); [ -n "$v" ] || { echo "no $k in publish.txt"; exit 1; }; echo "$k=$v" >> "$GITHUB_OUTPUT"; echo "$k=$v"; done
+      - name: The release (a draft until every zip is there)
+        env:
+          TAG: ${{ steps.c.outputs.tag }}
+          TITLE: ${{ steps.c.outputs.title }}
+        run: |
+          id=$(gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -1)
+          if [ -n "$id" ]; then echo "release $TAG exists ($id)"; exit 0; fi
+          gh api -X POST "repos/$GH_REPO/releases" -f tag_name="$TAG" -f target_commitish=ticino -f name="$TITLE" \
+            -f body="Being uploaded." -F draft=true -F prerelease=true --jq '.id'
+
+  copy:
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3, 4, 5]
+    env:
+      TAG: ${{ needs.setup.outputs.tag }}
+      SRC: ${{ needs.setup.outputs.zips }}
+      PART: ${{ matrix.part }}
+    steps:
+      - name: Copy every sixth zip
+        run: |
+          set -euo pipefail
+          rid() { gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$1\") | .id" | head -1; }
+          assets() { for p in 1 2 3; do gh api "repos/$GH_REPO/releases/$1/assets?per_page=100&page=$p" --jq '.[] | [.id, .name, .size, (.digest // "-")] | @tsv'; done; }
+          sid=$(rid "$SRC"); tid=$(rid "$TAG")
+          [ -n "$sid" ] && [ -n "$tid" ] || { echo "release not found: $SRC=$sid $TAG=$tid"; exit 1; }
+          assets "$sid" | awk -F'\t' '$2 ~ /^ticino_.*\.zip$/ || $2 == "ticino_base.sha256"' | sort -t$'\t' -k2,2 > src.tsv
+          assets "$tid" > dst.tsv
+          echo "$(wc -l < src.tsv) files in $SRC"
+          i=0; done=0; same=0
+          # fd 3: curl and gh in the loop must not eat the list on stdin
+          while IFS=$'\t' read -r -u 3 id name size digest; do
+            n=$i; i=$((i + 1))
+            [ $((n % 6)) -eq "$PART" ] || continue
+            have=$(awk -F'\t' -v n="$name" '$2 == n {print $1 "\t" $3 "\t" $4}' dst.tsv)
+            if [ -n "$have" ] && [ "$digest" != "-" ] && [ "$(cut -f3 <<< "$have")" = "$digest" ]; then same=$((same + 1)); continue; fi
+            for t in 1 2 3 4 5; do
+              curl -sSfL --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+                "https://api.github.com/repos/$GH_REPO/releases/assets/$id" -o "$name" && break
+              [ $t = 5 ] && { echo "download failed: $name"; exit 1; }; sleep $((t * 15))
+            done
+            [ "$(stat -c %s "$name")" = "$size" ] || { echo "size of $name: $(stat -c %s "$name") not $size"; exit 1; }
+            if [ "$digest" != "-" ]; then echo "${digest#sha256:}  $name" | sha256sum -c --quiet -; fi
+            if [ -n "$have" ]; then gh api -X DELETE "repos/$GH_REPO/releases/assets/$(cut -f1 <<< "$have")"; fi
+            for t in 1 2 3 4 5; do
+              gh release upload "$TAG" "$name" --clobber && break
+              [ $t = 5 ] && { echo "upload failed: $name"; exit 1; }; sleep $((t * 15))
+            done
+            rm -f "$name"
+            done=$((done + 1))
+            echo "copied $name ($((size / 1048576)) MB)"
+          done 3< src.tsv
+          echo "part $PART: $done copied, $same already there"
+
+  finish:
+    needs: [setup, copy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TAG: ${{ needs.setup.outputs.tag }}
+      TITLE: ${{ needs.setup.outputs.title }}
+      SRC: ${{ needs.setup.outputs.zips }}
+      TOOLS: ${{ needs.setup.outputs.tools }}
+      APP: ${{ needs.setup.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer, helper, server and app
+        run: |
+          set -euo pipefail
+          rid() { gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$1\") | .id" | head -1; }
+          get() {   # release, asset name -> file of that name
+            local id; id=$(for p in 1 2 3; do gh api "repos/$GH_REPO/releases/$1/assets?per_page=100&page=$p" --jq ".[] | select(.name == \"$2\") | .id"; done | head -1)
+            [ -n "$id" ] || { echo "no $2 on $1"; return 1; }
+            curl -sSfL --retry 3 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+              "https://api.github.com/repos/$GH_REPO/releases/assets/$id" -o "$2"
+          }
+          mkdir -p tools && cd tools
+          t=$(rid "$TOOLS"); a=$(rid "$APP")
+          get "$t" helper_ticino.zip
+          get "$t" server_ticino.zip
+          get "$t" installer_ticino.zip
+          # the installer finds its release by release.txt beside it
+          mkdir inst && (cd inst && unzip -q ../installer_ticino.zip && printf '%s\n' "$TAG" > release.txt && rm ../installer_ticino.zip && zip -qr ../installer_ticino.zip .)
+          unzip -p installer_ticino.zip release.txt
+          # the app of this commit (ticino_gui.yml builds it from the same push): wait for it
+          for w in $(seq 1 40); do
+            if get "$a" app_ticino.zip && unzip -p app_ticino.zip VERSION.txt | grep -q "$GITHUB_SHA"; then break; fi
+            if [ $w = 40 ]; then echo "app_ticino.zip of $GITHUB_SHA not on $APP"; exit 1; fi
+            echo "waiting for the app build of $GITHUB_SHA"; sleep 60
+          done
+          unzip -p app_ticino.zip VERSION.txt
+          gh release upload "$TAG" helper_ticino.zip server_ticino.zip installer_ticino.zip app_ticino.zip --clobber
+      - name: Every zip there, with the source's size and sha256
+        run: |
+          set -euo pipefail
+          rid() { gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$1\") | .id" | head -1; }
+          assets() { for p in 1 2 3; do gh api "repos/$GH_REPO/releases/$1/assets?per_page=100&page=$p" --jq '.[] | [.name, .size, (.digest // "-"), .id] | @tsv'; done; }
+          level() { awk -F'\t' '$1 ~ /^ticino_.*\.zip$/ || $1 == "ticino_base.sha256"' | sort; }
+          tid=$(rid "$TAG")
+          assets "$(rid "$SRC")" | level | cut -f1-3 > src.tsv
+          # a zone the source has under a new name (or no more): its old zip goes (the installer and the app take
+          # two zips of one zone for an old and a new one, but a player of an old install would keep both)
+          assets "$tid" | level > dst_ids.tsv
+          cut -f1 src.tsv > names.txt
+          awk -F'\t' 'NR == FNR {keep[$1] = 1; next} !($1 in keep) {print $1 "\t" $4}' names.txt dst_ids.tsv | while IFS=$'\t' read -r name aid; do
+            echo "removed $name (not on $SRC)"; gh api -X DELETE "repos/$GH_REPO/releases/assets/$aid" < /dev/null
+          done
+          assets "$tid" | level | cut -f1-3 > dst.tsv
+          if ! diff src.tsv dst.tsv; then echo "the release differs from $SRC"; exit 1; fi
+          echo "$(wc -l < dst.tsv) files as on $SRC"
+      - name: Notes, then publish as a pre-release
+        run: |
+          set -euo pipefail
+          id=$(gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -1)
+          rows=$(for p in 1 2 3; do gh api "repos/$GH_REPO/releases/$id/assets?per_page=100&page=$p" --jq '.[] | [.name, .size] | @tsv'; done)
+          zones=$(awk -F'\t' '$1 ~ /^ticino_ti_.*\.zip$/' <<< "$rows" | wc -l)
+          size=$(awk -F'\t' '$1 ~ /^ticino_.*\.zip$/ {s += $2} END {printf "%.0f GB", s / 1073741824}' <<< "$rows")
+          sed -e "s/{ZONES}/$zones/g" -e "s/{SIZE}/$size/g" beamng/ticino/publish_notes.md > notes.md
+          echo "$zones zones, $size"
+          gh api -X PATCH "repos/$GH_REPO/releases/$id" -F draft=false -F prerelease=true -f make_latest=false \
+            -f name="$TITLE" -F body=@notes.md --jq '[.html_url, .tag_name, .draft, .prerelease] | @tsv'

@@ -8,7 +8,7 @@ name: ticino tools
 on:
   workflow_dispatch:
   push:
-    branches: [ticino]   # only the ticino branch builds: a thread branch pushed for the first time counts every file as changed
+    branches: [ticino]            # a thread branch carrying installer changes must not replace the release's tools
     paths:
       - beamng/ticino/helper/**
       - beamng/ticino/install/**

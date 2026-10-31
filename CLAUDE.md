@@ -1183,6 +1183,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - settings\ticino.json: the app wrote every field (BURST_MS, GROUP_R...) with the values it took for the mod's defaults,
   which would pin them when a mod changes a default. It writes only what differs from the mod's own values now, and a
   "light" file without GROUP_R loads with the build's radii (light changes forest and far ground, not GROUP_R).
+- The merge of ticino into the app branch (8c30692) was committed with conflict markers left in beamng/ticino/README.md
+  (<<<<<<< HEAD ... >>>>>>> origin/ticino round the server section) and pushed; found only while writing the release
+  notes (2026-10-31). After resolving a merge, `git grep -n -E '^(<<<<<<<|=======$|>>>>>>>)'` before the commit.
+- Publishing (michi 2026-10-31, "Subito come pre-release"): the cloud session cannot create or edit releases, so
+  ticino_publish.yml (push trigger on beamng/ticino/publish.txt, thread branch only) copies the draft build to the
+  public pre-release ticino-v1: GitHub has no server-side copy of a release asset, every zip is downloaded and uploaded
+  again by six runner jobs (about 52 GB), and the release is published only when names, sizes and sha256 match the
+  source. A loop that reads a list on stdin and runs curl/gh inside must read from another fd (`read -u 3 ... 3< f`).
 
 ## Working with cat (the owner)
 
@@ -1758,3 +1766,18 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   child survives Stop-Process of its parent): the 1.85 GB copy was made and the original stayed. adopt now probes every
   pack with a rename first and moves nothing while one is open, and a cross-disk copy goes to .part and is removed
   again if the original cannot be.
+- PR #104 was merged with conflict markers left in beamng/ticino/README.md (the merge of ticino into the thread branch:
+  only CLAUDE.md, stream.lua and dae2cdae.py were checked). Run `git grep -n "^<<<<<<< \|^>>>>>>> "` before every
+  commit of a merge.
+- Restarting the thread branch from ticino after the merge and pushing started ticino_all.yml on the thread branch
+  (the ticino commits new to the branch touch all_stamp.txt): force-cancel at once. ticino_tools.yml now runs only on
+  ticino (a thread branch with installer changes replaced the release's tools); installer changes are tested with
+  ticino_install_check.yml (check_stamp.txt: parse, Move-Zip, Test-BaseServes, -ListOnly, no upload).
+- Windows PowerShell 5.1's ZipFile.CreateFromDirectory writes entry names with backslashes: a check of a zip entry by
+  name must take both separators (Test-BaseServes said "no files.lua" on the test zip).
+- It happened a second time when the branch was restarted from ticino again to bump exe_stamp.txt: every restart of a
+  thread branch onto ticino commits that touched all_stamp.txt starts ticino_all there. Bump a stamp on the branch
+  only after checking `git log origin/<branch>..origin/ticino -- beamng/ticino/all_stamp.txt` is empty, or force-cancel.
+- A new server flag (--game-pid) was merged into the installer while server_ticino.zip on the release was still built
+  without it: the shortcut would have started a server that stops at once (argparse error). Rebuild the exe (exe_stamp)
+  in the same round as any installer change that passes a new flag.

@@ -6,7 +6,8 @@ BeamNG level, `ticino`, streamed around the car. It is built by the same pipelin
 buildings, the survey's roads, walls, pavements, bridges, tunnels, motorways, forest, signs and traffic signals.
 The two maps are separate mods and can be installed together: nothing here changes the Malcantone level.
 
-Branch: `ticino`. Status: draft release, not public yet (see "State" at the end).
+Branch: `ticino`. Status: public pre-release `ticino-v1` since 2026-10-31 (the builds stay on drafts until copied there,
+`ticino_publish.yml`; see "State" at the end).
 
 ## Install (Windows)
 
@@ -29,10 +30,16 @@ The installer (`install/install_ticino.ps1`):
   versions: they would win over the zips) to `ticino_download\overrides_<date>`;
 - clears the game's cache of the level (`temp\levels\ticino`) when the base zip changed;
 - turns the Ticino mods back on in `mods\db.json` (BeamNG turns every mod off after a game update);
-- installs the streaming helper (`ticino_tools\ticino_helper.exe`), writes `settings\ticino.json` if there is none,
-  and puts a **Start Ticino (BeamNG)** shortcut on the desktop.
+- installs the streaming helper (`ticino_tools\ticino_helper.exe`), or in server mode the Ticino server
+  (`ticino_tools\ticino_server.exe`), writes `settings\ticino.json` if there is none, and puts a
+  **Start Ticino (BeamNG)** shortcut on the desktop;
+- in **server mode** (the default when the release has the server, see "Ticino server" below) puts only the base zip
+  into `mods` and the zone zips into `<user folder>\ticino_data`: the game starts in seconds instead of mounting
+  the zones for a minute and a half. Zips already in the other folder are moved, not downloaded again (a rename on
+  the same disk; a zip held open by another program is left where it is and reported).
 
-Options: `-ListOnly` (show what it would do), `-DeleteOld`, `-NoHelper`, `-NoShortcut`, `-KeepCache`,
+Options: `-Mode auto|server|packs`, `-DataFolder <path>` (server mode: where the zones go), `-ListOnly` (show what
+it would do), `-DeleteOld`, `-NoHelper`, `-NoShortcut`, `-KeepCache`,
 `-UserFolder <path>` (another BeamNG user folder), `-GameFolder <path>` (BeamNG not in a Steam library),
 `-Tag <release>`, `-Uninstall` (removes the zips, the cache, the tools and the shortcut; keeps the settings).
 A draft release can only be downloaded with the GitHub CLI logged in (`gh auth login`); a published one needs nothing.
@@ -44,13 +51,14 @@ Run the installer again to update. Linux or by hand: put every `ticino_*.zip` of
 
 `TicinoServer.exe` (`gui/`, `app_ticino.zip` on the release) is the map's Windows app, in English: one self-contained exe
 (.NET 10, WPF with the Fluent theme of Windows 11), nothing to install. It runs the server mode (the zone packs outside `mods`,
-see the server's own README) and keeps everything up to date from the GitHub release:
+see "Ticino server" below), or the packs mode of an install that has every zip in `mods`, and keeps everything up to
+date from the GitHub release (the public pre-release `ticino-v1` by default; a draft needs `gh auth login`):
 
 | Page | What it does |
 |---|---|
-| Home | server state (tiles ready, cache, shapes converted, where the car is), **Play** (server + BeamNG straight into the map), the game and user folders, warnings (zones still in `mods`, a base pack without the server's Lua) |
-| Graphics | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json`, kept fields it does not know |
-| Downloads | the release (tag), the data folder (proposed as `<user>\ticino_data` like the installer when that disk has room, else the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` |
+| Home | server state (tiles ready, cache, shapes converted, where the car is), **Play** (server + BeamNG straight into the map; in packs mode BeamNG and the helper, as Start Ticino), the game and user folders, warnings (zones still in `mods`, with **Move** to the packs folder, which turns packs mode into server mode; a base pack without the server's Lua) |
+| Graphics | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json` only where they differ from the mod's own values, kept fields it does not know |
+| Downloads | the release (tag), the data folder (proposed as `<user>\ticino_data` like the installer when that disk has room, else the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, in packs mode `<user>\ticino_download\app`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download (off by default); a zone counts in the data folder or in `mods`, and a zip the installer has hashed (`ticino_download\checked.json`) is not hashed again; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` (packs mode: `ticino_download\old`) |
 | Server | cache size, conversion processes, terrain windows ahead, `.cdae`, start with Play / stop with the game / start with the app, the server's log; removes a leftover copy of the server's test Lua from the user folder |
 
 The zone packs go to the data folder, the base pack to `mods`. Of `server_ticino.zip` only `ticino_server.exe` is
@@ -69,10 +77,11 @@ screenshots of every page in both themes from `TicinoServer.exe --screenshots <f
 
 ## Play
 
-Start with the desktop shortcut (BeamNG goes straight into the map, the helper starts beside it and stops with the
-game), or in the game: Freeroam > Ticino. There are spawn points in every zone (villages and towns).
+Start with the desktop shortcut (BeamNG goes straight into the map, the server or the helper starts beside it and
+stops with the game), or in the game: Freeroam > Ticino. In server mode the map needs the server: start it with the
+shortcut (or the Ticino app), not the game alone. There are spawn points in every zone (villages and towns).
 
-The **first start** after an install mounts about 600,000 new files: the game can show "not responding" for one or
+In packs mode the **first start** after an install mounts about 600,000 new files: the game can show "not responding" for one or
 two minutes before the main menu. Wait; it is not a crash. The first time a place is seen the game converts its
 shapes and textures (stutters in a new area); the second time they come from its cache. To convert them before
 driving, run the warm-up (below, "How it works").
@@ -215,43 +224,45 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 - **Is the streamer running?** `beamng.log` has `ticino` lines (`streaming on`, `settings: ...`, `jump: window at`).
   In the console: `ticino_stream.status()`.
 
-<<<<<<< HEAD
-## Ticino server (optional, 2026-10-29)
+## Ticino server (server mode)
 
-`server/ticino_server.py` keeps the whole map beside the game: only the base pack (`ticino_base_*.zip`, 270 MB: the
-level, materials, textures, Lua) is in `<user>/mods`; the 87 zone packs (51.6 GB) stay in the server's data folder
-(any disk). While the game runs, the server puts the files of the tiles round the car into
+In server mode only the base pack (`ticino_base_*.zip`, 270 MB: the level, materials, textures, Lua) is in
+`<user>/mods`; the 87 zone packs (51.6 GB) stay in a data folder (`<user>\ticino_data` by default). While the game
+runs, `ticino_server.exe` (`server/ticino_server.py`) puts the files of the tiles round the car into
 `<user>/temp/ticino/srv/` (objects and trees files, collision cells, far ground, and every level shape converted to
 `.cdae` by `dae2cdae.py`) a few rings ahead of the car, lists the finished tiles in
-`<user>/temp/ticino/helper/ready.json`, deletes the farthest tiles when the cache is over `--cache-gb`, and makes the
-terrain windows as the helper does (it is the helper with more to do). `ticino/files.lua` in the mod reads from there
-and skips a tile until it is listed; at a jump it waits (`SERVE_WAIT_MS`) for the rings round the car.
+`<user>/temp/ticino/helper/ready.json`, deletes the farthest tiles when the cache is over `cacheGB`, and makes the
+terrain windows as the helper does (it replaces the helper). `ticino/files.lua` in the mod reads from there and skips
+a tile until it is listed; tiles that come late are asked for again in groups, and at a jump the mod waits
+(`SERVE_WAIT_MS`) for the rings round the car.
 
-Why: with the packs in mods the game mounts all of them at every start (596,326 files: 75-81 s before the menu in
-michi's beamng.log of 2026-10-29), and the first time it meets a shape it parses the Collada file (195 GB of XML for
-all of Ticino) and writes its own `.cdae` cache (12 GB in `temp/levels/ticino` after four zones). With the server the
+Why: with the packs in mods the game mounts all of them at every start (596,326 files: about 85 s before the menu),
+and the first time it meets a shape it parses the Collada file and writes its own `.cdae` cache. With the server the
 game mounts one pack and loads every shape as `.cdae`.
 
-    python server/ticino_server.py download [--zones ti_0_0 ...]   the release's packs: zones to the data folder, base to mods
-    python server/ticino_server.py adopt                           move the zone packs already in mods to the data folder
-    python server/ticino_server.py                                 run it (before or with the game), Ctrl+C stops and cleans
-    python server/ticino_server.py once <x> <y> --radius 7         the tiles round a point, timed
+Measured on DESKTOP-OUPOLOA (0.40.4, 2026-10-31, RTX 4070):
 
-Settings on the command line or in `ticino_server.json` beside it (`user`, `data`, `cacheGB`, `workers`, `dae`, `tag`,
-`zones`). Without the server and with the packs in mods nothing changes (simulator: the same scene, object for object).
+| | packs in mods | server |
+|---|---|---|
+| game start (mods mounted) | ~85 s | 4 s |
+| Lugano standing still, settled | 84.4 fps, 1% low 60.1 | 79.6 fps, 1% low 64.8 |
+| flight at 120 km/h, 5 min | 94.2 fps, 25 frames > 100 ms | 93.5 fps, 15 frames > 100 ms |
 
-Checked in the cloud (zone ti_0_0, 4 cores): 225 near tiles (radius 7) in 80 s with the conversion (70 ms a shape),
-33 s without; the simulator at 120 km/h for 100 s with the server running beside it ended with the same scene as with
-the packs (5,175 objects, 1,155 far tiles, the same collision triangles), 28 tiles late while driving (the start
-aside) on the shared 4-core container. `dae2cdae.py` against 7 shapes the game compiled itself (michi's cache): the
-same vertices, triangles, normals, colours, materials and detail levels; the node tree (base00/start01) is left out,
-texture coordinates differ in the last bit of a float. Not checked in the game yet: the start time with the base pack
-alone, files written under temp while the game runs (the game's file watcher), our `.cdae` shapes with detail levels.
+The installer sets it up (`-Mode auto`, the default when the release has `server_ticino.zip` and a base that can be
+served): zones into the data folder, `ticino_tools\ticino_server.exe` with `ticino_tools\ticino_server.json`
+(`user`, `data`, `tag`, and optionally `cacheGB`, `workers`, `dae`), and the shortcut starts the server with
+`--game-pid`, so it stops and deletes its files when the game ends. If a server is already running (for example
+from the Ticino app), the shortcut does not start another one. By hand:
 
-## State and open work (2026-10-29)
-=======
+    ticino_server.exe [--user <BeamNG user folder>] [--data <folder>] [--game-pid <pid>]   run (Ctrl+C stops and cleans)
+    ticino_server.exe download [--tag ticino-all] [--zones ti_0_0 ...]   the release's packs: zones to data, base to mods
+    ticino_server.exe adopt     move the zone packs already in mods to the data folder (nothing moves while one is open)
+    python server/ticino_server.py ...   the same from the repository (Linux; numpy needed)
+
+Without the server and with the packs in mods nothing changes (packs mode, `-Mode packs`). A base pack without the
+server Lua (`lua/ge/extensions/ticino/files.lua`) cannot be served: the installer then falls back to packs mode.
+
 ## State and open work (2026-10-31)
->>>>>>> origin/ticino
 
 Done: all 87 zones in one level, the streamer with wave loading, 64 m collision cells, the helper, settings, the
 installer, shapes shipped as .cdae, static streamed objects and bursts (standing still as fast as Italy). Open:

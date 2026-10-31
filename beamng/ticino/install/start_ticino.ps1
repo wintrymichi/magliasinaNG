@@ -1,8 +1,9 @@
 <#
-  Starts BeamNG.drive straight into the Ticino map and, if the settings allow it, the streaming helper
-  (ticino_helper.exe) beside it. The helper stops by itself when the game ends. Installed by install_ticino.ps1
-  into <user folder>\ticino_tools with install.json (game and user folder).
-    start_ticino.ps1                 game + helper
+  Starts BeamNG.drive straight into the Ticino map with, beside it, the Ticino server (ticino_server.exe, when the
+  map was installed in server mode: install.json "mode": "server") or, if the settings allow it, the streaming helper
+  (ticino_helper.exe). Both stop by themselves when the game ends. Installed by install_ticino.ps1 into
+  <user folder>\ticino_tools with install.json (game and user folder, mode, data folder).
+    start_ticino.ps1                 game + server or helper
     start_ticino.ps1 -NoHelper       game only
     start_ticino.ps1 -Menu           to the game's main menu instead of the map
 #>
@@ -16,7 +17,9 @@ $userDir = $info.user
 $exe = Join-Path $gameDir 'Bin64\BeamNG.drive.x64.exe'
 if (-not (Test-Path $exe)) { throw "BeamNG not found at ${exe}: run the installer again with -GameFolder <path>." }
 
-$useHelper = -not $NoHelper
+$serverExe = Join-Path $here 'ticino_server.exe'
+$serveMode = $info.PSObject.Properties['mode'] -and $info.mode -eq 'server'
+$useHelper = (-not $NoHelper) -and (-not $serveMode)
 $settingsPath = Join-Path $userDir 'settings\ticino.json'
 if (Test-Path $settingsPath) {
     try {
@@ -27,7 +30,7 @@ if (Test-Path $settingsPath) {
 
 $running = Get-Process -Name 'BeamNG.drive.x64' -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($running) {
-    Write-Host 'BeamNG is already running: only the helper is started.' -ForegroundColor Yellow
+    Write-Host 'BeamNG is already running: only the server or helper is started.' -ForegroundColor Yellow
     $proc = $running
 } else {
     $gameArgs = @()
@@ -41,6 +44,19 @@ if ($running) {
         $live = Get-Process -Name 'BeamNG.drive.x64' -ErrorAction SilentlyContinue | Select-Object -First 1
     } while (-not $live -and (Get-Date) -lt $deadline)
     if ($live) { $proc = $live }
+}
+
+if ($serveMode) {
+    if (-not (Test-Path $serverExe)) {
+        Write-Host 'ticino_server.exe is missing: run the installer again (without it the map finds no zones).' -ForegroundColor Red
+    } elseif (Get-Process -Name 'ticino_server' -ErrorAction SilentlyContinue) {
+        Write-Host 'The Ticino server is already running (another window or the Ticino app): not started again.' -ForegroundColor Yellow
+    } elseif ($proc) {
+        # ticino_server.json beside the exe holds the user and data folders; --game-pid ends it with the game
+        Start-Process -FilePath $serverExe -ArgumentList @('--game-pid', $proc.Id) -WorkingDirectory $here `
+            -WindowStyle Minimized | Out-Null
+        Write-Host "Ticino server started beside the game (pid $($proc.Id)); it stops when the game ends." -ForegroundColor Green
+    }
 }
 
 $helperExe = Join-Path $here 'ticino_helper.exe'
