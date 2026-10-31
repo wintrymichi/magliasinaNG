@@ -1709,3 +1709,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   child survives Stop-Process of its parent): the 1.85 GB copy was made and the original stayed. adopt now probes every
   pack with a rename first and moves nothing while one is open, and a cross-disk copy goes to .part and is removed
   again if the original cannot be.
+- PR #104 was merged with conflict markers left in beamng/ticino/README.md (the merge of ticino into the thread branch:
+  only CLAUDE.md, stream.lua and dae2cdae.py were checked). Run `git grep -n "^<<<<<<< \|^>>>>>>> "` before every
+  commit of a merge.
+- Restarting the thread branch from ticino after the merge and pushing started ticino_all.yml on the thread branch
+  (the ticino commits new to the branch touch all_stamp.txt): force-cancel at once. ticino_tools.yml now runs only on
+  ticino (a thread branch with installer changes replaced the release's tools); installer changes are tested with
+  ticino_install_check.yml (check_stamp.txt: parse, Move-Zip, Test-BaseServes, -ListOnly, no upload).
+- Windows PowerShell 5.1's ZipFile.CreateFromDirectory writes entry names with backslashes: a check of a zip entry by
+  name must take both separators (Test-BaseServes said "no files.lua" on the test zip).
