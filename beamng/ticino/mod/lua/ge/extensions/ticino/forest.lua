@@ -28,11 +28,13 @@ M.ONE_FOREST = true                   -- a frame finishes the pass of ONE tile a
 M.FORESTS_PER_FRAME = 1              -- Forests (tiles) a frame may change: each changed frame may redraw the cached sun
                                       -- shadow map (static scene), so a few big batches may beat many single tiles
 M.BATCH_MAX_MS = 60                   -- with FORESTS_PER_FRAME > 1: the time a frame may spend on its batch
-M.BLOCK = 1                           -- tiles of a BLOCK x BLOCK square share one Forest, and a frame does the passes
+M.BLOCK = 3                           -- tiles of a BLOCK x BLOCK square share one Forest, and a frame does the passes
                                       -- of all of them at once: a frame that touches a Forest costs ~185-230 ms whatever
                                       -- it adds (PC flight 2026-10-31: +140 items 185 ms, +1,305 228 ms), so fewer
                                       -- Forests touched, fewer such frames (emulated: 31 a tile crossed with 1, 18 with 2,
-                                      -- 11 with 3). Whether a Forest's own size adds to the cost is to be measured.
+                                      -- 11 with 3). PC flight 2026-10-31: near-forest frames 63 -> 7 (2) -> 3 (3),
+                                      -- frames over 100 ms 130 -> 70 -> 52, 80.5 -> 83.0 fps; a Forest of ~3,000
+                                      -- items still costs ~250 ms a touch, so its size adds little.
 M.CHECK_EVERY = 8                     -- items between two looks at the clock (budget, ONE_FOREST off)
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'

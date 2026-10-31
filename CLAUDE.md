@@ -893,6 +893,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   slow bursts (up to 711 ms, 89 fps); "one Forest a burst + a clock check inside the tile" was WORSE (204 bursts of
   ~220 ms, 80.5 fps): a frame that touches a Forest costs ~200 ms whatever it adds, so more partial touches = more
   hitches. The objects take the whole burst and the trees only what is left (93.5 fps, debf2f8).
+- Flight at 33 m/s (2026-10-31): the "near" frames of ~200 ms were forest passes (one Forest touched costs 185-230 ms
+  whether it adds 140 or 1,305 items). Hysteresis of the shares (forest.HYST) did not change them; sharing one Forest
+  among BLOCK x BLOCK tiles and doing their passes in one frame did: BLOCK 3 near-forest frames 63 -> 3, frames over
+  100 ms 130 -> 52. With the props fix (empty material blocks) Lugano standing still is 84.4 fps against Italy's 81.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
