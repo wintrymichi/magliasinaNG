@@ -50,21 +50,21 @@ public partial class ServerPage : UserControl, ITickable
         {
             LuaBar.Severity = baseLua == true ? "Warning" : "Info";
             LuaBar.Message = baseLua == true
-                ? "Il pacchetto base ora contiene il Lua del server: togli quello di prova dalla cartella utente, altrimenti copre il Lua nuovo."
-                : "Installato nella cartella utente di BeamNG: copre il Lua del pacchetto base finché non esce un base che conosce il server.";
-            LuaButton.Content = "Togli";
+                ? "The base pack now has the server Lua: remove the test one from the user folder, or it hides the new Lua."
+                : "Installed in the BeamNG user folder: it takes the place of the base pack's Lua until a base pack that knows the server is out.";
+            LuaButton.Content = "Remove";
         }
         else
         {
             LuaBar.Severity = "Warning";
             LuaBar.Message = Directory.Exists(LuaSource)
-                ? "Il pacchetto base installato carica le zone solo da mods. Per provare il server serve il suo Lua nella cartella utente di BeamNG (lua\\ge\\extensions\\ticino)."
-                : "Il pacchetto base installato carica le zone solo da mods, e il programma del server non è ancora scaricato.";
-            LuaButton.Content = "Installa";
+                ? "The installed base pack loads zones from mods only. To try the server, its Lua is needed in the BeamNG user folder (lua\\ge\\extensions\\ticino)."
+                : "The installed base pack loads zones from mods only, and the server program is not downloaded yet.";
+            LuaButton.Content = "Install";
             LuaButton.IsEnabled = Directory.Exists(LuaSource);
         }
         string? exe = PackManager.ServerExe();
-        ExeCard.Description = exe ?? "Non ancora scaricato (pagina Download).";
+        ExeCard.Description = exe ?? "Not downloaded yet (Downloads page).";
     }
 
     void Labels()
@@ -98,7 +98,7 @@ public partial class ServerPage : UserControl, ITickable
 
     void Lua_Click(object sender, RoutedEventArgs e)
     {
-        if (BeamNG.Running()) { Ui.Info("Chiudi prima BeamNG."); return; }
+        if (BeamNG.Running()) { Ui.Info("Close BeamNG first."); return; }
         try
         {
             if (LuaOverrideInstalled())
@@ -108,7 +108,7 @@ public partial class ServerPage : UserControl, ITickable
             }
             else
             {
-                if (!Ui.Ask("Copiare il Lua di prova del server in\n" + LuaDir + "?\n\nCopre il Lua del pacchetto base. Si toglie da qui con Togli (o lo sposta via l'installatore classico).")) return;
+                if (!Ui.Ask("Copy the server test Lua to\n" + LuaDir + "?\n\nIt takes the place of the base pack's Lua. Remove it here with Remove (the classic installer also moves it away).")) return;
                 Directory.CreateDirectory(LuaDir);
                 foreach (var f in Directory.EnumerateFiles(LuaSource, "*.lua"))
                     File.Copy(f, Path.Combine(LuaDir, Path.GetFileName(f)), true);

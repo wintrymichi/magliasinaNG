@@ -6,66 +6,66 @@
             <StackPanel Margin="40,30,40,40" MaxWidth="1000">
                 <TextBlock Text="Server" Style="{StaticResource TitleText}" />
                 <TextBlock Style="{StaticResource SubtitleText}"
-                           Text="Il server legge le zone dalla cartella dei pacchetti, converte le forme delle tile intorno all'auto e le scrive nella cartella temp di BeamNG, dove il gioco le carica come la sua cache." />
+                           Text="The server reads the zones from the packs folder, converts the shapes of the tiles around the car and writes them to BeamNG's temp folder, where the game loads them as its own cache." />
 
-                <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="Lua di prova del server" Visibility="Collapsed">
-                    <Button x:Name="LuaButton" Content="Installa" Click="Lua_Click" />
+                <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="Server test Lua" Visibility="Collapsed">
+                    <Button x:Name="LuaButton" Content="Install" Click="Lua_Click" />
                 </c:InfoBar>
 
-                <c:SettingCard Glyph="&#xE7B8;" Header="Spazio per le tile pronte"
-                               Description="Quanto il server tiene nella cartella temp di BeamNG; oltre, toglie le tile più lontane dall'auto.">
+                <c:SettingCard Glyph="&#xE7B8;" Header="Space for ready tiles"
+                               Description="How much the server keeps in BeamNG's temp folder; beyond it, it removes the tiles farthest from the car.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="CacheText" Style="{StaticResource ValueText}" />
                         <Slider x:Name="Cache" Minimum="2" Maximum="32" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
                                 ValueChanged="Changed" />
                     </StackPanel>
                 </c:SettingCard>
-                <c:SettingCard Glyph="&#xE950;" Header="Processi di conversione"
-                               Description="Core del processore che convertono le forme. Lasciane liberi almeno due per il gioco.">
+                <c:SettingCard Glyph="&#xE950;" Header="Conversion processes"
+                               Description="Processor cores that convert the shapes. Leave at least two free for the game.">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="WorkersText" Style="{StaticResource ValueText}" />
                         <Slider x:Name="Workers" Minimum="1" Maximum="8" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
                                 TickPlacement="BottomRight" ValueChanged="Changed" />
                     </StackPanel>
                 </c:SettingCard>
-                <c:SettingCard Glyph="&#xE909;" Header="Finestre di terreno pronte in anticipo"
-                               Description="Le prossime posizioni del terreno che il server tiene pronte (1-8).">
+                <c:SettingCard Glyph="&#xE909;" Header="Terrain windows prepared ahead"
+                               Description="The next terrain positions the server keeps ready (1-8).">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="AheadText" Style="{StaticResource ValueText}" />
                         <Slider x:Name="Ahead" Minimum="1" Maximum="8" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
                                 TickPlacement="BottomRight" ValueChanged="Changed" />
                     </StackPanel>
                 </c:SettingCard>
-                <c:SettingCard Glyph="&#xE8B9;" Header="Forme già convertite (.cdae)"
-                               Description="Il gioco non deve leggere i Collada né farsi la sua cache. Spento solo per prove.">
-                    <CheckBox x:Name="Cdae" Content="Attivo" Click="Toggle" />
+                <c:SettingCard Glyph="&#xE8B9;" Header="Pre-converted shapes (.cdae)"
+                               Description="The game does not have to read the Collada files or build its own cache. Off only for tests.">
+                    <CheckBox x:Name="Cdae" Content="On" Click="Toggle" />
                 </c:SettingCard>
 
-                <TextBlock Text="Avvio" Style="{StaticResource SectionText}" />
-                <c:SettingCard Glyph="&#xE7FC;" Header="Avvia il server con Gioca" Description="E fermalo quando BeamNG si chiude.">
+                <TextBlock Text="Startup" Style="{StaticResource SectionText}" />
+                <c:SettingCard Glyph="&#xE7FC;" Header="Start the server with Play" Description="And stop it when BeamNG closes.">
                     <StackPanel Orientation="Horizontal">
-                        <CheckBox x:Name="WithGame" Content="Avvia" Click="Toggle" Margin="0,0,16,0" />
-                        <CheckBox x:Name="StopWithGame" Content="Ferma" Click="Toggle" />
+                        <CheckBox x:Name="WithGame" Content="Start" Click="Toggle" Margin="0,0,16,0" />
+                        <CheckBox x:Name="StopWithGame" Content="Stop" Click="Toggle" />
                     </StackPanel>
                 </c:SettingCard>
-                <c:SettingCard Glyph="&#xE768;" Header="Avvia il server all'apertura dell'app">
-                    <CheckBox x:Name="WithApp" Content="Attivo" Click="Toggle" />
+                <c:SettingCard Glyph="&#xE768;" Header="Start the server when the app opens">
+                    <CheckBox x:Name="WithApp" Content="On" Click="Toggle" />
                 </c:SettingCard>
-                <c:SettingCard Glyph="&#xE895;" Header="Aggiorna anche il programma del server"
-                               Description="server_ticino.zip della stessa release.">
-                    <CheckBox x:Name="UpdateServer" Content="Attivo" Click="Toggle" />
+                <c:SettingCard Glyph="&#xE895;" Header="Also update the server program"
+                               Description="server_ticino.zip of the same release.">
+                    <CheckBox x:Name="UpdateServer" Content="On" Click="Toggle" />
                 </c:SettingCard>
-                <c:SettingCard x:Name="ExeCard" Glyph="&#xE756;" Header="Programma del server">
-                    <Button Content="Apri cartella" Click="OpenExe_Click" Padding="14,6" />
+                <c:SettingCard x:Name="ExeCard" Glyph="&#xE756;" Header="Server program">
+                    <Button Content="Open folder" Click="OpenExe_Click" Padding="14,6" />
                 </c:SettingCard>
                 <TextBlock x:Name="RestartText" Style="{StaticResource CaptionText}" Margin="2,6,0,0" Visibility="Collapsed"
-                           Text="Valgono dal prossimo avvio del server." />
+                           Text="They apply from the next server start." />
 
                 <Grid Margin="0,22,0,8">
-                    <TextBlock Text="Registro" Style="{StaticResource SectionText}" Margin="1,0,0,0" VerticalAlignment="Center" />
+                    <TextBlock Text="Log" Style="{StaticResource SectionText}" Margin="1,0,0,0" VerticalAlignment="Center" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="Copia" Click="Copy_Click" Padding="12,4" Margin="0,0,8,0" />
-                        <Button Content="Svuota" Click="Clear_Click" Padding="12,4" />
+                        <Button Content="Copy" Click="Copy_Click" Padding="12,4" Margin="0,0,8,0" />
+                        <Button Content="Clear" Click="Clear_Click" Padding="12,4" />
                     </StackPanel>
                 </Grid>
                 <TextBox x:Name="LogBox" Height="340" IsReadOnly="True" FontFamily="{StaticResource MonoFont}" FontSize="12"

@@ -39,10 +39,10 @@ public sealed class ServerHost : Observable
 
     public string StatusText => Status switch
     {
-        ServerStatus.Starting => "Avvio…",
-        ServerStatus.Running => Live ? "In esecuzione" : "In esecuzione (in attesa del gioco)",
-        ServerStatus.Stopping => "Arresto…",
-        _ => "Fermo",
+        ServerStatus.Starting => "Starting…",
+        ServerStatus.Running => Live ? "Running" : "Running (waiting for the game)",
+        ServerStatus.Stopping => "Stopping…",
+        _ => "Stopped",
     };
 
     public string LogText { get { lock (logText) return logText.ToString(); } }
@@ -83,11 +83,11 @@ public sealed class ServerHost : Observable
     {
         if (IsRunning) return null;
         string? exe = PackManager.ServerExe();
-        if (exe is null) return "Il programma del server non è ancora scaricato (pagina Download).";
+        if (exe is null) return "The server program is not downloaded yet (Downloads page).";
         if (string.IsNullOrWhiteSpace(cfg.DataFolder) || !Directory.Exists(cfg.DataFolder))
-            return "La cartella dei pacchetti non esiste: sceglila nella pagina Download.";
+            return "The packs folder does not exist: choose it on the Downloads page.";
         if (!Directory.EnumerateFiles(cfg.DataFolder!, "ticino_*.zip").Any())
-            return "Nella cartella dei pacchetti non ci sono zone: scaricale nella pagina Download.";
+            return "The packs folder has no zones: download them on the Downloads page.";
         var psi = new ProcessStartInfo(exe)
         {
             UseShellExecute = false,
@@ -115,7 +115,7 @@ public sealed class ServerHost : Observable
             p.ErrorDataReceived += (_, e) => { if (e.Data != null) Append(e.Data); };
             p.Exited += (_, _) => OnExit(p);
             Status = ServerStatus.Starting;
-            Append($"--- avvio: {exe} {string.Join(' ', psi.ArgumentList)}");
+            Append($"--- start: {exe} {string.Join(' ', psi.ArgumentList)}");
             p.Start();
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
@@ -127,7 +127,7 @@ public sealed class ServerHost : Observable
         {
             Status = ServerStatus.Stopped;
             LastError = e.Message;
-            return "Il server non parte: " + e.Message;
+            return "The server does not start: " + e.Message;
         }
     }
 
@@ -135,7 +135,7 @@ public sealed class ServerHost : Observable
     {
         int code = -1;
         try { code = p.ExitCode; } catch { }
-        Append($"--- server terminato (codice {code})");
+        Append($"--- server ended (exit code {code})");
         Log.Write($"server ended ({code})");
         if (ReferenceEquals(p, proc)) proc = null;
         CleanUp();
@@ -187,13 +187,13 @@ public sealed class ServerHost : Observable
         var p = proc;
         if (p is null || p.HasExited) { Status = ServerStatus.Stopped; return; }
         Status = ServerStatus.Stopping;
-        Append("--- arresto (Ctrl+C)");
+        Append("--- stopping (Ctrl+C)");
         bool sent = false;
         try { sent = await SendCtrlC(p); } catch (Exception e) { Log.Write("Ctrl+C: " + e.Message); }
         var waited = Task.Run(() => p.WaitForExit(sent ? 15_000 : 0));
         if (!await waited)
         {
-            Append("--- il server non si ferma: chiuso a forza");
+            Append("--- the server does not stop: killed");
             try { p.Kill(true); } catch { }
             await Task.Run(() => p.WaitForExit(5_000));
             CleanUp();
@@ -247,7 +247,7 @@ public sealed class ServerHost : Observable
                 double vx = r.TryGetProperty("vx", out var a1) ? a1.GetDouble() : 0;
                 double vy = r.TryGetProperty("vy", out var a2) ? a2.GetDouble() : 0;
                 double kmh = Math.Sqrt(vx * vx + vy * vy) * 3.6;
-                Car = $"auto a x {x:0}, y {y:0} · {kmh:0} km/h";
+                Car = $"car at x {x:0}, y {y:0} · {kmh:0} km/h";
                 GameConnected = true;
             }
             else

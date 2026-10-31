@@ -23,9 +23,9 @@ public sealed class PackItem : Observable
 
     public string Title => Kind switch
     {
-        PackKind.Base => "Pacchetto base",
-        PackKind.Server => "Programma del server",
-        _ => "Zona " + ZoneTitle(Zone) + (Place is null ? "" : " · " + Place),
+        PackKind.Base => "Base pack",
+        PackKind.Server => "Server program",
+        _ => "Zone " + ZoneTitle(Zone) + (Place is null ? "" : " · " + Place),
     };
 
     string? place;
@@ -61,15 +61,15 @@ public sealed class PackItem : Observable
 
     public string StateText => State switch
     {
-        PackState.Installed => "Installato",
-        PackState.Missing => "Da scaricare",
-        PackState.Update => "Aggiornamento disponibile",
-        PackState.Unchecked => "Da verificare",
-        PackState.Queued => "In coda",
+        PackState.Installed => "Installed",
+        PackState.Missing => "To download",
+        PackState.Update => "Update available",
+        PackState.Unchecked => "To check",
+        PackState.Queued => "Queued",
         PackState.Downloading => Detail.Length > 0 ? Detail : "Download…",
-        PackState.Verifying => "Verifica sha256…",
-        PackState.Ready => "Scaricato: si installa a server e gioco fermi",
-        PackState.Error => "Errore: " + Detail,
+        PackState.Verifying => "Checking sha256…",
+        PackState.Ready => "Downloaded: installs when the server and the game are stopped",
+        PackState.Error => "Error: " + Detail,
         _ => "",
     };
 

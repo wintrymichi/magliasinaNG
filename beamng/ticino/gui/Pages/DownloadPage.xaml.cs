@@ -40,28 +40,28 @@ public partial class DownloadPage : UserControl, ITickable
     {
         var rel = P.Release;
         ReleaseTitle.Text = rel is null ? $"Release {C.Tag}" :
-            $"{(string.IsNullOrWhiteSpace(rel.Name) ? rel.Tag : rel.Name)}{(rel.Draft ? " · bozza" : "")}";
-        SummaryText.Text = P.Checking ? "Lettura della release su GitHub…" : P.Summary;
-        LastCheckText.Text = C.LastCheck is { } t ? $"Ultimo controllo: {t:dd.MM.yyyy HH:mm}" : "";
+            $"{(string.IsNullOrWhiteSpace(rel.Name) ? rel.Tag : rel.Name)}{(rel.Draft ? " · draft" : "")}";
+        SummaryText.Text = P.Checking ? "Reading the release on GitHub…" : P.Summary;
+        LastCheckText.Text = C.LastCheck is { } t ? $"Last check: {t:d MMM yyyy HH:mm}" : "";
         ErrorBar.Visibility = P.Error != null ? Visibility.Visible : Visibility.Collapsed;
         ErrorBar.Message = P.Error ?? "";
         FolderBar.Visibility = P.DataFolder is null ? Visibility.Visible : Visibility.Collapsed;
-        FolderBar.Message = $"Le zone occupano circa 52 GB. Proposta: {suggested} ({Files.Size(Files.FreeSpace(suggested))} liberi).";
+        FolderBar.Message = $"The zones take about 52 GB. Suggested: {suggested} ({Files.Size(Files.FreeSpace(suggested))} free).";
         string? why = P.ApplyBlocker();
         ReadyBar.Visibility = P.ReadyCount > 0 && !P.Busy ? Visibility.Visible : Visibility.Collapsed;
         ReadyBar.Message = why is null
-            ? $"{P.ReadyCount} zip pronti da installare."
-            : $"{P.ReadyCount} zip pronti: si installano da soli {(why.StartsWith("BeamNG") ? "quando chiudi BeamNG" : "quando il server si ferma")}.";
+            ? $"{P.ReadyCount} zips ready to install."
+            : $"{P.ReadyCount} zips ready: they install themselves {(why.StartsWith("BeamNG") ? "when you close BeamNG" : "when the server stops")}.";
         ReadyBar.Severity = why is null ? "Info" : "Warning";
 
         DataCard.Description = P.DataFolder is null
-            ? "Non ancora scelta."
-            : $"{P.DataFolder} · {Files.Size(Files.FreeSpace(P.DataFolder))} liberi";
-        BaseCard.Description = $"{BeamNG.Mods(C)} (la cartella mods di BeamNG)";
+            ? "Not chosen yet."
+            : $"{P.DataFolder} · {Files.Size(Files.FreeSpace(P.DataFolder))} free";
+        BaseCard.Description = $"{BeamNG.Mods(C)} (BeamNG's mods folder)";
 
         CheckButton.IsEnabled = !P.Checking && !P.Busy;
         DownloadButton.IsEnabled = P.Busy || (P.NeedCount > 0 && P.DataFolder != null && !P.Checking);
-        DownloadLabel.Text = P.Busy ? "Pausa" : P.Items.Any(i => i.State == PackState.Update) ? "Aggiorna" : "Scarica";
+        DownloadLabel.Text = P.Busy ? "Pause" : P.Items.Any(i => i.State == PackState.Update) ? "Update" : "Download";
         DownloadGlyph.Text = P.Busy ? "" : "";
         ProgressPanel.Visibility = P.Busy || P.ProgressText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         Overall.Value = P.Overall;
@@ -80,15 +80,15 @@ public partial class DownloadPage : UserControl, ITickable
     async void Apply_Click(object sender, RoutedEventArgs e)
     {
         string? why = P.ApplyBlocker();
-        if (why == "il server è in esecuzione" && !BeamNG.Running() &&
-            Ui.Ask("Il server è in esecuzione e tiene aperti gli zip. Fermarlo, installare gli aggiornamenti e riavviarlo?"))
+        if (why == PackManager.ServerRunningReason && !BeamNG.Running() &&
+            Ui.Ask("The server is running and keeps the zips open. Stop it, install the updates and start it again?"))
         {
             await App.Server.Stop();
             await P.ApplyPending();
             App.Server.Start();
             return;
         }
-        if (why != null) { Ui.Info($"Non ancora: {why}. Gli aggiornamenti si installano da soli appena possibile."); return; }
+        if (why != null) { Ui.Info($"Not yet: {why}. The updates install themselves as soon as they can."); return; }
         await P.ApplyPending();
     }
 
@@ -96,7 +96,7 @@ public partial class DownloadPage : UserControl, ITickable
 
     async void ChangeData_Click(object sender, RoutedEventArgs e)
     {
-        string? f = Ui.ChooseFolder("Cartella dei pacchetti zona del Ticino", P.DataFolder ?? suggested);
+        string? f = Ui.ChooseFolder("Folder for the Ticino zone packs", P.DataFolder ?? suggested);
         if (f != null) await SetData(f);
     }
 
@@ -106,11 +106,11 @@ public partial class DownloadPage : UserControl, ITickable
         bool move = false;
         if (old != null && Directory.Exists(old) && Directory.EnumerateFiles(old, "ticino_*.zip").Any() &&
             !string.Equals(Path.GetFullPath(old), Path.GetFullPath(folder), StringComparison.OrdinalIgnoreCase))
-            move = Ui.Ask($"Spostare i pacchetti già scaricati da\n{old}\na\n{folder}?\n\nSe rispondi No restano dove sono e nella nuova cartella si scarica tutto di nuovo.");
+            move = Ui.Ask($"Move the packs already downloaded from\n{old}\nto\n{folder}?\n\nIf you answer No they stay where they are and everything is downloaded again into the new folder.");
         try
         {
             IsEnabled = false;
-            await P.ChangeDataFolder(old, folder, move, new Progress<string>(t => ProgressText.Text = "Spostamento: " + t));
+            await P.ChangeDataFolder(old, folder, move, new Progress<string>(t => ProgressText.Text = "Moving: " + t));
         }
         catch (Exception ex) { Ui.Info(ex.Message); }
         finally { IsEnabled = true; ProgressText.Text = ""; }

@@ -109,10 +109,10 @@ public partial class MainWindow : Window
         var s = App.Server;
         StatusTitle.Text = s.Status switch
         {
-            ServerStatus.Running => "Server in esecuzione",
-            ServerStatus.Starting => "Server in avvio…",
-            ServerStatus.Stopping => "Server in arresto…",
-            _ => "Server fermo",
+            ServerStatus.Running => "Server running",
+            ServerStatus.Starting => "Server starting…",
+            ServerStatus.Stopping => "Server stopping…",
+            _ => "Server stopped",
         };
         string key = s.Status switch
         {
@@ -121,7 +121,7 @@ public partial class MainWindow : Window
             _ => "TextFillColorTertiaryBrush",
         };
         StatusDot.Fill = TryFindResource(key) as Brush ?? Brushes.Gray;
-        StatusLine.Text = s.GameConnected ? "BeamNG collegato" : BeamNG.Running() ? "BeamNG aperto" : "BeamNG chiuso";
+        StatusLine.Text = s.GameConnected ? "BeamNG connected" : BeamNG.Running() ? "BeamNG open" : "BeamNG closed";
     }
 
     void UpdateBadge()
@@ -136,7 +136,7 @@ public partial class MainWindow : Window
         if (App.Server.IsRunning && BeamNG.Running())
         {
             var r = MessageBox.Show(this,
-                "BeamNG sta usando il server: chiudendo Ticino Server la mappa smette di caricare le zone intorno all'auto.\n\nChiudere comunque?",
+                "BeamNG is using the server: if Ticino Server closes, the map stops loading the zones around the car.\n\nClose anyway?",
                 "Ticino Server", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (r != MessageBoxResult.Yes) { e.Cancel = true; return; }
         }

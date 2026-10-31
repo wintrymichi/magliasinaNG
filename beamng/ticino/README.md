@@ -42,15 +42,15 @@ Run the installer again to update. Linux or by hand: put every `ticino_*.zip` of
 
 ## Ticino Server app (Windows)
 
-`TicinoServer.exe` (`gui/`, `app_ticino.zip` on the release) is the map's Windows app: one self-contained exe (.NET 10,
-WPF with the Fluent theme of Windows 11), nothing to install. It runs the server mode (the zone packs outside `mods`,
+`TicinoServer.exe` (`gui/`, `app_ticino.zip` on the release) is the map's Windows app, in English: one self-contained exe
+(.NET 10, WPF with the Fluent theme of Windows 11), nothing to install. It runs the server mode (the zone packs outside `mods`,
 see the server's own README) and keeps everything up to date from the GitHub release:
 
 | Page | What it does |
 |---|---|
-| Home | server state (tiles ready, cache, shapes converted, where the car is), **Gioca** (server + BeamNG straight into the map), the game and user folders, warnings (zones still in `mods`, a base pack without the server's Lua) |
-| Grafica | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json`, kept fields it does not know |
-| Download e aggiornamenti | the release (tag), the data folder (proposed on the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` |
+| Home | server state (tiles ready, cache, shapes converted, where the car is), **Play** (server + BeamNG straight into the map), the game and user folders, warnings (zones still in `mods`, a base pack without the server's Lua) |
+| Graphics | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json`, kept fields it does not know |
+| Downloads | the release (tag), the data folder (proposed on the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` |
 | Server | cache size, conversion processes, terrain windows ahead, `.cdae`, start with Play / stop with the game / start with the app, the server's log; installs or removes the server's test Lua in the user folder while the base pack does not carry it |
 
 The zone packs go to the data folder, the base pack to `mods`, `server_ticino.zip` is unpacked into

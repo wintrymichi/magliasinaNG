@@ -6,19 +6,19 @@
         <StackPanel Margin="40,30,40,40" MaxWidth="1000">
             <TextBlock Text="Ticino" Style="{StaticResource TitleText}" />
             <TextBlock Style="{StaticResource SubtitleText}"
-                       Text="Tutto il Canton Ticino in BeamNG.drive. Il server tiene la mappa su questo PC e passa al gioco solo quello che c'è intorno all'auto: l'avvio del gioco non deve più montare 52 GB di zip." />
+                       Text="All of Canton Ticino in BeamNG.drive. The server keeps the map on this PC and hands the game only what is around the car, so the game no longer mounts 52 GB of zips at every start." />
 
-            <c:InfoBar x:Name="UpdateBar" Severity="Info" Title="Aggiornamento disponibile" Visibility="Collapsed">
-                <Button Content="Aggiorna" Click="Update_Click" Style="{DynamicResource AccentButtonStyle}" />
+            <c:InfoBar x:Name="UpdateBar" Severity="Info" Title="Update available" Visibility="Collapsed">
+                <Button Content="Update" Click="Update_Click" Style="{DynamicResource AccentButtonStyle}" />
             </c:InfoBar>
-            <c:InfoBar x:Name="SetupBar" Severity="Warning" Title="Prima di giocare" Visibility="Collapsed">
-                <Button Content="Vai ai download" Click="GoDownload_Click" />
+            <c:InfoBar x:Name="SetupBar" Severity="Warning" Title="Before you play" Visibility="Collapsed">
+                <Button Content="Go to Downloads" Click="GoDownload_Click" />
             </c:InfoBar>
-            <c:InfoBar x:Name="ModsBar" Severity="Warning" Title="Zone nella cartella mods" Visibility="Collapsed">
-                <Button Content="Sposta" Click="MoveFromMods_Click" />
+            <c:InfoBar x:Name="ModsBar" Severity="Warning" Title="Zones in the mods folder" Visibility="Collapsed">
+                <Button Content="Move" Click="MoveFromMods_Click" />
             </c:InfoBar>
-            <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="Il pacchetto base non conosce ancora il server" Visibility="Collapsed">
-                <Button Content="Vai al server" Click="GoServer_Click" />
+            <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="The base pack does not know the server yet" Visibility="Collapsed">
+                <Button Content="Go to Server" Click="GoServer_Click" />
             </c:InfoBar>
             <c:InfoBar x:Name="ErrorBar" Severity="Error" Visibility="Collapsed" />
 
@@ -37,7 +37,7 @@
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </Grid>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock x:Name="HeroTitle" Text="Server fermo" FontSize="20" FontWeight="SemiBold"
+                        <TextBlock x:Name="HeroTitle" Text="Server stopped" FontSize="20" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         <TextBlock x:Name="HeroLine" Style="{StaticResource BodyText}" Margin="0,2,0,0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -46,14 +46,14 @@
                         <Button x:Name="ServerButton" Click="Server_Click" Padding="16,8" Margin="0,0,8,0" MinWidth="130">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock x:Name="ServerGlyph" Style="{StaticResource Icon}" Text="&#xE768;" FontSize="14" Margin="0,0,8,0" />
-                                <TextBlock x:Name="ServerLabel" Text="Avvia server" />
+                                <TextBlock x:Name="ServerLabel" Text="Start server" />
                             </StackPanel>
                         </Button>
                         <Button x:Name="PlayButton" Click="Play_Click" Padding="22,8" MinWidth="130"
                                 Style="{DynamicResource AccentButtonStyle}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Style="{StaticResource Icon}" Text="&#xE7FC;" FontSize="14" Margin="0,0,8,0" />
-                                <TextBlock Text="Gioca" FontWeight="SemiBold" />
+                                <TextBlock Text="Play" FontWeight="SemiBold" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -64,46 +64,46 @@
             <UniformGrid Columns="4" Margin="-2,4,-2,0">
                 <Border Style="{StaticResource Card}" Margin="2">
                     <StackPanel>
-                        <TextBlock Text="Zone installate" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="Zones installed" Style="{StaticResource CaptionText}" />
                         <TextBlock x:Name="ZonesValue" Text="–" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource Card}" Margin="2">
                     <StackPanel>
-                        <TextBlock Text="Tile pronte per il gioco" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="Tiles ready for the game" Style="{StaticResource CaptionText}" />
                         <TextBlock x:Name="TilesValue" Text="–" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource Card}" Margin="2">
                     <StackPanel>
-                        <TextBlock Text="Cache del server" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="Server cache" Style="{StaticResource CaptionText}" />
                         <TextBlock x:Name="CacheValue" Text="–" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource Card}" Margin="2">
                     <StackPanel>
-                        <TextBlock Text="Forme convertite" Style="{StaticResource CaptionText}" />
+                        <TextBlock Text="Shapes converted" Style="{StaticResource CaptionText}" />
                         <TextBlock x:Name="ShapesValue" Text="–" FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     </StackPanel>
                 </Border>
             </UniformGrid>
 
-            <TextBlock Text="Su questo PC" Style="{StaticResource SectionText}" />
+            <TextBlock Text="On this PC" Style="{StaticResource SectionText}" />
             <c:SettingCard x:Name="GameCard" Glyph="&#xE7FC;" Header="BeamNG.drive">
-                <Button Content="Cambia…" Click="ChangeGame_Click" Padding="14,6" />
+                <Button Content="Change…" Click="ChangeGame_Click" Padding="14,6" />
             </c:SettingCard>
-            <c:SettingCard x:Name="UserCard" Glyph="&#xE77B;" Header="Cartella utente di BeamNG">
+            <c:SettingCard x:Name="UserCard" Glyph="&#xE77B;" Header="BeamNG user folder">
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Apri" Click="OpenUser_Click" Padding="14,6" Margin="0,0,8,0" />
-                    <Button Content="Cambia…" Click="ChangeUser_Click" Padding="14,6" />
+                    <Button Content="Open" Click="OpenUser_Click" Padding="14,6" Margin="0,0,8,0" />
+                    <Button Content="Change…" Click="ChangeUser_Click" Padding="14,6" />
                 </StackPanel>
             </c:SettingCard>
-            <c:SettingCard x:Name="DataCard" Glyph="&#xE8B7;" Header="Pacchetti zona">
-                <Button Content="Apri" Click="OpenData_Click" Padding="14,6" />
+            <c:SettingCard x:Name="DataCard" Glyph="&#xE8B7;" Header="Zone packs">
+                <Button Content="Open" Click="OpenData_Click" Padding="14,6" />
             </c:SettingCard>
         </StackPanel>
     </ScrollViewer>

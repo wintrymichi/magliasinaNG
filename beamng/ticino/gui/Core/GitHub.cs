@@ -109,7 +109,7 @@ public sealed class GitHub
         using var r = await Http.SendAsync(Request("https://api.github.com/" + path), ct);
         if (r.StatusCode == HttpStatusCode.NotFound) return null;
         if (r.StatusCode == HttpStatusCode.Forbidden || (int)r.StatusCode == 429)
-            throw new InvalidOperationException("GitHub ha rifiutato la richiesta (limite di richieste raggiunto?): riprova tra qualche minuto.");
+            throw new InvalidOperationException("GitHub refused the request (rate limit reached?): try again in a few minutes.");
         r.EnsureSuccessStatusCode();
         await using var s = await r.Content.ReadAsStreamAsync(ct);
         return await JsonSerializer.DeserializeAsync<T>(s, cancellationToken: ct);
@@ -130,8 +130,8 @@ public sealed class GitHub
         }
         if (rel is null)
             throw new InvalidOperationException(HasToken
-                ? $"La release '{tag}' non esiste in {repo}."
-                : $"La release '{tag}' non è stata trovata. Se è una bozza (draft) serve GitHub CLI con 'gh auth login'.");
+                ? $"The release '{tag}' does not exist in {repo}."
+                : $"The release '{tag}' was not found. If it is a draft, GitHub CLI logged in with 'gh auth login' is needed.");
         for (int page = 1; page <= 20; page++)
         {
             var part = await Get<List<ReleaseAsset>>($"repos/{repo}/releases/{rel.Id}/assets?per_page=100&page={page}", ct)

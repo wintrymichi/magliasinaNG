@@ -14,7 +14,7 @@ public static class Files
         File.Move(tmp, path, true);
     }
 
-    public static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("it-CH");
+    public static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-GB");
 
     public static string Size(double bytes)
     {

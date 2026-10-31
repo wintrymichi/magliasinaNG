@@ -23,7 +23,7 @@ public partial class GraphicsPage : UserControl
         Show();
     }
 
-    static string Tiles(int n) => n == 0 ? "solo la tile dell'auto" : $"{Files.Metres(n * GameSettings.TileM + GameSettings.TileM / 2)}";
+    static string Tiles(int n) => n == 0 ? "only the car's tile" : $"{Files.Metres(n * GameSettings.TileM + GameSettings.TileM / 2)}";
 
     void Show()
     {
@@ -51,7 +51,7 @@ public partial class GraphicsPage : UserControl
         FarText.Text = Tiles(s.FarRadius);
         BuildingsText.Text = Tiles(s.Buildings);
         RoadsText.Text = Tiles(s.Roads);
-        DetailsText.Text = s.Details switch { 0 => "vicino", 1 => "normale", _ => "lontano" };
+        DetailsText.Text = s.Details switch { 0 => "near", 1 => "normal", _ => "far" };
         BurstEveryText.Text = $"{s.BurstEveryMs} ms";
         BurstText.Text = $"{s.BurstMs} ms";
         BlockText.Text = $"{s.ForestBlock} x {s.ForestBlock}";
@@ -119,15 +119,15 @@ public partial class GraphicsPage : UserControl
         {
             s.Save(FilePath);
             SavedBar.Severity = "Success";
-            SavedBar.Title = "Salvato";
+            SavedBar.Title = "Saved";
             SavedBar.Message = BeamNG.Running()
-                ? "BeamNG è aperto: le impostazioni valgono la prossima volta che carichi la mappa."
-                : "Valgono dal prossimo caricamento della mappa.";
+                ? "BeamNG is open: the settings apply the next time you load the map."
+                : "They apply the next time the map loads.";
         }
         catch (Exception ex)
         {
             SavedBar.Severity = "Error";
-            SavedBar.Title = "Non salvato";
+            SavedBar.Title = "Not saved";
             SavedBar.Message = $"{FilePath}: {ex.Message}";
         }
         SavedBar.Visibility = Visibility.Visible;

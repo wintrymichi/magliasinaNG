@@ -20,7 +20,7 @@ static class Ui
         {
             if (!pathOrUrl.StartsWith("http") && !Directory.Exists(pathOrUrl) && !File.Exists(pathOrUrl))
             {
-                Info("La cartella non esiste ancora:\n" + pathOrUrl);
+                Info("The folder does not exist yet:\n" + pathOrUrl);
                 return;
             }
             Process.Start(new ProcessStartInfo(pathOrUrl) { UseShellExecute = true });

@@ -35,17 +35,17 @@ public partial class HomePage : UserControl, ITickable
         // the hero
         HeroTitle.Text = S.Status switch
         {
-            ServerStatus.Running => S.GameConnected ? "In gioco" : "Server in esecuzione",
-            ServerStatus.Starting => "Avvio del server…",
-            ServerStatus.Stopping => "Arresto del server…",
-            _ => "Server fermo",
+            ServerStatus.Running => S.GameConnected ? "In game" : "Server running",
+            ServerStatus.Starting => "Starting the server…",
+            ServerStatus.Stopping => "Stopping the server…",
+            _ => "Server stopped",
         };
         HeroLine.Text = S.Status switch
         {
-            ServerStatus.Running when S.GameConnected => $"Il server prepara le zone intorno all'auto · {S.Car}",
-            ServerStatus.Running => game ? "BeamNG è aperto: carica la mappa Ticino (Freeroam) per collegarlo." : "Pronto: premi Gioca.",
-            ServerStatus.Starting => "Indicizza i pacchetti zona…",
-            _ => P.InstalledZones > 0 ? "Premi Gioca: avvia il server e BeamNG direttamente nella mappa." : "Scarica prima la mappa.",
+            ServerStatus.Running when S.GameConnected => $"The server is preparing the zones around the car · {S.Car}",
+            ServerStatus.Running => game ? "BeamNG is open: load the Ticino map (Freeroam) to connect it." : "Ready: press Play.",
+            ServerStatus.Starting => "Indexing the zone packs…",
+            _ => P.InstalledZones > 0 ? "Press Play: starts the server and BeamNG straight into the map." : "Download the map first.",
         };
         string dot = S.Status switch
         {
@@ -55,11 +55,11 @@ public partial class HomePage : UserControl, ITickable
         };
         HeroDot.Fill = TryFindResource(dot) as Brush ?? Brushes.Gray;
         HeroGlyph.Foreground = S.IsRunning ? Brushes.White : (TryFindResource("TextFillColorPrimaryBrush") as Brush ?? Brushes.Black);
-        ServerLabel.Text = S.IsRunning ? "Ferma server" : "Avvia server";
+        ServerLabel.Text = S.IsRunning ? "Stop server" : "Start server";
         ServerGlyph.Text = S.IsRunning ? "" : "";
         ServerButton.IsEnabled = S.Status is ServerStatus.Running or ServerStatus.Stopped;
         PlayButton.IsEnabled = !game && BeamNG.FindGame(C) != null;
-        PlayButton.ToolTip = game ? "BeamNG è già aperto" : BeamNG.FindGame(C) is null ? "BeamNG non trovato: sceglilo qui sotto" : null;
+        PlayButton.ToolTip = game ? "BeamNG is already open" : BeamNG.FindGame(C) is null ? "BeamNG not found: choose its folder below" : null;
 
         // numbers
         ZonesValue.Text = P.Release is null ? (P.DataFolder is null ? "–" : $"{LocalZoneCount()}") : $"{P.InstalledZones} / {P.ReleaseZones}";
@@ -69,27 +69,27 @@ public partial class HomePage : UserControl, ITickable
 
         // bars
         UpdateBar.Visibility = P.NeedCount > 0 && !P.Busy && P.DataFolder != null && P.InstalledZones > 0 ? Visibility.Visible : Visibility.Collapsed;
-        UpdateBar.Message = $"{P.NeedCount} pacchetti nuovi o cambiati ({Files.Size(P.NeedBytes)}).";
-        string? setup = P.DataFolder is null ? "Scegli dove salvare la mappa e scaricala (circa 52 GB)."
-            : P.Release != null && P.InstalledZones == 0 && P.NeedCount > 0 ? $"La mappa non è ancora scaricata: {Files.Size(P.NeedBytes)}."
+        UpdateBar.Message = $"{P.NeedCount} new or changed packs ({Files.Size(P.NeedBytes)}).";
+        string? setup = P.DataFolder is null ? "Choose where to keep the map and download it (about 52 GB)."
+            : P.Release != null && P.InstalledZones == 0 && P.NeedCount > 0 ? $"The map is not downloaded yet: {Files.Size(P.NeedBytes)}."
             : P.Busy ? null
-            : PackManager.ServerExe() is null && P.Release != null ? "Manca il programma del server: scaricalo nella pagina Download." : null;
+            : PackManager.ServerExe() is null && P.Release != null ? "The server program is missing: download it on the Downloads page." : null;
         if (P.Busy) setup = null;
         SetupBar.Visibility = setup != null ? Visibility.Visible : Visibility.Collapsed;
         SetupBar.Message = setup ?? "";
         ModsBar.Visibility = P.ZonesInMods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        ModsBar.Message = $"{P.ZonesInMods.Count} zone ({Files.Size(P.ZonesInMods.Sum(f => f.Length))}) sono in mods: il gioco le monta tutte a ogni avvio (più di un minuto). Con il server stanno nella cartella dei pacchetti.";
+        ModsBar.Message = $"{P.ZonesInMods.Count} zones ({Files.Size(P.ZonesInMods.Sum(f => f.Length))}) are in mods: the game mounts all of them at every start (more than a minute). With the server they belong in the packs folder.";
         LuaBar.Visibility = baseLua == false && ServerPage.LuaOverrideInstalled() == false ? Visibility.Visible : Visibility.Collapsed;
-        LuaBar.Message = "Questo pacchetto base carica le zone solo da mods. Finché non esce un base nuovo serve il Lua di prova del server (pagina Server).";
+        LuaBar.Message = "This base pack loads zones from mods only. Until a new base pack is out, the server's test Lua is needed (Server page).";
         ErrorBar.Visibility = P.Error != null ? Visibility.Visible : Visibility.Collapsed;
         ErrorBar.Message = P.Error ?? "";
 
         // this PC
         string? g = BeamNG.FindGame(C);
-        GameCard.Description = g ?? "Non trovato nelle librerie di Steam: indicane la cartella.";
-        UserCard.Description = BeamNG.UserFolder(C) + (Directory.Exists(BeamNG.Mods(C)) ? "" : " (non trovata: avvia BeamNG una volta)");
-        DataCard.Description = P.DataFolder is null ? "Non ancora scelta (pagina Download)"
-            : $"{P.DataFolder} · {Files.Size(Files.FreeSpace(P.DataFolder))} liberi";
+        GameCard.Description = g ?? "Not found in the Steam libraries: choose its folder.";
+        UserCard.Description = BeamNG.UserFolder(C) + (Directory.Exists(BeamNG.Mods(C)) ? "" : " (not found: start BeamNG once)");
+        DataCard.Description = P.DataFolder is null ? "Not chosen yet (Downloads page)"
+            : $"{P.DataFolder} · {Files.Size(Files.FreeSpace(P.DataFolder))} free";
     }
 
     static int LocalZoneCount()
@@ -106,7 +106,7 @@ public partial class HomePage : UserControl, ITickable
     {
         if (S.IsRunning)
         {
-            if (BeamNG.Running() && !Ui.Ask("BeamNG è aperto: senza server le zone intorno all'auto non arrivano più. Fermare il server?")) return;
+            if (BeamNG.Running() && !Ui.Ask("BeamNG is open: without the server the zones around the car stop coming. Stop the server?")) return;
             await S.Stop();
             await P.ApplyPending();
             return;
@@ -126,7 +126,7 @@ public partial class HomePage : UserControl, ITickable
     {
         if (C.StartServerWithGame && !S.IsRunning && !await StartServer()) return;
         var p = BeamNG.Start(C);
-        if (p is null) Ui.Info("BeamNG.drive non trovato: indicane la cartella in Home.");
+        if (p is null) Ui.Info("BeamNG.drive not found: choose its folder on the Home page.");
         else Log.Write("BeamNG started into the Ticino map");
     }
 
@@ -142,11 +142,11 @@ public partial class HomePage : UserControl, ITickable
     async void MoveFromMods_Click(object sender, RoutedEventArgs e)
     {
         if (P.DataFolder is null) { Ui.Main.Navigate("download"); return; }
-        if (!Ui.Ask($"Spostare {P.ZonesInMods.Count} zone da\n{BeamNG.Mods(C)}\na\n{P.DataFolder}?")) return;
+        if (!Ui.Ask($"Move {P.ZonesInMods.Count} zones from\n{BeamNG.Mods(C)}\nto\n{P.DataFolder}?")) return;
         try
         {
             IsEnabled = false;
-            await P.MoveZonesFromMods(new Progress<string>(t => ModsBar.Message = "Spostamento: " + t));
+            await P.MoveZonesFromMods(new Progress<string>(t => ModsBar.Message = "Moving: " + t));
         }
         catch (Exception ex) { Ui.Info(ex.Message); }
         finally { IsEnabled = true; Refresh(); }
@@ -154,9 +154,9 @@ public partial class HomePage : UserControl, ITickable
 
     void ChangeGame_Click(object sender, RoutedEventArgs e)
     {
-        string? f = Ui.ChooseFolder("Cartella di BeamNG.drive (quella con Bin64)", BeamNG.FindGame(C));
+        string? f = Ui.ChooseFolder("BeamNG.drive folder (the one with Bin64)", BeamNG.FindGame(C));
         if (f is null) return;
-        if (BeamNG.GameExe(f) is null) { Ui.Info("In questa cartella non c'è Bin64\\BeamNG.drive.x64.exe."); return; }
+        if (BeamNG.GameExe(f) is null) { Ui.Info("This folder has no Bin64\\BeamNG.drive.x64.exe."); return; }
         C.GameFolder = f;
         C.Save();
         Refresh();
@@ -164,9 +164,9 @@ public partial class HomePage : UserControl, ITickable
 
     async void ChangeUser_Click(object sender, RoutedEventArgs e)
     {
-        string? f = Ui.ChooseFolder("Cartella utente di BeamNG (quella con mods e settings)", BeamNG.UserFolder(C));
+        string? f = Ui.ChooseFolder("BeamNG user folder (the one with mods and settings)", BeamNG.UserFolder(C));
         if (f is null) return;
-        if (!Directory.Exists(Path.Combine(f, "mods")) && !Ui.Ask("In questa cartella non c'è mods. Usarla comunque?")) return;
+        if (!Directory.Exists(Path.Combine(f, "mods")) && !Ui.Ask("This folder has no mods folder. Use it anyway?")) return;
         C.UserFolder = f.Equals(BeamNG.DefaultUserFolder, StringComparison.OrdinalIgnoreCase) ? null : f;
         C.Save();
         await P.Refresh();

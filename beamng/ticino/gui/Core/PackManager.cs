@@ -18,6 +18,8 @@ namespace TicinoServer.Core;
 public sealed partial class PackManager : Observable
 {
     public const string ServerAsset = "server_ticino.zip";
+    public const string GameOpenReason = "BeamNG is open";
+    public const string ServerRunningReason = "the server is running";
 
     readonly AppConfig cfg;
     readonly GitHub gh = new();
@@ -51,7 +53,7 @@ public sealed partial class PackManager : Observable
     string progressText = "";
     public string ProgressText { get => progressText; private set => Set(ref progressText, value); }
 
-    string summary = "Nessun controllo ancora.";
+    string summary = "Not checked yet.";
     public string Summary { get => summary; private set => Set(ref summary, value); }
 
     int needCount;
@@ -180,7 +182,7 @@ public sealed partial class PackManager : Observable
         }
         catch (Exception e)
         {
-            Error = e is HttpRequestException ? "GitHub non raggiungibile: " + e.Message : e.Message;
+            Error = e is HttpRequestException ? "GitHub cannot be reached: " + e.Message : e.Message;
             Log.Write("check failed: " + e.Message);
         }
         finally
@@ -314,14 +316,14 @@ public sealed partial class PackManager : Observable
         ReadyCount = Items.Count(i => i.State == PackState.Ready);
         ReleaseZones = Items.Count(i => i.Kind == PackKind.Zone);
         InstalledZones = Items.Count(i => i.Kind == PackKind.Zone && i.State == PackState.Installed);
-        if (Release is null) { Summary = Error ?? "Nessun controllo ancora."; return; }
+        if (Release is null) { Summary = Error ?? "Not checked yet."; return; }
         long total = Items.Where(i => i.Kind != PackKind.Server).Sum(i => i.Size);
-        string s = $"{ReleaseZones} zone · {Files.Size(total)}";
-        if (NeedCount == 0 && ReadyCount == 0) s += " · tutto aggiornato";
+        string s = $"{ReleaseZones} zones · {Files.Size(total)}";
+        if (NeedCount == 0 && ReadyCount == 0) s += " · all up to date";
         else
         {
-            if (NeedCount > 0) s += $" · {NeedCount} da scaricare ({Files.Size(NeedBytes)})";
-            if (ReadyCount > 0) s += $" · {ReadyCount} pronti da installare";
+            if (NeedCount > 0) s += $" · {NeedCount} to download ({Files.Size(NeedBytes)})";
+            if (ReadyCount > 0) s += $" · {ReadyCount} ready to install";
         }
         Summary = s;
     }
@@ -336,7 +338,7 @@ public sealed partial class PackManager : Observable
         if (Busy) return;
         if (DataFolder is null)
         {
-            Error = "Scegli prima la cartella dei pacchetti.";
+            Error = "Choose the packs folder first.";
             return;
         }
         var todo = Items.Where(i => i.NeedsDownload || i.State == PackState.Unchecked).ToList();
@@ -345,7 +347,7 @@ public sealed partial class PackManager : Observable
         long free = Files.FreeSpace(DataFolder);
         if (free > 0 && free < need + (2L << 30))
         {
-            Error = $"Spazio insufficiente su {Path.GetPathRoot(DataFolder)}: liberi {Files.Size(free)}, servono {Files.Size(need)} + 2 GB.";
+            Error = $"Not enough space on {Path.GetPathRoot(DataFolder)}: {Files.Size(free)} free, {Files.Size(need)} + 2 GB needed.";
             return;
         }
         Error = null;
@@ -385,7 +387,7 @@ public sealed partial class PackManager : Observable
             try { await Task.WhenAll(tasks); }
             catch (OperationCanceledException) { }
             Overall = meter.Fraction * 100;
-            ProgressText = ct.IsCancellationRequested ? "In pausa: riprende da dove si è fermato." : "";
+            ProgressText = ct.IsCancellationRequested ? "Paused: it resumes where it stopped." : "";
         }
         finally
         {
@@ -426,9 +428,9 @@ public sealed partial class PackManager : Observable
                 lastT = t;
                 lastDone = d;
             }
-            string text = $"{Files.Size(d)} di {Files.Size(total)}";
+            string text = $"{Files.Size(d)} of {Files.Size(total)}";
             if (speed > 1000)
-                text += $" · {Files.Speed(speed)} · mancano {Files.Duration(TimeSpan.FromSeconds((total - d) / speed))}";
+                text += $" · {Files.Speed(speed)} · {Files.Duration(TimeSpan.FromSeconds((total - d) / speed))} left";
             return text;
         }
     }
@@ -477,7 +479,7 @@ public sealed partial class PackManager : Observable
                         if (last.ElapsedMilliseconds > 250)
                         {
                             it.Progress = 100.0 * have / it.Size;
-                            it.Detail = $"{Files.Size(have)} di {Files.Size(it.Size)}";
+                            it.Detail = $"{Files.Size(have)} of {Files.Size(it.Size)}";
                             last.Restart();
                         }
                     }
@@ -490,7 +492,7 @@ public sealed partial class PackManager : Observable
                         meter.Add(-new FileInfo(part).Length);
                         File.Delete(part);
                     }
-                    it.Detail = $"tentativo {attempt}/6: {e.Message}";
+                    it.Detail = $"attempt {attempt}/6: {e.Message}";
                     Log.Write($"{it.Name}: {e.Message} (try {attempt})");
                     await Task.Delay(TimeSpan.FromSeconds(10 * attempt), ct);
                     await Renew(it, ct);
@@ -498,7 +500,7 @@ public sealed partial class PackManager : Observable
                 }
                 have = new FileInfo(part).Length;
             }
-            if (have != it.Size) { it.Detail = $"dimensione {have} invece di {it.Size}"; continue; }
+            if (have != it.Size) { it.Detail = $"size {have} instead of {it.Size}"; continue; }
             if (sha != null)
             {
                 it.State = PackState.Verifying;
@@ -519,7 +521,7 @@ public sealed partial class PackManager : Observable
             return;
         }
         it.State = PackState.Error;
-        if (it.Detail.Length == 0) it.Detail = "download non riuscito";
+        if (it.Detail.Length == 0) it.Detail = "download failed";
     }
 
     /// <summary>A workflow can replace an asset while we download (new id: the old one answers 404).</summary>
@@ -561,8 +563,8 @@ public sealed partial class PackManager : Observable
     /// <summary>Why the downloaded zips cannot go into place now, or null.</summary>
     public string? ApplyBlocker()
     {
-        if (BeamNG.Running()) return "BeamNG è aperto";
-        if (ServerRunning()) return "il server è in esecuzione";
+        if (BeamNG.Running()) return GameOpenReason;
+        if (ServerRunning()) return ServerRunningReason;
         return null;
     }
 
@@ -593,7 +595,7 @@ public sealed partial class PackManager : Observable
                 catch (Exception e)
                 {
                     it.State = PackState.Error;
-                    it.Detail = "installazione: " + e.Message;
+                    it.Detail = "install: " + e.Message;
                     Log.Write($"{it.Name}: not installed ({e.Message})");
                 }
             }
@@ -657,7 +659,7 @@ public sealed partial class PackManager : Observable
         foreach (var f in OldZips) Retire(f.FullName);
     }
 
-    /// <summary>An old zip: deleted, or moved to data\old (setting "Elimina i pacchetti vecchi").</summary>
+    /// <summary>An old zip: deleted, or moved to data\old (setting "Delete old packs").</summary>
     void Retire(string path)
     {
         try
@@ -708,14 +710,14 @@ public sealed partial class PackManager : Observable
     /// <summary>Moves the zone zips from mods into the data folder (`ticino_server adopt`): on one drive a rename.</summary>
     public async Task MoveZonesFromMods(IProgress<string> report)
     {
-        if (DataFolder is null) throw new InvalidOperationException("Scegli prima la cartella dei pacchetti.");
-        if (BeamNG.Running()) throw new InvalidOperationException("Chiudi BeamNG: tiene aperti gli zip in mods.");
+        if (DataFolder is null) throw new InvalidOperationException("Choose the packs folder first.");
+        if (BeamNG.Running()) throw new InvalidOperationException("Close BeamNG: it keeps the zips in mods open.");
         var list = ZonesInMods.ToList();
         Directory.CreateDirectory(DataFolder);
         long total = list.Sum(f => f.Length), done = 0;
         foreach (var f in list)
         {
-            report.Report($"{f.Name} ({Files.Size(done)} di {Files.Size(total)})");
+            report.Report($"{f.Name} ({Files.Size(done)} of {Files.Size(total)})");
             await Files.MoveAsync(f.FullName, Path.Combine(DataFolder, f.Name), new Progress<long>(n => done += n), CancellationToken.None);
             Log.Write($"moved {f.Name} from mods to {DataFolder}");
         }
@@ -728,7 +730,7 @@ public sealed partial class PackManager : Observable
     {
         if (move && from != null && Directory.Exists(from) && !Path.GetFullPath(from).Equals(Path.GetFullPath(to), StringComparison.OrdinalIgnoreCase))
         {
-            if (ServerRunning()) throw new InvalidOperationException("Ferma il server prima di spostare i pacchetti.");
+            if (ServerRunning()) throw new InvalidOperationException("Stop the server before moving the packs.");
             var files = new DirectoryInfo(from).EnumerateFiles("ticino_*.zip").ToList();
             string dl = Path.Combine(from, ".download");
             if (Directory.Exists(dl)) files.AddRange(new DirectoryInfo(dl).EnumerateFiles());
@@ -736,7 +738,7 @@ public sealed partial class PackManager : Observable
             foreach (var f in files)
             {
                 string rel = Path.GetRelativePath(from, f.FullName);
-                report.Report($"{f.Name} ({Files.Size(done)} di {Files.Size(total)})");
+                report.Report($"{f.Name} ({Files.Size(done)} of {Files.Size(total)})");
                 await Files.MoveAsync(f.FullName, Path.Combine(to, rel), new Progress<long>(n => done += n), CancellationToken.None);
             }
             Log.Write($"{files.Count} files moved from {from} to {to}");

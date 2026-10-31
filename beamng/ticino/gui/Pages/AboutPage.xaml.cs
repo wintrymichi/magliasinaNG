@@ -11,7 +11,7 @@ public partial class AboutPage : UserControl
     {
         InitializeComponent();
         var v = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
-        VersionText.Text = "Versione " + v;
+        VersionText.Text = "Version " + v;
     }
 
     void Repo_Click(object sender, RoutedEventArgs e) => Ui.Open("https://github.com/" + App.Config.Repo);

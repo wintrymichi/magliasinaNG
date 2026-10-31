@@ -35,7 +35,7 @@ public partial class App : Application
             single = new Mutex(true, @"Local\TicinoServer.App", out bool first);
             if (!first)
             {
-                MessageBox.Show("Ticino Server è già aperto.", "Ticino Server", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Ticino Server is already open.", "Ticino Server", MessageBoxButton.OK, MessageBoxImage.Information);
                 Shutdown();
                 return;
             }
@@ -60,7 +60,7 @@ public partial class App : Application
     void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log.Write("error: " + e.Exception);
-        MessageBox.Show(e.Exception.Message, "Ticino Server: errore", MessageBoxButton.OK, MessageBoxImage.Error);
+        MessageBox.Show(e.Exception.Message, "Ticino Server: error", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }
 

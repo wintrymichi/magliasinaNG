@@ -4,7 +4,7 @@
              xmlns:c="clr-namespace:TicinoServer.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="40,30,40,40" MaxWidth="1000">
-            <TextBlock Text="Informazioni" Style="{StaticResource TitleText}" />
+            <TextBlock Text="About" Style="{StaticResource TitleText}" />
             <Border Style="{StaticResource Card}" Padding="24,20" Margin="0,12,0,4">
                 <StackPanel Orientation="Horizontal">
                     <Image Source="/Assets/logo.png" Width="64" Height="64" RenderOptions.BitmapScalingMode="HighQuality" />
@@ -12,23 +12,23 @@
                         <TextBlock Text="Ticino Server" FontSize="20" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         <TextBlock x:Name="VersionText" Style="{StaticResource CaptionText}" />
-                        <TextBlock Style="{StaticResource CaptionText}" Text="Parte di MagliasinaNG · licenza CC BY-NC 4.0" />
+                        <TextBlock Style="{StaticResource CaptionText}" Text="Part of MagliasinaNG · licence CC BY-NC 4.0" />
                     </StackPanel>
                 </StackPanel>
             </Border>
-            <c:SettingCard Glyph="&#xE71B;" Header="Progetto su GitHub" Description="github.com/wintrymichi/magliasinaNG">
-                <Button Content="Apri" Click="Repo_Click" Padding="14,6" />
+            <c:SettingCard Glyph="&#xE71B;" Header="Project on GitHub" Description="github.com/wintrymichi/magliasinaNG">
+                <Button Content="Open" Click="Repo_Click" Padding="14,6" />
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE8A5;" Header="Guida della mappa Ticino" Description="Installazione, impostazioni, come funziona lo streaming.">
-                <Button Content="Apri" Click="Readme_Click" Padding="14,6" />
+            <c:SettingCard Glyph="&#xE8A5;" Header="Ticino map guide" Description="Installation, settings, how the streaming works.">
+                <Button Content="Open" Click="Readme_Click" Padding="14,6" />
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE9F9;" Header="Registro dell'app" Description="Per segnalare un problema: app.log nella cartella dell'app.">
-                <Button Content="Apri cartella" Click="Logs_Click" Padding="14,6" />
+            <c:SettingCard Glyph="&#xE9F9;" Header="App log" Description="To report a problem: app.log in the app's folder.">
+                <Button Content="Open folder" Click="Logs_Click" Padding="14,6" />
             </c:SettingCard>
-            <TextBlock Text="Crediti" Style="{StaticResource SectionText}" />
+            <TextBlock Text="Credits" Style="{StaticResource SectionText}" />
             <Border Style="{StaticResource Card}">
                 <TextBlock Style="{StaticResource BodyText}" LineHeight="22"
-                           Text="Dati: swisstopo (swissALTI3D, swissBUILDINGS3D, swissTLM3D), misurazione ufficiale del Canton Ticino, contributori di OpenStreetMap. Lo scambio del terreno, gli oggetti in tempo reale e il formato .cdae seguono BeamNG.Earth (TecnaGamer, MIT). BeamNG.drive è un marchio di BeamNG GmbH; questo programma non è affiliato a BeamNG." />
+                           Text="Data: swisstopo (swissALTI3D, swissBUILDINGS3D, swissTLM3D), official cadastral survey of Canton Ticino, OpenStreetMap contributors. The terrain swap, the runtime objects and the .cdae format follow BeamNG.Earth (TecnaGamer, MIT). BeamNG.drive is a trademark of BeamNG GmbH; this program is not affiliated with BeamNG." />
             </Border>
         </StackPanel>
     </ScrollViewer>

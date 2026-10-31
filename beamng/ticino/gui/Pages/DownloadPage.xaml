@@ -4,19 +4,19 @@
              xmlns:c="clr-namespace:TicinoServer.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="40,30,40,40" MaxWidth="1000">
-            <TextBlock Text="Download e aggiornamenti" Style="{StaticResource TitleText}" />
+            <TextBlock Text="Downloads and updates" Style="{StaticResource TitleText}" />
             <TextBlock Style="{StaticResource SubtitleText}"
-                       Text="I pacchetti della mappa arrivano dalla release di GitHub. Si scarica solo quello che è cambiato, un download interrotto riprende da dove si è fermato e ogni zip è controllato con il suo sha256." />
+                       Text="The map packs come from the GitHub release. Only what changed is downloaded, an interrupted download resumes where it stopped, and every zip is checked against its sha256." />
 
-            <c:InfoBar x:Name="ErrorBar" Severity="Error" Title="Controllo non riuscito" Visibility="Collapsed">
-                <Button Content="Riprova" Click="Check_Click" />
+            <c:InfoBar x:Name="ErrorBar" Severity="Error" Title="Check failed" Visibility="Collapsed">
+                <Button Content="Retry" Click="Check_Click" />
             </c:InfoBar>
-            <c:InfoBar x:Name="FolderBar" Severity="Warning" Title="Scegli dove salvare la mappa" Visibility="Collapsed"
-                       Message="Le zone occupano circa 52 GB. Il disco più capiente di questo PC è già proposto qui sotto.">
-                <Button Content="Usa questa cartella" Click="UseSuggested_Click" />
+            <c:InfoBar x:Name="FolderBar" Severity="Warning" Title="Choose where to keep the map" Visibility="Collapsed"
+                       Message="The zones take about 52 GB. The drive with the most room on this PC is suggested below.">
+                <Button Content="Use this folder" Click="UseSuggested_Click" />
             </c:InfoBar>
-            <c:InfoBar x:Name="ReadyBar" Severity="Info" Title="Aggiornamenti scaricati" Visibility="Collapsed">
-                <Button Content="Installa ora" Click="Apply_Click" />
+            <c:InfoBar x:Name="ReadyBar" Severity="Info" Title="Updates downloaded" Visibility="Collapsed">
+                <Button Content="Install now" Click="Apply_Click" />
             </c:InfoBar>
 
             <!-- the release and the big button -->
@@ -41,14 +41,14 @@
                         <Button x:Name="CheckButton" Click="Check_Click" Padding="14,6" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Style="{StaticResource Icon}" Text="&#xE72C;" FontSize="14" Margin="0,0,8,0" />
-                                <TextBlock Text="Controlla" />
+                                <TextBlock Text="Check" />
                             </StackPanel>
                         </Button>
                         <Button x:Name="DownloadButton" Click="Download_Click" Padding="18,6"
                                 Style="{DynamicResource AccentButtonStyle}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock x:Name="DownloadGlyph" Style="{StaticResource Icon}" Text="&#xE896;" FontSize="14" Margin="0,0,8,0" />
-                                <TextBlock x:Name="DownloadLabel" Text="Scarica" />
+                                <TextBlock x:Name="DownloadLabel" Text="Download" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -59,34 +59,34 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="Dove" Style="{StaticResource SectionText}" />
-            <c:SettingCard Glyph="&#xE8B7;" Header="Cartella dei pacchetti zona"
+            <TextBlock Text="Where" Style="{StaticResource SectionText}" />
+            <c:SettingCard Glyph="&#xE8B7;" Header="Zone packs folder"
                            x:Name="DataCard">
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Apri" Click="OpenData_Click" Padding="14,6" Margin="0,0,8,0" />
-                    <Button Content="Cambia…" Click="ChangeData_Click" Padding="14,6" />
+                    <Button Content="Open" Click="OpenData_Click" Padding="14,6" Margin="0,0,8,0" />
+                    <Button Content="Change…" Click="ChangeData_Click" Padding="14,6" />
                 </StackPanel>
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE7B8;" Header="Pacchetto base" x:Name="BaseCard"
-                           Description="Il pacchetto base (scena, materiali, mod) va nella cartella mods di BeamNG." />
-            <c:SettingCard Glyph="&#xE77B;" Header="Release" Description="Il tag della release su GitHub da cui scaricare.">
+            <c:SettingCard Glyph="&#xE7B8;" Header="Base pack" x:Name="BaseCard"
+                           Description="The base pack (scene, materials, mod) goes into BeamNG's mods folder." />
+            <c:SettingCard Glyph="&#xE77B;" Header="Release" Description="The tag of the GitHub release to download from.">
                 <TextBox x:Name="TagBox" Width="200" LostFocus="Tag_LostFocus" KeyDown="Tag_KeyDown" />
             </c:SettingCard>
 
-            <TextBlock Text="Aggiornamenti automatici" Style="{StaticResource SectionText}" />
-            <c:SettingCard Glyph="&#xE895;" Header="Controlla gli aggiornamenti all'avvio"
-                           Description="E ogni 6 ore mentre l'app è aperta.">
-                <CheckBox x:Name="CheckOnStart" Content="Attivo" Click="Options_Click" />
+            <TextBlock Text="Automatic updates" Style="{StaticResource SectionText}" />
+            <c:SettingCard Glyph="&#xE895;" Header="Check for updates at start"
+                           Description="And every 6 hours while the app is open.">
+                <CheckBox x:Name="CheckOnStart" Content="On" Click="Options_Click" />
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE896;" Header="Scarica gli aggiornamenti da solo"
-                           Description="Gli zip nuovi si installano quando server e gioco sono chiusi: mentre giochi non cambia niente.">
-                <CheckBox x:Name="AutoDownload" Content="Attivo" Click="Options_Click" />
+            <c:SettingCard Glyph="&#xE896;" Header="Download updates automatically"
+                           Description="New zips are installed when the server and the game are closed: nothing changes while you play.">
+                <CheckBox x:Name="AutoDownload" Content="On" Click="Options_Click" />
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE74D;" Header="Elimina i pacchetti vecchi"
-                           Description="Altrimenti finiscono nella cartella old dentro la cartella dei pacchetti.">
-                <CheckBox x:Name="DeleteOld" Content="Attivo" Click="Options_Click" />
+            <c:SettingCard Glyph="&#xE74D;" Header="Delete old packs"
+                           Description="Otherwise they go to the old folder inside the packs folder.">
+                <CheckBox x:Name="DeleteOld" Content="On" Click="Options_Click" />
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE9F5;" Header="Download in parallelo">
+            <c:SettingCard Glyph="&#xE9F5;" Header="Parallel downloads">
                 <ComboBox x:Name="Parallel" Width="90" SelectionChanged="Parallel_Changed">
                     <ComboBoxItem Content="1" />
                     <ComboBoxItem Content="2" />
@@ -97,8 +97,8 @@
             </c:SettingCard>
 
             <Grid Margin="0,22,0,8">
-                <TextBlock Text="Pacchetti" Style="{StaticResource SectionText}" Margin="1,0,0,0" />
-                <CheckBox x:Name="OnlyPending" Content="Solo quelli da scaricare" HorizontalAlignment="Right"
+                <TextBlock Text="Packs" Style="{StaticResource SectionText}" Margin="1,0,0,0" />
+                <CheckBox x:Name="OnlyPending" Content="Only those to download" HorizontalAlignment="Right"
                           Click="Filter_Click" />
             </Grid>
             <Border Style="{StaticResource Card}" Padding="0">
@@ -131,7 +131,7 @@
                 </ItemsControl>
             </Border>
             <TextBlock x:Name="EmptyText" Style="{StaticResource CaptionText}" Margin="2,8,0,0"
-                       Text="Premi Controlla per leggere la release." />
+                       Text="Press Check to read the release." />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

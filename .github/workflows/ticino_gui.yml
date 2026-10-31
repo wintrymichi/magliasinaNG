@@ -54,7 +54,7 @@ jobs:
         run: |
           mkdir -p pack
           cp out/TicinoServer.exe pack/
-          cp beamng/ticino/gui/LEGGIMI.txt pack/
+          cp beamng/ticino/gui/README.txt pack/
           echo "commit ${GITHUB_SHA}" > pack/VERSION.txt
           (cd pack && 7z a -tzip ../app_ticino.zip . > /dev/null)
           (cd shots && 7z a -tzip ../app_ticino_shots.zip . > /dev/null)

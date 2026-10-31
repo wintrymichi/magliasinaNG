@@ -67,7 +67,7 @@
                 <ListBoxItem Tag="graphics" Padding="12,9">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Icon}" Text="&#xE7F4;" Margin="0,0,14,0" />
-                        <TextBlock Text="Grafica" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock Text="Graphics" FontSize="14" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="download" Padding="12,9">
@@ -90,7 +90,7 @@
                 <ListBoxItem Tag="about" Padding="12,9">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Icon}" Text="&#xE946;" Margin="0,0,14,0" />
-                        <TextBlock Text="Informazioni" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock Text="About" FontSize="14" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
             </ListBox>
@@ -105,9 +105,9 @@
                     <Ellipse x:Name="StatusDot" Width="10" Height="10" Margin="0,5,12,0" VerticalAlignment="Top"
                              Fill="{DynamicResource TextFillColorTertiaryBrush}" />
                     <StackPanel Grid.Column="1">
-                        <TextBlock x:Name="StatusTitle" Text="Server fermo" FontSize="13" FontWeight="SemiBold"
+                        <TextBlock x:Name="StatusTitle" Text="Server stopped" FontSize="13" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <TextBlock x:Name="StatusLine" Text="BeamNG chiuso" Style="{StaticResource CaptionText}" />
+                        <TextBlock x:Name="StatusLine" Text="BeamNG closed" Style="{StaticResource CaptionText}" />
                     </StackPanel>
                 </Grid>
             </Border>
