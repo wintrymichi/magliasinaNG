@@ -13,7 +13,7 @@ public partial class MainWindow : Window
     readonly Dictionary<string, UserControl> pages = new();
     readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromSeconds(1) };
     readonly DispatcherTimer autoCheck = new() { Interval = TimeSpan.FromHours(6) };
-    bool gameWasRunning;
+    bool gameWasRunning, serverWasRunning;
 
     public MainWindow()
     {
@@ -90,10 +90,13 @@ public partial class MainWindow : Window
         if (gameWasRunning && !game)
         {
             Log.Write("BeamNG closed");
-            if (App.Config.StopServerWithGame && App.Server.IsRunning) _ = StopServerThenApply();
+            // a server of Start Ticino stops by itself with the game (--game-pid): a second Ctrl+C would cut its clean-up
+            if (App.Config.StopServerWithGame && App.Server.IsRunning && !App.Server.External) _ = StopServerThenApply();
             else _ = App.Packs.ApplyPending();
         }
+        else if (serverWasRunning && !App.Server.IsRunning && !game) _ = App.Packs.ApplyPending();
         gameWasRunning = game;
+        serverWasRunning = App.Server.IsRunning;
         UpdateStatus();
         if (Page.Content is ITickable t) t.Tick();
     }

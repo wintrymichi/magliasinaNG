@@ -9,7 +9,9 @@ public enum ServerStatus { Stopped, Starting, Running, Stopping }
 
 /// <summary>Runs ticino_server.exe (beamng/ticino/server) as a hidden child process, shows its output and reads its
 /// state from the files it shares with the mod (temp\ticino\helper\alive.json, req.json). Stopped with Ctrl+C, so
-/// it removes its files from the user folder as when stopped by hand.</summary>
+/// it removes its files from the user folder as when stopped by hand. A server started by "Start Ticino" (the
+/// installer's shortcut, which skips its own start when a ticino_server process runs) is shown as running and
+/// never started twice.</summary>
 public sealed class ServerHost : Observable
 {
     readonly AppConfig cfg;
@@ -37,9 +39,19 @@ public sealed class ServerHost : Observable
 
     public bool IsRunning => Status is ServerStatus.Running or ServerStatus.Starting or ServerStatus.Stopping;
 
+    bool external;
+    /// <summary>The running server is not the app's child: "Start Ticino" started it (it stops with the game).</summary>
+    public bool External { get => external; private set { if (Set(ref external, value)) Raise(nameof(StatusText)); } }
+
+    const string ProcName = "ticino_server", HelperName = "ticino_helper";
+
+    /// <summary>Every ticino_server process: a PyInstaller onefile exe is two of them (the boot loader and Python).</summary>
+    static Process[] ServerProcs() => Process.GetProcessesByName(ProcName);
+
     public string StatusText => Status switch
     {
         ServerStatus.Starting => "Starting…",
+        ServerStatus.Running when External => Live ? "Running (started by Start Ticino)" : "Running (started by Start Ticino, waiting for the game)",
         ServerStatus.Running => Live ? "Running" : "Running (waiting for the game)",
         ServerStatus.Stopping => "Stopping…",
         _ => "Stopped",
@@ -67,6 +79,7 @@ public sealed class ServerHost : Observable
     public bool GameConnected { get => gameConnected; private set => Set(ref gameConnected, value); }
 
     public string? LastError { get; private set; }
+    int polls;
 
     void Append(string line)
     {
@@ -82,12 +95,14 @@ public sealed class ServerHost : Observable
     public string? Start()
     {
         if (IsRunning) return null;
-        string? exe = PackManager.ServerExe();
+        if (FindExternal()) return null;
+        string? exe = PackManager.ServerExe(cfg);
         if (exe is null) return "The server program is not downloaded yet (Downloads page).";
         if (string.IsNullOrWhiteSpace(cfg.DataFolder) || !Directory.Exists(cfg.DataFolder))
             return "The packs folder does not exist: choose it on the Downloads page.";
         if (!Directory.EnumerateFiles(cfg.DataFolder!, "ticino_*.zip").Any())
             return "The packs folder has no zones: download them on the Downloads page.";
+        StopHelpers();
         var psi = new ProcessStartInfo(exe)
         {
             UseShellExecute = false,
@@ -131,6 +146,47 @@ public sealed class ServerHost : Observable
         }
     }
 
+    /// <summary>A server this app did not start (Start Ticino's): adopt it as running. True when there is one.</summary>
+    bool FindExternal()
+    {
+        if (proc != null) return false;
+        var ps = ServerProcs();
+        foreach (var x in ps) x.Dispose();
+        if (ps.Length == 0)
+        {
+            if (External) { External = false; Status = ServerStatus.Stopped; Live = false; GameConnected = false; }
+            return false;
+        }
+        if (!External)
+        {
+            External = true;
+            Append("--- a server started outside the app is running (Start Ticino): used as it is");
+            Log.Write("external server found");
+        }
+        if (Status == ServerStatus.Stopped) Status = ServerStatus.Running;
+        return true;
+    }
+
+    /// <summary>The streaming helper (packs mode) writes the same alive.json as the server: it goes before the server
+    /// starts. Ctrl+C first; Stop-Process alone leaves the onefile exe's Python child running with zips open.</summary>
+    void StopHelpers()
+    {
+        var hs = Process.GetProcessesByName(HelperName);
+        if (hs.Length == 0) return;
+        Append($"--- stopping the streaming helper ({hs.Length} processes): the server does its work");
+        foreach (var h in hs)                                // one Ctrl+C reaches every process of its console
+            try
+            {
+                if (h.HasExited) continue;
+                var t = SendCtrlC(h);
+                if (t.Wait(2_000) && t.Result) break;
+            }
+            catch { }
+        foreach (var h in hs)
+            try { if (!h.WaitForExit(3_000)) h.Kill(true); } catch { }
+            finally { h.Dispose(); }
+    }
+
     void OnExit(Process p)
     {
         int code = -1;
@@ -168,14 +224,14 @@ public sealed class ServerHost : Observable
     /// <summary>Ctrl+C into the server's (hidden) console: Python stops with KeyboardInterrupt and cleans up.</summary>
     static async Task<bool> SendCtrlC(Process p)
     {
-        await ConsoleGate.WaitAsync();
+        await ConsoleGate.WaitAsync().ConfigureAwait(false);
         try
         {
             if (!AttachConsole((uint)p.Id)) return false;
             SetConsoleCtrlHandler(IntPtr.Zero, true);       // this app ignores the Ctrl+C it sends
             bool ok = GenerateConsoleCtrlEvent(0, 0);
             FreeConsole();
-            await Task.Delay(500);
+            await Task.Delay(500).ConfigureAwait(false);    // no UI thread needed: StopNow and StopHelpers wait on it
             SetConsoleCtrlHandler(IntPtr.Zero, false);
             return ok;
         }
@@ -185,6 +241,7 @@ public sealed class ServerHost : Observable
     public async Task Stop()
     {
         var p = proc;
+        if (p is null && External) { await StopExternal(); return; }
         if (p is null || p.HasExited) { Status = ServerStatus.Stopped; return; }
         Status = ServerStatus.Stopping;
         Append("--- stopping (Ctrl+C)");
@@ -200,7 +257,36 @@ public sealed class ServerHost : Observable
         }
     }
 
-    /// <summary>Stops the server at once (the app closes).</summary>
+    /// <summary>Stops a server Start Ticino started: Ctrl+C into its console, killed (every process of the name, so no
+    /// onefile child is left) if it does not stop.</summary>
+    async Task StopExternal()
+    {
+        Status = ServerStatus.Stopping;
+        Append("--- stopping the server started by Start Ticino (Ctrl+C)");
+        var ps = ServerProcs();
+        try
+        {
+            foreach (var x in ps)                            // one Ctrl+C reaches every process of its console:
+                try { if (!x.HasExited && await SendCtrlC(x)) break; } catch { }   // a second one would cut its clean-up
+            bool done = await Task.Run(() => ps.All(x => { try { return x.WaitForExit(15_000); } catch { return true; } }));
+            if (!done)
+            {
+                Append("--- the server does not stop: killed");
+                foreach (var x in ServerProcs())
+                    try { x.Kill(true); } catch { }
+                    finally { x.Dispose(); }
+                await Task.Delay(1_000);
+                CleanUp();
+            }
+        }
+        finally { foreach (var x in ps) x.Dispose(); }
+        External = false;
+        Status = ServerStatus.Stopped;
+        Live = false;
+        GameConnected = false;
+    }
+
+    /// <summary>Stops the server at once (the app closes). A server of Start Ticino stays: it stops with the game.</summary>
     public void StopNow()
     {
         var p = proc;
@@ -221,6 +307,7 @@ public sealed class ServerHost : Observable
     public void Poll()
     {
         if (Status == ServerStatus.Starting && proc is { HasExited: false }) Status = ServerStatus.Running;
+        if (proc is null && Status != ServerStatus.Stopping && (External || ++polls % 3 == 0)) FindExternal();
         string dir = BeamNG.HelperDir(cfg);
         try
         {

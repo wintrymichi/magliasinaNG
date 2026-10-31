@@ -73,14 +73,16 @@ public partial class HomePage : UserControl, ITickable
         string? setup = P.DataFolder is null ? "Choose where to keep the map and download it (about 52 GB)."
             : P.Release != null && P.InstalledZones == 0 && P.NeedCount > 0 ? $"The map is not downloaded yet: {Files.Size(P.NeedBytes)}."
             : P.Busy ? null
-            : PackManager.ServerExe() is null && P.Release != null ? "The server program is missing: download it on the Downloads page." : null;
+            : PackManager.ServerExe(C) is null && P.Release != null ? "The server program is missing: download it on the Downloads page." : null;
         if (P.Busy) setup = null;
         SetupBar.Visibility = setup != null ? Visibility.Visible : Visibility.Collapsed;
         SetupBar.Message = setup ?? "";
         ModsBar.Visibility = P.ZonesInMods.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         ModsBar.Message = $"{P.ZonesInMods.Count} zones ({Files.Size(P.ZonesInMods.Sum(f => f.Length))}) are in mods: the game mounts all of them at every start (more than a minute). With the server they belong in the packs folder.";
-        LuaBar.Visibility = baseLua == false && ServerPage.LuaOverrideInstalled() == false ? Visibility.Visible : Visibility.Collapsed;
-        LuaBar.Message = "This base pack loads zones from mods only. Until a new base pack is out, the server's test Lua is needed (Server page).";
+        LuaBar.Visibility = baseLua == false || ServerPage.LuaOverrideInstalled() ? Visibility.Visible : Visibility.Collapsed;
+        LuaBar.Message = ServerPage.LuaOverrideInstalled()
+            ? "A test copy of the server's Lua in the BeamNG user folder hides the base pack's Lua: remove it on the Server page."
+            : "This base pack loads zones from mods only: update it on the Downloads page.";
         ErrorBar.Visibility = P.Error != null ? Visibility.Visible : Visibility.Collapsed;
         ErrorBar.Message = P.Error ?? "";
 
@@ -137,7 +139,7 @@ public partial class HomePage : UserControl, ITickable
     }
 
     void GoDownload_Click(object sender, RoutedEventArgs e) => Ui.Main.Navigate("download");
-    void GoServer_Click(object sender, RoutedEventArgs e) => Ui.Main.Navigate("server");
+    void Lua_Click(object sender, RoutedEventArgs e) => Ui.Main.Navigate(ServerPage.LuaOverrideInstalled() ? "server" : "download");
 
     async void MoveFromMods_Click(object sender, RoutedEventArgs e)
     {

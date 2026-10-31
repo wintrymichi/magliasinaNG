@@ -9,10 +9,10 @@ public partial class App : Application
 {
     Mutex? single;
 
-    /// <summary>The app's state, shared by every page.</summary>
     /// <summary>Started with --screenshots: no startup check, no timers that change the pages.</summary>
     public static bool ShotMode { get; private set; }
 
+    /// <summary>The app's state, shared by every page.</summary>
     public static AppConfig Config { get; private set; } = null!;
     public static PackManager Packs { get; private set; } = null!;
     public static ServerHost Server { get; private set; } = null!;
@@ -41,7 +41,9 @@ public partial class App : Application
             }
         }
 
+        bool firstStart = !AppConfig.Exists;
         Config = AppConfig.Load();
+        if (!ShotMode && Installer.Adopt(Config, firstStart)) Config.Save();
         Packs = new PackManager(Config);
         Server = new ServerHost(Config);
         Packs.ServerRunning = () => Server.IsRunning;

@@ -11,7 +11,7 @@ public partial class DownloadPage : UserControl, ITickable
 {
     readonly ICollectionView view;
     bool loading = true;
-    string suggested = PackManager.SuggestDataFolder();
+    string suggested = App.Packs.SuggestDataFolder();
 
     static PackManager P => App.Packs;
     static AppConfig C => App.Config;
@@ -46,6 +46,7 @@ public partial class DownloadPage : UserControl, ITickable
         ErrorBar.Visibility = P.Error != null ? Visibility.Visible : Visibility.Collapsed;
         ErrorBar.Message = P.Error ?? "";
         FolderBar.Visibility = P.DataFolder is null ? Visibility.Visible : Visibility.Collapsed;
+        if (P.DataFolder is null && !P.Checking) suggested = P.SuggestDataFolder();
         FolderBar.Message = $"The zones take about 52 GB. Suggested: {suggested} ({Files.Size(Files.FreeSpace(suggested))} free).";
         string? why = P.ApplyBlocker();
         ReadyBar.Visibility = P.ReadyCount > 0 && !P.Busy ? Visibility.Visible : Visibility.Collapsed;

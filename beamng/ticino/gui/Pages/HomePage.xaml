@@ -17,8 +17,8 @@
             <c:InfoBar x:Name="ModsBar" Severity="Warning" Title="Zones in the mods folder" Visibility="Collapsed">
                 <Button Content="Move" Click="MoveFromMods_Click" />
             </c:InfoBar>
-            <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="The base pack does not know the server yet" Visibility="Collapsed">
-                <Button Content="Go to Server" Click="GoServer_Click" />
+            <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="Base pack and server do not match" Visibility="Collapsed">
+                <Button x:Name="LuaButton" Content="Fix" Click="Lua_Click" />
             </c:InfoBar>
             <c:InfoBar x:Name="ErrorBar" Severity="Error" Visibility="Collapsed" />
 

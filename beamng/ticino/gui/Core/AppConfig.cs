@@ -43,6 +43,9 @@ public sealed class AppConfig
 
     static string FilePath => Path.Combine(Dir, "settings.json");
 
+    /// <summary>Has the app saved its settings on this PC before (false on the first start)?</summary>
+    public static bool Exists => File.Exists(FilePath);
+
     public static AppConfig Load()
     {
         try
@@ -61,5 +64,7 @@ public sealed class AppConfig
     {
         Directory.CreateDirectory(Dir);
         Files.WriteAtomic(FilePath, JsonSerializer.Serialize(this, Json));
+        // the same settings for the server Start Ticino runs (ticino_server.json beside it)
+        Installer.Sync(this, PackManager.OwnServerDir);
     }
 }

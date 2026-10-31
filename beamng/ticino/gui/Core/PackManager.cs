@@ -82,7 +82,12 @@ public sealed partial class PackManager : Observable
 
     public string? DataFolder => string.IsNullOrWhiteSpace(cfg.DataFolder) ? null : cfg.DataFolder;
     string? DownloadDir => DataFolder is null ? null : Path.Combine(DataFolder, ".download");
-    public static string ServerDir => Path.Combine(AppConfig.Dir, "server");
+    /// <summary>The app's own copy of the server, used when the installer has not set up this user folder.</summary>
+    public static string OwnServerDir => Path.Combine(AppConfig.Dir, "server");
+
+    /// <summary>Where the server program goes: the installer's ticino_tools when it has set up this user folder
+    /// (one exe for the app and "Start Ticino"), else the app's own folder.</summary>
+    public string ServerHome => Installer.Present(cfg) ? Installer.ToolsDir(cfg) : OwnServerDir;
 
     [GeneratedRegex(@"^ticino_(.+)_\d+\.zip$", RegexOptions.IgnoreCase)]
     private static partial Regex ZoneName();
@@ -99,6 +104,13 @@ public sealed partial class PackManager : Observable
         public Dictionary<string, string> Checked { get; set; } = new();
         public string? Base { get; set; }
         public string? Server { get; set; }
+        public string? ServerDir { get; set; }
+    }
+
+    static string? StampOf(string path)
+    {
+        try { return File.Exists(path) ? File.ReadAllText(path).Trim().ToLowerInvariant() : null; }
+        catch { return null; }
     }
 
     string StatePath => Path.Combine(DownloadDir ?? Path.Combine(AppConfig.Dir, "download"), "state.json");
@@ -131,12 +143,13 @@ public sealed partial class PackManager : Observable
     string? ReadyPath(PackItem it) => DownloadDir is null ? null : Path.Combine(DownloadDir, it.Name + ".ready");
     string? PartPath(PackItem it) => DownloadDir is null ? null : Path.Combine(DownloadDir, it.Name + ".part");
 
-    public static string? ServerExe()
+    /// <summary>The server program to run: beside the app (a developer's copy), the installer's, the app's own.</summary>
+    public static string? ServerExe(AppConfig c)
     {
-        string beside = Path.Combine(AppContext.BaseDirectory, "ticino_server.exe");
-        if (File.Exists(beside)) return beside;
-        string p = Path.Combine(ServerDir, "ticino_server.exe");
-        return File.Exists(p) ? p : null;
+        foreach (var dir in new[] { AppContext.BaseDirectory, Installer.Present(c) ? Installer.ToolsDir(c) : null, OwnServerDir })
+            if (dir != null && File.Exists(Path.Combine(dir, Installer.ServerExeName)))
+                return Path.Combine(dir, Installer.ServerExeName);
+        return null;
     }
 
     IEnumerable<FileInfo> LocalZones()
@@ -178,7 +191,7 @@ public sealed partial class PackManager : Observable
                 Items.Add(it);
             }
             await Task.Run(Classify);
-            Log.Write($"release {rel.Tag}: {Items.Count} zip, {NeedCount} da scaricare ({Files.Size(NeedBytes)})");
+            Log.Write($"release {rel.Tag}: {Items.Count} zips, {NeedCount} to download ({Files.Size(NeedBytes)})");
         }
         catch (Exception e)
         {
@@ -213,9 +226,10 @@ public sealed partial class PackManager : Observable
             }
             if (it.Kind == PackKind.Server)
             {
-                bool have = ServerExe() != null;
-                it.State = have && st.Server == $"{it.Name}|{it.Asset.Sha256}" ? PackState.Installed
-                    : have ? PackState.Update : PackState.Missing;
+                bool have = File.Exists(Path.Combine(ServerHome, Installer.ServerExeName));
+                bool current = st.Server == $"{it.Name}|{it.Asset.Sha256}" && (st.ServerDir ?? OwnServerDir) == ServerHome
+                               || Installer.Present(cfg) && it.Asset.Sha256 != null && StampOf(Installer.ServerStamp(cfg)) == it.Asset.Sha256;
+                it.State = have && current ? PackState.Installed : have ? PackState.Update : PackState.Missing;
                 continue;
             }
             string? dest = Dest(it);
@@ -572,15 +586,25 @@ public sealed partial class PackManager : Observable
     /// Returns the number installed.</summary>
     public async Task<int> ApplyPending()
     {
+        if (applying) return 0;                             // called from several places: one install at a time
         var ready = Items.Where(i => i.State == PackState.Ready).ToList();
         if (ready.Count == 0 && OldZips.Count == 0) return 0;
         string? why = ApplyBlocker();
         if (why != null)
         {
-            if (ready.Count > 0) Log.Write($"{ready.Count} zip ready, installed when {why} no longer");
+            if (ready.Count > 0) Log.Write($"{ready.Count} zips ready, installed when {why} no longer");
             UpdateSummary();
             return 0;
         }
+        applying = true;
+        try { return await Apply(ready); }
+        finally { applying = false; }
+    }
+
+    bool applying;
+
+    async Task<int> Apply(List<PackItem> ready)
+    {
         int n = 0;
         await Task.Run(() =>
         {
@@ -604,7 +628,7 @@ public sealed partial class PackManager : Observable
         });
         await Task.Run(Classify);
         UpdateSummary();
-        if (n > 0) { Log.Write($"{n} zip installati"); Applied?.Invoke(); }
+        if (n > 0) { Log.Write($"{n} zips installed"); Applied?.Invoke(); }
         return n;
     }
 
@@ -615,11 +639,24 @@ public sealed partial class PackManager : Observable
         switch (it.Kind)
         {
             case PackKind.Server:
-                Directory.CreateDirectory(ServerDir);
-                ZipFile.ExtractToDirectory(ready, ServerDir, true);
+            {
+                // only the exe: the zip's lua folder is the server's test override, which would hide the base pack's
+                string home = ServerHome, exe = Path.Combine(home, Installer.ServerExeName);
+                Directory.CreateDirectory(home);
+                using (var z = ZipFile.OpenRead(ready))
+                {
+                    var e = z.Entries.FirstOrDefault(x => x.Name.Equals(Installer.ServerExeName, StringComparison.OrdinalIgnoreCase))
+                            ?? throw new InvalidDataException($"no {Installer.ServerExeName} in {it.Name}");
+                    e.ExtractToFile(exe + ".new", true);
+                }
+                File.Move(exe + ".new", exe, true);
                 File.Delete(ready);
+                if (Installer.Present(cfg) && sha != null) File.WriteAllText(Installer.ServerStamp(cfg), sha);
                 st.Server = $"{it.Name}|{sha}";
+                st.ServerDir = home;
+                Log.Write($"server installed in {home}");
                 break;
+            }
             case PackKind.Base:
             {
                 string mods = BeamNG.Mods(cfg);
@@ -751,9 +788,15 @@ public sealed partial class PackManager : Observable
         UpdateSummary();
     }
 
-    /// <summary>A sensible default for the data folder: the fixed drive with the most free space.</summary>
-    public static string SuggestDataFolder()
+    /// <summary>&lt;user&gt;\ticino_data as the installer (on the disk of mods: moving the zips there is a rename) when
+    /// that disk has room for the map or already holds it, else the disk with the most free space.</summary>
+    public string SuggestDataFolder()
     {
+        string user = Path.Combine(BeamNG.UserFolder(cfg), "ticino_data");
+        long need = Math.Max(0, (Release?.Assets.Where(a => ZoneName().IsMatch(a.Name) && !a.Name.StartsWith("ticino_base")).Sum(a => a.Size) ?? 52_000_000_000L)
+                                - ZonesInMods.Sum(z => z.Length));
+        if (Installer.DataFolder(cfg) is { } inst) return inst;
+        if (Files.FreeSpace(BeamNG.UserFolder(cfg)) > need + 2_000_000_000L) return user;
         var best = DriveInfo.GetDrives()
             .Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
             .OrderByDescending(d => d.AvailableFreeSpace)

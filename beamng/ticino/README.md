@@ -50,12 +50,20 @@ see the server's own README) and keeps everything up to date from the GitHub rel
 |---|---|
 | Home | server state (tiles ready, cache, shapes converted, where the car is), **Play** (server + BeamNG straight into the map), the game and user folders, warnings (zones still in `mods`, a base pack without the server's Lua) |
 | Graphics | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json`, kept fields it does not know |
-| Downloads | the release (tag), the data folder (proposed on the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` |
-| Server | cache size, conversion processes, terrain windows ahead, `.cdae`, start with Play / stop with the game / start with the app, the server's log; installs or removes the server's test Lua in the user folder while the base pack does not carry it |
+| Downloads | the release (tag), the data folder (proposed as `<user>\ticino_data` like the installer when that disk has room, else the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` |
+| Server | cache size, conversion processes, terrain windows ahead, `.cdae`, start with Play / stop with the game / start with the app, the server's log; removes a leftover copy of the server's test Lua from the user folder |
 
-The zone packs go to the data folder, the base pack to `mods`, `server_ticino.zip` is unpacked into
-`%LOCALAPPDATA%\TicinoServer\server` (or `ticino_server.exe` beside the app is used). The app stops the server with
-Ctrl+C sent to its hidden console, so the server removes its files from the user folder as when stopped by hand.
+The zone packs go to the data folder, the base pack to `mods`. Of `server_ticino.zip` only `ticino_server.exe` is
+installed (its `lua` folder is the server's test override): into `<user>\ticino_tools` when the installer has set up the
+user folder, else `%LOCALAPPDATA%\TicinoServer\server` (a `ticino_server.exe` beside the app wins). The app stops the
+server with Ctrl+C sent to its hidden console, so the server removes its files from the user folder as when stopped by hand.
+
+With the installer (server mode) the app and **Start Ticino** share one setup: at its first start the app takes the
+data folder, release and game folder from `ticino_tools\install.json`; every change of its settings goes into
+`ticino_tools\ticino_server.json` (user, data, tag, cacheGB, workers, dae; other keys kept) and the data folder into
+`install.json`, so the shortcut's server and the next installer run use the same zips. A `ticino_server` process the app
+did not start (the shortcut's, with `--game-pid`) is shown as running and never started twice; the shortcut in turn
+skips its server when one runs. Before the app starts the server it stops a running streaming helper (Ctrl+C).
 Its own settings and log: `%LOCALAPPDATA%\TicinoServer`. Built by `ticino_gui.yml` (draft `ticino-app`, with
 screenshots of every page in both themes from `TicinoServer.exe --screenshots <folder>`).
 

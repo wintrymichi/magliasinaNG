@@ -1160,6 +1160,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   new in the range) started ticino server exe on the thread branch; cancelled at its checkout, nothing uploaded. After
   a `--no-commit` merge, `git add` the extra edits (check `git status` before the commit), and give every new workflow
   with push paths `branches: [ticino]` before a merge brings it to a thread branch.
+- The app first unpacked the whole server_ticino.zip into its server folder, lua folder included: that folder is the
+  server's TEST override (it hides the base pack's Lua if copied to the user folder) and the Server page even offered to
+  copy it there. Only ticino_server.exe is installed now, into the installer's ticino_tools when install.json is there
+  (one exe for the app and Start Ticino, stamp server.sha256), and the page only removes a leftover override.
+- Two programs start the server (the app, Start Ticino with --game-pid): Start Ticino skips its server while any
+  ticino_server process runs, and the app treats such a process as a running server of its own (no second start; on
+  "game closed" it does not send Ctrl+C, the server stops itself). Count processes by name: a PyInstaller onefile exe is
+  two processes, and only one Ctrl+C per console (a second one cuts the server's clean-up).
 
 ## Working with cat (the owner)
 
