@@ -1,3 +1,4 @@
 # zones for ticino_all.yml: "all" (every zone of zones/ticino_plan.json) or zone names, one a line
-# 2026-10-30: all zones again: the cut shapes no longer keep their empty material blocks (draw calls)
-all
+# 2026-10-31: the two slices of run 41142809094 whose upload got a 502, then the base with the Lua of 75c262d
+ti_0_7
+ti_2_4
