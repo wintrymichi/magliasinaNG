@@ -133,7 +133,8 @@ function Test-BaseServes([string]$zipPath) {
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $z = [IO.Compression.ZipFile]::OpenRead($zipPath)
         try {
-            foreach ($e in $z.Entries) { if ($e.FullName -eq 'lua/ge/extensions/ticino/files.lua') { return $true } }
+            # zips made by .NET Framework store '\' in entry names
+            foreach ($e in $z.Entries) { if (($e.FullName -replace '\\', '/') -eq 'lua/ge/extensions/ticino/files.lua') { return $true } }
             return $false
         } finally { $z.Dispose() }
     } catch { return $null }
