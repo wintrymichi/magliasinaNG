@@ -44,7 +44,7 @@ jobs:
           # the installer's own functions, without running the script
           $ast = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path beamng/ticino/install/install_ticino.ps1), [ref]$null, [ref]$null)
           foreach ($fn in $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
-            if (@('Say', 'Move-Zip', 'Test-BaseServes') -contains $fn.Name) { Invoke-Expression $fn.Extent.Text }
+            if (@('Say', 'Move-Zip', 'Test-BaseServes', 'Write-Json') -contains $fn.Name) { Invoke-Expression $fn.Extent.Text }
           }
           $t = Join-Path $env:RUNNER_TEMP 'mz'
           New-Item -ItemType Directory -Force -Path "$t\mods", "$t\data" | Out-Null
@@ -69,6 +69,12 @@ jobs:
           [IO.Compression.ZipFile]::CreateFromDirectory($src2, "$t\base_no.zip")
           Write-Host "base with files.lua: $(Test-BaseServes "$t\base_yes.zip"), without: $(Test-BaseServes "$t\base_no.zip")"
           if ((Test-BaseServes "$t\base_yes.zip") -ne $true -or (Test-BaseServes "$t\base_no.zip") -ne $false) { throw 'Test-BaseServes wrong' }
+          $p = "$t\u.json"
+          Write-Json ([ordered]@{ user = "C:\Users\Mich$([char]0xE8)le" }) $p
+          $raw = [IO.File]::ReadAllText($p)
+          $back = (Get-Content $p -Raw | ConvertFrom-Json).user
+          Write-Host "json: $raw"
+          if ($raw -notmatch '\\u00e8' -or $back -ne "C:\Users\Mich$([char]0xE8)le") { throw 'Write-Json lost the accent' }
           Write-Host 'unit checks ok'
       - name: List only, both modes (Windows PowerShell 5.1)
         shell: powershell

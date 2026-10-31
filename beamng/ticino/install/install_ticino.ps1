@@ -140,6 +140,15 @@ function Test-BaseServes([string]$zipPath) {
     } catch { return $null }
 }
 
+# JSON files as ASCII with every other character as \uXXXX: Set-Content -Encoding ASCII turned a user folder with
+# an accent (C:\Users\Michele with a grave e) into "?", and UTF-8 without a BOM is read as ANSI by Get-Content in 5.1.
+# Python, PowerShell 5.1 and the Ticino app all read \u escapes.
+function Write-Json([object]$obj, [string]$path) {
+    $json = $obj | ConvertTo-Json -Depth 20
+    $json = [regex]::Replace($json, '[^\x00-\x7F]', { param($m) '\u{0:x4}' -f [int][char]$m.Value })
+    [IO.File]::WriteAllText($path, $json, (New-Object System.Text.ASCIIEncoding))
+}
+
 # ------------------------------------------------------------------------------------------------ user folder
 # Files of the level in the user folder win over the zips: any left from tests or older versions must go.
 function Move-Overrides {
@@ -294,7 +303,7 @@ if (Test-Path $checkedFile) {
         foreach ($prop in $read.PSObject.Properties) { $checked[$prop.Name] = $prop.Value }
     } catch { Say 'checked.json unreadable: checking every zip again.' 'Yellow' }
 }
-function Save-Checked { $checked | ConvertTo-Json | Set-Content -Path $checkedFile -Encoding ASCII }
+function Save-Checked { Write-Json $checked $checkedFile }
 
 # The zone of a Ticino zip: ticino_<zone>_<n>.zip -> <zone> (ticino_base_<n>.zip -> base)
 function Zone-Of([string]$name) {
@@ -593,19 +602,19 @@ if ($serveMode) {
     $sc['user'] = $UserFolder
     $sc['data'] = $dataDir
     $sc['tag'] = $Tag
-    $sc | ConvertTo-Json | Set-Content -Path $srvCfg -Encoding ASCII
+    Write-Json $sc $srvCfg
 }
 $modeName = 'packs'
 if ($serveMode) { $modeName = 'server' }
 $installInfo = [ordered]@{ tag = $Tag; base = "$($base.name)|$baseSha"; game = $game; user = $UserFolder
                             mode = $modeName; data = $dataDir; installed = (Get-Date).ToString('s') }
-$installInfo | ConvertTo-Json | Set-Content -Path $stateFile -Encoding ASCII
-$installInfo | ConvertTo-Json | Set-Content -Path (Join-Path $tools 'install.json') -Encoding ASCII
+Write-Json $installInfo $stateFile
+Write-Json $installInfo (Join-Path $tools 'install.json')
 
 if (-not (Test-Path $settingsFile)) {
     New-Item -ItemType Directory -Force -Path (Split-Path $settingsFile -Parent) | Out-Null
     $defaults = [ordered]@{ preset = 'standard'; helper = $true; diagnostics = $false }
-    $defaults | ConvertTo-Json | Set-Content -Path $settingsFile -Encoding ASCII
+    Write-Json $defaults $settingsFile
     Say "Settings written to $settingsFile (preset 'standard'; 'light' for weaker PCs)." 'Cyan'
 }
 
