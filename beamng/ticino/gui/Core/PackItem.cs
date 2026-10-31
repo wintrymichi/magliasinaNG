@@ -25,8 +25,15 @@ public sealed class PackItem : Observable
     {
         PackKind.Base => "Base pack",
         PackKind.Server => "Server program",
-        _ => "Zone " + ZoneTitle(Zone) + (Place is null ? "" : " · " + Place),
+        _ => "Zone " + ZoneTitle(Zone) + (Place is null ? "" : " · " + Place) + (Part is null ? "" : " (" + Part + ")"),
     };
+
+    /// <summary>The zip is on this PC with the release's size (its sha256 may still wait to be checked).</summary>
+    public bool InPlace { get; set; }
+
+    string? part;
+    /// <summary>"part 1 of 2" for a zone in more than one zip (ticino_ti_1_0_1.zip, _2.zip), else null.</summary>
+    public string? Part { get => part; set { if (Set(ref part, value)) Raise(nameof(Title)); } }
 
     string? place;
     /// <summary>The biggest village of the zone, from the spawn points of the base pack (null without one).</summary>

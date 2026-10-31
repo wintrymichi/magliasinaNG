@@ -81,7 +81,13 @@ public partial class MainWindow : Window
             Log.Write($"automatic update: {App.Packs.NeedCount} zip");
             await App.Packs.DownloadAll();
         }
-        else if (App.Packs.ReadyCount > 0) await App.Packs.ApplyPending();
+        else
+        {
+            if (App.Packs.ReadyCount > 0) await App.Packs.ApplyPending();
+            // zips in place never checked (moved by hand, or by the app before 1.1): read, not downloaded; not while
+            // the game runs (it reads the same disk)
+            if (App.Packs.UncheckedCount > 0 && !BeamNG.Running()) await App.Packs.Verify();
+        }
     }
 
     void Tick()

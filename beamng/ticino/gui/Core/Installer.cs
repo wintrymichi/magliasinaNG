@@ -39,32 +39,46 @@ public static class Installer
     static string? Str(JsonObject o, string k) =>
         o[k] is JsonValue v && v.TryGetValue(out string? s) && !string.IsNullOrWhiteSpace(s) ? s : null;
 
-    /// <summary>The installer's packs folder: install.json "data" in server mode, else "data" of ticino_server.json,
-    /// else &lt;user&gt;\ticino_data if it is there.</summary>
+    /// <summary>The installer's packs folder: install.json "data", else "data" of ticino_server.json, else
+    /// &lt;user&gt;\ticino_data: the first of them that exists (in either mode: a PC moved from packs to server mode, or
+    /// installed twice, has its zones there whatever install.json's mode says).</summary>
     public static string? DataFolder(AppConfig c)
     {
-        var i = Read(c);
-        if (i?.Mode == "server" && i.Data != null) return i.Data;
+        var list = new List<string?> { Read(c)?.Data };
         try
         {
-            if (File.Exists(ServerJson(c)) && JsonNode.Parse(File.ReadAllText(ServerJson(c))) is JsonObject s &&
-                Str(s, "data") is { } d)
-                return d;
+            if (File.Exists(ServerJson(c)) && JsonNode.Parse(File.ReadAllText(ServerJson(c))) is JsonObject s)
+                list.Add(Str(s, "data"));
         }
         catch { /* not valid JSON: the server ignores it too */ }
-        string def = Path.Combine(BeamNG.UserFolder(c), "ticino_data");
-        return Directory.Exists(def) ? def : null;
+        list.Add(Path.Combine(BeamNG.UserFolder(c), "ticino_data"));
+        foreach (var d in list)
+            if (d != null && Directory.Exists(d)) return d;
+        return null;
     }
 
-    /// <summary>First start of the app on a PC the installer has set up: take over its packs folder (server mode
-    /// only: in packs mode the zones are in mods), release and game folder, so the app and "Start Ticino" use one
-    /// set of zips. Returns true when the settings changed.</summary>
+    static bool HasZones(string dir)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(dir, "ticino_*.zip")
+                .Any(f => !Path.GetFileName(f).StartsWith("ticino_base", StringComparison.OrdinalIgnoreCase));
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Start of the app on a PC the installer has set up: take over its packs folder (when it is in server
+    /// mode or holds zones: the PC test of 2026-10-31 had 89 zones in "D:\ticino zones", named in install.json, and the
+    /// app showed 0 of 89 with "not chosen yet"), and on the first start its release and game folder, so the app and
+    /// "Start Ticino" use one set of zips. Returns true when the settings changed.</summary>
     public static bool Adopt(AppConfig c, bool newSettings)
     {
         var i = Read(c);
         if (i is null) return false;
         bool changed = false;
-        if (c.DataFolder is null && i.Mode == "server" && DataFolder(c) is { } d && Directory.Exists(d))
+        if (c.DataFolder is null && DataFolder(c) is { } d &&
+            (i.Mode == "server" || HasZones(d)) &&
+            !Path.GetFullPath(d).Equals(Path.GetFullPath(BeamNG.Mods(c)), StringComparison.OrdinalIgnoreCase))
         {
             c.DataFolder = d;
             changed = true;

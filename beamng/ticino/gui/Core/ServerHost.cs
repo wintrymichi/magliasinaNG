@@ -173,7 +173,7 @@ public sealed class ServerHost : Observable
 
     /// <summary>The streaming helper (packs mode) writes the same alive.json as the server: it goes before the server
     /// starts. Ctrl+C first; Stop-Process alone leaves the onefile exe's Python child running with zips open.</summary>
-    void StopHelpers()
+    public void StopHelpers()
     {
         var hs = Process.GetProcessesByName(HelperName);
         if (hs.Length == 0) return;

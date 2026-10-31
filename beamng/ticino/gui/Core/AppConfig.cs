@@ -31,6 +31,13 @@ public sealed class AppConfig
 
     public DateTime? LastCheck { get; set; }
 
+    /// <summary>The version of this file's format. 1.0.0 wrote none, with AutoDownload true by default: such a file
+    /// started 52 GB of downloads by itself on michi's PC (2026-10-31), so it is turned off once when read.</summary>
+    public int SettingsVersion { get; set; }
+    const int CurrentVersion = 2;
+    /// <summary>Load changed an older file: save it.</summary>
+    [JsonIgnore] public bool Migrated { get; private set; }
+
     static readonly JsonSerializerOptions Json = new()
     {
         WriteIndented = true,
@@ -49,16 +56,24 @@ public sealed class AppConfig
 
     public static AppConfig Load()
     {
+        AppConfig c = new();
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(FilePath), Json) ?? new AppConfig();
+                c = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(FilePath), Json) ?? new AppConfig();
         }
         catch (Exception e)
         {
             Log.Write($"settings.json not readable ({e.Message}): defaults");
         }
-        return new AppConfig();
+        if (c.SettingsVersion < 2 && Exists)
+        {
+            if (c.AutoDownload) Log.Write("settings of 1.0.0: automatic download turned off (it was on by default there)");
+            c.AutoDownload = false;
+            c.Migrated = true;
+        }
+        c.SettingsVersion = CurrentVersion;
+        return c;
     }
 
     public void Save()

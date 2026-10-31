@@ -62,13 +62,15 @@ public partial class DownloadPage : UserControl, ITickable
             : $"{P.DataFolder} · {Files.Size(Files.FreeSpace(P.DataFolder))} free";
         BaseCard.Description = $"{BeamNG.Mods(C)} (BeamNG's mods folder)";
 
-        CheckButton.IsEnabled = !P.Checking && !P.Busy;
-        DownloadButton.IsEnabled = P.Busy || (P.NeedCount > 0 && P.ZoneHome != null && !P.Checking);
-        DownloadLabel.Text = P.Busy ? "Pause" : P.Items.Any(i => i.State == PackState.Update) ? "Update" : "Download";
+        CheckButton.IsEnabled = !P.Checking && !P.Busy && !P.Moving;
+        DownloadButton.IsEnabled = !P.Moving && (P.Busy || (P.NeedCount > 0 && P.ZoneHome != null && !P.Checking));
+        DownloadLabel.Text = P.Busy ? "Pause" : P.Items.Any(i => i.State == PackState.Update) ? "Update"
+            : P.NeedCount > 0 && P.NeedCount == P.UncheckedCount ? "Check" : "Download";
         DownloadGlyph.Text = P.Busy ? "" : "";
-        ProgressPanel.Visibility = P.Busy || P.ProgressText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProgressPanel.Visibility = P.Busy || P.Moving || P.ProgressText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        Overall.IsIndeterminate = P.Moving;
         Overall.Value = P.Overall;
-        ProgressText.Text = P.ProgressText;
+        ProgressText.Text = P.Moving ? "Moving: " + P.MoveText : P.ProgressText;
         EmptyText.Visibility = P.Items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -112,11 +114,9 @@ public partial class DownloadPage : UserControl, ITickable
             move = Ui.Ask($"Move the packs already downloaded from\n{old}\nto\n{folder}?\n\nIf you answer No they stay where they are and everything is downloaded again into the new folder.");
         try
         {
-            IsEnabled = false;
-            await P.ChangeDataFolder(old, folder, move, new Progress<string>(t => ProgressText.Text = "Moving: " + t));
+            await P.ChangeDataFolder(old, folder, move);
         }
         catch (Exception ex) { Ui.Info(ex.Message); }
-        finally { IsEnabled = true; ProgressText.Text = ""; }
         Refresh();
     }
 

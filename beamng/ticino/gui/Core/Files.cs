@@ -67,7 +67,9 @@ public static class Files
         return n;
     }
 
-    /// <summary>Moves a file, also to another drive (copy, then delete), reporting the bytes copied.</summary>
+    /// <summary>Moves a file, also to another drive (copy, then delete), reporting the bytes copied. The copy keeps
+    /// the file's times: the zips are known by "sha256|length|LastWriteTimeUtc" (checked.json, state.json), and a
+    /// copy dated now made every zone moved from C: to D: "to check" again (PC test 2026-10-31: 0 of 89 in place).</summary>
     public static async Task MoveAsync(string src, string dst, IProgress<long>? progress, CancellationToken ct)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
@@ -77,6 +79,8 @@ public static class Files
             progress?.Report(new FileInfo(dst).Length);
             return;
         }
+        var info = new FileInfo(src);
+        DateTime written = info.LastWriteTimeUtc, created = info.CreationTimeUtc;
         string tmp = dst + ".part";
         await using (var i = new FileStream(src, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 20, true))
         await using (var o = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20, true))
@@ -89,6 +93,8 @@ public static class Files
                 progress?.Report(n);
             }
         }
+        File.SetCreationTimeUtc(tmp, created);
+        File.SetLastWriteTimeUtc(tmp, written);
         File.Move(tmp, dst, true);
         File.Delete(src);
     }

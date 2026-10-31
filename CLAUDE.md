@@ -1194,6 +1194,24 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   First run: the app's new default tag (ticino-v1) broke the packs-mode screenshot test, which made its fake zips from
   ticino-all (0 of 9 zones), so no app was uploaded and the publish run's last job would have waited 40 min for it:
   cancelled (the 20 zips already copied are skipped by the next run). A test that fakes a release must pin its tag.
+- michi's own use of 1.0.0 (2026-10-31 evening, "l'app è rotta"; read from his app.log by the PC thread): Move took the
+  89 zones from mods (C:) to "D:\ticino zones" in 10 min with no progress shown (the page's refresh overwrote the bar's
+  text every second), then said "0 of 89 zones in place" (the copies were dated now, so no sha256|length|ticks key of
+  checked.json/state.json matched: Files.MoveAsync keeps the times now, and a move rewrites the keys), and at the next
+  start AutoDownload downloaded the 52 GB again: DownloadAll set every item to Queued BEFORE One() looked for
+  "Unchecked", so a zip in place was never hashed, always downloaded. The set of zips in place is taken before the
+  states change. AutoDownload was on because 1.0.0 saved its old default into settings.json: settings without
+  SettingsVersion get it turned off once. A test of a download path must look at what the job DID (log lines per zip),
+  not at the state the page shows before it.
+- Same evening: the app moved ticino_ti_1_0_1.zip to "old" when it installed ticino_ti_1_0_2.zip and downloaded it
+  again: a zone too big for one zip comes in pieces _1, _2 (ticino-all-cdae: ti_1_0, ti_1_2), and Install retired
+  "every other zip of the zone". It retires only another copy of the same name now; zips of names the release no longer
+  has go through OldZips as before. The zone count is per zone (87), not per zip (89).
+- Same evening: an old installer (packs) ran beside the app and the new installer (server): zones in both folders and
+  install.json saying the wrong mode, and with no packs folder in settings.json the app showed 0 of 89 and "not chosen
+  yet" although install.json named "D:\ticino zones". The app now takes the installer's folder whenever it holds zones,
+  decides the mode by where the zones are (install.json only on a tie) and writes that mode back for Start Ticino;
+  Move skips a zip the folder already has with the same size (the mods copy goes to ticino_download\old, on its disk).
 
 ## Working with cat (the owner)
 

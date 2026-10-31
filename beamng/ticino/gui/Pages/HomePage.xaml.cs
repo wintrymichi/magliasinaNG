@@ -62,11 +62,12 @@ public partial class HomePage : UserControl, ITickable
         HeroGlyph.Foreground = S.IsRunning ? Brushes.White : (TryFindResource("TextFillColorPrimaryBrush") as Brush ?? Brushes.Black);
         ServerLabel.Text = S.IsRunning ? "Stop server" : "Start server";
         ServerGlyph.Text = S.IsRunning ? "" : "";
-        ServerButton.IsEnabled = S.Status is ServerStatus.Running or ServerStatus.Stopped;
+        ServerButton.IsEnabled = S.Status is ServerStatus.Running or ServerStatus.Stopped && !P.Moving;
         // packs mode has no server to start: the zones are mounted by the game
         ServerButton.Visibility = packs ? Visibility.Collapsed : Visibility.Visible;
-        PlayButton.IsEnabled = !game && BeamNG.FindGame(C) != null;
-        PlayButton.ToolTip = game ? "BeamNG is already open" : BeamNG.FindGame(C) is null ? "BeamNG not found: choose its folder below" : null;
+        PlayButton.IsEnabled = !game && BeamNG.FindGame(C) != null && !P.Moving;
+        PlayButton.ToolTip = game ? "BeamNG is already open" : BeamNG.FindGame(C) is null ? "BeamNG not found: choose its folder below"
+            : P.Moving ? "The zones are being moved" : null;
 
         // numbers
         ZonesValue.Text = P.Release is null ? (P.ZoneHome is null ? "–" : $"{P.LocalZoneCount()}") : $"{P.InstalledZones} / {P.ReleaseZones}";
@@ -85,10 +86,13 @@ public partial class HomePage : UserControl, ITickable
         if (P.Busy) setup = null;
         SetupBar.Visibility = setup != null ? Visibility.Visible : Visibility.Collapsed;
         SetupBar.Message = setup ?? "";
-        ModsBar.Visibility = P.ZonesInMods.Count > 0 && !(P.PacksMode && baseLua == false) ? Visibility.Visible : Visibility.Collapsed;
-        ModsBar.Title = P.PacksMode ? "Start the game faster" : "Zones in the mods folder";
-        ModsBar.Severity = P.PacksMode ? "Info" : "Warning";
-        ModsBar.Message = P.PacksMode
+        ModsBar.Visibility = P.Moving || P.ZonesInMods.Count > 0 && !(P.PacksMode && baseLua == false) ? Visibility.Visible : Visibility.Collapsed;
+        ModsBar.Title = P.Moving ? "Moving the zones…" : P.PacksMode ? "Start the game faster" : "Zones in the mods folder";
+        ModsBar.Severity = P.PacksMode || P.Moving ? "Info" : "Warning";
+        MoveButton.IsEnabled = !P.Moving && !P.Busy;
+        MoveButton.Visibility = P.Moving ? Visibility.Collapsed : Visibility.Visible;
+        ModsBar.Message = P.Moving ? P.MoveText
+            : P.PacksMode
             ? $"The game mounts all {P.ZonesInMods.Count} zones in mods ({Files.Size(P.ZonesInMods.Sum(f => f.Length))}) at every start (more than a minute). Move them to a packs folder and the server loads only the zones around the car."
             : $"{P.ZonesInMods.Count} zones ({Files.Size(P.ZonesInMods.Sum(f => f.Length))}) are in mods: the game mounts all of them at every start (more than a minute). With the server they belong in the packs folder.";
         // an old base loads zones from mods only: what packs mode does anyway
@@ -157,6 +161,7 @@ public partial class HomePage : UserControl, ITickable
     async void MoveFromMods_Click(object sender, RoutedEventArgs e)
     {
         if (BeamNG.Running()) { Ui.Info("Close BeamNG first: it keeps the zips in mods open."); return; }
+        if (P.Busy) { Ui.Info("Wait for the download to end (or pause it) first."); return; }
         string? to = P.DataFolder;
         if (to is null)
         {
@@ -164,18 +169,24 @@ public partial class HomePage : UserControl, ITickable
             if (to is null) return;
         }
         string size = Files.Size(P.ZonesInMods.Sum(f => f.Length));
-        if (!Ui.Ask($"Move {P.ZonesInMods.Count} zones ({size}) from\n{BeamNG.Mods(C)}\nto\n{to}?\n\nFrom then on the server loads the zones around the car, and \"Start Ticino\" starts it too.")) return;
+        string how = Files.SameDrive(BeamNG.Mods(C), to)
+            ? "Same disk: the zips are only renamed, it takes a moment."
+            : "Another disk: the zips are copied (several minutes); the app shows how far it is.";
+        if (!Ui.Ask($"Move {P.ZonesInMods.Count} zones ({size}) from\n{BeamNG.Mods(C)}\nto\n{to}?\n\n{how}\n\nFrom then on the server loads the zones around the car, and \"Start Ticino\" starts it too.")) return;
         try
         {
-            IsEnabled = false;
-            if (P.DataFolder is null) await P.ChangeDataFolder(null, to, false, new Progress<string>(_ => { }));
-            await P.MoveZonesFromMods(new Progress<string>(t => ModsBar.Message = "Moving: " + t));
+            S.StopHelpers();                                  // the streaming helper keeps the zips in mods open
+            if (P.DataFolder is null) await P.ChangeDataFolder(null, to, false);
+            await P.MoveZonesFromMods();
+        }
+        catch (Exception ex) { Ui.Info(ex.Message); }
+        finally
+        {
             // server mode now: the server program comes with the next check (packs mode does not download it)
             await P.Refresh();
             if (PackManager.ServerExe(C) is null) await P.DownloadAll(i => i.Kind == PackKind.Server);
+            Refresh();
         }
-        catch (Exception ex) { Ui.Info(ex.Message); }
-        finally { IsEnabled = true; Refresh(); }
     }
 
     void ChangeGame_Click(object sender, RoutedEventArgs e)

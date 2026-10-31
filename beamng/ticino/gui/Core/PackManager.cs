@@ -72,6 +72,17 @@ public sealed partial class PackManager : Observable
     int releaseZones;
     public int ReleaseZones { get => releaseZones; private set => Set(ref releaseZones, value); }
 
+    int uncheckedCount;
+    /// <summary>Zips in place whose sha256 is not checked yet (<see cref="Verify"/> checks them, no download).</summary>
+    public int UncheckedCount { get => uncheckedCount; private set => Set(ref uncheckedCount, value); }
+
+    bool moving;
+    /// <summary>Zips are being moved (from mods, or to a new packs folder): <see cref="MoveText"/> says how far.</summary>
+    public bool Moving { get => moving; private set => Set(ref moving, value); }
+
+    string moveText = "";
+    public string MoveText { get => moveText; private set => Set(ref moveText, value); }
+
     public bool CanDownload => !Busy && NeedCount > 0;
 
     /// <summary>Zone zips in BeamNG's mods (an install made without the server): the game mounts every one of them
@@ -95,7 +106,8 @@ public sealed partial class PackManager : Observable
     /// <summary>The installer's work folder (its .part files, checked.json, old zips).</summary>
     string Work => Path.Combine(BeamNG.UserFolder(cfg), "ticino_download");
     // packs mode: beside the installer's, on the disk of mods (installing a zip is a rename)
-    string? DownloadDir => PacksMode ? Path.Combine(Work, "app") : DataFolder is null ? null : Path.Combine(DataFolder, ".download");
+    // (and before a packs folder is chosen: only the base and the server can be downloaded then)
+    string DownloadDir => PacksMode || DataFolder is null ? Path.Combine(Work, "app") : Path.Combine(DataFolder, ".download");
     /// <summary>The app's own copy of the server, used when the installer has not set up this user folder.</summary>
     public static string OwnServerDir => Path.Combine(AppConfig.Dir, "server");
 
@@ -184,8 +196,8 @@ public sealed partial class PackManager : Observable
         return null;
     }
 
-    string? ReadyPath(PackItem it) => DownloadDir is null ? null : Path.Combine(DownloadDir, it.Name + ".ready");
-    string? PartPath(PackItem it) => DownloadDir is null ? null : Path.Combine(DownloadDir, it.Name + ".part");
+    string ReadyPath(PackItem it) => Path.Combine(DownloadDir, it.Name + ".ready");
+    string PartPath(PackItem it) => Path.Combine(DownloadDir, it.Name + ".part");
 
     /// <summary>The server program to run: beside the app (a developer's copy), the installer's, the app's own.</summary>
     public static string? ServerExe(AppConfig c)
@@ -233,13 +245,27 @@ public sealed partial class PackManager : Observable
         }
         catch { ZonesInMods = new(); }
         Raise(nameof(ZonesInMods));
-        string? mode = Installer.Read(cfg)?.Mode;
-        bool packs = mode == "packs" || mode != "server" && ZonesInMods.Count > 0 && !LocalZones().Any();
-        if (packs != PacksMode) Log.Write(packs ? "packs mode: the zones are in mods, the game loads them itself"
-                                                : "server mode: the zones are in the packs folder");
+        // the mode follows where the zones ARE (the game needs them there), install.json's word only on a tie: on
+        // the PC of 2026-10-31 an installer of the other mode ran beside the app and install.json said "packs"
+        // with every zone in the packs folder, or "server" with them back in mods
+        var inst = Installer.Read(cfg);
+        int inData = LocalZones().Count(), inMods = ZonesInMods.Count;
+        bool packs = inData == 0 && inMods == 0 ? inst?.Mode == "packs"
+                   : inData == 0 ? true
+                   : inMods == 0 ? false
+                   : inst?.Mode == "packs" || inst?.Mode != "server" && inMods > inData;
+        if (packs != PacksMode || !scanned)
+            Log.Write(packs ? $"packs mode: {inMods} zones in mods, the game loads them itself"
+                            : $"server mode: {inData} zones in the packs folder{(inMods > 0 ? $", {inMods} also in mods" : "")}");
+        scanned = true;
         PacksMode = packs;
+        // "Start Ticino" starts the server only in mode "server", the helper only in "packs"
+        if (inst != null && inst.Mode != (packs ? "packs" : "server") && (inData > 0 || inMods > 0) && !Busy && !moving)
+            Installer.SetMode(cfg, packs ? "packs" : "server", packs ? null : DataFolder);
         Raise(nameof(ZoneHome));
     }
+
+    bool scanned;
 
     // ------------------------------------------------------------------------------------------- check
     /// <summary>Reads the release and sets every item's state. Call on the UI thread.</summary>
@@ -274,10 +300,20 @@ public sealed partial class PackManager : Observable
                 if (keepBusy.TryGetValue(it.Name, out var old)) it = old;
                 Items.Add(it);
             }
-            await Task.Run(Classify);
+            // a zone too big for one zip comes in pieces (ticino_ti_1_0_1.zip and _2.zip): both belong to it
+            foreach (var g in Items.Where(i => i.Kind == PackKind.Zone).GroupBy(i => i.Zone, StringComparer.OrdinalIgnoreCase))
+            {
+                var parts = g.OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                for (int k = 0; k < parts.Count; k++) parts[k].Part = parts.Count > 1 ? $"part {k + 1} of {parts.Count}" : null;
+            }
+            var items = Items.ToList();
+            await Task.Run(() => Classify(items));
             UpdateSummary();
             Log.Write($"release {rel.Tag}: {Items.Count} zips, {InstalledZones} of {ReleaseZones} zones in place, " +
                       $"{NeedCount} to download or check ({Files.Size(NeedBytes)}){(PacksMode ? ", packs mode" : "")}");
+            var need = Items.Where(i => i.NeedsDownload || i.State == PackState.Unchecked).ToList();
+            if (need.Count is > 0 and <= 10)
+                Log.Write("  " + string.Join(", ", need.Select(i => $"{i.Name} ({i.StateText})")));
         }
         catch (Exception e)
         {
@@ -292,20 +328,22 @@ public sealed partial class PackManager : Observable
     }
 
     /// <summary>The state of each item from the files on disk (no hashing: a zip in place but never checked is
-    /// Unchecked and is hashed by the download job).</summary>
-    void Classify()
+    /// Unchecked and is hashed by <see cref="Verify"/>). Takes a copy of <see cref="Items"/> made on the UI thread
+    /// (Refresh may rebuild the list meanwhile).</summary>
+    void Classify(List<PackItem> items)
     {
         if (!Busy) LoadState();                             // a running download writes into the state it loaded
         ScanMods();
         var inst = InstallerChecked();
         var local = AllZones();
-        var relNames = Items.Select(i => i.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var relZones = Items.Where(i => i.Kind == PackKind.Zone).Select(i => i.Zone).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var it in Items)
+        var relNames = items.Select(i => i.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var relZones = items.Where(i => i.Kind == PackKind.Zone).Select(i => i.Zone).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var it in items)
         {
             if (it.IsBusy || it.State == PackState.Queued) continue;
             it.Detail = "";
             it.Progress = 0;
+            it.InPlace = false;
             string? ready = ReadyPath(it);
             if (ready != null && File.Exists(ready) && new FileInfo(ready).Length == it.Size)
             {
@@ -323,6 +361,7 @@ public sealed partial class PackManager : Observable
             string? dest = Dest(it);
             if (dest is null) { it.State = PackState.Missing; continue; }
             var f = new FileInfo(dest);
+            it.InPlace = f.Exists && f.Length == it.Size;
             if (f.Exists && f.Length == it.Size)
             {
                 string? sha = it.Asset.Sha256;
@@ -340,7 +379,10 @@ public sealed partial class PackManager : Observable
                 else it.State = PackState.Unchecked;
             }
             else if (f.Exists) it.State = PackState.Update;
-            else if (it.Kind == PackKind.Zone && local.Any(l => ZoneOf(l.Name).Equals(it.Zone, StringComparison.OrdinalIgnoreCase)))
+            // an older zip of the zone (a name the release no longer has); the other piece of a zone in two zips
+            // (ticino_ti_1_0_1 and _2) is not one
+            else if (it.Kind == PackKind.Zone && local.Any(l => ZoneOf(l.Name).Equals(it.Zone, StringComparison.OrdinalIgnoreCase)
+                                                                 && !relNames.Contains(l.Name)))
                 it.State = PackState.Update;
             else if (it.Kind == PackKind.Base && Directory.Exists(BeamNG.Mods(cfg)) &&
                      Directory.EnumerateFiles(BeamNG.Mods(cfg), "ticino_base_*.zip").Any())
@@ -349,15 +391,15 @@ public sealed partial class PackManager : Observable
         }
         OldZips = local.Where(l => !relNames.Contains(l.Name) && relZones.Contains(ZoneOf(l.Name))).ToList();
         Raise(nameof(OldZips));
-        var places = PlaceNames();
-        foreach (var it in Items.Where(i => i.Kind == PackKind.Zone))
+        var places = PlaceNames(items);
+        foreach (var it in items.Where(i => i.Kind == PackKind.Zone))
             it.Place = places.TryGetValue(it.Zone, out var p) ? p : null;
     }
 
     /// <summary>Zone -> its biggest village, read from the spawn points in the base pack's info.json
     /// ("ti_1_3_spawn_bellinzona"). A zone's first three spawns are the route's (spawn_magliaso, _mid, _pura: the
     /// names of the Malcantone route, on the zone's main roads), then one per village by population.</summary>
-    Dictionary<string, string> PlaceNames()
+    Dictionary<string, string> PlaceNames(List<PackItem> items)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
@@ -365,7 +407,7 @@ public sealed partial class PackManager : Observable
             string mods = BeamNG.Mods(cfg);
             string? zip = Directory.Exists(mods)
                 ? Directory.EnumerateFiles(mods, "ticino_base_*.zip").OrderByDescending(x => x).FirstOrDefault() : null;
-            var baseItem = Items.FirstOrDefault(i => i.Kind == PackKind.Base);
+            var baseItem = items.FirstOrDefault(i => i.Kind == PackKind.Base);
             if (zip is null && baseItem != null && ReadyPath(baseItem) is { } r && File.Exists(r)) zip = r;
             if (zip is null) return map;
             using var z = ZipFile.OpenRead(zip);
@@ -414,15 +456,22 @@ public sealed partial class PackManager : Observable
         NeedCount = need.Count;
         NeedBytes = need.Where(i => i.State != PackState.Unchecked).Sum(i => i.Size);
         ReadyCount = Items.Count(i => i.State == PackState.Ready);
-        ReleaseZones = Items.Count(i => i.Kind == PackKind.Zone);
-        InstalledZones = Items.Count(i => i.Kind == PackKind.Zone && i.State == PackState.Installed);
+        // zones, not zips (a zone may be two zips); a zip in place with the release's size counts while its sha256
+        // waits to be checked (Verify), so a move or a new install does not show "0 of 87" for minutes
+        var zones = Items.Where(i => i.Kind == PackKind.Zone).GroupBy(i => i.Zone, StringComparer.OrdinalIgnoreCase).ToList();
+        ReleaseZones = zones.Count;
+        InstalledZones = zones.Count(g => g.All(i => i.State is PackState.Installed or PackState.Unchecked or PackState.Verifying
+                                                    || i.InPlace && i.State == PackState.Queued));
+        UncheckedCount = Items.Count(i => i.State == PackState.Unchecked);
         if (Release is null) { Summary = Error ?? "Not checked yet."; return; }
         long total = Items.Where(i => i.Kind != PackKind.Server).Sum(i => i.Size);
         string s = $"{ReleaseZones} zones · {Files.Size(total)}";
         if (NeedCount == 0 && ReadyCount == 0) s += " · all up to date";
         else
         {
-            if (NeedCount > 0) s += $" · {NeedCount} to download ({Files.Size(NeedBytes)})";
+            int dl = NeedCount - UncheckedCount;
+            if (dl > 0) s += $" · {dl} to download ({Files.Size(NeedBytes)})";
+            if (UncheckedCount > 0) s += $" · {UncheckedCount} to check (sha256, no download)";
             if (ReadyCount > 0) s += $" · {ReadyCount} ready to install";
         }
         Summary = s;
@@ -431,33 +480,49 @@ public sealed partial class PackManager : Observable
     // ------------------------------------------------------------------------------------------- download
     public void Pause() => cts?.Cancel();
 
+    /// <summary>Checks the sha256 of the zips in place that were never checked (after a move to another disk without
+    /// the installer's checked.json, or zips copied by hand): no download, unless one turns out different.</summary>
+    public Task Verify()
+    {
+        if (Busy || Moving || UncheckedCount == 0) return Task.CompletedTask;
+        Log.Write($"checking {UncheckedCount} zips in place (sha256)");
+        return DownloadAll(i => i.State == PackState.Unchecked);
+    }
+
     /// <summary>Checks, downloads and (when the server and the game are stopped) installs everything that is not
     /// up to date, or only the items <paramref name="only"/> picks. Call on the UI thread.</summary>
     public async Task DownloadAll(Func<PackItem, bool>? only = null)
     {
-        if (Busy) return;
-        if (ZoneHome is null)
+        if (Busy || Moving) return;
+        var todo = Items.Where(i => (i.NeedsDownload || i.State == PackState.Unchecked) && (only is null || only(i))).ToList();
+        // a zone to download needs its folder; checking zips in place, the base and the server do not
+        if (ZoneHome is null && todo.Any(i => i.Kind == PackKind.Zone && i.State != PackState.Unchecked))
         {
             Error = "Choose the packs folder first.";
             return;
         }
-        var todo = Items.Where(i => (i.NeedsDownload || i.State == PackState.Unchecked) && (only is null || only(i))).ToList();
         if (todo.Count == 0) { await ApplyPending(); return; }
         long need = todo.Where(i => i.State != PackState.Unchecked).Sum(i => i.Size - PartLength(i));
-        long free = Files.FreeSpace(ZoneHome);
+        string disk = ZoneHome ?? BeamNG.Mods(cfg);
+        long free = Files.FreeSpace(disk);
         if (free > 0 && free < need + (2L << 30))
         {
-            Error = $"Not enough space on {Path.GetPathRoot(ZoneHome)}: {Files.Size(free)} free, {Files.Size(need)} + 2 GB needed.";
+            Error = $"Not enough space on {Path.GetPathRoot(disk)}: {Files.Size(free)} free, {Files.Size(need)} + 2 GB needed.";
             return;
         }
         Error = null;
         Busy = true;
         cts = new CancellationTokenSource();
         var ct = cts.Token;
+        // the zips in place to check, known before every item shows "Queued": 1.0.0 looked at the state in One()
+        // after it was set to Queued, so it never checked a zip in place and downloaded it again (52 GB on michi's
+        // PC, 2026-10-31)
+        var inPlace = todo.Where(i => i.State == PackState.Unchecked).ToHashSet();
         foreach (var it in todo) { it.State = PackState.Queued; it.Detail = ""; }
-        Directory.CreateDirectory(DownloadDir!);
+        Directory.CreateDirectory(DownloadDir);
         LoadState();
-        var meter = new Meter(todo.Where(i => i.State != PackState.Unchecked).Sum(i => i.Size));
+        long bytes = todo.Where(i => !inPlace.Contains(i)).Sum(i => i.Size);
+        var meter = new Meter(bytes);
         foreach (var it in todo) meter.Add(PartLength(it));
         try
         {
@@ -465,7 +530,7 @@ public sealed partial class PackManager : Observable
             var tasks = todo.Select(async it =>
             {
                 await gate.WaitAsync(ct);
-                try { await Task.Run(() => One(it, meter, ct), ct); }
+                try { await Task.Run(() => One(it, inPlace.Contains(it), meter, ct), ct); }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception e)
                 {
@@ -479,21 +544,32 @@ public sealed partial class PackManager : Observable
             {
                 while (!ct.IsCancellationRequested && tasks.Any(t => !t.IsCompleted))
                 {
-                    Overall = meter.Fraction * 100;
-                    ProgressText = meter.Text();
+                    if (bytes == 0)
+                    {
+                        // only zips in place to check: no bytes to count, zips instead
+                        int done = todo.Count(i => i.State is not (PackState.Queued or PackState.Verifying));
+                        Overall = 100.0 * done / todo.Count;
+                        ProgressText = $"Checking the zips in place (sha256, no download): {done} of {todo.Count}";
+                    }
+                    else
+                    {
+                        Overall = meter.Fraction * 100;
+                        ProgressText = meter.Text();
+                    }
                     await Task.Delay(500);
                 }
             });
             try { await Task.WhenAll(tasks); }
             catch (OperationCanceledException) { }
-            Overall = meter.Fraction * 100;
+            Overall = bytes == 0 ? 100 : meter.Fraction * 100;
             ProgressText = ct.IsCancellationRequested ? "Paused: it resumes where it stopped." : "";
         }
         finally
         {
             foreach (var it in todo.Where(i => i.State is PackState.Queued or PackState.Downloading or PackState.Verifying))
             {
-                it.State = PartLength(it) > 0 ? PackState.Update : PackState.Missing;
+                it.State = inPlace.Contains(it) && Dest(it) is { } d && File.Exists(d) ? PackState.Unchecked
+                         : PartLength(it) > 0 ? PackState.Update : PackState.Missing;
                 it.Detail = "";
             }
             SaveState();
@@ -535,10 +611,10 @@ public sealed partial class PackManager : Observable
         }
     }
 
-    async Task One(PackItem it, Meter meter, CancellationToken ct)
+    async Task One(PackItem it, bool inPlace, Meter meter, CancellationToken ct)
     {
         string? sha = it.Asset.Sha256;
-        if (it.State == PackState.Unchecked)
+        if (inPlace)
         {
             string dest = Dest(it)!;
             it.State = PackState.Verifying;
@@ -712,7 +788,7 @@ public sealed partial class PackManager : Observable
             RemoveOld();
             SaveState();
         });
-        await Task.Run(Classify);
+        await Reclassify();
         UpdateSummary();
         if (n > 0) { Log.Write($"{n} zips installed"); Applied?.Invoke(); }
         return n;
@@ -767,8 +843,10 @@ public sealed partial class PackManager : Observable
             {
                 string dest = Target(it) ?? throw new InvalidOperationException("no packs folder");
                 Directory.CreateDirectory(ZoneHome!);
-                // every other copy of the zone, in either folder (an older build, or this one in the other folder)
-                foreach (var old in AllZones().Where(l => ZoneOf(l.Name).Equals(it.Zone, StringComparison.OrdinalIgnoreCase)
+                // a copy of this zip in the other folder: one copy only (older zips of the zone, names the release no
+                // longer has, go in RemoveOld; the other piece of a zone in two zips is NOT an old one: 1.0.0 moved
+                // ticino_ti_1_0_1.zip to "old" when it installed _2 and downloaded it again, PC test 2026-10-31)
+                foreach (var old in AllZones().Where(l => l.Name.Equals(it.Name, StringComparison.OrdinalIgnoreCase)
                                                           && !l.FullName.Equals(Path.GetFullPath(dest), StringComparison.OrdinalIgnoreCase)))
                     Retire(old.FullName);
                 File.Move(ready, dest, true);
@@ -786,7 +864,7 @@ public sealed partial class PackManager : Observable
 
     /// <summary>An old zip: deleted (setting "Delete old packs"), or moved to the packs folder's "old" (in packs mode
     /// the installer's ticino_download\old, on the disk of mods).</summary>
-    void Retire(string path)
+    void Retire(string path, bool forget = true)
     {
         try
         {
@@ -798,14 +876,25 @@ public sealed partial class PackManager : Observable
             }
             else
             {
-                string dir = PacksMode || DataFolder is null ? Path.Combine(Work, "old") : Path.Combine(DataFolder, "old");
+                string dir = OldDir(path);
                 Directory.CreateDirectory(dir);
                 File.Move(path, Path.Combine(dir, Path.GetFileName(path)), true);
                 Log.Write($"moved {path} to {dir}");
             }
-            st.Checked.Remove(Path.GetFileName(path));
+            // forget: false for a second copy of a zip that stays (its name is the one kept in place)
+            if (forget) st.Checked.Remove(Path.GetFileName(path));
         }
         catch (Exception e) { Log.Write($"could not remove {path}: {e.Message}"); }
+    }
+
+    /// <summary>The "old" folder on the zip's own disk (moving it there is a rename): the packs folder's for a zip in
+    /// the packs folder, the installer's ticino_download\old (beside mods) for every other.</summary>
+    string OldDir(string path)
+    {
+        string? dir = Path.GetDirectoryName(Path.GetFullPath(path));
+        if (DataFolder != null && dir != null && dir.Equals(Path.GetFullPath(DataFolder).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
+            return Path.Combine(DataFolder, "old");
+        return Path.Combine(Work, "old");
     }
 
     /// <summary>After a game update BeamNG turns every mod off in mods\db.json: the Ticino ones go back on.</summary>
@@ -825,8 +914,8 @@ public sealed partial class PackManager : Observable
                     changed++;
                 }
             if (changed == 0) return;
-            Directory.CreateDirectory(DownloadDir ?? Work);
-            File.Copy(db, Path.Combine(DownloadDir ?? Work, "db.json.bak"), true);
+            Directory.CreateDirectory(DownloadDir);
+            File.Copy(db, Path.Combine(DownloadDir, "db.json.bak"), true);
             Files.WriteAtomic(db, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             Log.Write($"{changed} Ticino mods turned back on in mods\\db.json");
         }
@@ -834,52 +923,138 @@ public sealed partial class PackManager : Observable
     }
 
     // ------------------------------------------------------------------------------------------- moving packs
-    /// <summary>Moves the zone zips from mods into the packs folder (`ticino_server adopt`; on one drive a rename):
-    /// packs mode becomes server mode, also for "Start Ticino" (install.json "mode": "server").</summary>
-    public async Task MoveZonesFromMods(IProgress<string> report)
+    async Task Reclassify()
+    {
+        var items = Items.ToList();
+        await Task.Run(() => Classify(items));
+    }
+
+    /// <summary>A zip that is moved keeps the sha256 it was checked with (state.json, the installer's checked.json):
+    /// its key is written again for the new file (another disk may keep the times coarser).</summary>
+    void Rekey(string name, long length, long ticks, FileInfo moved, Dictionary<string, string> inst)
+    {
+        string tail = $"|{length}|{ticks}";
+        string? k = st.Checked.GetValueOrDefault(name);
+        if (k is null || !k.EndsWith(tail)) k = inst.GetValueOrDefault(name);
+        if (k is null || !k.EndsWith(tail)) return;
+        moved.Refresh();
+        st.Checked[name] = $"{k[..^tail.Length]}|{moved.Length}|{moved.LastWriteTimeUtc.Ticks}";
+    }
+
+    /// <summary>Moves zips into a folder, one after the other, with <see cref="MoveText"/> saying how far (the pages
+    /// show it: 1.0.0 wrote it into a bar the page's own refresh overwrote every second, and a 10 min copy from C:
+    /// to D: looked like a hang). A zip that the folder already has with the same size is not copied again: that
+    /// copy goes to the "old" folder on its own disk. Returns the zips that could not be moved.</summary>
+    async Task<List<string>> MoveInto(List<FileInfo> files, string to, Func<FileInfo, string> rel)
+    {
+        var inst = InstallerChecked();
+        var failed = new List<string>();
+        long total = files.Sum(f => f.Length), done = 0;
+        var sw = Stopwatch.StartNew();
+        int n = 0;
+        Moving = true;
+        try
+        {
+            LoadState();
+            foreach (var f in files)
+            {
+                n++;
+                string dst = Path.Combine(to, rel(f));
+                long length = f.Length, ticks = f.LastWriteTimeUtc.Ticks;
+                void Show(long extra)
+                {
+                    double t = sw.Elapsed.TotalSeconds, d = done + extra;
+                    string left = t > 5 && d > 0 && d < total ? $" · {Files.Duration(TimeSpan.FromSeconds(t * (total - d) / d))} left" : "";
+                    MoveText = $"{f.Name} ({n} of {files.Count}) · {Files.Size(d)} of {Files.Size(total)}{left}";
+                }
+                Show(0);
+                try
+                {
+                    if (File.Exists(dst) && new FileInfo(dst).Length == length &&
+                        !Path.GetFullPath(dst).Equals(f.FullName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Retire(f.FullName, forget: false);
+                        Log.Write($"{f.Name}: already in {to} with the same size, the other copy put aside");
+                    }
+                    else
+                    {
+                        long copied = 0, shown = 0;
+                        await Task.Run(() => Files.MoveAsync(f.FullName, dst, new SyncProgress(b =>
+                        {
+                            copied += b;
+                            if (copied - shown > 64 << 20) { shown = copied; Show(copied); }
+                        }), CancellationToken.None));
+                        Rekey(f.Name, length, ticks, new FileInfo(dst), inst);
+                        Log.Write($"moved {f.Name} to {to}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    failed.Add(f.Name);
+                    Log.Write($"{f.Name} not moved: {e.Message}");
+                }
+                done += length;
+            }
+            SaveState();
+        }
+        finally
+        {
+            Moving = false;
+            MoveText = "";
+        }
+        return failed;
+    }
+
+    /// <summary>A progress that reports on the thread that copies (Progress&lt;T&gt; posts to the UI thread, which
+    /// read the counter long after the copy).</summary>
+    sealed class SyncProgress(Action<long> on) : IProgress<long>
+    {
+        public void Report(long value) => on(value);
+    }
+
+    /// <summary>Moves the zone zips from mods into the packs folder (on one drive a rename): packs mode becomes server
+    /// mode, also for "Start Ticino" (install.json "mode": "server"). Throws with the zips that could not be moved.</summary>
+    public async Task MoveZonesFromMods()
     {
         if (DataFolder is null) throw new InvalidOperationException("Choose the packs folder first.");
+        if (Busy || Moving) throw new InvalidOperationException("Wait for the download to end (or pause it) first.");
         if (BeamNG.Running()) throw new InvalidOperationException("Close BeamNG: it keeps the zips in mods open.");
         if (BaseHasServerLua() == false)
             throw new InvalidOperationException("The base pack in mods loads zones from mods only: the server could not serve them. Update it first (Downloads page).");
+        ScanMods();
         var list = ZonesInMods.ToList();
         Directory.CreateDirectory(DataFolder);
-        long total = list.Sum(f => f.Length), done = 0;
-        foreach (var f in list)
-        {
-            report.Report($"{f.Name} ({Files.Size(done)} of {Files.Size(total)})");
-            await Files.MoveAsync(f.FullName, Path.Combine(DataFolder, f.Name), new Progress<long>(n => done += n), CancellationToken.None);
-            Log.Write($"moved {f.Name} from mods to {DataFolder}");
-        }
+        var failed = await MoveInto(list, DataFolder, f => f.Name);
         Installer.SetMode(cfg, "server", DataFolder);
-        await Task.Run(Classify);
+        await Reclassify();
         UpdateSummary();
+        if (failed.Count > 0)
+            throw new IOException($"{failed.Count} of {list.Count} zips could not be moved (in use?): {string.Join(", ", failed.Take(5))}" +
+                                  (failed.Count > 5 ? ", …" : "") + ". Close BeamNG and the Ticino tools and press Move again.");
     }
 
     /// <summary>A new data folder: the zips (and the unfinished downloads) of the old one go with it.</summary>
-    public async Task ChangeDataFolder(string? from, string to, bool move, IProgress<string> report)
+    public async Task ChangeDataFolder(string? from, string to, bool move)
     {
+        if (Busy || Moving) throw new InvalidOperationException("Wait for the download to end (or pause it) first.");
+        var failed = new List<string>();
         if (move && from != null && Directory.Exists(from) && !Path.GetFullPath(from).Equals(Path.GetFullPath(to), StringComparison.OrdinalIgnoreCase))
         {
             if (ServerRunning()) throw new InvalidOperationException("Stop the server before moving the packs.");
             var files = new DirectoryInfo(from).EnumerateFiles("ticino_*.zip").ToList();
             string dl = Path.Combine(from, ".download");
             if (Directory.Exists(dl)) files.AddRange(new DirectoryInfo(dl).EnumerateFiles());
-            long total = files.Sum(f => f.Length), done = 0;
-            foreach (var f in files)
-            {
-                string rel = Path.GetRelativePath(from, f.FullName);
-                report.Report($"{f.Name} ({Files.Size(done)} of {Files.Size(total)})");
-                await Files.MoveAsync(f.FullName, Path.Combine(to, rel), new Progress<long>(n => done += n), CancellationToken.None);
-            }
-            Log.Write($"{files.Count} files moved from {from} to {to}");
+            failed = await MoveInto(files, to, f => Path.GetRelativePath(from, f.FullName));
+            Log.Write($"{files.Count - failed.Count} files moved from {from} to {to}");
         }
         cfg.DataFolder = to;
         cfg.Save();
         Directory.CreateDirectory(to);
         Raise(nameof(DataFolder));
-        await Task.Run(Classify);
+        await Reclassify();
         UpdateSummary();
+        if (failed.Count > 0)
+            throw new IOException($"{failed.Count} files stayed in {from} (in use?): {string.Join(", ", failed.Take(5))}");
     }
 
     /// <summary>&lt;user&gt;\ticino_data as the installer (on the disk of mods: moving the zips there is a rename) when

@@ -36,7 +36,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.0.0+$($env:GITHUB_SHA.Substring(0,7))"
+          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.1.0+$($env:GITHUB_SHA.Substring(0,7))"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem out | Format-Table Name, Length
       - name: Screenshots
@@ -92,6 +92,65 @@ jobs:
           $log
           $line = $log | Where-Object { $_ -match 'zones in place' } | Select-Object -Last 1
           if ($line -notmatch ', 1 to download or check .*packs mode') { throw "packs mode not recognised: $line" }
+      # The PC of 2026-10-31 after the app moved the zones out of mods: every zone in a packs folder that only
+      # install.json names ("data", its "mode" still "packs"), the app's settings of 1.0.0 (no packs folder,
+      # AutoDownload on), and the second zip of a zone in two zips missing. The app must take the folder over, run in
+      # server mode (install.json set to "server"), turn the automatic download off and offer only that zip (as "To
+      # download", not as an update of its first piece) and the server program.
+      - name: Screenshots in server mode (zones moved out of mods)
+        shell: pwsh
+        run: |
+          $user = Join-Path $env:RUNNER_TEMP 'bng_user_srv'
+          $mods = Join-Path $user 'mods'
+          $data = Join-Path $env:RUNNER_TEMP 'ticino zones'
+          New-Item -ItemType Directory -Force -Path $mods, $data, (Join-Path $user 'ticino_tools'), (Join-Path $user 'ticino_download') | Out-Null
+          $tag = 'ticino-all-cdae'
+          $rel = gh api "repos/$env:GH_REPO/releases?per_page=100" | ConvertFrom-Json | Where-Object tag_name -eq $tag | Select-Object -First 1
+          if (-not $rel) { Write-Host "no $tag release: skipped"; exit 0 }
+          $assets = @(foreach ($pg in 1, 2, 3) { gh api "repos/$env:GH_REPO/releases/$($rel.id)/assets?per_page=100&page=$pg" --jq '.[] | {name, size, digest}' | ForEach-Object { $_ | ConvertFrom-Json } })
+          $zips = @($assets | Where-Object { $_.name -like 'ticino_*.zip' } | Sort-Object name)
+          $left = ($zips | Where-Object { $_.name -match '^ticino_ti_.+_2\.zip$' } | Select-Object -First 1).name
+          if (-not $left) { throw "no zone in two zips on $tag" }
+          $checked = [ordered]@{}
+          foreach ($a in $zips) {
+            if ($a.name -eq $left) { continue }
+            $dir = if ($a.name -like 'ticino_base_*') { $mods } else { $data }
+            $p = Join-Path $dir $a.name
+            [System.IO.File]::Create($p).Close()
+            fsutil sparse setflag $p | Out-Null
+            $fs = [System.IO.File]::OpenWrite($p); $fs.SetLength([int64]$a.size); $fs.Close()
+            $sha = "$($a.digest)" -replace '^sha256:', ''
+            $checked[$a.name] = "$sha|$($a.size)|$((Get-Item $p).LastWriteTimeUtc.Ticks)"
+          }
+          $checked | ConvertTo-Json | Set-Content (Join-Path $user 'ticino_download/checked.json') -Encoding ASCII
+          $inst = Join-Path $user 'ticino_tools/install.json'
+          [ordered]@{ tag = $tag; user = $user; mode = 'packs'; data = $data } | ConvertTo-Json | Set-Content $inst -Encoding ASCII
+          Write-Host "$($checked.Count) sparse zips, zones in $data, left out: $left"
+          $env:TICINO_APP_DIR = Join-Path $env:RUNNER_TEMP 'appdir_srv'
+          New-Item -ItemType Directory -Force -Path $env:TICINO_APP_DIR | Out-Null
+          # the settings 1.0.0 wrote: no SettingsVersion, AutoDownload on, no packs folder
+          @{ UserFolder = $user; Tag = $tag; AutoDownload = $true; CheckOnStart = $true } | ConvertTo-Json | Set-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Encoding ASCII
+          $shots = Join-Path $PWD 'shots/server'
+          $p = Start-Process -FilePath out/TicinoServer.exe -ArgumentList @('--screenshots', $shots) -PassThru
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); Write-Host 'timeout' }
+          Get-ChildItem $shots | Format-Table Name, Length
+          if (Test-Path "$shots/error.txt") { Get-Content "$shots/error.txt"; exit 1 }
+          $log = Get-Content "$env:TICINO_APP_DIR/app.log"
+          $log
+          $bad = @()
+          if (-not ($log -match 'packs folder of the installer taken over')) { $bad += 'the packs folder of install.json was not taken over' }
+          if (-not ($log -match 'automatic download turned off')) { $bad += 'AutoDownload of 1.0.0 not turned off' }
+          $line = $log | Where-Object { $_ -match 'zones in place' } | Select-Object -Last 1
+          if ($line -notmatch '(\d+) of (\d+) zones in place, 2 to download or check' -or $line -match 'packs mode' -or
+              [int]$Matches[1] -ne [int]$Matches[2] - 1) { $bad += "not server mode with one zone short: $line" }
+          $list = $log | Where-Object { $_ -match "^\S+   " } | Select-Object -Last 1
+          if ($list -notmatch [regex]::Escape("$left (To download)") -or $list -notmatch 'server_ticino.zip \(To download\)') { $bad += "to download: $list" }
+          $mode = (Get-Content $inst -Raw | ConvertFrom-Json).mode
+          if ($mode -ne 'server') { $bad += "install.json mode $mode" }
+          $s = Get-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Raw | ConvertFrom-Json
+          if ($s.AutoDownload -or $s.DataFolder -ne $data) { $bad += "settings.json: AutoDownload $($s.AutoDownload), DataFolder $($s.DataFolder)" }
+          if ($bad) { $bad | ForEach-Object { Write-Host "FAIL: $_" }; exit 1 }
+          Write-Host 'server mode after a move: ok'
       - name: Pack
         shell: bash
         run: |

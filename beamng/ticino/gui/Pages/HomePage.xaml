@@ -15,7 +15,7 @@
                 <Button Content="Go to Downloads" Click="GoDownload_Click" />
             </c:InfoBar>
             <c:InfoBar x:Name="ModsBar" Severity="Warning" Title="Zones in the mods folder" Visibility="Collapsed">
-                <Button Content="Move" Click="MoveFromMods_Click" />
+                <Button x:Name="MoveButton" Content="Move" Click="MoveFromMods_Click" />
             </c:InfoBar>
             <c:InfoBar x:Name="LuaBar" Severity="Warning" Title="Base pack and server do not match" Visibility="Collapsed">
                 <Button x:Name="LuaButton" Content="Fix" Click="Lua_Click" />
