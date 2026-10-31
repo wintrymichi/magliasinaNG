@@ -195,7 +195,7 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 | AI car round Magliaso, up to 166 km/h | 1 of 61 spans with a frame over 100 ms |
 | All Ticino, after the spawn | about 1 min of stutter (12 s first window, 28-30 s AI map), then 100 fps |
 | Lugano standing still, fresh install, empty cache (2026-10-31) | queues empty after ~2 min, then 84.4 fps (1 % low 60, worst frame 17 ms); Italy at the same settings 81.0 |
-| Free camera from Manno north at 33 m/s, 300 s (2026-10-31) | 83.0 fps, 52 frames over 100 ms (terrain moves, bursts, 3 forest changes) |
+| Free camera from Manno north at 33 m/s, 300 s (2026-10-31, 83fabe4) | 94.2 fps, 87 frames over 50 ms, 25 over 100 ms (terrain moves, a few forest changes and heavy objects) |
 
 ## Troubleshooting
 
@@ -207,13 +207,49 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 - **Is the streamer running?** `beamng.log` has `ticino` lines (`streaming on`, `settings: ...`, `jump: window at`).
   In the console: `ticino_stream.status()`.
 
+<<<<<<< HEAD
+## Ticino server (optional, 2026-10-29)
+
+`server/ticino_server.py` keeps the whole map beside the game: only the base pack (`ticino_base_*.zip`, 270 MB: the
+level, materials, textures, Lua) is in `<user>/mods`; the 87 zone packs (51.6 GB) stay in the server's data folder
+(any disk). While the game runs, the server puts the files of the tiles round the car into
+`<user>/temp/ticino/srv/` (objects and trees files, collision cells, far ground, and every level shape converted to
+`.cdae` by `dae2cdae.py`) a few rings ahead of the car, lists the finished tiles in
+`<user>/temp/ticino/helper/ready.json`, deletes the farthest tiles when the cache is over `--cache-gb`, and makes the
+terrain windows as the helper does (it is the helper with more to do). `ticino/files.lua` in the mod reads from there
+and skips a tile until it is listed; at a jump it waits (`SERVE_WAIT_MS`) for the rings round the car.
+
+Why: with the packs in mods the game mounts all of them at every start (596,326 files: 75-81 s before the menu in
+michi's beamng.log of 2026-10-29), and the first time it meets a shape it parses the Collada file (195 GB of XML for
+all of Ticino) and writes its own `.cdae` cache (12 GB in `temp/levels/ticino` after four zones). With the server the
+game mounts one pack and loads every shape as `.cdae`.
+
+    python server/ticino_server.py download [--zones ti_0_0 ...]   the release's packs: zones to the data folder, base to mods
+    python server/ticino_server.py adopt                           move the zone packs already in mods to the data folder
+    python server/ticino_server.py                                 run it (before or with the game), Ctrl+C stops and cleans
+    python server/ticino_server.py once <x> <y> --radius 7         the tiles round a point, timed
+
+Settings on the command line or in `ticino_server.json` beside it (`user`, `data`, `cacheGB`, `workers`, `dae`, `tag`,
+`zones`). Without the server and with the packs in mods nothing changes (simulator: the same scene, object for object).
+
+Checked in the cloud (zone ti_0_0, 4 cores): 225 near tiles (radius 7) in 80 s with the conversion (70 ms a shape),
+33 s without; the simulator at 120 km/h for 100 s with the server running beside it ended with the same scene as with
+the packs (5,175 objects, 1,155 far tiles, the same collision triangles), 28 tiles late while driving (the start
+aside) on the shared 4-core container. `dae2cdae.py` against 7 shapes the game compiled itself (michi's cache): the
+same vertices, triangles, normals, colours, materials and detail levels; the node tree (base00/start01) is left out,
+texture coordinates differ in the last bit of a float. Not checked in the game yet: the start time with the base pack
+alone, files written under temp while the game runs (the game's file watcher), our `.cdae` shapes with detail levels.
+
+## State and open work (2026-10-29)
+=======
 ## State and open work (2026-10-31)
+>>>>>>> origin/ticino
 
 Done: all 87 zones in one level, the streamer with wave loading, 64 m collision cells, the helper, settings, the
 installer, shapes shipped as .cdae, static streamed objects and bursts (standing still as fast as Italy). Open:
 
-- Driving fast: about 3 frames a second of 50-100 ms while a new area fills in at 120 km/h, the trees fall behind,
-  and a long jump (teleport) pauses the game about 10 s.
+- Driving fast: about 25 frames over 100 ms in 5 minutes at 120 km/h (terrain moves every ~1.5 km, a few forest
+  changes and heavy objects), and a long jump (teleport) pauses the game about 10 s.
 
 - **AI map.** The game builds the AI map from the 57,298 AI roads, which take their heights from the terrain: only
   the window has terrain, so outside it the AI nodes sit at height 0, 4,020 of the 4,065 traffic signals find no road

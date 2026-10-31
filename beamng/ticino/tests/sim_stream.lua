@@ -105,10 +105,13 @@ local stream = require('ticino/stream')
 stream.PERF_FILE = '/ticino_perf_sim.csv'   -- (root/temp/ticino_perf_sim.csv)
 -- start at the default spawn (Magliaso), drive west-north-west at 120 km/h
 car.x, car.y = 747, -1094
+if os.getenv('START') then car.x, car.y = os.getenv('START'):match('^(%-?[%d.]+),(%-?[%d.]+)$') end
+car.x, car.y = tonumber(car.x), tonumber(car.y)
 stream.onClientPostStartMission('/levels/ticino/main.level.json')
 local dt = 1 / 60
 local v = tonumber(os.getenv('SPEED') or '120') / 3.6
 local dir = { -0.94, 0.34 }
+if os.getenv('DIR') then local a, b = os.getenv('DIR'):match('^(%-?[%d.]+),(%-?[%d.]+)$'); dir = { tonumber(a), tonumber(b) } end
 local worstLua, t = 0, 0
 local tele = os.getenv('TELEPORT') and {}
 if tele then for v in os.getenv('TELEPORT'):gmatch('[^,]+') do tele[#tele + 1] = tonumber(v) end end
@@ -139,6 +142,10 @@ local live = 0
 for _ in pairs(objs) do live = live + 1 end
 print(string.format('drove %.1f km in %.0f s: %d window swaps, %d collision rebuilds, objects made %d deleted %d, in scene %d (%d colliders, %d far)',
   v * seconds / 1000, seconds, counts.swaps, counts.reload, counts.made, counts.deleted, live, s.objects.colliders, s.objects.far))
+if type(s.files) == 'table' then
+  print(string.format('server: %d tiles ready, %d tiles late (%d after the first 30 s), %d refreshes', s.files.near,
+    s.files.late, s.files.lateRun, s.files.refreshes))
+end
 print(string.format('collision pieces made: %d triangles, cells live %d', counts.colTris or 0, s.objects.colCells or -1))
 print(string.format('worst Lua frame after the start %.1f ms (luajit CPU; budget %d + %d ms); window now at tile (%d, %d), car tile (%d, %d)',
   worstLua, stream.BUDGET_MS, stream.OBJ_BUDGET_MS, s.window[1] / 256, s.window[2] / 256, s.cell[1], s.cell[2]))
