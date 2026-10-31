@@ -93,8 +93,8 @@ public static class BeamNG
                 CreateNoWindow = true,
             };
             foreach (var a in new[] { "--user", UserFolder(c), "--game-pid", live.Id.ToString() }) psi.ArgumentList.Add(a);
-            Process.Start(psi);
-            Log.Write($"helper started beside the game (pid {live.Id})");
+            using var h = Process.Start(psi);
+            Log.Write($"helper started (pid {h?.Id}) beside the game (pid {live.Id})");
         }
         catch (Exception e) { Log.Write("helper not started: " + e.Message); }
     }

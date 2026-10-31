@@ -28,6 +28,9 @@ public partial class GraphicsPage : UserControl
     void Show()
     {
         loading = true;
+        View.Value = s.ViewKm;
+        Fog.Value = Math.Round(s.Fog * 1e5);
+        FarLod.IsChecked = s.FarLod;
         Forest.Value = s.ForestRadius;
         Far.Value = s.FarRadius;
         Buildings.Value = s.Buildings;
@@ -47,6 +50,8 @@ public partial class GraphicsPage : UserControl
 
     void Labels()
     {
+        ViewText.Text = $"{s.ViewKm} km";
+        FogText.Text = $"{GameSettings.HiddenAt10Km(s.Fog) * 100:0} % hidden at 10 km";
         ForestText.Text = Tiles(s.ForestRadius);
         FarText.Text = Tiles(s.FarRadius);
         BuildingsText.Text = Tiles(s.Buildings);
@@ -61,6 +66,9 @@ public partial class GraphicsPage : UserControl
     void Slider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (loading || s is null) return;
+        s.ViewKm = (int)View.Value;
+        // the slider is in steps of 1e-5; the value of the file stays as it was until the haze slider moves
+        if (sender == Fog) s.Fog = Fog.Value * 1e-5;
         s.ForestRadius = (int)Forest.Value;
         s.FarRadius = (int)Far.Value;
         s.Buildings = (int)Buildings.Value;
@@ -70,7 +78,7 @@ public partial class GraphicsPage : UserControl
         s.BurstMs = (int)Burst.Value;
         s.ForestBlock = (int)Block.Value;
         s.ForestHyst = (int)Hyst.Value;
-        if (sender == Forest || sender == Far || sender == Buildings || sender == Roads || sender == Details)
+        if (sender == Forest || sender == Far || sender == Buildings || sender == Roads || sender == Details || sender == View)
         {
             s.Quality = s.Match();
             loading = true;
@@ -87,6 +95,7 @@ public partial class GraphicsPage : UserControl
         if (loading || s is null) return;
         s.Helper = Helper.IsChecked == true;
         s.Diagnostics = Diagnostics.IsChecked == true;
+        s.FarLod = FarLod.IsChecked == true;
         Changed();
     }
 
@@ -98,6 +107,8 @@ public partial class GraphicsPage : UserControl
         var p = GameSettings.Preset(q);
         p.Helper = s.Helper;
         p.Diagnostics = s.Diagnostics;
+        p.Fog = s.Fog;                                  // not part of a quality level
+        p.FarLod = s.FarLod;
         p.BurstEveryMs = s.BurstEveryMs;
         p.BurstMs = s.BurstMs;
         p.ForestBlock = s.ForestBlock;

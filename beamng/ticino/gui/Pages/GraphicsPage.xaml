@@ -21,6 +21,26 @@
             </c:SettingCard>
 
             <TextBlock Text="View distance" Style="{StaticResource SectionText}" />
+            <c:SettingCard Glyph="&#xE774;" Header="Horizon"
+                           Description="How far the camera sees: the far ground of the whole of Ticino, in coarser levels the farther it is.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="ViewText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="View" Minimum="12" Maximum="80" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE9CA;" Header="Haze"
+                           Description="How much of the distance the air hides. Less haze shows more mountains far away.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="FogText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="Fog" Minimum="2" Maximum="13" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE81E;" Header="Far ground levels"
+                           Description="Draws the far ground beyond the far terrain up to the horizon. Off: the view ends where the far terrain ends.">
+                <CheckBox x:Name="FarLod" Content="On" Checked="Toggle_Changed" Unchecked="Toggle_Changed" />
+            </c:SettingCard>
             <c:SettingCard Glyph="&#xE913;" Header="Trees"
                            Description="How far from the car the trees reach. Each step is one 384 m tile.">
                 <StackPanel Orientation="Horizontal">
@@ -62,7 +82,7 @@
                 </StackPanel>
             </c:SettingCard>
             <TextBlock Style="{StaticResource CaptionText}" Margin="2,6,0,0"
-                       Text="Objects cannot be drawn farther than the map was built for: High is already the maximum." />
+                       Text="Trees, buildings, roads and details cannot be drawn farther than the map was built for (High is their maximum); the horizon reaches 80 km." />
 
             <TextBlock Text="Performance" Style="{StaticResource SectionText}" />
             <c:SettingCard Glyph="&#xE9F5;" Header="Helper"

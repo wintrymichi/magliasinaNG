@@ -20,6 +20,12 @@ public sealed class GameSettings
     public int Buildings { get; set; } = 6;         // objects.GROUP_R.buildings (build: 6)
     public int Roads { get; set; } = 5;             // roads, walls, railway, tunnels, cut slopes (build: 5)
     public int Details { get; set; } = 1;           // street clutter (build caps it at 1)
+    // the horizon (stream.lua 570f922, michi 2026-10-31 "voglio vedere di più da lontano"): the base's far ground
+    // levels reach the whole of Ticino, LevelInfo.visibleDistance goes to viewKm and the haze thins to fog
+    public int ViewKm { get; set; } = 60;           // "viewKm" (0 = the level's 12 km; preset light 25)
+    public double Fog { get; set; } = DefaultFog;   // "fog" (0 = the level's 1.3e-4)
+    public bool FarLod { get; set; } = true;        // objects.FAR_LOD: the far ground levels
+    public const double DefaultFog = 6e-5, LevelFog = 1.3e-4;
     public bool Helper { get; set; } = true;
     public bool Diagnostics { get; set; } = false;
     public int BurstEveryMs { get; set; } = 1000;
@@ -29,8 +35,8 @@ public sealed class GameSettings
 
     public static GameSettings Preset(Quality q) => q switch
     {
-        Quality.Low => new GameSettings { Quality = q, ForestRadius = 2, FarRadius = 8, Buildings = 4, Roads = 4, Details = 0 },
-        Quality.Medium => new GameSettings { Quality = q, ForestRadius = 3, FarRadius = 10, Buildings = 5, Roads = 5, Details = 1 },
+        Quality.Low => new GameSettings { Quality = q, ForestRadius = 2, FarRadius = 8, Buildings = 4, Roads = 4, Details = 0, ViewKm = 25 },
+        Quality.Medium => new GameSettings { Quality = q, ForestRadius = 3, FarRadius = 10, Buildings = 5, Roads = 5, Details = 1, ViewKm = 40 },
         _ => new GameSettings { Quality = Quality.High },
     };
 
@@ -41,7 +47,7 @@ public sealed class GameSettings
         {
             var p = Preset(q);
             if (p.ForestRadius == ForestRadius && p.FarRadius == FarRadius && p.Buildings == Buildings &&
-                p.Roads == Roads && p.Details == Details)
+                p.Roads == Roads && p.Details == Details && p.ViewKm == ViewKm)
                 return q;
         }
         return Quality.Custom;
@@ -92,6 +98,15 @@ public sealed class GameSettings
 
     static string? Str(JsonNode? n) => n is JsonValue v && v.TryGetValue(out string? t) ? t : null;
 
+    static double? Num(JsonNode? n)
+    {
+        try { return n is JsonValue v && v.TryGetValue(out double x) ? x : null; }
+        catch { return null; }
+    }
+
+    /// <summary>The share of the scene the haze hides at 10 km (exponential fog: 6e-5 hides 45 %).</summary>
+    public static double HiddenAt10Km(double fog) => 1 - Math.Exp(-fog * 10_000);
+
     static JsonObject ReadRoot(string path)
     {
         try
@@ -124,6 +139,9 @@ public sealed class GameSettings
         s.Buildings = Int(caps?["buildings"], s.Buildings, 2, 6);
         s.Roads = Int(caps?["roads"], s.Roads, 2, 5);
         s.Details = Int(caps?["props/street_life"], s.Details, 0, 2);
+        if (Num(root["viewKm"]) is { } vk && vk >= 0) s.ViewKm = Math.Clamp(vk == 0 ? 12 : (int)Math.Round(vk), 12, 80);
+        if (Num(root["fog"]) is { } fg && fg >= 0) s.Fog = Math.Clamp(fg == 0 ? LevelFog : fg, 1e-5, 2e-4);
+        if ((root["objects"] as JsonObject)?["FAR_LOD"] is JsonValue fl && fl.TryGetValue(out bool flb)) s.FarLod = flb;
         if (root["helper"] is JsonValue h && h.TryGetValue(out bool hb)) s.Helper = hb;
         if (root["diagnostics"] is JsonValue g && g.TryGetValue(out bool gb)) s.Diagnostics = gb;
         string? q = Str((root["app"] as JsonObject)?["quality"]);
@@ -136,6 +154,7 @@ public sealed class GameSettings
     static GameSettings ModDefaults(bool light) => new()
     {
         ForestRadius = light ? 3 : 4, FarRadius = light ? 10 : 16, Buildings = 6, Roads = 5, Details = 1,
+        ViewKm = light ? 25 : 60, Fog = DefaultFog, FarLod = true,
         Helper = true, Diagnostics = false, BurstEveryMs = 1000, BurstMs = 20, ForestBlock = 3, ForestHyst = 1,
     };
 
@@ -156,6 +175,9 @@ public sealed class GameSettings
         Set(root, "level", "farRadius", FarRadius == d.FarRadius ? null : FarRadius);
         Set(root, "stream", "BURST_EVERY_MS", BurstEveryMs == d.BurstEveryMs ? null : BurstEveryMs);
         Set(root, "stream", "BURST_MS", BurstMs == d.BurstMs ? null : BurstMs);
+        Set(root, null, "viewKm", ViewKm == d.ViewKm ? null : ViewKm);
+        Set(root, null, "fog", Math.Abs(Fog - d.Fog) < 1e-7 ? null : Math.Round(Fog, 7));
+        Set(root, "objects", "FAR_LOD", FarLod == d.FarLod ? null : FarLod);
         // the mod takes GROUP_R as a whole table (applyFields replaces it): all of it, or none
         JsonObject? caps = null;
         if (Buildings != d.Buildings || Roads != d.Roads || Details != d.Details)
