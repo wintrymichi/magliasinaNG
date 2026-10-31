@@ -919,6 +919,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   wrote only temp/art/terrainMaterialCache/<hash>.dds (one per terrain swap, part of its ~230 ms). The slow frames are
   a first use per SESSION: gone on a second flight in the same session, back after a restart. Next: tell material
   first use from shape first use (jump to another zone first, then fly).
+  It was neither: spawning in Bellinzona and arriving in Manno later, Manno (first visit) had no slow frame, and the
+  8 frames (125-483 ms, 4-8 objects each) always came in the 2 s right AFTER the first jump's map.reset frame (28-32 s),
+  wherever that was; the AI map is read once a session (later jumps keep it), hence "first use per session". Not
+  dropAIRoads either (same frames with DROP_AI_ROADS false, which costs 0.7-1 s a terrain swap). beamng.log shows only
+  "GpuCull| registry: <n> instances" lines in those seconds (the engine rebuilding its GPU culling registry). stream.lua
+  now keeps the game paused RESET_HOLD_MS (3 s) after that map.reset while the streamer goes on, so the tail passes
+  in the pause. Read the frames before a slow frame too: a 30 s frame just before it is the likelier cause.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.

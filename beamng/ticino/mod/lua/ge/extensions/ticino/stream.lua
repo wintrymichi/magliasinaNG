@@ -85,6 +85,10 @@ M.PRESETS = {
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
 M.MAP_RESET_ON_JUMP = true -- read the AI map again at a jump, while the game is paused (1.9-2.5 s on the laptop)
+M.RESET_HOLD_MS = 3000     -- after that map.reset the game stays paused this long while the streamer goes on: the
+                           -- engine's next ~2 s are slow whatever is added (PC 2026-10-31: 8 frames of 125-483 ms
+                           -- adding 4-8 objects each, GpuCull registry rebuilds; not shapes, materials or the AI
+                           -- roads' deletion), so they pass in the pause instead of at the start of the drive
 M.MAP_RESET_FRAMES = nil  -- frames after a terrain swap to read the AI map again (nil: never). A map.reset() fixed
                            -- the z 0 nodes near the car but froze the laptop 2-2.5 s every move (run 4); the AI roads
                            -- now have useSubdivisions off (blocks.py), so the graph takes their own heights
@@ -120,7 +124,8 @@ local function pause(on)
   local s = sta()
   if not s or not s.pause then return end
   if on then
-    st.wasPaused = s.getPause and s.getPause() or false
+    if st.holdUntil then st.holdUntil = nil   -- a jump during the hold after a map.reset: keep its wasPaused
+    else st.wasPaused = s.getPause and s.getPause() or false end
     s.pause(true)
   elseif not st.wasPaused then
     s.pause(false)
@@ -690,6 +695,7 @@ local function onUpdate(dtReal)
         local ok = pcall(function() map.reset() end)
         if st.watch then st.watch.rec.mapResetMs = clock() - t0 end
         log('I', 'ticino', string.format('AI map read again at the jump: %.1f ms%s', clock() - t0, ok and '' or ' (failed)'))
+        if ok and (M.RESET_HOLD_MS or 0) > 0 then st.holdUntil = clock() + M.RESET_HOLD_MS end
       end
       if M.DROP_AI_ROADS and not st.aiDropped then
         local ok, res = pcall(M.dropAIRoads)
@@ -700,9 +706,14 @@ local function onUpdate(dtReal)
     st.resumeIn = st.resumeIn - 1
     if st.resumeIn <= 0 then
       st.resumeIn = nil
-      pause(false)
+      if not st.holdUntil then pause(false) end
     end
     return
+  end
+  if st.holdUntil and clock() >= st.holdUntil then   -- the hold after a map.reset is over
+    st.holdUntil = nil
+    log('I', 'ticino', 'hold after the AI map read over')
+    pause(false)
   end
   if st.rwatch then
     local w = st.rwatch
