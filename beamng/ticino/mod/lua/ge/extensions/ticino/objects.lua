@@ -50,7 +50,7 @@ M.WAVE_DEL_AT = 99         -- objects that went out of range (and only drew) are
                            -- flight 2026-10-30, 1,620 live of ~3,400); was 1.5 (after the rings 0 and 1)
 
 -- The cap of a group: the GROUP_R entry of the longest prefix of its path ("buildings" caps "buildings/details" too),
--- so the settings file can lower a whole family (Ticino Server app, "Distanza visiva"). Cached per GROUP_R table.
+-- so the settings file can lower a whole family (Ticino Server app, "View distance"). Cached per GROUP_R table.
 local capFor, capCache = nil, {}
 local function groupCap(g)
   if capFor ~= M.GROUP_R then capFor, capCache = M.GROUP_R, {} end

@@ -1155,6 +1155,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   spawns spawn_magliaso/_mid/_pura, which every zone reuses as names). The Lugano zone's first village spawn is
   `ti_1_0_spawn_ligiaun`: places.villages() took swissNAMES3D's Romansh name of Lugano. The app maps it back; the
   spawn name itself is not fixed in the pipeline.
+- Merging ticino (with PR #104) into the app branch: the branch filter for the new ticino_server_exe.yml was edited
+  after `git merge --no-commit` but not staged, so `git commit` took the merge without it, and the push (exe_stamp.txt
+  new in the range) started ticino server exe on the thread branch; cancelled at its checkout, nothing uploaded. After
+  a `--no-commit` merge, `git add` the extra edits (check `git status` before the commit), and give every new workflow
+  with push paths `branches: [ticino]` before a merge brings it to a thread branch.
 
 ## Working with cat (the owner)
 
