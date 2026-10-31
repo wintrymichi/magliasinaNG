@@ -38,7 +38,7 @@ The programs are not signed: Windows SmartScreen may warn the first time (More i
 | `server_ticino.zip` | the Ticino server alone (the app and the installer fetch it themselves) |
 | `helper_ticino.zip` | the streaming helper used when every zip is in mods |
 | `ticino_base_*.zip` | the level: scene, roads, materials, the streaming mod |
-| `ticino_<zone>_*.zip` | one per zone ({ZONES}) |
+| `ticino_<zone>_*.zip` | the {ZONES} zones, one zip each (two for the biggest: `_1` and `_2` belong together) |
 
 ## Known issues
 

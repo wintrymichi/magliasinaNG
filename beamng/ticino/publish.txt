@@ -8,4 +8,6 @@ zips=ticino-all-cdae
 tools=ticino-all
 # app_ticino.zip, built by ticino_gui.yml from the same commit as this file
 app=ticino-app
-stamp=2026-10-31 2
+# copy (default): the level's zips too; keep: the level on the release stays as it is (only tools and app)
+level=keep
+stamp=2026-11-01 app 1.1

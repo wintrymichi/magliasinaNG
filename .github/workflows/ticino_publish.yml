@@ -36,6 +36,7 @@ jobs:
       zips: ${{ steps.c.outputs.zips }}
       tools: ${{ steps.c.outputs.tools }}
       app: ${{ steps.c.outputs.app }}
+      level: ${{ steps.c.outputs.level }}
     steps:
       - uses: actions/checkout@v4
       - id: c
@@ -43,6 +44,8 @@ jobs:
         run: |
           get() { grep -E "^$1=" beamng/ticino/publish.txt | head -1 | cut -d= -f2- | tr -d '\r'; }
           for k in tag title zips tools app; do v=$(get $k); [ -n "$v" ] || { echo "no $k in publish.txt"; exit 1; }; echo "$k=$v" >> "$GITHUB_OUTPUT"; echo "$k=$v"; done
+          # level=keep: only the installer, helper, server and app (a level build not tested yet stays on its draft)
+          l=$(get level); echo "level=${l:-copy}" >> "$GITHUB_OUTPUT"; echo "level=${l:-copy}"
       - name: The release (a draft until every zip is there)
         env:
           TAG: ${{ steps.c.outputs.tag }}
@@ -55,6 +58,7 @@ jobs:
 
   copy:
     needs: setup
+    if: needs.setup.outputs.level != 'keep'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
@@ -103,6 +107,8 @@ jobs:
 
   finish:
     needs: [setup, copy]
+    # after the copy, or without it (level=keep: the copy job is skipped)
+    if: always() && needs.setup.result == 'success' && (needs.copy.result == 'success' || needs.copy.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -140,6 +146,7 @@ jobs:
           unzip -p app_ticino.zip VERSION.txt
           gh release upload "$TAG" helper_ticino.zip server_ticino.zip installer_ticino.zip app_ticino.zip --clobber
       - name: Every zip there, with the source's size and sha256
+        if: needs.setup.outputs.level != 'keep'
         run: |
           set -euo pipefail
           rid() { gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$1\") | .id" | head -1; }
@@ -162,7 +169,8 @@ jobs:
           set -euo pipefail
           id=$(gh api "repos/$GH_REPO/releases?per_page=100" --jq ".[] | select(.tag_name == \"$TAG\") | .id" | head -1)
           rows=$(for p in 1 2 3; do gh api "repos/$GH_REPO/releases/$id/assets?per_page=100&page=$p" --jq '.[] | [.name, .size] | @tsv'; done)
-          zones=$(awk -F'\t' '$1 ~ /^ticino_ti_.*\.zip$/' <<< "$rows" | wc -l)
+          # zones, not zips: a big zone comes in two (ticino_ti_1_0_1.zip, _2.zip)
+          zones=$(awk -F'\t' '$1 ~ /^ticino_ti_.*\.zip$/ {print $1}' <<< "$rows" | sed -E 's/_[0-9]+\.zip$//' | sort -u | wc -l)
           size=$(awk -F'\t' '$1 ~ /^ticino_.*\.zip$/ {s += $2} END {printf "%.0f GB", s / 1073741824}' <<< "$rows")
           sed -e "s/{ZONES}/$zones/g" -e "s/{SIZE}/$size/g" beamng/ticino/publish_notes.md > notes.md
           echo "$zones zones, $size"
