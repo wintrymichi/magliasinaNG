@@ -1718,3 +1718,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ticino_install_check.yml (check_stamp.txt: parse, Move-Zip, Test-BaseServes, -ListOnly, no upload).
 - Windows PowerShell 5.1's ZipFile.CreateFromDirectory writes entry names with backslashes: a check of a zip entry by
   name must take both separators (Test-BaseServes said "no files.lua" on the test zip).
+- It happened a second time when the branch was restarted from ticino again to bump exe_stamp.txt: every restart of a
+  thread branch onto ticino commits that touched all_stamp.txt starts ticino_all there. Bump a stamp on the branch
+  only after checking `git log origin/<branch>..origin/ticino -- beamng/ticino/all_stamp.txt` is empty, or force-cancel.
+- A new server flag (--game-pid) was merged into the installer while server_ticino.zip on the release was still built
+  without it: the shortcut would have started a server that stops at once (argparse error). Rebuild the exe (exe_stamp)
+  in the same round as any installer change that passes a new flag.

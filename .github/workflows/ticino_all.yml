@@ -13,6 +13,9 @@ name: ticino all
 on:
   workflow_dispatch:
   push:
+    # only ticino: a thread branch restarted from ticino counts its stamp commits as new and started this workflow
+    # (twice on 2026-10-31, force-cancelled)
+    branches: [ticino]
     paths:
       - beamng/ticino/all_stamp.txt
 
