@@ -20,6 +20,7 @@ its objects use; a "far" tile is the far ground shape alone. The server makes th
 The mod without a running server, or with the packs in mods as before, works as before.
 
     python ticino_server.py [--user <BeamNG user folder>] [--data <folder with the ticino_<zone>_<n>.zip>]
+                            [--game-pid <pid>]   stop and clean up when that process (the game) ends
     python ticino_server.py download [--tag ticino-v1]   the packs of a release: zones to --data, the base to mods
                                                          (resumes, checks size and sha256, skips what is there)
     python ticino_server.py adopt     move the zone packs from <user>/mods to --data (same disk: a rename)
@@ -511,7 +512,7 @@ class ServeHelper(th.Helper):
         return False
 
 
-def run(user, data, cache_gb, workers, cdae, ahead):
+def run(user, data, cache_gb, workers, cdae, ahead, game_pid=None):
     packs = Packs([data])
     if not packs.paths:
         raise SystemExit("no ticino_<zone>_<n>.zip in %s (python ticino_server.py adopt moves them from mods)" % data)
@@ -528,10 +529,17 @@ def run(user, data, cache_gb, workers, cdae, ahead):
             signal.signal(getattr(signal, name), stop)
     log("server ready: %s -> %s, cache %.1f GB, %d workers, shapes as %s" % (
         data, srv.root, cache_gb, workers, ".cdae" if cdae else ".dae"))
-    last = 0
+    if game_pid:
+        log("stops when the game (pid %d) ends" % game_pid)
+    last, next_pid = 0, 0.0
     try:
         h.alive(force=True)
         while True:
+            if game_pid and time.time() >= next_pid:
+                next_pid = time.time() + th.PID_CHECK_S
+                if not th.process_alive(game_pid):
+                    log("the game has ended")
+                    break
             srv.read_req()
             busy = h.tick()
             busy = srv.step() or busy
@@ -756,6 +764,7 @@ def main():
     ap.add_argument("--zones", nargs="*", default=cfg.get("zones"), help="download: only these zones (ti_0_0 ...)")
     ap.add_argument("--ahead", type=int, default=8, help="terrain windows of the next move kept ready (1-8)")
     ap.add_argument("--radius", type=int, default=2, help="once: rings of near tiles")
+    ap.add_argument("--game-pid", type=int, default=None, help="run: stop (and clean up) when this process ends")
     a = ap.parse_args()
     data = a.data or default_data()
     if a.cmd == "adopt":
@@ -765,7 +774,7 @@ def main():
     elif a.cmd == "once":
         once(a.user, data, a.xy[0], a.xy[1], a.radius, a.workers, not a.dae)
     else:
-        run(a.user, data, a.cache_gb, a.workers, not a.dae, max(1, min(8, a.ahead)))
+        run(a.user, data, a.cache_gb, a.workers, not a.dae, max(1, min(8, a.ahead)), a.game_pid)
 
 
 if __name__ == "__main__":
