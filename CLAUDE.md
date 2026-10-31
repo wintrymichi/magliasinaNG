@@ -841,6 +841,23 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
+- Night of 2026-10-30/31 on DESKTOP-OUPOLOA (kit in %LOCALAPPDATA%\ticino_helper_test\kit: run_test2.ps1, test mods
+  ticinofps = fps standing still with Lua steps, ticinotest = camera flight): Lugano standing still went 13 -> 84 fps
+  (Italy vanilla 81) once (1) streamed TSStatics are created static (dynamic=true redrew every object in every shadow
+  cascade; flipping to static at runtime does not give the cost back, SETTLE_MS left some dynamic) and (2) the 192 m
+  shape pieces no longer carry every material block of their source (80 props_signs/props_osm pieces were hundreds of
+  draw calls each: hiding the 103 props alone gave 49 -> 85 fps, one at a time nothing). dynamicCubemap (1,146
+  materials), far tiles, DecalRoad, SFXEmitter, GroundCover: no effect. A frame that touches a Forest costs ~190 ms
+  whatever its item count: forest BLOCK 3 (one Forest per 3x3 tiles) cut the flight's >100 ms frames 128 -> 52.
+- Test pitfalls of that night: a hidden-category sweep needs the queues EMPTY first (the streamer loads for 2-5 min
+  after a spawn and every scene change costs a frame); hide one category at a time and show it again (cumulative
+  hiding misleads); the per-shape bisect could not see a cost spread over 100 objects. snap.ps1 brings BeamNG to the
+  front and captures the primary screen: while michi used the PC it captured his own window (deleted) - never run it
+  while he is at the PC. michi wants game audio at 0 (settings AudioMasterVol, restored after) and no controller
+  vibration (hydros.enableVibration/enableFFB false on the car) during tests. The auto-mode filter blocks closing a
+  BeamNG, deleting the level cache and uploading files until michi writes his yes in the thread itself (a yes relayed by
+  the coordinator does not count). An installer run against a release missing a zone moved the installed zone to old\
+  and stopped (stderr was discarded, so the error was lost): capture stderr; fixed in ticino 39dd1ae ("kept").
 
 ## Data from the cloud sessions
 
