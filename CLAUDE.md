@@ -1137,6 +1137,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - The Ticino build workflows (zone_build, ticino_all, ticino_region, ticino_test, ticino_tools, ticino_helper) had no
   branch filter: the first push of a new thread branch based on ticino counts every file as changed against main and
   would have started 87 zone builds. They now run only on `ticino`.
+- The light-theme shots of the Download page showed "reading the release" and an empty list: the window's own startup
+  check was running and PackManager.Refresh returns at once while a check runs. Screenshot mode (App.ShotMode) now
+  skips the startup check and the 6 h timer and waits for Checking to end before the first shot.
+- The app names zones by the first village spawn of each zone in the base pack's info.json (after the three route
+  spawns spawn_magliaso/_mid/_pura, which every zone reuses as names). The Lugano zone's first village spawn is
+  `ti_1_0_spawn_ligiaun`: places.villages() took swissNAMES3D's Romansh name of Lugano. The app maps it back; the
+  spawn name itself is not fixed in the pipeline.
 
 ## Working with cat (the owner)
 
