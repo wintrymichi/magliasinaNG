@@ -8,4 +8,4 @@ zips=ticino-all-cdae
 tools=ticino-all
 # app_ticino.zip, built by ticino_gui.yml from the same commit as this file
 app=ticino-app
-stamp=2026-10-31 1
+stamp=2026-10-31 2

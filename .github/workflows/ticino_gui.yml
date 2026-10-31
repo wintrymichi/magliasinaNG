@@ -81,7 +81,8 @@ jobs:
           Write-Host "$($checked.Count) sparse zips in $mods, left out: $left"
           $env:TICINO_APP_DIR = Join-Path $env:RUNNER_TEMP 'appdir_packs'
           New-Item -ItemType Directory -Force -Path $env:TICINO_APP_DIR | Out-Null
-          @{ UserFolder = $user } | ConvertTo-Json | Set-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Encoding ASCII
+          # the release the sparse zips come from (the app's default is the public one, which may differ)
+          @{ UserFolder = $user; Tag = 'ticino-all' } | ConvertTo-Json | Set-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Encoding ASCII
           $shots = Join-Path $PWD 'shots/packs'
           $p = Start-Process -FilePath out/TicinoServer.exe -ArgumentList @('--screenshots', $shots) -PassThru
           if (-not $p.WaitForExit(240000)) { $p.Kill(); Write-Host 'timeout' }

@@ -1191,6 +1191,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   public pre-release ticino-v1: GitHub has no server-side copy of a release asset, every zip is downloaded and uploaded
   again by six runner jobs (about 52 GB), and the release is published only when names, sizes and sha256 match the
   source. A loop that reads a list on stdin and runs curl/gh inside must read from another fd (`read -u 3 ... 3< f`).
+  First run: the app's new default tag (ticino-v1) broke the packs-mode screenshot test, which made its fake zips from
+  ticino-all (0 of 9 zones), so no app was uploaded and the publish run's last job would have waited 40 min for it:
+  cancelled (the 20 zips already copied are skipped by the next run). A test that fakes a release must pin its tag.
 
 ## Working with cat (the owner)
 
