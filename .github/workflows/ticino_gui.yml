@@ -1,0 +1,71 @@
+# Ticino Server, the Windows app (beamng/ticino/gui): one self-contained TicinoServer.exe (.NET 10, WPF, Fluent theme),
+# screenshots of every page in the light and dark theme (the app's --screenshots mode, with the real release read
+# through the job's token), both on the draft release "ticino-app"; on the ticino branch the app also goes on the
+# release named in tools_release.txt as app_ticino.zip. The zip is not called ticino_*.zip (the installer and the
+# server take every ticino_*.zip for a level pack).
+name: ticino gui
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ticino, claude/project-thread-9w6q31]
+    paths:
+      - beamng/ticino/gui/**
+      - .github/workflows/ticino_gui.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ticino-gui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build
+        shell: pwsh
+        run: |
+          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.0.0+$($env:GITHUB_SHA.Substring(0,7))"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem out | Format-Table Name, Length
+      - name: Screenshots
+        shell: pwsh
+        run: |
+          $env:TICINO_APP_DIR = Join-Path $env:RUNNER_TEMP 'appdir'
+          $shots = Join-Path $PWD 'shots'
+          $p = Start-Process -FilePath out/TicinoServer.exe -ArgumentList @('--screenshots', $shots) -PassThru
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); Write-Host 'timeout' }
+          Get-ChildItem $shots | Format-Table Name, Length
+          if (Test-Path "$shots/error.txt") { Get-Content "$shots/error.txt"; exit 1 }
+          if (Test-Path "$env:TICINO_APP_DIR/app.log") { Get-Content "$env:TICINO_APP_DIR/app.log" }
+      - name: Pack
+        shell: bash
+        run: |
+          mkdir -p pack
+          cp out/TicinoServer.exe pack/
+          cp beamng/ticino/gui/README.txt pack/
+          echo "commit ${GITHUB_SHA}" > pack/VERSION.txt
+          (cd pack && 7z a -tzip ../app_ticino.zip . > /dev/null)
+          (cd shots && 7z a -tzip ../app_ticino_shots.zip . > /dev/null)
+          ls -l *.zip
+      - name: Upload
+        shell: bash
+        run: |
+          gh release view ticino-app > /dev/null 2>&1 || \
+            gh release create ticino-app --draft --target "$GITHUB_SHA" --title "Ticino Server app (draft)" --notes "Test builds of the Windows app."
+          gh release upload ticino-app app_ticino.zip app_ticino_shots.zip --clobber
+          if [ "$GITHUB_REF_NAME" = "ticino" ]; then
+            TAG=$(tr -d ' \r\n' < beamng/ticino/tools_release.txt)
+            gh release upload "$TAG" app_ticino.zip --clobber
+          fi

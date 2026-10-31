@@ -1135,6 +1135,40 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Force-pushing this branch or merging another thread's branch into it was blocked: hand the branch over and let
   the integrator merge it.
 
+## Ticino Server app (beamng/ticino/gui, WPF .NET 10)
+
+- The cloud container cannot install the .NET SDK (dotnet-install.sh was refused): the app is compiled only by
+  ticino_gui.yml on a Windows runner, which also renders every page in both themes (`TicinoServer.exe --screenshots`)
+  to the draft release ticino-app (app_ticino_shots.zip): read the screenshots before handing a UI change over.
+- First CI build: CS0246 for HttpClient/FileInfo in `*_wpftmp.csproj`: the temporary project WPF compiles the XAML in
+  did not get the implicit usings. GlobalUsings.cs writes them out.
+- A keyed Style `BasedOn="{StaticResource {x:Type Slider}}"` in our own dictionary may not find the Fluent style at
+  load (crash at start): style controls inline, use DynamicResource for the Fluent brushes (a missing key only falls
+  back, it does not crash).
+- The Ticino build workflows (zone_build, ticino_all, ticino_region, ticino_test, ticino_tools, ticino_helper) had no
+  branch filter: the first push of a new thread branch based on ticino counts every file as changed against main and
+  would have started 87 zone builds. They now run only on `ticino`.
+- The light-theme shots of the Download page showed "reading the release" and an empty list: the window's own startup
+  check was running and PackManager.Refresh returns at once while a check runs. Screenshot mode (App.ShotMode) now
+  skips the startup check and the 6 h timer and waits for Checking to end before the first shot.
+- The app names zones by the first village spawn of each zone in the base pack's info.json (after the three route
+  spawns spawn_magliaso/_mid/_pura, which every zone reuses as names). The Lugano zone's first village spawn is
+  `ti_1_0_spawn_ligiaun`: places.villages() took swissNAMES3D's Romansh name of Lugano. The app maps it back; the
+  spawn name itself is not fixed in the pipeline.
+- Merging ticino (with PR #104) into the app branch: the branch filter for the new ticino_server_exe.yml was edited
+  after `git merge --no-commit` but not staged, so `git commit` took the merge without it, and the push (exe_stamp.txt
+  new in the range) started ticino server exe on the thread branch; cancelled at its checkout, nothing uploaded. After
+  a `--no-commit` merge, `git add` the extra edits (check `git status` before the commit), and give every new workflow
+  with push paths `branches: [ticino]` before a merge brings it to a thread branch.
+- The app first unpacked the whole server_ticino.zip into its server folder, lua folder included: that folder is the
+  server's TEST override (it hides the base pack's Lua if copied to the user folder) and the Server page even offered to
+  copy it there. Only ticino_server.exe is installed now, into the installer's ticino_tools when install.json is there
+  (one exe for the app and Start Ticino, stamp server.sha256), and the page only removes a leftover override.
+- Two programs start the server (the app, Start Ticino with --game-pid): Start Ticino skips its server while any
+  ticino_server process runs, and the app treats such a process as a running server of its own (no second start; on
+  "game closed" it does not send Ctrl+C, the server stops itself). Count processes by name: a PyInstaller onefile exe is
+  two processes, and only one Ctrl+C per console (a second one cuts the server's clean-up).
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs

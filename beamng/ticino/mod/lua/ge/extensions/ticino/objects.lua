@@ -49,6 +49,23 @@ M.WAVE_DEL_AT = 99         -- objects that went out of range (and only drew) are
                            -- at 33 m/s the deletions took their share of the bursts while 2,776 objects waited (PC
                            -- flight 2026-10-30, 1,620 live of ~3,400); was 1.5 (after the rings 0 and 1)
 
+-- The cap of a group: the GROUP_R entry of the longest prefix of its path ("buildings" caps "buildings/details" too),
+-- so the settings file can lower a whole family (Ticino Server app, "View distance"). Cached per GROUP_R table.
+local capFor, capCache = nil, {}
+local function groupCap(g)
+  if capFor ~= M.GROUP_R then capFor, capCache = M.GROUP_R, {} end
+  local c = capCache[g]
+  if c == nil then
+    c = false
+    local best = -1
+    for k, v in pairs(M.GROUP_R) do
+      if type(v) == 'number' and #k > best and (g == k or g:sub(1, #k + 1) == k .. '/') then best, c = #k, v end
+    end
+    capCache[g] = c
+  end
+  return c or nil
+end
+
 -- keys of an entry that are not engine fields
 local SKIP = { class = true, p = true, q = true, s = true, g = true, r = true, name = true }
 
@@ -100,7 +117,7 @@ local function tile(cx, cy)
   t = (ok and type(data) == 'table') and data or false
   if t then
     for _, e in ipairs(t) do
-      local cap = e.g and M.GROUP_R[e.g]
+      local cap = e.g and groupCap(e.g)
       if cap and (e.r or 0) > cap then e.r = cap end
     end
   end

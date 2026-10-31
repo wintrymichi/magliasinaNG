@@ -8,6 +8,7 @@ name: ticino server exe
 on:
   workflow_dispatch:
   push:
+    branches: [ticino]   # only the ticino branch builds: a thread branch pushed for the first time counts every file as changed
     paths:
       - beamng/ticino/server/exe_stamp.txt
 

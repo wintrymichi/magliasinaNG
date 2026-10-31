@@ -1,0 +1,128 @@
+<UserControl x:Class="TicinoServer.Pages.GraphicsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:TicinoServer.Controls">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="40,30,40,40" MaxWidth="1000">
+            <TextBlock Text="Graphics" Style="{StaticResource TitleText}" />
+            <TextBlock Style="{StaticResource SubtitleText}"
+                       Text="How far the map draws trees, buildings, roads and terrain. Changes save themselves and apply the next time the map loads." />
+
+            <c:InfoBar x:Name="SavedBar" Severity="Success" Visibility="Collapsed" />
+
+            <c:SettingCard Glyph="&#xE790;" Header="Quality"
+                           Description="High is the map as it was built and tested. Medium and Low are for PCs with little video memory or a slow processor: the scene near the car (roads, buildings, collisions) stays the same.">
+                <ComboBox x:Name="QualityBox" Width="200" SelectionChanged="Quality_Changed">
+                    <ComboBoxItem Content="Low" Tag="Low" />
+                    <ComboBoxItem Content="Medium" Tag="Medium" />
+                    <ComboBoxItem Content="High (recommended)" Tag="High" />
+                    <ComboBoxItem Content="Custom" Tag="Custom" />
+                </ComboBox>
+            </c:SettingCard>
+
+            <TextBlock Text="View distance" Style="{StaticResource SectionText}" />
+            <c:SettingCard Glyph="&#xE913;" Header="Trees"
+                           Description="How far from the car the trees reach. Each step is one 384 m tile.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="ForestText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="Forest" Minimum="1" Maximum="4" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE909;" Header="Far terrain"
+                           Description="The mountains and valleys beyond the 3 km of near terrain (no collision, only to look at).">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="FarText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="Far" Minimum="4" Maximum="16" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE80F;" Header="Buildings"
+                           Description="Houses, churches, sheds.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="BuildingsText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="Buildings" Minimum="2" Maximum="6" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE804;" Header="Roads, walls and railway"
+                           Description="Also the tunnels and the rock cuts along the roads.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="RoadsText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="Roads" Minimum="2" Maximum="5" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <c:SettingCard Glyph="&#xE81E;" Header="Details"
+                           Description="Street furniture, posts, shop windows, road markings, house details.">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="DetailsText" Style="{StaticResource ValueText}" />
+                    <Slider x:Name="Details" Minimum="0" Maximum="2" Width="220" IsSnapToTickEnabled="True" TickFrequency="1"
+                            TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                </StackPanel>
+            </c:SettingCard>
+            <TextBlock Style="{StaticResource CaptionText}" Margin="2,6,0,0"
+                       Text="Objects cannot be drawn farther than the map was built for: High is already the maximum." />
+
+            <TextBlock Text="Performance" Style="{StaticResource SectionText}" />
+            <c:SettingCard Glyph="&#xE9F5;" Header="Helper"
+                           Description="Prepares the terrain on another processor core while you drive (with the server running, the server does it).">
+                <CheckBox x:Name="Helper" Content="On" Checked="Toggle_Changed" Unchecked="Toggle_Changed" />
+            </c:SettingCard>
+
+            <Expander Margin="0,4,0,4" Padding="0,8,0,0">
+                <Expander.Header>
+                    <StackPanel Orientation="Horizontal" Margin="4,8">
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE713;" FontSize="20" Margin="0,0,18,0" />
+                        <StackPanel>
+                            <TextBlock Text="Advanced" FontSize="14" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <TextBlock Text="Values measured on the test PC (October 2026): change them only to experiment." Style="{StaticResource CaptionText}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander.Header>
+                <StackPanel>
+                    <c:SettingCard Header="Interval between object bursts"
+                                   Description="Objects, trees and far terrain arrive in bursts: few short ones cost less than many.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="BurstEveryText" Style="{StaticResource ValueText}" />
+                            <Slider x:Name="BurstEvery" Minimum="200" Maximum="2000" Width="220" IsSnapToTickEnabled="True"
+                                    TickFrequency="100" ValueChanged="Slider_Changed" />
+                        </StackPanel>
+                    </c:SettingCard>
+                    <c:SettingCard Header="Length of a burst">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="BurstText" Style="{StaticResource ValueText}" />
+                            <Slider x:Name="Burst" Minimum="5" Maximum="60" Width="220" IsSnapToTickEnabled="True"
+                                    TickFrequency="5" ValueChanged="Slider_Changed" />
+                        </StackPanel>
+                    </c:SettingCard>
+                    <c:SettingCard Header="Trees changed together"
+                                   Description="N x N tiles share one forest: fewer changes, each costs the engine about 200 ms.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="BlockText" Style="{StaticResource ValueText}" />
+                            <Slider x:Name="Block" Minimum="1" Maximum="4" Width="220" IsSnapToTickEnabled="True"
+                                    TickFrequency="1" TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                        </StackPanel>
+                    </c:SettingCard>
+                    <c:SettingCard Header="Tree hysteresis"
+                                   Description="A tile's trees stay until N rings beyond their radius.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="HystText" Style="{StaticResource ValueText}" />
+                            <Slider x:Name="Hyst" Minimum="0" Maximum="2" Width="220" IsSnapToTickEnabled="True"
+                                    TickFrequency="1" TickPlacement="BottomRight" ValueChanged="Slider_Changed" />
+                        </StackPanel>
+                    </c:SettingCard>
+                    <c:SettingCard Header="Diagnostics"
+                                   Description="Writes ticino_perf.csv and ticino_frames.csv to the BeamNG user folder.">
+                        <CheckBox x:Name="Diagnostics" Content="On" Checked="Toggle_Changed" Unchecked="Toggle_Changed" />
+                    </c:SettingCard>
+                </StackPanel>
+            </Expander>
+
+            <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                <Button Content="Restore the recommended values" Click="Reset_Click" Padding="14,6" />
+                <Button Content="Open the settings file" Click="OpenFile_Click" Padding="14,6" Margin="8,0,0,0" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
