@@ -45,6 +45,8 @@ for x = -12, 12 do for y = -12, 12 do
 end end
 objects.init(cfg, 'L', { addObject = function() end })
 forest.init(cfg, 'L', function() end)
+forest.BLOCK = tonumber(os.getenv('BLOCK') or '1')
+forest.HYST = 0   -- the end state below is a fresh jump's; the hysteresis is checked at the end
 local t = 0
 local clock = function() t = t + 0.01; return t end
 -- jump at 0,0
@@ -95,4 +97,18 @@ print('forest order', #str:gsub('f', ''), 'near steps, then', #str:gsub('N', '')
 print('final', objects.stats().live, forest.stats().items)
 assert(live.live == 315 and objects.stats().live == 315, 'objects end state')
 assert(forest.stats().items == fresh, 'forest end state')
+-- hysteresis: one tile on and back again passes only the tiles that must grow or collide, never one that thins
+forest.HYST = 1
+forest.retarget(3, 1); while forest.pending() do forest.step(clock, nil, 1e9) end
+local before = forest.stats().items
+local nback = forest.retarget(2, 1)
+while forest.pending() do forest.step(clock, nil, 1e9) end
+assert(forest.stats().items >= before, 'hysteresis: a tile thinned on the way back')
+print('hysteresis: back one tile', nback, 'passes, items', before, '->', forest.stats().items)
+-- frames that touch a Forest on a move (budget mode, as the streamer calls it): fewer with BLOCK > 1
+local t0 = forest.counts().touched
+forest.retarget(4, 2)
+local frames = 0
+while forest.pending() do frames = frames + 1; forest.step(clock, 3) end
+print('move: frames', frames, 'Forests touched', forest.counts().touched - t0, 'BLOCK', forest.BLOCK)
 print('OK')

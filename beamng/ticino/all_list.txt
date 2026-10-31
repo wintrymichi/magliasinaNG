@@ -1,6 +1,4 @@
 # zones for ticino_all.yml: "all" (every zone of zones/ticino_plan.json) or zone names, one a line
-# 2026-10-29: retry of the 4 slices that stopped on an empty <triangles> block (run 40881073781)
-ti_3_6
-ti_3_9
-ti_m1_8
-ti_m3_9
+# 2026-10-31: the two slices of run 41142809094 whose upload got a 502, then the base with the Lua of 75c262d
+ti_0_7
+ti_2_4

@@ -358,19 +358,36 @@ def _write_kept(data, tris, masks, dst, compact=False, near=None):
         items = by_geo[g0]
         gm = items[0][0]
         geo = gm.group(0)
-        sels = []
+        sels, drop = [], []
         for _, tm, idx, ok, c in items:
             sel = idx[ok]
-            if not len(sel) and len(idx):       # (a block of no triangles in the source stays empty)
-                k = 0 if near is None else int(np.argmin((c[:, 0] - near[0]) ** 2 + (c[:, 1] - near[1]) ** 2))
-                sel = idx[k:k + 1].copy()       # a geometry needs a triangle: one of no area
-                sel[:, :, :] = sel[:, :1, :]
             sels.append(sel)
-        remap = _compact(geo, items, sels) if compact else None
+            drop.append(not len(sel))
+        # a block with nothing kept goes: every material block is a draw call per frame and shadow cascade, and the
+        # pieces of a sign or prop shape (hundreds of materials) each kept all of them as triangles of no area: the
+        # 103 props of Lugano cost ~35 ms a frame (PC test 2026-10-30). Only a geometry left with no block at all
+        # keeps one triangle of no area (a geometry needs one)
+        if all(drop):
+            n = next((i for i, (_, _, idx, _, _) in enumerate(items) if len(idx)), None)
+            if n is None:                       # (blocks of no triangles in the source stay as they are)
+                drop = [False] * len(items)
+            else:
+                idx, c = items[n][2], items[n][4]
+                k = 0 if near is None else int(np.argmin((c[:, 0] - near[0]) ** 2 + (c[:, 1] - near[1]) ** 2))
+                sel = idx[k:k + 1].copy()
+                sel[:, :, :] = sel[:, :1, :]
+                sels[n], drop[n] = sel, False
+        sels_kept = [s_ for s_, d in zip(sels, drop) if not d]
+        items_kept = [it for it, d in zip(items, drop) if not d]
+        remap = _compact(geo, items_kept, sels_kept) if compact else None
         if remap is None and all(it[3].all() for it in items):
             continue
         parts, glast = [], 0
-        for (_, tm, idx, ok, _), sel in zip(items, sels):
+        for (_, tm, idx, ok, _), sel, d in zip(items, sels, drop):
+            if d:                               # the whole <triangles> element goes
+                parts.append(geo[glast:tm.start()])
+                glast = tm.end()
+                continue
             if remap is None and ok.all():
                 continue
             if remap is not None:
@@ -725,7 +742,8 @@ def copy_shared(srcs, dst, skip_shapes):
             json.dump(d, f, indent=1)
     # the materials whose textures the game cooked while driving (0.05-0.14 s each, 2026-10-28): ticino/warmup.lua
     warm = sorted({k for d in mats.values() for k in d if k.startswith(WARM_MATERIALS)})
-    with wopen(os.path.join(dst, "warmup_materials.json"), "w") as f:
+    # not *.materials.json: the game reads every such file of the level as material definitions (log error)
+    with wopen(os.path.join(dst, "warmup_mats.json"), "w") as f:
         json.dump(warm, f)
     log("shared files:", n, "material files:", len(mats), "game model materials added:", added)
 

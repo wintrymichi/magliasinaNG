@@ -19,11 +19,12 @@ a GPU with 8 GB of video memory or more.
 
 The installer (`install/install_ticino.ps1`):
 
-- downloads the 88 zips of the release (`ticino_base_<n>.zip` with the scene and the streaming mod, one
+- downloads the zips of the release (90 in October 2026: `ticino_base_<n>.zip` with the scene and the streaming mod, one
   `ticino_<zone>_<n>.zip` per zone) into `mods`, resumes a broken download where it stopped and checks every zip
   by its sha256 before it goes into `mods` (a zip already there and checked is skipped: an update downloads only
   the zips that changed);
-- moves Ticino zips the release no longer has to `ticino_download\old` (or deletes them with `-DeleteOld`);
+- moves Ticino zips the release no longer has to `ticino_download\old` (or deletes them with `-DeleteOld`); a zip
+  of a zone the release has no zip of at all (a release still being uploaded) is kept, with a warning;
 - moves any user-folder files of the level (`levels\ticino`, `lua\ge\extensions\ticino`, left by tests or older
   versions: they would win over the zips) to `ticino_download\overrides_<date>`;
 - clears the game's cache of the level (`temp\levels\ticino`) when the base zip changed;
@@ -65,6 +66,19 @@ when the level starts:
 | `diagnostics` | `false` (default), `true` | write `ticino_perf.csv` (every terrain move, timings) and `ticino_frames.csv` (frame times every 5 s) to the user folder |
 | `stream`, `objects`, `forest` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
 | `level` | object of numbers | advanced: numbers of the level's `stream.json`, e.g. `{"level": {"farRadius": 20}}` |
+| `dynamicObjects` | `false` (default), `true` | create the streamed objects dynamic, as BeamNG.Earth does: costs about 5x the frame time standing in a town (each one is drawn into every shadow cascade); for tests only |
+
+Advanced fields that were measured on the PC (October 2026), with their defaults:
+
+| Field | Default | What it does |
+|---|---|---|
+| `forest.BLOCK` | 3 | the trees of 3 x 3 tiles share one Forest and change in one frame: each frame that changes a Forest costs the engine ~200 ms whatever it adds, so fewer, bigger changes (1: one Forest a tile, 4x more such frames in a drive) |
+| `forest.HYST` | 1 | a tile keeps its trees until one ring beyond where they belong (no change on every ring crossed) |
+| `forest.RADIUS` | 4 | tiles (384 m) round the car with trees |
+| `stream.BURST_EVERY_MS`, `stream.BURST_MS` | 1000, 20 | objects, trees and far ground come in bursts of 20 ms once a second (every frame that changes the scene costs the engine, so few small changes beat many) |
+| `stream.BURST_DEL_MS` | 4 | of each burst, for removing the objects the car left behind |
+| `stream.BURST_EVERY_SLOW_MS`, `stream.SLOW_MPS` | 200, 4 | a burst every 200 ms while the car is slower than 4 m/s (a new place fills in ~2 min) |
+| `stream.BURST_QUEUE_REF` | 300 | more than this many objects waiting shortens the time between bursts (down to 200 ms) |
 
 A file that is not valid JSON is ignored (the log says so). Tables indexed from 0 (`forest.SHARE`) cannot be set from
 JSON. `ticino_stream_cfg.json` in the user folder root still overrides everything (tests only).
@@ -122,10 +136,33 @@ The zone grid and what every zone shares (terrain heights, layers, forest and gr
 
 Files: `zones.py` (the grid), `region_plan.py`, `region_slice.py`, `region_base.py`, `region_net.py` (AI road
 welding across zone edges, signals, sites), `collision.py`, `cdae.py` (the `.cdae` writer, from BeamNG.Earth),
+`dae2cdae.py` (every zone shape compiled to `.cdae`, see "Shapes shipped compiled"),
 `zipremote.py` (zips read by HTTP range), `blocks.py`, `region.py`, `pack_region.py` (the older one-job region),
 `helper/`, `install/`, `mod/`, `tests/` (`sim_stream.lua`: the mod driven outside the game with the game API stubbed,
 `python tests/luajit.py tests/sim_stream.lua <level folder> <seconds>`; `test_helper.py`, `test_cdae.py`,
-`test_region_net.py`, `wave_order.lua`).
+`test_region_net.py`, `test_dae2cdae.py`, `shape_file.lua`, `wave_order.lua`).
+
+## Shapes shipped compiled (.cdae, 2026-10-29)
+
+The game imports a Collada `.dae` the first time it shows it (about 0.1 s, the biggest up to 46 s) and keeps a
+compiled copy in `<user>/temp/.../*.cdae`. With 13,707 `.dae` (27 GB of XML) in the zones that was 30 s of stutter in
+every new zone, or a warm-up of 968 s for one region (HANDOFF of 2026-10-28, point 3). Now `region_slice.py` compiles
+every shape of a zone with `dae2cdae.py` after the collision cells have read them, and ships only the `.cdae`; the
+base compiles the shared shapes and points the scene at the slices' `.cdae`. The game loads a `.cdae` as it loads its
+own cache: no import, no warm-up (`warmup/<zone>.json` lists only what is left as `.dae`: the game's own props).
+
+- What is compiled: the shapes `bng.write_dae` writes (one node per detail level `<name>_a<size>`, one triangle list per
+  material, normals, uvs, vertex colours): all the zones' shapes. Left as `.dae`: forest shapes (`managedItemData.json`)
+  and shapes with prebaked imposters beside them (`x.dae.imposter.dds`), anything else the parser does not know.
+- Same picture: the same triangles, detail levels and sizes, materials, normals, uvs and colours (`tests/test_dae2cdae.py`
+  on a whole zone: 709 of 709 identical), laid out as the game lays out its own cache (`cdae.py`). Against 33 `.cdae`
+  the game itself wrote (`--golden`): identical positions, normals, colours and triangles; tangents differ on 2.5 % of
+  the vertices, all where the uvs are degenerate (no texture gradient to follow).
+- Smaller: zone ti_0_8, 396 MB of `.dae` -> 190 MB of `.cdae` (in the zip 74 -> 86 MB: binary floats compress less).
+  709 shapes in 8 s on 4 cores.
+- Mixed installs: `objects.lua` takes the `.cdae` when it is there and the `.dae` when a tile names a `.cdae` that is not
+  installed (an older zone zip beside a newer base).
+- By hand: `python dae2cdae.py <level folder>` (or `--one in.dae out.cdae`).
 
 ## Measured
 
@@ -137,6 +174,8 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 | Motorway Lamone-Maroggia, 33 m/s | 8 of 65 five-second spans with a frame over 100 ms, all of them terrain moves |
 | AI car round Magliaso, up to 166 km/h | 1 of 61 spans with a frame over 100 ms |
 | All Ticino, after the spawn | about 1 min of stutter (12 s first window, 28-30 s AI map), then 100 fps |
+| Lugano standing still, fresh install, empty cache (2026-10-31) | queues empty after ~2 min, then 84.4 fps (1 % low 60, worst frame 17 ms); Italy at the same settings 81.0 |
+| Free camera from Manno north at 33 m/s, 300 s (2026-10-31) | 83.0 fps, 52 frames over 100 ms (terrain moves, bursts, 3 forest changes) |
 
 ## Troubleshooting
 
@@ -148,6 +187,7 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 - **Is the streamer running?** `beamng.log` has `ticino` lines (`streaming on`, `settings: ...`, `jump: window at`).
   In the console: `ticino_stream.status()`.
 
+<<<<<<< HEAD
 ## Ticino server (optional, 2026-10-29)
 
 `server/ticino_server.py` keeps the whole map beside the game: only the base pack (`ticino_base_*.zip`, 270 MB: the
@@ -181,16 +221,20 @@ texture coordinates differ in the last bit of a float. Not checked in the game y
 alone, files written under temp while the game runs (the game's file watcher), our `.cdae` shapes with detail levels.
 
 ## State and open work (2026-10-29)
+=======
+## State and open work (2026-10-31)
+>>>>>>> origin/ticino
 
 Done: all 87 zones in one level, the streamer with wave loading, 64 m collision cells, the helper, settings, the
-installer. Open, each in its own thread:
+installer, shapes shipped as .cdae, static streamed objects and bursts (standing still as fast as Italy). Open:
+
+- Driving fast: about 3 frames a second of 50-100 ms while a new area fills in at 120 km/h, the trees fall behind,
+  and a long jump (teleport) pauses the game about 10 s.
 
 - **AI map.** The game builds the AI map from the 57,298 AI roads, which take their heights from the terrain: only
   the window has terrain, so outside it the AI nodes sit at height 0, 4,020 of the 4,065 traffic signals find no road
   and AI traffic works only round the spawn; the same roads cost the 12 s first window and the 30 s map read. Fix in
   progress: a precomputed AI map loaded with `map.reset(nodes)` and no AI roads in the scene.
-- **Shapes converted on first sight.** 13,707 `.dae` files are imported by the game the first time they are seen.
-  Fix in progress: ship them already converted.
 - Floating origin (coordinates reach 75 km from the origin: no jitter seen so far), AI traffic guard at the window edge.
 
 Credits: the terrain swap, ground cover flush, runtime objects, pause and the `.cdae` writer follow BeamNG.Earth

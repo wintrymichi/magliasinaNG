@@ -41,9 +41,19 @@ M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
 M.NEAR_RINGS = 1           -- the objects of the tiles this near the car's (Chebyshev) come before the window's files
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
-M.FOREST_JUMP_MS = 3000    -- forest items made at a jump, while the game is paused
-M.FAR_JUMP_MS = 2000       -- far ground tiles made at a jump (the mountains round the new place)
+M.FOREST_JUMP_MS = 1000    -- forest items made at a jump, while the game is paused (3000 made the jump frame 6-7 s)
+M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains round the new place; the rest comes after)
+M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
+M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
+M.BURST_EVERY_MS = 1000    -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
+M.BURST_MS = 20            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
+                           -- PC test 2026-10-30, Lugano flight 47 fps with 3 ms a frame, 94 with 40 ms bursts a second;
+                           -- 2026-10-31 flight: 40 ms 80.0 fps, 1,030 frames over 50 ms; 20 ms 86.3 fps, 672)
+M.BURST_DEL_MS = 4         -- of each burst, for the deletions of objects out of range (the tail of the queue)
+M.BURST_EVERY_SLOW_MS = 200  -- bursts this often while the car is slower than SLOW_MPS (standing: the queue of a
+M.SLOW_MPS = 4               -- new place, ~8 ms an object in the game, took minutes at one burst a second)
+M.BURST_QUEUE_REF = 300      -- objects queued over this shorten the time between bursts in proportion
 M.COL_BUDGET_MS = 4        -- and for the collision cells (ProceduralMesh, ~1.7 us a triangle: a 2,500 piece is ~4 ms)
 M.SWAP_QUIET_FRAMES = 3    -- no collision rebuild this many frames and ms after a terrain swap: a rebuild in between
 M.SWAP_QUIET_MS = 150      -- took the block before its heights were in (BeamNG.Earth roads.lua, a car fell through)
@@ -164,6 +174,19 @@ local function follow(c, wc, n)
   return wc
 end
 
+-- what the last frame changed in the scene (objects made/deleted, colliders, the slowest spawn, forest passes and
+-- items, collision rebuilds), for the slow-frame log line
+local function frameWork()
+  local o, f, o0, f0 = objects.counts(), forest.counts(), st.snapO, st.snapF
+  if not (o and f and o0 and f0) then return '' end
+  local s = string.format(' | objects +%d -%d (colliders +%d), forest passes %d items +%d -%d, reloads %d',
+    o.created - o0.created, o.deleted - o0.deleted, o.colMade - o0.colMade, f.touched - f0.touched,
+    f.made - f0.made, f.removed - f0.removed, (st.reloads or 0) - (st.reloadsAt or 0))
+  if o.maxSpawn > 0 then s = s .. string.format(', slowest spawn %.0f ms %s', o.maxSpawn, tostring(o.maxShape)) end
+  if f.touched > f0.touched then s = s .. ' (tile ' .. tostring(f.lastKey) .. ')' end
+  return s
+end
+
 -- frame times: every FRAMES_EVERY_MS one line of fps, the worst frame, frames over 50 and 100 ms, moves and rebuilds
 local function frameStats()
   local now = clock()
@@ -177,9 +200,10 @@ local function frameStats()
   f.last = now
   f.n = f.n + 1
   if d > M.SLOW_FRAME_MS then          -- what the streamer did in that frame (st.act, set by onUpdate)
-    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s', d, tostring(st.act)))
+    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s%s', d, tostring(st.act), frameWork()))
   end
   st.act = 'idle'
+  st.snapO, st.snapF, st.reloadsAt = objects.counts(), forest.counts(), st.reloads
   local a = st.afterSwap               -- the frames right after a swap (the frame of the swap is next1Ms)
   if a then
     a.n = a.n + 1
@@ -364,9 +388,11 @@ local function setBase(job, list)
   local cfg = st.cfg
   local unit = cfg.baseSizeUnit == 'metres' and cfg.square or 1
   local size = tostring(cfg.window * unit)
+  if #st.baseMats == 0 then log('W', 'ticino', 'no terrain material takes the base colour map') end
   for _, bm in ipairs(list or st.baseMats) do
     local p = job.base.combined or job.base[bm.key]
     if p then
+      if list == nil and not FS:fileExists(p) then log('W', 'ticino', 'base colour map missing: ' .. p) end
       bm.obj:setField('baseColorBaseTex', 0, p)
       bm.obj:setField('baseColorBaseTexSize', 0, size)
     end
@@ -434,6 +460,9 @@ local function jump(x, y)
   local n = cfg.window / cfg.cell
   local cx, cy = cellOf(x, y)
   local wcx, wcy = cx - (n / 2 - 1), cy - (n / 2 - 1)
+  local T = { t0 = clock() }
+  local function mark(k) T[k] = clock() - T.t0 end
+  log('I', 'ticino', string.format('jump to (%.0f, %.0f), tile (%d, %d), window (%d, %d)', x, y, cx, cy, wcx, wcy))
   pause(true)
   if st.job then removeFiles(st.job) end
   st.job = nil
@@ -446,6 +475,7 @@ local function jump(x, y)
   local job = makeJob(wcx * cfg.cell, wcy * cfg.cell)
   if M.HELPER then job.waitMs = helper.stats().lastWaitMs end
   runJob(job, nil)
+  mark('files')
   -- a jump farther than the objects reach (Manno -> Bellinzona, PC 2026-10-30): the old place has nothing the new one
   -- needs. Its objects and trees go at once here, while paused; else their deletions queued behind the new rings and
   -- the new place filled in for minutes.
@@ -455,18 +485,31 @@ local function jump(x, y)
   if far and st.cell then
     dropped, felled = objects.dropAll(), forest.clear()
   end
+  mark('drop')
   st.cell = { cx, cy }
-  if not job.failed then apply(job, 'jump') end
+  if not job.failed then apply(job, 'jump') else log('W', 'ticino', 'jump: the window files failed, terrain not moved') end
+  mark('swap')
   if files.serving() then job.serveWaitMs = files.waitNear(cx, cy, M.SERVE_RINGS, cfg.tiles or {}, M.SERVE_WAIT_MS) end
   objects.retarget(cx, cy)
-  objects.step(clock, nil, M.NEAR_RINGS)
+  -- ring 0 whole, then the near rings up to OBJ_JUMP_MS: with no cap the paused jump frame grew to 8-9 s (PC test of
+  -- 79f0e61, every shape of a new zone is a COLLADA import); what is left comes in the next frames, nearest first
+  objects.step(clock, nil, 0)
+  local tObj = clock()
+  while not objects.step(clock, math.max(1, M.OBJ_JUMP_MS - (clock() - tObj)), M.NEAR_RINGS)
+    and clock() - tObj < M.OBJ_JUMP_MS and objects.nearPending(M.NEAR_RINGS) do end
+  mark('objects')
   objects.updateCols(x, y, true)
   objects.stepCols(clock, nil)
+  mark('cols')
   forest.retarget(cx, cy)
   forest.step(clock, M.FOREST_JUMP_MS, 1e9)
+  mark('forest')
   objects.stepFar(clock, M.FAR_JUMP_MS)
+  mark('far')
   log('I', 'ticino', string.format('jump to tile (%d, %d)%s: %d objects and %d trees of the old place removed, far ground '
-    .. '%s', cx, cy, far and ' (far)' or '', dropped, felled, objects.farPending() and 'still queued' or 'made'))
+    .. '%s; ms files %.0f, drop %.0f, swap %.0f, objects %.0f, cols %.0f, forest %.0f, far %.0f', cx, cy,
+    far and ' (far)' or '', dropped, felled, objects.farPending() and 'still queued' or 'made', T.files, T.drop - T.files,
+    T.swap - T.drop, T.objects - T.swap, T.cols - T.objects, T.forest - T.cols, T.far - T.forest))
   -- the collision rebuild waits for the swapped terrain (SWAP_QUIET_FRAMES), the game stays paused till after it
   st.jumpReload = true
   st.resumeIn = M.SWAP_QUIET_FRAMES + 2
@@ -528,11 +571,20 @@ local function readSettings(cfg)
     log('W', 'ticino', 'unknown preset "' .. preset .. '": standard')
     preset = 'standard'
   end
+  local W = cfg.window
   applyFields(M.PRESETS[preset], cfg, 'preset ' .. preset .. ':')
   if type(s.helper) == 'boolean' then M.HELPER = s.helper end
   if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
+  if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
+  -- a window size of the settings (level.window, tiles of cfg.cell): the helper writes the built size only
+  -- 4 tiles were too few: every move came too late and was a jump (sim, 2026-10-30)
+  if cfg.window % cfg.cell ~= 0 or cfg.window / cfg.cell < 6 or cfg.window > W then
+    if cfg.window ~= W then log('W', 'ticino', 'window ' .. cfg.window .. ' not usable: ' .. W) end
+    cfg.window = W
+  end
+  if cfg.window ~= W then M.HELPER = false end
   log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s', preset, tostring(M.HELPER),
     tostring(M.DIAG)))
 end
@@ -579,6 +631,7 @@ local function start()
   if M.TB_BASE_TEX_SIZE > 0 then tb:setField('baseTexSize', 0, tostring(M.TB_BASE_TEX_SIZE)) end
   st.layerKey = {}                    -- terrain material (.ter name) -> its streamed base map (BASE_COMBINED)
   for _, bm in ipairs(cfg.baseMaterials or {}) do st.layerKey[bm[2]] = bm[3] end
+  if M.NO_DYNAMIC_CUBEMAP then M.dynamicCubemaps(false) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
@@ -602,6 +655,8 @@ end
 local function onUpdate(dtReal)
   if not st then return end
   frameStats()
+  local settled, nSettled = objects.settle(clock)
+  if settled and M.DIAG then log('D', 'ticino', nSettled .. ' objects made static') end
   if st.basePending then              -- BASE_MODE 'split': one terrain material's base colour map a frame
     local bp = st.basePending
     local bm = st.baseMats[bp.i]
@@ -680,6 +735,11 @@ local function onUpdate(dtReal)
   end
   local x, y = focus()
   if not x then return end
+  if st.lastXY and dtReal and dtReal > 0 then        -- the car's speed, smoothed over ~1 s
+    local v = math.sqrt((x - st.lastXY[1]) ^ 2 + (y - st.lastXY[2]) ^ 2) / dtReal
+    st.speed = (st.speed or v) + (v - (st.speed or v)) * math.min(1, dtReal)
+  end
+  st.lastXY = { x, y }
   local cfg = st.cfg
   local n = cfg.window / cfg.cell
   if M.HELPER then
@@ -770,6 +830,28 @@ local function onUpdate(dtReal)
     return            -- the objects wait for a frame without window work
   end
   -- the objects
+  if M.BURST_EVERY_MS > 0 and (objects.pending() or forest.pending() or objects.farPending()) then
+    local every = (st.speed or 0) < M.SLOW_MPS and M.BURST_EVERY_SLOW_MS or M.BURST_EVERY_MS
+    -- a long queue gets bursts more often (down to BURST_EVERY_SLOW_MS): at 33 m/s one a second left 2,776 objects
+    -- waiting and the motorway without them (PC flight 2026-10-30)
+    local nq = objects.addsQueued()
+    if nq > M.BURST_QUEUE_REF then every = math.max(M.BURST_EVERY_SLOW_MS, every * M.BURST_QUEUE_REF / nq) end
+    if clock() - (st.lastBurst or -1e9) < every then st.act = 'wait burst'; return end
+    st.lastBurst = clock()
+    st.act = 'burst'
+    local t0 = clock()
+    objects.BURSTING = true
+    -- the objects take the whole burst, the trees what is left: giving the trees a share (and one Forest a burst)
+    -- made more slow bursts of ~220 ms (each frame that touches a Forest costs that much: PC tests H1, H2)
+    if objects.delsPending() then objects.stepDels(clock, M.BURST_DEL_MS) end
+    if objects.pending() then objects.step(clock, math.max(1, M.BURST_MS - (clock() - t0))) end
+    objects.BURSTING = false
+    local left = M.BURST_MS - (clock() - t0)
+    if left > 0 and forest.pending() then forest.step(clock, 1000, nil, left) end
+    left = M.BURST_MS - (clock() - t0)
+    if left > 0 and objects.farPending() then objects.stepFar(clock, left) end
+    return
+  end
   if objects.pending() then
     st.act = 'objects'
     objects.step(clock, M.OBJ_BUDGET_MS)
@@ -829,6 +911,44 @@ end
 
 function M.followCamera(on)
   if st then st.useCamera = on and true or false end
+end
+
+-- the materials with dynamicCubemap: listed (nil), or turned off (false), with a fixed cubemap so metal still shines
+function M.dynamicCubemaps(on)
+  local names = {}
+  for _, n in ipairs(scenetree.findClassObjects('Material') or {}) do
+    local m = scenetree.findObject(n)
+    local v = m and m:getField('dynamicCubemap', 0)
+    if v == '1' or v == 'true' then
+      names[#names + 1] = n
+      if on == false then
+        m:setField('dynamicCubemap', 0, '0')
+        if (m:getField('cubemap', 0) or '') == '' then m:setField('cubemap', 0, 'global_cubemap_metalblurred') end
+        if m.flush then pcall(function() m:flush() end) end
+        if m.reload then pcall(function() m:reload() end) end
+      end
+    end
+  end
+  log('I', 'ticino', string.format('%d materials with dynamicCubemap%s: %s', #names,
+    on == false and ' turned off' or '', table.concat(names, ', ')))
+  return names
+end
+
+function M.setDynamic(on)
+  local n = objects.setDynamic(on)
+  log('I', 'ticino', string.format('%d streamed objects made %s', n, on and 'dynamic' or 'static'))
+  return n
+end
+
+-- objects of the base scene by class, for a render test: ticino_stream.sceneCount()
+function M.sceneCount()
+  local out = {}
+  for _, c in ipairs({ 'DecalRoad', 'SFXEmitter', 'WaterBlock', 'GroundCover', 'TSStatic', 'ProceduralMesh', 'Forest',
+                       'SpawnSphere', 'BeamNGGameplayArea', 'BeamNGPointOfInterest' }) do
+    out[c] = #(scenetree.findClassObjects(c) or {})
+  end
+  dump(out)
+  return out
 end
 
 function M.dropAIRoads()

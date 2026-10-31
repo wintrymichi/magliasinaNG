@@ -858,6 +858,50 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (objects.dropAll, forest.clear, while paused), makes the near rings whole (step untilRing, no heavy break without
   a budget) and FAR_JUMP_MS of far ground, and the far ground also gets FAR_EVERY_MS each frame beside the objects.
   The grey ground (base colour map, log "base 0.0 ms") is not explained yet: read the jump's log lines.
+  PC test of 79f0e61 (spawn Manno, jumps to Bellinzona and Airolo, 30 fps, warm cache): Bellinzona's jump removed
+  4,330 objects and 14,647 trees at once; slow forest frames 110 -> 0 (ONE_FOREST), frames over 100 ms 139-249 -> 96,
+  mean 25.4 fps. The paused jump frame is longer (spawn 8.1 s, Bellinzona 8.7 s, was 3.9-5.2 s; Airolo ~4 s): the
+  near rings and FAR_JUMP_MS are made inside it. Still seen: 2 object frames of ~0.9 s 60 s after a jump and 25 of
+  ~215 ms at 100 s (the traffic starting). The ticino stream.lua without PR #105's aimap hook gives 12,849 "Map node
+  could not be set" again: expected until #105 is merged. "base 0.0" at every jump, grey ground not confirmed.
+  Now ring 0 is made whole at a jump, rings up to NEAR_RINGS only for OBJ_JUMP_MS (2.5 s), FAR_JUMP_MS 2000 -> 500 (the
+  rest in the next frames, nearest first). "base 0.0 ms" is expected (setField only stores the path, the engine
+  reads the texture later): setBase now logs a base map file missing at a swap and an empty list of base materials.
+  PC test of b45a209: jump frame 6.55 s (spawn) and 7.35 s (Bellinzona), swap 110 ms, no "base colour map" line (the
+  file was there): the near rings were not the cost. The jump frame is the SUM of its budgets: FOREST_JUMP_MS was
+  3000, then OBJ_JUMP_MS 2500 and FAR_JUMP_MS 500. Now forest 1000, objects 1500, and the "jump to tile" line gives
+  the ms of each part (files, drop, swap, objects, cols, forest, far). Airolo's jump wrote no "jump: window" line
+  twice: jump() now logs its start and a failed window job, read those lines next time.
+- 13 fps standing still in Lugano against Italy's 81 (2026-10-30, CPU-bound, GPU ~30 %): every streamed TSStatic was
+  created with dynamic = true (copied from BeamNG.Earth, to spare the cached sun shadow map a redraw per added object),
+  and a dynamic object is sent once per shadow cascade every frame. setField('dynamic', 0, 'false') on the 5,392 live
+  TSStatics: 14.0 -> 83.2 fps. objects.DYNAMIC is false now (settings "dynamicObjects": true for the old way). Setting
+  dynamic back to true at runtime did NOT bring the cost back: an A/B test must reload the level, not flip the field.
+  The base scene's 57k AI DecalRoads and 4,343 SFXEmitters were not the cost (127 and 327 left near Lugano after a jump).
+- After the static fix (2026-10-30 evening, PC sweeps at Lugano with the queues empty): 49 fps against Italy's 81, and
+  hiding the 103 props TSStatics alone gave 85 (all TSStatics hidden: 116). No single prop shape mattered (hiding one
+  at a time: nothing) and dynamicCubemap off on the 1,146 materials did nothing: the cost was material blocks.
+  region.split_dae / clip_dae kept EVERY <triangles> block of the source in every piece, an empty one as a triangle of
+  no area; the merged sign/prop shapes have hundreds of materials, so each 192 m piece was hundreds of draw calls per
+  frame and shadow cascade. _write_kept now drops the blocks it keeps nothing of (60 materials split into 23 pieces:
+  1,380 -> 222 blocks). Count the <triangles> blocks of a cut shape, not only its triangles.
+- SETTLE_MS (objects made dynamic, then flipped to static in batches) was worse than static from the start: with the
+  queues empty 13 fps against 50; an object flipped at runtime stays costly. Off by default, kept for tests.
+- The queues while standing: an object costs ~8 ms of engine in the game; at 3 ms a frame the ~4,500 objects of Lugano
+  took minutes, and every frame that changed the scene was slow (14-20 fps the whole time). Bursts (BURST_MS 40 once
+  a second, every 200 ms below SLOW_MPS) made the flight 47 -> 94 fps. Giving the trees 40 % of each burst made 91
+  slow bursts (up to 711 ms, 89 fps); "one Forest a burst + a clock check inside the tile" was WORSE (204 bursts of
+  ~220 ms, 80.5 fps): a frame that touches a Forest costs ~200 ms whatever it adds, so more partial touches = more
+  hitches. The objects take the whole burst and the trees only what is left (93.5 fps, debf2f8).
+- Flight at 33 m/s (2026-10-31): the "near" frames of ~200 ms were forest passes (one Forest touched costs 185-230 ms
+  whether it adds 140 or 1,305 items). Hysteresis of the shares (forest.HYST) did not change them; sharing one Forest
+  among BLOCK x BLOCK tiles and doing their passes in one frame did: BLOCK 3 near-forest frames 63 -> 3, frames over
+  100 ms 130 -> 52. With the props fix (empty material blocks) Lugano standing still is 84.4 fps against Italy's 81.
+- Burst A/B/C flight (2026-10-31, second of two runs each): A standard (40 ms, adaptive) 80.0 fps, 1,030 frames over 50 ms;
+  B fixed 1 burst a second 89.9 fps, 504, but the deletions (WAVE_DEL_AT, behind every new object) never came: 10,649
+  live and 45,524 queued after 5 min; C BURST_MS 20 86.3 fps, 672, queue 3x A's. A deletion that waits behind the adds
+  never runs while driving: objects.stepDels now takes the tail of the queue for BURST_DEL_MS of every burst, BURST_MS
+  is 20 and the adaptive interval counts only the objects to make (addsQueued).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
@@ -1512,7 +1556,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   of the level as old-format forest data (ForestData::readAppendJsonV23Format "string pointer is null" on
   tiles/t_10_0.forest.json, the streamer's row format). The tile files are now t_<cx>_<cy>.trees.json (region.py,
   forest.lua M.FILE). Never give a file of our own a name ending the game claims (.forest.json, .materials.json,
-  items.level.json...). michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
+  items.level.json...). warmup_materials.json (region.py) broke the same rule: "loadJsonMaterialsFile| unable to
+  deserialize" at every load of all Ticino (2026-10-31); now warmup_mats.json. michi's zip 1 was rewritten by hand on DESKTOP-OUPOLOA (original in
   %LOCALAPPDATA%\BeamNG\ticino_backup\ticino_region_1.orig.zip).
 - First region drive on DESKTOP-OUPOLOA (2026-10-28 evening, fixes tried there as user-folder overrides, then ported):
   - Shipping .dae: the game imports each COLLADA file on first use (~0.1 s, up to 46 s for bld_*/river_*) -> 30 s of
@@ -1570,6 +1615,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   hitches: the terrain swap frame 207-256 ms at every window move (terrainFile ~105 ms + the frame after), the forest
   after a spawn (~75 frames of ~190 ms for ~100 s at PER_FRAME 250, the budget was looked at only every 64 items) and
   the AI map read at a jump (25.6 s, PR #105). forest.PER_FRAME 64 did not help (see Streaming helper process).
+- Installer on an incomplete release (2026-10-31, ticino-all-cdae while two slices were rebuilt): every ticino_*.zip in
+  mods not named in the release counted as old, so the valid ti_2_4 zip was moved out, and the Move-Item error
+  ($ErrorActionPreference Stop) ended the install (the PC run discarded stderr, so no message). Now only zips of a zone
+  the release has under other names are old, the others are kept with a warning, and a failed move does not stop it.
+  Capture stderr (`*>&1`) when running the installer in a test.
 - The cloud session could not run a downloaded pwsh to check the PowerShell scripts (auto mode refused code from
   outside): ticino_tools.yml parses every install/*.ps1 in pwsh and in Windows PowerShell 5.1 before packing.
 - `gh api --paginate` on release assets failed through the proxy (it follows a "repositories/<id>/..." next link,
@@ -1581,6 +1631,38 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   ticino_all/ticino_tools (both write the same draft release). The zone build and region run were cancelled after
   25 min (19 runners busy). Push Ticino work only to `ticino`; check `actions/runs?branch=<new branch>` after any
   first push and cancel what was not meant.
+  Again 2026-10-30: merging origin/ticino into claude/project-thread-qgsibb (.cdae) and pushing started ticino_all
+  (4-zone retry list + base), ticino_tools and ticino_helper on the thread branch; cancelled at once (the base job had
+  to be force-cancelled: a plain cancel left it running; it stopped at its first step, nothing uploaded). Before
+  pushing a merge of ticino, check whether it brings changes to all_stamp.txt, helper/** or install/**.
+
+## Shapes compiled to .cdae (beamng/ticino/dae2cdae.py, 2026-10-29)
+
+- The zones' shapes are all bng.write_dae files (one node `<name>_a<size>` per detail level, one <triangles> per
+  material, VERTEX/NORMAL/TEXCOORD/COLOR with the same index for every input): dae2cdae parses only that and refuses
+  the rest (trees' bb_autobillboard, transforms, polylists), which stays .dae. Forest shapes (managedItemData) and
+  shapes with prebaked imposters beside them (x.dae.imposter.dds) are never compiled: the imposter names follow the
+  shape file's name.
+- cdae.encode's `lods` follow BeamNG.Earth's convention (the main mesh drawn from lods[0]'s size up), NOT Collada's
+  (each node's trailing number is its OWN size, nothing drawn under the smallest): cdae.encode_details writes our DAEs.
+- First self-check failed on 6 of 709 shapes: the test flipped v in float64, the writer (as the engine) in float32
+  (2048.0325 vs 2048.0322 on large building uvs). Compare in the writer's precision before suspecting the writer.
+- region_slice compiles AFTER collision.build (it reads the .dae) and rewrites the tiles itself; the base cannot see the
+  slices' files, so the shared shapes are decided on both sides by the same test (dae2cdae.compilable) and the
+  slices list what they left as .dae (slice.json "cdae.kept"). objects.lua falls back to the .dae if a .cdae is missing.
+- The proxy blocks `gh api --paginate` on a release's assets (it follows a repositories/<id> URL: 403): page by hand
+  with `?per_page=100&page=N` (a draft release with 178 assets showed only 100).
+- `rm -rf zsrc/*` after a `cd` in the same command was blocked by the safety check (relative glob): use absolute paths.
+- Golden check against 43 .cdae the game wrote on DESKTOP-OUPOLOA (tests/test_dae2cdae.py --golden, 2026-10-30): the
+  game TRUNCATES vertex colours (floor(c*255), our first writer rounded: off by 1), computes tangents in float32, skips
+  triangles of zero uv area and falls back to (0,0,1) for a zero tangent (not orthogonalised); it orders the triangles of
+  a primitive its own way (same set, same picture). After matching that: 33 comparable pairs identical in positions,
+  normals, colours, primitives and triangles; tangents differ on 2.5 % of the vertices, all with degenerate uvs. Ten
+  pairs came from another version of the shape (the cache was older than the zips): compare positions first and drop
+  such pairs before calling the converter wrong.
+- First full .cdae build (run 41095920457): slice ti_1_m2 stopped in compile_level (min of an empty array): a shape whose
+  <triangles> blocks are all empty. parse now refuses it (stays .dae), and any other error of one shape keeps that
+  shape as .dae (listed in cdae.kept) instead of stopping the slice.
 ## Ticino server (thread "Studiare la mod tutta nel server", 2026-10-29)
 
 - With the 88 Ticino packs in mods the game spends 75-81 s at EVERY start in initDB (beamng.log: the last
@@ -1601,3 +1683,6 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   instead of 1,155). Ask again only for tiles that were late and are ready now, at most once a second.
 - The "packs in mods" probe must not test one tile file: the first key of stream.json tiles may be a zone that a test
   install does not have.
+- ticino's own dae2cdae.py (build-time .cdae, PR #103) replaced the server's: the server calls compile_bytes(bytes).
+  A shape it raises Unsupported on is counted as failed and NOT served (the tile names it as .cdae): watch "failed" in
+  the server's status line. Zone packs built with the .cdae already are copied as they are.

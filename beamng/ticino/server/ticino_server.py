@@ -138,7 +138,7 @@ def convert_job(src_bytes, out_path):
     """Collada bytes to a .cdae at out_path (written under a temporary name). Returns (out_path, bytes, ms)."""
     import dae2cdae
     t0 = time.perf_counter()
-    data = dae2cdae.convert(src_bytes.decode("utf-8"))
+    data = dae2cdae.compile_bytes(src_bytes)       # raises dae2cdae.Unsupported for a shape it cannot write
     write_file(out_path, data)
     return out_path, len(data), (time.perf_counter() - t0) * 1000
 
@@ -239,7 +239,12 @@ class Server:
         if name == rel or self.pool is None:
             if name != rel:
                 import dae2cdae
-                data = dae2cdae.convert(data.decode("utf-8"))
+                try:
+                    data = dae2cdae.compile_bytes(data)
+                except Exception as e:             # noqa: BLE001 - a bad shape must not stop the server
+                    self.stats["failed"] += 1
+                    log("shape not converted: %s (%s)" % (p, e))
+                    return
                 self.stats["converted"] += 1
             self._add_file(u, name, data)
             return

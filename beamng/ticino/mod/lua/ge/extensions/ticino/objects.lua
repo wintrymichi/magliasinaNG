@@ -23,6 +23,20 @@ local M = {}
 M.NO_COLLISION_SHAPES = { 'clutter_pallet', 'clutter_metal_bin', 'clutter_big_dustbin', 'clutter_metal_drum',
   'clutter_mailboxstand', 'clutter_plastic_chair', 'clutter_metal_chair', 'clutter_round_ptable',
   'clutter_round_mtable', 'clutter_pwood_table', 'clutter_sorting_bin', 'clutter_convexmirror' }
+-- DYNAMIC: a dynamic TSStatic is drawn into every sun shadow cascade at every frame (no cached shadow map); a static
+-- one only when the cached map is redrawn, which an added static object asks for (~6 ms, BeamNG.Earth farfield.lua).
+-- Up to 2026-10-30 every streamed object was dynamic: ~5,600 objects in Lugano drawn into every cascade each frame
+-- (suspected cause of 13 fps standing still against Italy's 81, PC test pending). Static, the map is redrawn only in
+-- the frames that add objects.
+M.DYNAMIC = false
+-- SETTLE_MS > 0 (with DYNAMIC false): objects are made dynamic and turned static together once no object was made for
+-- SETTLE_MS (at most 4 x SETTLE_MS after the first), so the cached shadow map is redrawn once per batch, not in every
+-- frame that adds objects. Turning dynamic -> static at runtime works (PC test 2026-10-30: 14 -> 83 fps).
+M.SETTLE_MS = 0
+-- the largest radius (tiles) of a group, under the build's own r: small clutter at 2 tiles (up to 960 m) was 2,609 of
+-- the 5,640 objects round a dense tile, each a draw call for something a few pixels high (render CPU-bound, 2026-10-30)
+M.GROUP_R = { ['props/street_life'] = 1, ['props/delineators'] = 1, ['props/shopfronts'] = 1,
+              ['props/osm/furniture'] = 1, ['roads/markings'] = 2 }
 M.COL_LAZY = 0             -- 1 tried: 25 cells of 128 m were 1.1 M triangles, a rebuild 170-250 ms in Lugano
 M.SLOW_SPAWN_MS = 40       -- an object (or far tile) that takes longer to make is logged with its shape
 M.CACHE_TILES = 400
@@ -31,7 +45,9 @@ M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
 M.COL_FILE = '/levels/%s/col/c_%d_%d.bin'
 M.COL_XY_OFF_CM = 16384     -- collision.XY_OFF_CM
 M.COL_HYST_M = 16          -- the car's collision cell changes only this far past its edge
-M.WAVE_DEL_AT = 1.5        -- objects that went out of range are deleted after the new ones of the rings 0 and 1 are made
+M.WAVE_DEL_AT = 99         -- objects that went out of range (and only drew) are deleted after every new one is made:
+                           -- at 33 m/s the deletions took their share of the bursts while 2,776 objects waited (PC
+                           -- flight 2026-10-30, 1,620 live of ~3,400); was 1.5 (after the rings 0 and 1)
 
 -- keys of an entry that are not engine fields
 local SKIP = { class = true, p = true, q = true, s = true, g = true, r = true, name = true }
@@ -54,7 +70,7 @@ local S = nil     -- state: cfg, level, group, tiles (cache), live, farLive, que
 function M.init(cfg, level, group)
   S = { cfg = cfg, level = level, group = group, tiles = {}, tileOrder = {}, live = {}, farLive = {},
         queue = {}, qpos = 1, colDirty = false, maxR = 0,
-        stats = { created = 0, deleted = 0, failed = 0, tilesRead = 0 } }
+        stats = { created = 0, deleted = 0, failed = 0, tilesRead = 0 }, fresh = {} }
   S.maxR = cfg.maxRadius or 6
   S.noCol = {}                      -- groups that never collide (setCollision)
   S.farQueue, S.farPos = {}, 1
@@ -64,6 +80,7 @@ function M.init(cfg, level, group)
   S.col = { size = cfg.colCell, R = (cfg.colRadius or 1) + M.COL_LAZY, has = {}, live = {}, cell = nil, queue = {},
             types = cfg.colGroundTypes or {} }
   S.noColShape = {}
+  S.shapeFile = {}
   -- the cells of 64 m (stream.json colCell; colDir if not col: the rebuild cost follows the cells' triangles)
   M.COL_FILE = '/levels/%s/' .. (cfg.colDir or 'col') .. '/c_%d_%d.bin'
   if cfg.colCell and cfg.colCell < 128 then M.COL_HYST_M = cfg.colCell / 8 end
@@ -81,6 +98,12 @@ local function tile(cx, cy)
   if not files.near(key) then return nil end          -- served and not there yet: asked again at refresh()
   local ok, data = pcall(jsonDecode, readFile(files.map(string.format(M.TILE_FILE, S.level, cx, cy))) or '')
   t = (ok and type(data) == 'table') and data or false
+  if t then
+    for _, e in ipairs(t) do
+      local cap = e.g and M.GROUP_R[e.g]
+      if cap and (e.r or 0) > cap then e.r = cap end
+    end
+  end
   S.tiles[key] = t
   S.tileOrder[#S.tileOrder + 1] = key
   S.stats.tilesRead = S.stats.tilesRead + 1
@@ -90,16 +113,79 @@ local function tile(cx, cy)
   return t or nil
 end
 
+-- The shape file to load: the zones' shapes are compiled to .cdae at build time (dae2cdae.py: no Collada import while
+-- driving). Should a tile name a .cdae that is not installed (an older zone zip beside a newer one) the .dae is
+-- taken, and a .dae with a .cdae beside it takes the .cdae. Cached by name.
+local function shapeFile(name)
+  local v = S.shapeFile[name]
+  if v then return v end
+  v = name
+  if FS and type(name) == 'string' then
+    local low = name:lower()
+    if low:sub(-5) == '.cdae' then
+      if not FS:fileExists(name) and FS:fileExists(name:sub(1, -6) .. '.dae') then v = name:sub(1, -6) .. '.dae' end
+    elseif low:sub(-4) == '.dae' then
+      if FS:fileExists(name:sub(1, -5) .. '.cdae') then v = name:sub(1, -5) .. '.cdae' end
+    end
+  end
+  S.shapeFile[name] = v
+  return v
+end
+M.shapeFile = function(name) return shapeFile(name) end
+
+-- every live object and far tile static or dynamic (A/B test from the console: ticino_stream.setDynamic(true/false))
+function M.setDynamic(on)
+  M.DYNAMIC = on and true or false
+  local n = 0
+  local function set(id)
+    local o = id and scenetree.findObjectById(id)
+    if o and o:getClassName() == 'TSStatic' then o:setField('dynamic', 0, M.DYNAMIC and 'true' or 'false'); n = n + 1 end
+  end
+  for _, l in pairs(S.live or {}) do set(l.id) end
+  for _, f in pairs(S.farLive or {}) do set(f.id) end
+  return n
+end
+
+local function wantDynamic() return M.DYNAMIC or M.SETTLE_MS > 0 end
+local function fresh(id)
+  if M.DYNAMIC or M.SETTLE_MS <= 0 or not id then return end
+  S.fresh[#S.fresh + 1] = id
+end
+
+-- the fresh dynamic objects turned static in one frame: true when it did (stream.lua calls it every frame)
+function M.settle(clock)
+  local f = S and S.fresh
+  if not f or #f == 0 then return false end
+  local t = clock()
+  if #f ~= S.freshSeen then                 -- made one since the last call
+    if (S.freshSeen or 0) == 0 then S.freshT0 = t end
+    S.freshSeen, S.freshLast = #f, t
+  end
+  if t - (S.freshLast or t) < M.SETTLE_MS and t - (S.freshT0 or t) < 4 * M.SETTLE_MS then return false end
+  local n = 0
+  for _, id in ipairs(f) do
+    local o = scenetree.findObjectById(id)
+    if o then o:setField('dynamic', 0, 'false'); n = n + 1 end
+  end
+  S.fresh, S.freshSeen = {}, 0
+  S.stats.settled = (S.stats.settled or 0) + n
+  S.stats.settles = (S.stats.settles or 0) + 1
+  return true, n
+end
+
 local function spawn(e, col)
   local o = createObject(e.class)
   if not o then return nil end
   for k, v in pairs(e) do
-    if not SKIP[k] then o:setField(k, 0, fieldStr(v)) end
+    if k == 'shapeName' then
+      o:setField(k, 0, shapeFile(v))
+    elseif not SKIP[k] then
+      o:setField(k, 0, fieldStr(v))
+    end
   end
   if e.class == 'TSStatic' then
     o:setField('collisionType', 0, col and (e.collisionType or 'Visible Mesh Final') or 'None')
-    -- dynamic: an added static object redraws the sun's cached shadow map (BeamNG.Earth farfield.lua)
-    o:setField('dynamic', 0, 'true')
+    o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
   end
   o.canSave = false
   local p = e.p
@@ -108,6 +194,7 @@ local function spawn(e, col)
   if e.q then o:setPosRot(p[1], p[2], p[3], e.q[1], e.q[2], e.q[3], e.q[4]) end
   if e.s then o:setScale(vec3(e.s[1], e.s[2], e.s[3])) end
   S.group:addObject(o)
+  if e.class == 'TSStatic' then fresh(o:getID()) end
   return o:getID()
 end
 
@@ -137,6 +224,8 @@ local function canCollide(e)
 end
 
 -- Distance (Chebyshev, tiles) of tile (tx, ty) from (cx, cy); nil when there is no centre yet
+local clock_ = os.clock    -- the caller's ms clock (step/stepDels set it)
+
 local function dist(tx, ty, c)
   if not c then return math.huge end
   return math.max(math.abs(tx - c[1]), math.abs(ty - c[2]))
@@ -227,8 +316,10 @@ function M.retarget(cx, cy)
   end)
   local nCol = 0
   while nCol < #q and q[nCol + 1][5] < 0 do nCol = nCol + 1 end
+  local dFrom = #q + 1        -- the deletions of drawn objects are the tail of the queue (stepDels takes them from there)
+  while dFrom > nCol + 1 and q[dFrom - 1][5] == M.WAVE_DEL_AT do dFrom = dFrom - 1 end
   S.queue, S.qpos = q, 1
-  S.colQEnd = nCol
+  S.colQEnd, S.delFrom = nCol, dFrom
   S.cell = new
   return #q
 end
@@ -236,48 +327,75 @@ end
 -- Work through the queue for at most budgetMs (clock: ms function; nil: all of it, or up to the ring untilRing).
 -- Each entry brings one object to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing
 -- left to do). Returns true when the queue is empty.
+-- Bring one object to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing left to do).
+-- Returns true when it spawned a heavy object.
+local function apply(op)
+  local key, e = op[1], op[2]
+  local colR = S.cfg.collisionRadius or 1
+  local d = dist(op[3], op[4], S.cell)
+  local want = d <= (e.r or 0)
+  local col = want and canCollide(e) and d <= colR
+  local l = S.live[key]
+  if l and (not want or l.col ~= col) then
+    delete(l.id)
+    S.live[key] = nil
+    S.stats.deleted = S.stats.deleted + 1
+    l = nil
+  end
+  if want and not l then
+    local ts = clock_()
+    local ok, id = pcall(spawn, e, col)
+    local dts = clock_() - ts
+    if dts > M.SLOW_SPAWN_MS then
+      log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
+    end
+    if dts > (S.stats.maxSpawn or 0) then S.stats.maxSpawn, S.stats.maxShape = dts, e.shapeName or e.class end
+    if ok and id then
+      S.live[key] = { id = id, col = col }
+      if col then S.colDirty = true; S.stats.colMade = (S.stats.colMade or 0) + 1 end
+      S.stats.created = S.stats.created + 1
+    else
+      S.stats.failed = S.stats.failed + 1
+      if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
+    end
+    return dts > M.SLOW_SPAWN_MS
+  end
+  return false
+end
+
+-- Work through the queue for at most budgetMs (clock: ms function; nil: all of it, or up to the ring untilRing).
+-- Returns true when the queue is empty.
 function M.step(clock, budgetMs, untilRing)
+  clock_ = clock
   local t0 = clock()
   local q = S.queue
-  local colR = S.cfg.collisionRadius or 1
   while S.qpos <= #q do
     local op = q[S.qpos]
     if untilRing and (op[5] or 0) > untilRing then break end
     S.qpos = S.qpos + 1
-    local key, e = op[1], op[2]
-    local heavy = false
-    local d = dist(op[3], op[4], S.cell)
-    local want = d <= (e.r or 0)
-    local col = want and canCollide(e) and d <= colR
-    local l = S.live[key]
-    if l and (not want or l.col ~= col) then
-      delete(l.id)
-      S.live[key] = nil
-      S.stats.deleted = S.stats.deleted + 1
-      l = nil
-    end
-    if want and not l then
-      local ts = clock()
-      local ok, id = pcall(spawn, e, col)
-      local dts = clock() - ts
-      if dts > M.SLOW_SPAWN_MS then
-        log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
-      end
-      heavy = dts > M.SLOW_SPAWN_MS
-      if ok and id then
-        S.live[key] = { id = id, col = col }
-        if col then S.colDirty = true end
-        S.stats.created = S.stats.created + 1
-      else
-        S.stats.failed = S.stats.failed + 1
-        if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
-      end
-    end
+    local heavy = apply(op)
     -- one heavy object a frame: a second one after it would add its cost to the same frame (with no budget, at a
     -- jump while the game is paused, the step goes on: it made one object of a new zone and left the rest crawling)
-    if budgetMs and (heavy or clock() - t0 > budgetMs) then break end
+    if budgetMs and ((heavy and not M.BURSTING) or clock() - t0 > budgetMs) then break end
   end
   return S.qpos > #q
+end
+
+-- The deletions of drawn objects that went out of range, from the tail of the queue, for at most budgetMs: they wait
+-- behind every new object (WAVE_DEL_AT), and at 33 m/s with one burst a second they never came (PC flight B
+-- 2026-10-31: 10,649 live objects and 45,524 queued after 5 min). Returns the number done.
+function M.stepDels(clock, budgetMs)
+  clock_ = clock
+  local t0, n = clock(), 0
+  local q = S.queue
+  while #q >= math.max(S.delFrom or #q + 1, S.qpos) do
+    local op = q[#q]
+    q[#q] = nil
+    apply(op)
+    n = n + 1
+    if clock() - t0 > budgetMs then break end
+  end
+  return n
 end
 
 -- Read (at most n) tile files the next move may need, one ring beyond the largest radius, so that retarget finds them
@@ -562,12 +680,13 @@ function M.stepFar(clock, budgetMs)
       o:setField('shapeName', 0, files.map(string.format(M.FAR_SHAPE, S.level, tx, ty)))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
-      o:setField('dynamic', 0, 'true')
+      o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
       o.canSave = false
       local cfg = S.cfg
       o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
       o:registerObject('')
       S.group:addObject(o)
+      fresh(o:getID())
       local f = { id = o:getID(), cx = tx, cy = ty, hidden = false }
       S.farLive[key] = f
       M._farHide(f)
@@ -619,7 +738,7 @@ function M.clear()
   for _, ids in pairs(S.col.live) do for _, id in ipairs(ids) do delete(id) end end
   if S.col.job then for _, id in ipairs(S.col.job.ids) do delete(id) end end
   S.col.live, S.col.cell, S.col.job, S.col.queue, S.col.liveTris, S.col.tris = {}, nil, nil, {}, {}, 0
-  S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
+  S.live, S.farLive, S.queue, S.qpos, S.delFrom = {}, {}, {}, 1, nil
   S.farQueue, S.farPos = {}, 1
 end
 
@@ -631,7 +750,7 @@ function M.dropAll()
   local n = 0
   for _, l in pairs(S.live) do delete(l.id); n = n + 1 end
   if n > 0 then S.colDirty = true end
-  S.live, S.queue, S.qpos, S.colQEnd, S.cell = {}, {}, 1, 0, nil
+  S.live, S.queue, S.qpos, S.colQEnd, S.cell, S.delFrom = {}, {}, 1, 0, nil, nil
   S.stats.deleted = S.stats.deleted + n
   return n
 end
@@ -655,6 +774,21 @@ function M.stats()
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+function M.queued() return S and (#S.queue - S.qpos + 1) or 0 end
+-- objects still to make (the queue without its tail of deletions)
+function M.addsQueued()
+  if not S then return 0 end
+  return math.max(0, math.min(S.delFrom or #S.queue + 1, #S.queue + 1) - S.qpos)
+end
+function M.delsPending() return S and #S.queue >= math.max(S.delFrom or #S.queue + 1, S.qpos) end
+-- Counters for the slow-frame log (cheap: no walk over the live objects). The slowest spawn since the last call.
+function M.counts()
+  if not S then return nil end
+  local c = { created = S.stats.created, deleted = S.stats.deleted, colMade = S.stats.colMade or 0,
+              maxSpawn = S.stats.maxSpawn or 0, maxShape = S.stats.maxShape }
+  S.stats.maxSpawn, S.stats.maxShape = 0, nil
+  return c
+end
 -- Are objects of the rings up to d (tiles from the car's) still queued? (the queue is sorted by ring: the head tells)
 function M.nearPending(d)
   if not S or S.qpos > #S.queue then return false end
