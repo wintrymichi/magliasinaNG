@@ -5,7 +5,8 @@ TicinoServer.exe is the Windows app of the Ticino map of MagliasinaNG. It needs 
 - Downloads: downloads the map from the GitHub release into the folder you choose (about 52 GB), only what changed,
   resumes interrupted downloads and checks every zip against its sha256. Updates are installed when the server and
   the game are closed.
-- Graphics: view distance of trees, far terrain, buildings, roads and details (BeamNG's settings\ticino.json).
+- Graphics: the horizon (up to 80 km), the haze, and the view distance of trees, far terrain, buildings, roads and
+  details (BeamNG's settings\ticino.json).
 - Server: starts and stops ticino_server.exe (downloaded by the app itself), shows its log and its state.
 - Play: starts the server and BeamNG straight into the map. In packs mode (every zip in BeamNG's mods, as the installer
   makes it with -Mode packs) it starts BeamNG and the streaming helper, as "Start Ticino" does; Move on the Home page

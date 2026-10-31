@@ -43,6 +43,14 @@ M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
 M.CACHE_TILES = 120
 M.WAVE_NEAR = 1                       -- rings round the car's tile whose trees come whole before any farther tree
 M.WAVE_PART = 0.4                     -- share of its trees a farther tile gets in the first pass of the wave
+-- Shape variants (BeamNG.Earth trees.lua SHAPE_VARIANTS, 2026-10-15 probes): a frame that adds or removes Forest items
+-- costs the engine ~0.5 us for EVERY item in the level of each SHAPE it touches, whatever its Forest: the "~200 ms a
+-- touch whatever it adds" of our PC flights (a pass touches nearly all 43 tree shapes, whose items add up to ~400k).
+-- The engine tells shapes apart by their path, so the non-colliding items of a block use one of SHAPE_VARIANTS
+-- spellings of each path ('dir/./name', 'dir/././name': the same file, a shape of its own): a pass then touches
+-- about 1/SHAPE_VARIANTS of the population. A variant's first items cost one load (~12 ms) and its own copy of the
+-- shape in memory. 1 = off (as built); 4 = Earth's value, to be checked on the PC (frames, and no imposter squares).
+M.SHAPE_VARIANTS = 1
 
 local S = nil
 
@@ -67,9 +75,29 @@ local function rowsOf(key)
   return r or nil
 end
 
--- the item type of index i, solid (the level's own) or not (a twin with collidable 0)
-local function itemType(i, solid)
-  local key = i .. (solid and 's' or 'n')
+-- 'dir/name.dae' spelled 'dir/./name.dae' (v = 1), 'dir/././name.dae' (v = 2), ...
+local function variantPath(p, v)
+  if v <= 0 or type(p) ~= 'string' then return p end
+  local dir, name = p:match('^(.*)/([^/]+)$')
+  if not dir then return p end
+  return dir .. string.rep('/.', v) .. '/' .. name
+end
+
+-- the variant of a tile's (block's) non-colliding items: fixed by its block key
+local function variantOf(key)
+  local V = M.SHAPE_VARIANTS or 1
+  if V <= 1 then return 0 end
+  local tx, ty = key:match('^(%-?%d+)_(%-?%d+)$')
+  tx, ty = tonumber(tx), tonumber(ty)
+  if M.BLOCK > 1 then tx, ty = math.floor(tx / M.BLOCK), math.floor(ty / M.BLOCK) end
+  return (tx * 7 + ty * 13) % V            -- neighbouring blocks differ
+end
+
+-- the item type of index i, solid (the level's own) or not (a twin with collidable 0; variant v > 0: its shape path
+-- spelled another way, SHAPE_VARIANTS)
+local function itemType(i, solid, v)
+  v = (not solid and v) or 0
+  local key = i .. (solid and 's' or 'n') .. (v > 0 and v or '')
   local d = S.types[key]
   if d ~= nil then return d or nil end
   local name = S.typeNames[i + 1]
@@ -84,7 +112,7 @@ local function itemType(i, solid)
     S.types[key] = base
     return base
   end
-  local twin = name .. '_tcn'
+  local twin = name .. '_tcn' .. (v > 0 and ('_v' .. v) or '')
   d = scenetree.findObject(twin)
   if not d then
     d = (worldEditorCppApi and worldEditorCppApi.createObject) and worldEditorCppApi.createObject('TSForestItemData')
@@ -92,8 +120,9 @@ local function itemType(i, solid)
     if d then
       for _, f in ipairs({ 'shapeFile', 'radius', 'mass', 'rigidity', 'tightnessCoefficient', 'dampingCoefficient',
                            'windScale', 'trunkBendScale', 'branchAmp', 'detailAmp', 'detailFreq', 'annotation' }) do
-        local v = base:getField(f, 0)
-        if v and v ~= '' then d:setField(f, 0, v) end
+        local val = base:getField(f, 0)
+        if f == 'shapeFile' then val = variantPath(val, v) end
+        if val and val ~= '' then d:setField(f, 0, val) end
       end
       d:setField('collidable', 0, '0')
       d:registerObject(twin)
@@ -259,7 +288,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       end
       if want and not it then
         local r = rows[i]
-        local d = itemType(r[1], op.solid)
+        local d = itemType(r[1], op.solid, variantOf(op.key))
         if d then
           fd = fd or forestOf(t, op.key):getData()
           local m = MatrixF(true)
@@ -374,5 +403,8 @@ function M.stats()
   return { tiles = tiles, items = items, forests = S.nForest, queued = #S.queue - S.qpos + 1, made = S.stats.made,
            removed = S.stats.removed, failed = S.stats.failed, missingTypes = S.stats.missingTypes }
 end
+
+-- for tests
+M._variantPath, M._variantOf = variantPath, variantOf
 
 return M

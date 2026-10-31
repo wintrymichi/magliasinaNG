@@ -59,7 +59,7 @@ function jsonDecode(s)
   end
   return val()
 end
-function log(l, tag, msg) if l ~= 'I' then print(l, tag, msg) end end
+function log(l, tag, msg) if l ~= 'I' or os.getenv('LOGI') then print(l, tag, msg) end end
 function vec3(x, y, z) return { x = x, y = y, z = z } end
 local objs, nextId, counts = {}, 1, { made = 0, deleted = 0, reload = 0, swaps = 0, hiddenFar = 0 }
 local Obj = {}
@@ -98,6 +98,7 @@ local car = { x = 0, y = 0 }
 function getPlayerVehicle() return { getPosition = function() return vec3(car.x, car.y, 0) end } end
 local paused = false
 simTimeAuthority = { pause = function(p) paused = p end, getPause = function() return paused end }
+map = map or { reset = function() print("sim: map.reset") end, getMap = function() return { nodes = {} } end }
 
 -- ---- the run
 if os.getenv('PROF') then dofile(os.getenv('PROF')) end

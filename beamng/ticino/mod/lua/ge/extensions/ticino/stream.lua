@@ -32,6 +32,7 @@ local forest = require('ticino/forest')
 local png = require('ticino/png')
 local helper = require('ticino/helper')
 local files = require('ticino/files')
+local pace = require('ticino/pace')
 
 local M = {}
 
@@ -80,11 +81,22 @@ M.DIAG = false             -- write ticino_frames.csv and ticino_perf.csv (setti
 M.PRESETS = {
   standard = {},
   light = { forest = { RADIUS = 3, SHARE = { [0] = 1.0, 1.0, 0.5, 0.25 }, CACHE_TILES = 80 },
-            objects = { CACHE_TILES = 250 }, level = { farRadius = 10 } },
+            objects = { CACHE_TILES = 250 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
 }
+-- How far the camera sees (michi 2026-10-31, "io voglio vedere di più da lontano"): with the far levels of the base
+-- (farlod.py, objects.lua FAR_LOD) the ground reaches the whole of Ticino, so LevelInfo.visibleDistance goes to VIEW_KM
+-- (the level file has 12 km) and the haze thins to FOG_DENSITY (the level's 1.3e-4 hid 70 % at 10 km; 6e-5: 45 % at
+-- 10 km, 70 % at 20 km, 90 % at 40 km). Both need postApply (BeamNG.Earth horizon.lua: the field alone does nothing).
+-- Settings: "viewKm" (0: the level's own), "fog" (0: the level's own).
+M.VIEW_KM = 60
+M.FOG_DENSITY = 6e-5
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
 M.MAP_RESET_ON_JUMP = true -- read the AI map again at a jump, while the game is paused (1.9-2.5 s on the laptop)
+M.RESET_HOLD_MS = 3000     -- after that map.reset the game stays paused this long while the streamer goes on: the
+                           -- engine's next ~2 s are slow whatever is added (PC 2026-10-31: 8 frames of 125-483 ms
+                           -- adding 4-8 objects each, GpuCull registry rebuilds; not shapes, materials or the AI
+                           -- roads' deletion), so they pass in the pause instead of at the start of the drive
 M.MAP_RESET_FRAMES = nil  -- frames after a terrain swap to read the AI map again (nil: never). A map.reset() fixed
                            -- the z 0 nodes near the car but froze the laptop 2-2.5 s every move (run 4); the AI roads
                            -- now have useSubdivisions off (blocks.py), so the graph takes their own heights
@@ -96,6 +108,14 @@ M.HELPER_WAIT_MS = 8000    -- at a jump, wait this long for the helper's window 
 M.SERVE_WAIT_MS = 20000    -- at a jump with the Ticino server, wait this long for the tiles round the car (files.lua)
 M.SERVE_RINGS = 1          -- the rings of tiles round the car that must be there before the jump goes on
 M.GROUP = 'ticino_stream'
+M.GATE = true              -- frames that change the scene stay lone spikes between calm frames (pace.lua; settings
+                           -- "frameGate": false turns it off)
+M.PACING = true            -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": false)
+M.TERRAIN_SHADOWS = true   -- false: the TerrainBlock casts no sun shadows (BeamNG.Earth terrain.lua: every block move
+                           -- redrew the cached sun shadow map for it, 250-340 ms of RenderShadows on a GTX 1060, and
+                           -- its screenshots were pixel-identical without; settings "terrainShadows": false). Off only
+                           -- after the same screenshot check in the Alps (mountain shadows over the valleys)
+M.ENGINE_TOP = 6           -- slow-frame lines name the engine's this many largest subsystems of that frame
 
 local st = nil
 
@@ -120,7 +140,8 @@ local function pause(on)
   local s = sta()
   if not s or not s.pause then return end
   if on then
-    st.wasPaused = s.getPause and s.getPause() or false
+    if st.holdUntil then st.holdUntil = nil   -- a jump during the hold after a map.reset: keep its wasPaused
+    else st.wasPaused = s.getPause and s.getPause() or false end
     s.pause(true)
   elseif not st.wasPaused then
     s.pause(false)
@@ -206,7 +227,9 @@ local function frameStats()
   f.last = now
   f.n = f.n + 1
   if d > M.SLOW_FRAME_MS then          -- what the streamer did in that frame (st.act, set by onUpdate)
-    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s%s', d, tostring(st.act), frameWork()))
+    local eng = (M.ENGINE_TOP or 0) > 0 and pace.engineTop(M.ENGINE_TOP) or ''
+    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s%s%s', d, tostring(st.act), frameWork(),
+      eng ~= '' and (' | engine ' .. eng) or ''))
   end
   st.act = 'idle'
   st.snapO, st.snapF, st.reloadsAt = objects.counts(), forest.counts(), st.reloads
@@ -545,7 +568,7 @@ end
 -- override stream.json (numbers only, e.g. farRadius).
 local function applyFields(over, cfg, what)
   if type(over) ~= 'table' then return end
-  for name, mod in pairs({ stream = M, objects = objects, forest = forest }) do
+  for name, mod in pairs({ stream = M, objects = objects, forest = forest, pace = pace }) do
     for k, v in pairs(type(over[name]) == 'table' and over[name] or {}) do
       if mod[k] ~= nil and type(mod[k]) == type(v) then
         mod[k] = v
@@ -582,6 +605,11 @@ local function readSettings(cfg)
   if type(s.helper) == 'boolean' then M.HELPER = s.helper end
   if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
   if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
+  if type(s.pacing) == 'boolean' then M.PACING = s.pacing end
+  if type(s.frameGate) == 'boolean' then M.GATE = s.frameGate end
+  if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
+  if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
+  if type(s.fog) == 'number' and s.fog >= 0 then M.FOG_DENSITY = s.fog end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
   -- a window size of the settings (level.window, tiles of cfg.cell): the helper writes the built size only
@@ -591,8 +619,8 @@ local function readSettings(cfg)
     cfg.window = W
   end
   if cfg.window ~= W then M.HELPER = false end
-  log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s', preset, tostring(M.HELPER),
-    tostring(M.DIAG)))
+  log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s, frame gate %s, pacing %s', preset,
+    tostring(M.HELPER), tostring(M.DIAG), tostring(M.GATE), tostring(M.PACING)))
 end
 
 local function start()
@@ -621,7 +649,8 @@ local function start()
   st = { cfg = cfg, tb = tb, group = group, serial = 0, moves = 0, reloads = 0, perf = {},
          tcache = terwin.newCache(files.map('/levels/' .. M.LEVEL .. '/blocks/terrain/'), 16),
          bcache = terwin.newCache(files.map('/levels/' .. M.LEVEL .. '/blocks/base/'), 12 * #(cfg.baseTextures or {})),
-         window = { cfg.start[1], cfg.start[2] }, baseMats = {}, started = true }
+         window = { cfg.start[1], cfg.start[2] }, baseMats = {}, started = true,
+         gate = pace.newGate(), pacer = pace.newPacer() }
   -- the terrain materials whose base colour is the window's map
   for _, bm in ipairs(cfg.baseMaterials or {}) do
     local o = scenetree.findObject(bm[1])
@@ -635,15 +664,33 @@ local function start()
     else log('W', 'ticino', 'terrain material not found: ' .. bm[1]) end
   end
   if M.TB_BASE_TEX_SIZE > 0 then tb:setField('baseTexSize', 0, tostring(M.TB_BASE_TEX_SIZE)) end
+  if not M.TERRAIN_SHADOWS then tb:setField('castShadows', 0, '0') end
   st.layerKey = {}                    -- terrain material (.ter name) -> its streamed base map (BASE_COMBINED)
   for _, bm in ipairs(cfg.baseMaterials or {}) do st.layerKey[bm[2]] = bm[3] end
   if M.NO_DYNAMIC_CUBEMAP then M.dynamicCubemaps(false) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
+  M.applyView()
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, #(cfg.far or {})))
   log('I', 'ticino', string.format('stream 2026-10-28: window places %d..%d, base maps %s, collision lazy %d, '
     .. 'frame times to %s', M.FOLLOW_LO, M.FOLLOW_HI, M.BASE_MODE, objects.COL_LAZY or -1, M.FRAMES_FILE))
+end
+
+-- visibleDistance and haze for the far levels (VIEW_KM, FOG_DENSITY); the level's own values without far levels
+function M.applyView()
+  local li = scenetree.theLevelInfo or scenetree.findObject('theLevelInfo')
+  if not li then return false end
+  if not objects.hasFarLod() then
+    log('I', 'ticino', 'no far levels in the base: view distance and haze of the level')
+    return false
+  end
+  local v, d = M.VIEW_KM * 1000, M.FOG_DENSITY
+  if v > 0 then li.visibleDistance = v end
+  if d > 0 then li.fogDensity = d end
+  if li.postApply then li:postApply() end
+  log('I', 'ticino', string.format('view %s m, haze %s', tostring(li.visibleDistance), tostring(li.fogDensity)))
+  return true
 end
 
 local function stop()
@@ -658,9 +705,23 @@ local function stop()
   st = nil
 end
 
+-- the frame gate (pace.lua): may this frame change the scene? changed() after a step that did
+local function mayChange()
+  if not M.GATE then return true end
+  if st.gate:open() then return true end
+  st.act = 'gate'
+  return false
+end
+local function changed() st.gate:worked() end
+
 local function onUpdate(dtReal)
   if not st then return end
   frameStats()
+  do
+    local now, s = clock(), sta()
+    st.gate:beginFrame(st.gateT and (now - st.gateT) or nil, s and s.getPause and s.getPause() or false)
+    st.gateT = now
+  end
   local settled, nSettled = objects.settle(clock)
   if settled and M.DIAG then log('D', 'ticino', nSettled .. ' objects made static') end
   if st.basePending then              -- BASE_MODE 'split': one terrain material's base colour map a frame
@@ -690,6 +751,7 @@ local function onUpdate(dtReal)
         local ok = pcall(function() map.reset() end)
         if st.watch then st.watch.rec.mapResetMs = clock() - t0 end
         log('I', 'ticino', string.format('AI map read again at the jump: %.1f ms%s', clock() - t0, ok and '' or ' (failed)'))
+        if ok and (M.RESET_HOLD_MS or 0) > 0 then st.holdUntil = clock() + M.RESET_HOLD_MS end
       end
       if M.DROP_AI_ROADS and not st.aiDropped then
         local ok, res = pcall(M.dropAIRoads)
@@ -700,9 +762,14 @@ local function onUpdate(dtReal)
     st.resumeIn = st.resumeIn - 1
     if st.resumeIn <= 0 then
       st.resumeIn = nil
-      pause(false)
+      if not st.holdUntil then pause(false) end
     end
     return
+  end
+  if st.holdUntil and clock() >= st.holdUntil then   -- the hold after a map.reset is over
+    st.holdUntil = nil
+    log('I', 'ticino', 'hold after the AI map read over')
+    pause(false)
   end
   if st.rwatch then
     local w = st.rwatch
@@ -785,8 +852,10 @@ local function onUpdate(dtReal)
   end
   -- the collision cells round the car (ProceduralMesh pieces, a few ms a frame)
   if objects.colsPending() then
+    if not mayChange() then return end
     st.act = 'cols'
     objects.stepCols(clock, M.COL_BUDGET_MS)
+    changed()
     if objects.colsPending() then return end
   end
   -- the collision rebuild first, as soon as the cells and the colliders of the queue (it starts with them) are made
@@ -795,10 +864,14 @@ local function onUpdate(dtReal)
   if objects.colDirty() then
     st.dirtySince = st.dirtySince or clock()
     local due = (objects.colUrgent and objects.colUrgent()) or clock() - st.dirtySince > M.RELOAD_DEFER_MS
-    if due and not objects.colsPending() and not objects.collidersPending() and tryReload(st.objRec) then
-      st.act = 'reload'
-      st.objRec, st.dirtySince = nil, nil
-      return
+    if due and not objects.colsPending() and not objects.collidersPending() then
+      if not mayChange() then return end
+      if tryReload(st.objRec) then
+        st.act = 'reload'
+        changed()
+        st.objRec, st.dirtySince = nil, nil
+        return
+      end
     end
   else
     st.dirtySince = nil
@@ -807,7 +880,9 @@ local function onUpdate(dtReal)
   -- come before the next window's files (a window starts moving with the car still 2 tiles from its edge) and before
   -- anything farther
   if objects.nearPending(M.NEAR_RINGS) then
+    if not mayChange() then return end
     st.act = 'near objects'
+    changed()
     -- a whole burst a frame: each frame that adds a building costs the engine ~160-480 ms whatever its spawn took
     -- (4-42 ms), and at OBJ_BUDGET_MS the near ring came one object a frame (PC flight D 2026-10-31, after the jump)
     objects.BURSTING = true
@@ -816,8 +891,10 @@ local function onUpdate(dtReal)
     return
   end
   if forest.nearPending() then
+    if not mayChange() then return end
     st.act = 'near forest'
     forest.step(clock, M.FOREST_BUDGET_MS)
+    changed()
     return
   end
   if st.objRec and st.objRec.t0 and not st.objRec.nearMs then
@@ -832,13 +909,17 @@ local function onUpdate(dtReal)
     end
   end
   if st.job then
-    st.act = 'window files'
-    if runJob(st.job, M.BUDGET_MS) then
-      local job = st.job
-      st.job = nil
-      if not job.failed then st.act = 'terrain swap'; apply(job, 'move') end
+    -- the files in Lua, a few ms a frame (no scene change); the swap itself waits for the gate, alone in its frame
+    if not st.job.done then
+      st.act = 'window files'
+      if runJob(st.job, M.BUDGET_MS) then st.job.done = true end
+      return          -- the objects wait for a frame without window work
     end
-    return            -- the objects wait for a frame without window work
+    if not mayChange() then return end
+    local job = st.job
+    st.job = nil
+    if not job.failed then st.act = 'terrain swap'; apply(job, 'move'); changed() end
+    return
   end
   -- the objects
   if M.BURST_EVERY_MS > 0 and (objects.pending() or forest.pending() or objects.farPending()) then
@@ -848,6 +929,8 @@ local function onUpdate(dtReal)
     local nq = objects.addsQueued()
     if nq > M.BURST_QUEUE_REF then every = math.max(M.BURST_EVERY_SLOW_MS, every * M.BURST_QUEUE_REF / nq) end
     if clock() - (st.lastBurst or -1e9) < every then st.act = 'wait burst'; return end
+    if not mayChange() then return end
+    changed()
     st.lastBurst = clock()
     st.act = 'burst'
     local t0 = clock()
@@ -863,22 +946,34 @@ local function onUpdate(dtReal)
     if left > 0 and objects.farPending() then objects.stepFar(clock, left) end
     return
   end
+  if (objects.pending() or forest.pending() or (objects.farPending() and not st.objRec)) and not mayChange() then
+    return
+  end
   if objects.pending() then
     st.act = 'objects'
     objects.step(clock, M.OBJ_BUDGET_MS)
     if objects.farPending() then objects.stepFar(clock, M.FAR_EVERY_MS) end
+    changed()
   elseif forest.pending() then
     st.act = 'forest'
     forest.step(clock, M.FOREST_BUDGET_MS)
+    changed()
   elseif st.objRec then
     perfLine(st.objRec)
     st.objRec = nil
   elseif not objects.farPending() then
+    -- old far tiles whose cover came late (the Ticino server's far tiles)
+    if objects.farDoomedLeft() and mayChange() and objects.dropCovered(clock) > 0 then
+      st.act = 'far drop'
+      changed()
+      return
+    end
     st.act = 'prefetch'
     if objects.prefetch(1) == 0 then forest.prefetch(cx, cy, 1) end
   else
     st.act = 'far'
     objects.stepFar(clock, M.FAR_BUDGET_MS)
+    changed()
   end
 end
 
@@ -985,6 +1080,21 @@ M.onUpdate = function(dtReal)
   local t = clock()
   onUpdate(dtReal)
   if st then st.luaMs = clock() - t end
+end
+-- even frame pacing (pace.lua): after physics, before the frame is drawn; the frame's own time without the wait
+M.onPreRender = function(dtReal, dtSim)
+  if not st then return end
+  local now = clock()
+  if M.PACING and st.paceLast and (dtSim or 0) > 0 then
+    local wait = st.pacer:step(now - st.paceLast)
+    if wait > 0 then
+      if not pace.sleep(wait) then M.PACING = false; log('W', 'ticino', 'no socket.sleep: frame pacing off') end
+      now = clock()
+    end
+  elseif (dtSim or 0) <= 0 then
+    st.pacer:reset()
+  end
+  st.paceLast = now
 end
 M.onClientPostStartMission = onClientPostStartMission
 M.onClientEndMission = onClientEndMission

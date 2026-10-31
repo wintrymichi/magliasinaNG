@@ -913,6 +913,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   2-8 objects each (road_wear, road_m3, skin pieces, slowest spawn 10-36 ms). The slow-frame line now gives the sum
   of the spawns and the streamer's own Lua time of that frame (st.luaMs): frame minus Lua = engine, to tell before
   guessing (shadow cache redraw, material first use, collision).
+- PC tests of d945d41 (2026-10-31): sun shadows off (113 fps) and NEAR_BURST_MS 150 (worse, a 579 ms frame) did not
+  remove the 2-3 frames of 450-580 ms that add 3-7 objects (Lua 40-50 ms, the rest engine). Hypothesis "PNG textures
+  cooked on first sight" (1,838 PNGs, 578 Mpx outside the warm-up's mp_ch_/mp_fuel_) was WRONG on disk: the flights
+  wrote only temp/art/terrainMaterialCache/<hash>.dds (one per terrain swap, part of its ~230 ms). The slow frames are
+  a first use per SESSION: gone on a second flight in the same session, back after a restart. Next: tell material
+  first use from shape first use (jump to another zone first, then fly).
+  It was neither: spawning in Bellinzona and arriving in Manno later, Manno (first visit) had no slow frame, and the
+  8 frames (125-483 ms, 4-8 objects each) always came in the 2 s right AFTER the first jump's map.reset frame (28-32 s),
+  wherever that was; the AI map is read once a session (later jumps keep it), hence "first use per session". Not
+  dropAIRoads either (same frames with DROP_AI_ROADS false, which costs 0.7-1 s a terrain swap). beamng.log shows only
+  "GpuCull| registry: <n> instances" lines in those seconds (the engine rebuilding its GPU culling registry). stream.lua
+  now keeps the game paused RESET_HOLD_MS (3 s) after that map.reset while the streamer goes on, so the tail passes
+  in the pause. Read the frames before a slow frame too: a 30 s frame just before it is the likelier cause.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
@@ -1725,6 +1738,35 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   to be force-cancelled: a plain cancel left it running; it stopped at its first step, nothing uploaded). Before
   pushing a merge of ticino, check whether it brings changes to all_stamp.txt, helper/** or install/**.
 
+## Stutters of the Ticino and what BeamNG.Earth does about them (thread "Eliminare gli scatti del Ticino", 2026-11-01)
+
+- BeamNG.Earth (github.com/TecnaGamer/BeamNG.Earth, MIT) clones fine with `git clone --depth 1` in the cloud. Its
+  answers to the same problem: (1) governor.lua: streaming gets ~2 ms a frame from a token bucket, and a heavy step
+  (terrain commit) runs alone with 2 quiet frames before and after, because the engine moves the world by a smoothed
+  frame time (median of 3 + slow average): a LONE slow frame is dropped (a hitch, game speed right), two or more in a
+  row pass and the game runs slow then fast. Our PC flights had 8 "near objects" bursts in 1.6 s, one EVERY frame,
+  exactly the bad pattern. (2) framepacer.lua: frames shorter than the recent 70th percentile sleep the rest
+  (socket.sleep in onPreRender), on by default, costs up to a tenth of the fps. (3) server/staging.py: temporary files
+  outside the user folder (the game's file watchers fire for every file made or renamed in it, up to ~1 s a frame)
+  and one read of every new file on Windows before the game opens it (the antivirus scan of a first open cost the
+  game 20-184 ms a tile file). (4) TerrainBlock castShadows 0 (every block move redrew the cached sun shadow map). (5)
+  pooled shape and Material names (the frame cost grows ~0.3 ms per 1000 distinct shape files ever loaded in a
+  session: "long sessions get more stuttery"). Not ported: (5) needs the server to serve fixed slot paths.
+- Ported (ticino/pace.lua, stream.lua): the gate (every scene-changing step: near objects, bursts, forest, collision
+  cells, rebuilds, the terrain swap waits for QUIET=2 calm frames, open while paused, CALM_TIMEOUT 30 frames), the
+  pacer (settings "pacing"), engine subsystems in the slow-frame lines (Engine.Debug.getLastPerformanceMetrics), the
+  helper/server write_atomic with staging + warm read, terrainShadows as a setting (default still on: mountain
+  shadows must be checked in screenshots first). The window job's files and its swap are now in different frames.
+- Forest frames (~200 ms a touch "whatever it adds", PC 2026-10-30/31) fit BeamNG.Earth trees.lua: a frame adding or
+  removing Forest items costs the engine ~0.5 us for every item in the level of each SHAPE touched (any Forest), and a
+  pass touches nearly all 43 tree shapes. Earth splits the populations with SHAPE_VARIANTS path spellings
+  (dir/./name). forest.SHAPE_VARIANTS (default 1 = off) does it per block; to be checked on the PC with 4 (frames, and
+  no imposter squares: a respelled path may need its own imposter bake).
+- tests/sim_stream.lua cannot judge the gate: its frame "wall time" is the Lua's CPU time, so every frame is calm;
+  it only proves no Lua error and the same throughput (2,402 vs 2,406 objects in 120 s with SPAWN_MS=30).
+  tests/pace_test.lua emulates the engine's filter for the effect. sim_stream needs a level: curl ticino_base_1.zip
+  and ticino_ti_0_0_1.zip from the public pre-release ticino-v1 (2.1 GB, ~1 min) and unzip both into one folder.
+
 ## Shapes compiled to .cdae (beamng/ticino/dae2cdae.py, 2026-10-29)
 
 - The zones' shapes are all bng.write_dae files (one node `<name>_a<size>` per detail level, one <triangles> per
@@ -1802,3 +1844,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - A new server flag (--game-pid) was merged into the installer while server_ticino.zip on the release was still built
   without it: the shortcut would have started a server that stops at once (argparse error). Rebuild the exe (exe_stamp)
   in the same round as any installer change that passes a new flag.
+
+## View distance of Ticino (farlod.py, objects.lua FAR_LOD, 2026-11-01)
+
+- Up to ticino 8008a51 nothing stood past the far tiles (16 tiles of 384 m, ~6 km) and LevelInfo.visibleDistance was
+  12 km: the mountains ended in the sky. farlod.py (run by region_base.py) makes 3,377 coarse tiles (levels 2-5: 1.5 /
+  3 / 6 / 12 km, 33 x 33 vertices like a far tile) from the 39,300 far tiles (read by HTTP range from the slice zips in
+  ~90 s), ~300 MB raw, ~107 MB zipped in the base; objects.lua shows them as BeamNG.Earth's quadtree (~500 more drawn
+  tiles). stream.lua sets visibleDistance 60 km and haze 6e-5 (settings viewKm, fog) only when the base has them.
+- A far tile's .cdae vertices are reordered by the writer (cdae first_use) and the skirt repeats the border's xy 4 m
+  lower: read a far tile by the xy of its vertices, keeping the highest z, never by vertex index.
+- First Lua version, checked by tests/far_lod.lua (every far tile covered exactly once each frame): at a teleport the
+  old coarse tile under the new terrain window stayed drawn with the terrain (64 tiles doubled). Coarse tiles that
+  reach into the window are hidden now (a few holes round a jump while the new far tiles come, never two layers).
+- Not tested in the game yet (2026-11-01): FPS with ~500 more static tiles and 60 km view, and whether the borders
+  between levels show (each coarse border vertex is the highest far height of its stretch, skirt down to the lowest).
+

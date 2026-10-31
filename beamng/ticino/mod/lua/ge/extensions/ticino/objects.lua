@@ -642,33 +642,153 @@ function M.colDirty() return S and S.colDirty end
 function M.markColDirty() if S then S.colDirty = true end end
 function M.colCell() return S and S.col.cell end
 
--- Far ground: spawn the tiles within farRadius of (cx, cy) that are not there, delete the ones 2 beyond it,
--- and hide the ones inside the terrain window (window origin wcx, wcy in tiles, n tiles a side).
-function M.updateFar(cx, cy, wcx, wcy, n)
-  local R = S.cfg.farRadius or 16
-  local deleted = 0
-  for key, f in pairs(S.farLive) do
-    if math.max(math.abs(f.cx - cx), math.abs(f.cy - cy)) > R + 2 then
-      delete(f.id)
-      S.farLive[key] = nil
-      deleted = deleted + 1
+-- Far ground. Without far levels (stream.json farLod, farlod.py): the far tiles within farRadius of (cx, cy), deleted
+-- 2 beyond it. With them (FAR_LOD): a quadtree as BeamNG.Earth's far field (farfield.lua, MIT licence): a level k tile
+-- (2^k far tiles a side, k = 2..5) is split while it is within LOD_D[k] far tiles of the car's tile, a level 2 tile
+-- straight into its 16 far tiles; so the far tiles reach about as far as farRadius and the coarse ones the whole map,
+-- ~150 tiles a level. A tile no longer wanted stays until every wanted tile over its square is made, and the new
+-- tiles over a square still covered by an old one are made hidden and shown in the frame the old one goes: never a
+-- hole, never two layers drawn (dropCovered). The far tiles inside the terrain window are hidden (window origin wcx,
+-- wcy in tiles, n tiles a side); the coarse ones never reach it (LOD_D[2] >= the window's reach).
+M.FAR_LOD = true            -- use the far levels when the base has them
+M.FARLOD_FILE = '/levels/%s/farlod/l%d_%d_%d.cdae'
+M.FARLOD_INDEX = '/levels/%s/farlod/farlod.json'
+M.LOD_D2 = nil              -- far tiles from the car's tile within which a level 2 tile is split (nil: farRadius - 2)
+M.LOD_GROW = 2.0            -- LOD_D[k + 1] = LOD_D[k] * this (a fixed number of tiles per level's ring)
+M.DROP_EVERY_MS = 100       -- how often the old tiles are checked for being covered
+
+local function lodSetup()
+  if S.lod ~= nil then return S.lod end
+  S.lod = false
+  if not M.FAR_LOD then return false end
+  local idx = S.cfg.farLod
+  if type(idx) ~= 'table' then
+    local text = readFile(string.format(M.FARLOD_INDEX, S.level))
+    local ok, t = pcall(jsonDecode, text or '')
+    idx = ok and type(t) == 'table' and t or nil
+  end
+  if not idx then return false end
+  local L = { has = {}, levels = {}, size = {}, D = {} }
+  for ks, keys in pairs(idx) do
+    local k = tonumber(ks)
+    if k and k >= 2 and type(keys) == 'table' then
+      L.has[k] = {}
+      for _, key in ipairs(keys) do L.has[k][key] = true end
+      L.levels[#L.levels + 1] = k
+      L.size[k] = 2 ^ k
     end
   end
-  -- the missing tiles, nearest first; made a few a frame by stepFar (a first-time far shape is converted by the game:
-  -- making all 1,000 at once took 7.8 s at the first jump)
+  table.sort(L.levels)
+  if #L.levels == 0 or L.levels[1] ~= 2 then return false end
+  for i = 2, #L.levels do if L.levels[i] ~= L.levels[i - 1] + 1 then return false end end
+  L.top = L.levels[#L.levels]
+  local d2 = M.LOD_D2 or math.max(7, (S.cfg.farRadius or 16) - 2)
+  for _, k in ipairs(L.levels) do L.D[k] = math.floor(d2 * M.LOD_GROW ^ (k - 2) + 0.5) end
+  S.lod = L
+  log('I', 'ticino', string.format('far levels %d..%d: split within %d / %d / %d / %d far tiles', L.levels[1], L.top,
+    L.D[2] or -1, L.D[3] or -1, L.D[4] or -1, L.D[5] or -1))
+  return L
+end
+
+local function parse2(key)
+  local a, b = key:match('^(%-?%d+)_(%-?%d+)$')
+  return tonumber(a), tonumber(b)
+end
+
+-- the square of a far entry in far tiles: x0, y0, x1, y1 (inclusive)
+local function farSquare(f)
+  if f.k == 0 then return f.cx, f.cy, f.cx, f.cy end
+  local s = S.lod.size[f.k]
+  return f.cx * s, f.cy * s, f.cx * s + s - 1, f.cy * s + s - 1
+end
+
+local function sqDist(cx, cy, x0, y0, x1, y1)
+  return math.max(math.max(0, x0 - cx, cx - x1), math.max(0, y0 - cy, cy - y1))
+end
+
+-- the wanted far entries round the car's tile: key -> { key, k, cx, cy, d } (k 0: a far tile)
+local function lodWant(cx, cy)
+  local L, want = S.lod, {}
+  local function visit(k, i, j)
+    local s = L.size[k]
+    local x0, y0 = i * s, j * s
+    local d = sqDist(cx, cy, x0, y0, x0 + s - 1, y0 + s - 1)
+    if d <= L.D[k] then
+      if k > 2 then
+        local h = L.has[k - 1]
+        for jj = 2 * j, 2 * j + 1 do
+          for ii = 2 * i, 2 * i + 1 do
+            if h[ii .. '_' .. jj] then visit(k - 1, ii, jj) end
+          end
+        end
+      else
+        for ty = y0, y0 + s - 1 do
+          for tx = x0, x0 + s - 1 do
+            local key = tx .. '_' .. ty
+            if S.farHas[key] then
+              want[key] = { key, 0, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) }
+            end
+          end
+        end
+      end
+    else
+      local key = 'l' .. k .. '_' .. i .. '_' .. j
+      want[key] = { key, k, i, j, d }
+    end
+  end
+  for key in pairs(L.has[L.top]) do
+    local i, j = parse2(key)
+    visit(L.top, i, j)
+  end
+  return want
+end
+
+local function farApplyHidden(f)
+  local h = (f.win or f.pend) and true or false
+  if h ~= f.hidden then
+    local o = scenetree.findObjectById(f.id)
+    if o then o:setHidden(h) end
+    f.hidden = h
+  end
+end
+
+function M.updateFar(cx, cy, wcx, wcy, n)
+  local deleted = 0
+  S.farArgs = { cx, cy, wcx, wcy, n }
+  S.farWin = { wcx, wcy, n }
   local want = {}
-  for ty = cy - R, cy + R do
-    for tx = cx - R, cx + R do
-      local key = tx .. '_' .. ty
-      if S.farHas[key] and not S.farLive[key] and files.far(key) then
-        want[#want + 1] = { key, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) }
+  if lodSetup() then
+    want = lodWant(cx, cy)
+    S.farWant = want
+    S.farDoomed = {}
+    for key, f in pairs(S.farLive) do
+      if not want[key] then S.farDoomed[key] = f end
+    end
+    S.dropAt = nil
+  else
+    local R = S.cfg.farRadius or 16
+    for key, f in pairs(S.farLive) do
+      if math.max(math.abs(f.cx - cx), math.abs(f.cy - cy)) > R + 2 then
+        delete(f.id)
+        S.farLive[key] = nil
+        deleted = deleted + 1
+      end
+    end
+    for ty = cy - R, cy + R do
+      for tx = cx - R, cx + R do
+        local key = tx .. '_' .. ty
+        if S.farHas[key] then want[key] = { key, 0, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) } end
       end
     end
   end
-  table.sort(want, function(a, b) return a[4] < b[4] end)
-  S.farQueue, S.farPos = want, 1
-  S.farArgs = { cx, cy, wcx, wcy, n }
-  S.farWin = { wcx, wcy, n }
+  -- the missing ones, nearest first; made a few a frame by stepFar (a first-time far shape is converted by the game:
+  -- making all 1,000 at once took 7.8 s at the first jump)
+  local q = {}
+  for key, w in pairs(want) do
+    if not S.farLive[key] and (w[2] > 0 or files.far(key)) then q[#q + 1] = w end
+  end
+  table.sort(q, function(a, b) if a[5] ~= b[5] then return a[5] < b[5] end return a[1] < b[1] end)
+  S.farQueue, S.farPos = q, 1
   for _, f in pairs(S.farLive) do M._farHide(f) end
   return deleted
 end
@@ -676,36 +796,147 @@ end
 function M._farHide(f)
   local w = S.farWin
   if not w then return end
-  local inside = f.cx >= w[1] and f.cx < w[1] + w[3] and f.cy >= w[2] and f.cy < w[2] + w[3]
-  if inside ~= f.hidden then
-    local o = scenetree.findObjectById(f.id)
-    if o then o:setHidden(inside) end
-    f.hidden = inside
+  if f.k == 0 then
+    f.win = f.cx >= w[1] and f.cx < w[1] + w[3] and f.cy >= w[2] and f.cy < w[2] + w[3] or false
+  else
+    -- a coarse tile is never wanted over the window, but an old one (a jump) may still be there: hidden under the
+    -- terrain, or both would be drawn
+    local x0, y0, x1, y1 = farSquare(f)
+    f.win = x0 < w[1] + w[3] and w[1] <= x1 and y0 < w[2] + w[3] and w[2] <= y1 or false
   end
+  farApplyHidden(f)
 end
 
--- Make queued far tiles for at most budgetMs; returns the number made.
+-- Is every wanted entry over the square of f made (or with no file at all)?
+local function covered(f)
+  local want, live, L = S.farWant or {}, S.farLive, S.lod
+  local x0, y0, x1, y1 = farSquare(f)
+  -- a coarser wanted tile over it
+  for _, k in ipairs(L.levels) do
+    if k > f.k then
+      local s = L.size[k]
+      local key = 'l' .. k .. '_' .. math.floor(x0 / s) .. '_' .. math.floor(y0 / s)
+      if want[key] then return live[key] ~= nil end
+    end
+  end
+  -- finer wanted tiles inside it
+  local function inner(k, i, j)
+    if k == 0 then
+      local key = i .. '_' .. j
+      if want[key] and not live[key] then return false end
+      return true
+    end
+    local key = 'l' .. k .. '_' .. i .. '_' .. j
+    if want[key] then return live[key] ~= nil end
+    if not L.has[k][i .. '_' .. j] then return true end
+    if k > 2 then
+      for jj = 2 * j, 2 * j + 1 do
+        for ii = 2 * i, 2 * i + 1 do
+          if not inner(k - 1, ii, jj) then return false end
+        end
+      end
+    else
+      local s = L.size[2]
+      for ty = j * s, j * s + s - 1 do
+        for tx = i * s, i * s + s - 1 do
+          if not inner(0, tx, ty) then return false end
+        end
+      end
+    end
+    return true
+  end
+  if f.k == 0 then return true end      -- a far tile no coarser tile is wanted over: beyond the map's levels
+  if f.k > 2 then
+    for jj = 2 * f.cy, 2 * f.cy + 1 do
+      for ii = 2 * f.cx, 2 * f.cx + 1 do
+        if not inner(f.k - 1, ii, jj) then return false end
+      end
+    end
+  else
+    for ty = y0, y1 do
+      for tx = x0, x1 do
+        if not inner(0, tx, ty) then return false end
+      end
+    end
+  end
+  return true
+end
+
+local function overlaps(a, b)
+  local ax0, ay0, ax1, ay1 = farSquare(a)
+  local bx0, by0, bx1, by1 = farSquare(b)
+  return ax0 <= bx1 and bx0 <= ax1 and ay0 <= by1 and by0 <= ay1
+end
+
+-- The old far entries that are covered go, and the new ones they hid are shown, in the same frame. Returns the number
+-- deleted. clock/force: at most every DROP_EVERY_MS unless force.
+function M.dropCovered(clock, force)
+  if not (S and S.lod and S.farDoomed) then return 0 end
+  local now = clock and clock() or 0
+  if not force and S.dropAt and now - S.dropAt < M.DROP_EVERY_MS then return 0 end
+  S.dropAt = now
+  local gone, left = {}, false
+  for key, f in pairs(S.farDoomed) do
+    if S.farLive[key] ~= f then S.farDoomed[key] = nil
+    elseif covered(f) then gone[#gone + 1] = key
+    else left = true end
+  end
+  for _, key in ipairs(gone) do
+    local f = S.farDoomed[key]
+    S.farDoomed[key] = nil
+    S.farLive[key] = nil
+    delete(f.id)
+  end
+  -- the hidden new ones that no old entry overlaps any more
+  for _, f in pairs(S.farLive) do
+    if f.pend then
+      local still = false
+      if left then
+        for _, d in pairs(S.farDoomed) do
+          if overlaps(f, d) then still = true; break end
+        end
+      end
+      if not still then f.pend = nil; farApplyHidden(f) end
+    end
+  end
+  S.stats.farDropped = (S.stats.farDropped or 0) + #gone
+  return #gone
+end
+
+-- Make queued far entries for at most budgetMs; returns the number made.
 function M.stepFar(clock, budgetMs)
   local t0, made = clock(), 0
   local q = S.farQueue
   while S.farPos <= #q do
     local w = q[S.farPos]
     S.farPos = S.farPos + 1
-    local key, tx, ty = w[1], w[2], w[3]
+    local key, k, tx, ty = w[1], w[2], w[3], w[4]
     if not S.farLive[key] then
       local ts = clock()
+      local cfg = S.cfg
+      local tm = cfg.cell * cfg.square
+      local s = k == 0 and 1 or S.lod.size[k]
+      -- a new entry over a square an old one still covers is made hidden (shown by dropCovered)
+      local f = { cx = tx, cy = ty, k = k, hidden = false, win = false }
+      local pend = false
+      if S.farDoomed then
+        for _, d in pairs(S.farDoomed) do
+          if overlaps(f, d) then pend = true; break end
+        end
+      end
       local o = createObject('TSStatic')
-      o:setField('shapeName', 0, files.map(string.format(M.FAR_SHAPE, S.level, tx, ty)))
+      o:setField('shapeName', 0, k == 0 and files.map(string.format(M.FAR_SHAPE, S.level, tx, ty))
+        or string.format(M.FARLOD_FILE, S.level, k, tx, ty))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
       o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
       o.canSave = false
-      local cfg = S.cfg
-      o:setPosition(vec3(cfg.origin[1] + tx * cfg.cell * cfg.square, cfg.origin[2] + ty * cfg.cell * cfg.square, 0))
+      o:setPosition(vec3(cfg.origin[1] + tx * s * tm, cfg.origin[2] + ty * s * tm, 0))
+      if pend then o:setHidden(true) end
       o:registerObject('')
       S.group:addObject(o)
       fresh(o:getID())
-      local f = { id = o:getID(), cx = tx, cy = ty, hidden = false }
+      f.id, f.hidden, f.pend = o:getID(), pend, pend or nil
       S.farLive[key] = f
       M._farHide(f)
       made = made + 1
@@ -714,7 +945,16 @@ function M.stepFar(clock, budgetMs)
     end
     if budgetMs and clock() - t0 > budgetMs then break end
   end
+  if made > 0 and S.lod then M.dropCovered(clock, S.farPos > #q) end
   return made
+end
+
+function M.hasFarLod() return S ~= nil and lodSetup() and true or false end
+
+-- old far entries still waiting for their cover
+function M.farDoomedLeft()
+  if not (S and S.farDoomed) then return false end
+  return next(S.farDoomed) ~= nil
 end
 
 function M.farPending() return S and S.farPos <= #S.farQueue end
@@ -757,7 +997,7 @@ function M.clear()
   if S.col.job then for _, id in ipairs(S.col.job.ids) do delete(id) end end
   S.col.live, S.col.cell, S.col.job, S.col.queue, S.col.liveTris, S.col.tris = {}, nil, nil, {}, {}, 0
   S.live, S.farLive, S.queue, S.qpos, S.delFrom = {}, {}, {}, 1, nil
-  S.farQueue, S.farPos = {}, 1
+  S.farQueue, S.farPos, S.farDoomed, S.farWant = {}, 1, nil, nil
 end
 
 -- A long jump: delete every streamed object at once (the far ground and the collision cells stay: updateFar and
@@ -782,11 +1022,18 @@ function M.stats()
     live = live + 1
     if l.col then col = col + 1 end
   end
-  local far = 0
-  for _ in pairs(S.farLive) do far = far + 1 end
+  local far, farLod, farHidden = 0, 0, 0
+  for _, f in pairs(S.farLive) do
+    far = far + 1
+    if (f.k or 0) > 0 then farLod = farLod + 1 end
+    if f.hidden then farHidden = farHidden + 1 end
+  end
+  local doomed = 0
+  for _ in pairs(S.farDoomed or {}) do doomed = doomed + 1 end
   local cells = 0
   for _ in pairs(S.col.live) do cells = cells + 1 end
-  return { live = live, colliders = col, far = far, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
+  return { live = live, colliders = col, far = far, farLod = farLod, farHidden = farHidden, farDoomed = doomed,
+           farDropped = S.stats.farDropped or 0, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
            deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead,
            colFailed = S.col.failed or 0, colTris = S.col.tris or 0, colFfi = hasFfi and not S.col.noFfi }
 end

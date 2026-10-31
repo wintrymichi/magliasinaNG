@@ -6,8 +6,8 @@ BeamNG level, `ticino`, streamed around the car. It is built by the same pipelin
 buildings, the survey's roads, walls, pavements, bridges, tunnels, motorways, forest, signs and traffic signals.
 The two maps are separate mods and can be installed together: nothing here changes the Malcantone level.
 
-Branch: `ticino`. Status: public pre-release `ticino-v1` since 2026-10-31 (the builds stay on drafts until copied there,
-`ticino_publish.yml`; see "State" at the end).
+Branch: `ticino`. Status: public pre-release **`ticino-v1`** (releases/tag/ticino-v1, copied from the draft builds by
+`ticino_publish.yml`; the Malcantone v3.1.1 stays the latest release). See "State" at the end for what is still open.
 
 ## Install (Windows)
 
@@ -15,7 +15,8 @@ Needs BeamNG.drive 0.40.x from Steam, about **52 GB** free on the disk of the Be
 about 15 GB more that the game fills with its cache of the level as you drive, 16 GB of RAM (32 GB recommended) and
 a GPU with 8 GB of video memory or more.
 
-1. Download `installer_ticino.zip` from the release and unpack it anywhere.
+1. Download `installer_ticino.zip` from the release [ticino-v1](https://github.com/wintrymichi/magliasinaNG/releases/tag/ticino-v1)
+   and unpack it anywhere (or use the Ticino app, `TicinoServer.exe`, from the same release).
 2. Close BeamNG and double-click **`Install Ticino.bat`**.
 
 The installer (`install/install_ticino.ps1`):
@@ -42,7 +43,8 @@ Options: `-Mode auto|server|packs`, `-DataFolder <path>` (server mode: where the
 it would do), `-DeleteOld`, `-NoHelper`, `-NoShortcut`, `-KeepCache`,
 `-UserFolder <path>` (another BeamNG user folder), `-GameFolder <path>` (BeamNG not in a Steam library),
 `-Tag <release>`, `-Uninstall` (removes the zips, the cache, the tools and the shortcut; keeps the settings).
-A draft release can only be downloaded with the GitHub CLI logged in (`gh auth login`); a published one needs nothing.
+The public release needs nothing; a draft (`-Tag ticino-all-cdae`, test builds) only with the GitHub CLI logged in
+(`gh auth login`).
 
 Run the installer again to update. Linux or by hand: put every `ticino_*.zip` of the release into
 `<user folder>/mods`, nothing else is needed (the helper runs with `python3 helper/ticino_helper.py`).
@@ -57,7 +59,7 @@ date from the GitHub release (the public pre-release `ticino-v1` by default; a d
 | Page | What it does |
 |---|---|
 | Home | server state (tiles ready, cache, shapes converted, where the car is), **Play** (server + BeamNG straight into the map; in packs mode BeamNG and the helper, as Start Ticino), the game and user folders, warnings (zones still in `mods`, with **Move** to the packs folder, which turns packs mode into server mode; a base pack without the server's Lua) |
-| Graphics | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json` only where they differ from the mod's own values, kept fields it does not know |
+| Graphics | quality Low / Medium / High / Custom, the horizon (`viewKm`, 12-80 km), haze (`fog`), far ground levels (`objects.FAR_LOD`) and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json` only where they differ from the mod's own values, kept fields it does not know |
 | Downloads | the release (tag), the data folder (proposed as `<user>\ticino_data` like the installer when that disk has room, else the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, in packs mode `<user>\ticino_download\app`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download (off by default); a zone counts in the data folder or in `mods`, and a zip the installer has hashed (`ticino_download\checked.json`) is not hashed again; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` (packs mode: `ticino_download\old`) |
 | Server | cache size, conversion processes, terrain windows ahead, `.cdae`, start with Play / stop with the game / start with the app, the server's log; removes a leftover copy of the server's test Lua from the user folder |
 
@@ -100,9 +102,14 @@ when the level starts:
 | `preset` | `standard` (default), `light` | `standard` is the level as built and tested. `light` is for PCs with little video memory or a slow CPU: trees shown within 3 tiles (1.2 km) instead of 4, fewer of them at a distance, far ground to 10 tiles instead of 16. The near scene (roads, buildings, collision) stays the same. |
 | `helper` | `true` (default), `false` | use the helper process when it runs |
 | `diagnostics` | `false` (default), `true` | write `ticino_perf.csv` (every terrain move, timings) and `ticino_frames.csv` (frame times every 5 s) to the user folder |
-| `stream`, `objects`, `forest` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
+| `stream`, `objects`, `forest`, `pace` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua`, `pace.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
 | `level` | object of numbers | advanced: numbers of the level's `stream.json`, e.g. `{"level": {"farRadius": 20}}` |
 | `dynamicObjects` | `false` (default), `true` | create the streamed objects dynamic, as BeamNG.Earth does: costs about 5x the frame time standing in a town (each one is drawn into every shadow cascade); for tests only |
+| `pacing` | `true` (default), `false` | even frame pacing (from BeamNG.Earth): a frame shorter than the recent frames' 70th percentile waits the rest, so the frames come evenly and the game speed stays steady; costs a few fps; off below 30 fps |
+| `frameGate` | `true` (default), `false` | a frame that changes the scene (objects, trees, collision, a terrain move) runs only after two calm frames that changed nothing: each such frame stays a lone spike, which the game's smoothed clock drops instead of slowing down and catching up (the "scatti") |
+| `terrainShadows` | `true` (default), `false` | `false`: the terrain casts no sun shadows (BeamNG.Earth: each terrain move redrew the sun's shadow map, up to 1/3 s on slow GPUs); for tests until checked against screenshots of the mountains |
+| `viewKm` | `60` (default; `light` preset 25), `0` = the level's 12 km | how far the camera sees. The base carries the far ground in coarser levels to the whole of Ticino (`farlod/`, 1.5 / 3 / 6 / 12 km tiles beyond the 6 km of far tiles, ~500 more drawn tiles): without them in the base nothing changes |
+| `fog` | `6e-5` (default), `0` = the level's 1.3e-4 | haze density with the far levels: 45 % at 10 km, 70 % at 20 km, 90 % at 40 km |
 
 Advanced fields that were measured on the PC (October 2026), with their defaults:
 
@@ -167,6 +174,7 @@ All builds run on GitHub Actions (the cloud sessions cannot reach swisstopo), on
 | `ticino_tools.yml` | `install/**`, `helper/**`, `tools_release.txt` | `helper_ticino.zip` (exe) and `installer_ticino.zip` on the release named in `tools_release.txt` |
 | `ticino_gui.yml` | `gui/**` | `TicinoServer.exe` (the Windows app) with screenshots on the draft `ticino-app`; on `ticino` also `app_ticino.zip` on the tools release |
 | `ticino_helper.yml` | `helper/**` | test pack of the helper with the Lua as user-folder override, draft `ticino-helper` |
+| `ticino_publish.yml` | `publish.txt` | copies the 90 zips of the draft `ticino-all-cdae`, the installer (pointed at `ticino-v1`), helper, server and app to the public pre-release `ticino-v1` (not latest); change `publish.txt` and rerun to update it |
 
 The zone grid and what every zone shares (terrain heights, layers, forest and ground types) are fixed in
 `zones/ticino_plan.json` (`region_plan.py`; lists append only), so the slice jobs never need each other.
