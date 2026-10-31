@@ -904,7 +904,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   is 20 and the adaptive interval counts only the objects to make (addsQueued).
   PC flight of 83fabe4 (D, default): 94.2 fps, 87 frames over 50 ms (A: 1,030), 25 over 100 ms, no slow bursts, 2,231
   live at the end. E (one burst a second) 97.9 fps but the queue 3x behind: D stays the default. Left per 5 min flight:
-  ~9 forest frames ~250 ms, ~5 object frames ~450 ms (single heavy spawns), 6 terrain swaps ~250 ms, the jump.
+  ~9 forest frames ~190-250 ms (one per new 3x3 block, every ~1,150 m), ~5 object frames 160-479 ms, 6 terrain swaps
+  ~250 ms, the jump (swap 2.35 s: position 1.16 s + terrainFile 1.19 s). The object frames were the near ring after the
+  jump, ONE building a frame (OBJ_BUDGET_MS 3 and the one-heavy-object break) with spawns of only 4-42 ms: the frame cost
+  is the engine's per frame that adds a building. The near rings now get NEAR_BURST_MS (40) a frame with no heavy break.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.

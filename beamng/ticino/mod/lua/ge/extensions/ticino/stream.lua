@@ -37,6 +37,7 @@ local M = {}
 M.LEVEL = 'ticino'
 M.BUDGET_MS = 4            -- Lua time a frame for the next window's files
 M.OBJ_BUDGET_MS = 3        -- and for the objects' queue
+M.NEAR_BURST_MS = 40       -- for the objects of the near rings, in one frame (no one-heavy-object break)
 M.NEAR_RINGS = 1           -- the objects of the tiles this near the car's (Chebyshev) come before the window's files
 M.FAR_BUDGET_MS = 2        -- and for the far ground tiles
 M.FOREST_BUDGET_MS = 3     -- and for the forest items (forest.lua, also at most forest.PER_FRAME items)
@@ -786,7 +787,11 @@ local function onUpdate(dtReal)
   -- anything farther
   if objects.nearPending(M.NEAR_RINGS) then
     st.act = 'near objects'
-    objects.step(clock, M.OBJ_BUDGET_MS)
+    -- a whole burst a frame: each frame that adds a building costs the engine ~160-480 ms whatever its spawn took
+    -- (4-42 ms), and at OBJ_BUDGET_MS the near ring came one object a frame (PC flight D 2026-10-31, after the jump)
+    objects.BURSTING = true
+    objects.step(clock, M.NEAR_BURST_MS)
+    objects.BURSTING = false
     return
   end
   if forest.nearPending() then
