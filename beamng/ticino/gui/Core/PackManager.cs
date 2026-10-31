@@ -247,6 +247,63 @@ public sealed partial class PackManager : Observable
         catch { ZonesInMods = new(); }
         Raise(nameof(ZonesInMods));
         Raise(nameof(OldZips));
+        var places = PlaceNames();
+        foreach (var it in Items.Where(i => i.Kind == PackKind.Zone))
+            it.Place = places.TryGetValue(it.Zone, out var p) ? p : null;
+    }
+
+    /// <summary>Zone -> its biggest village, read from the spawn points in the base pack's info.json
+    /// ("ti_1_3_spawn_bellinzona"). A zone's first three spawns are the route's (spawn_magliaso, _mid, _pura: the
+    /// names of the Malcantone route, on the zone's main roads), then one per village by population.</summary>
+    Dictionary<string, string> PlaceNames()
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            string mods = BeamNG.Mods(cfg);
+            string? zip = Directory.Exists(mods)
+                ? Directory.EnumerateFiles(mods, "ticino_base_*.zip").OrderByDescending(x => x).FirstOrDefault() : null;
+            var baseItem = Items.FirstOrDefault(i => i.Kind == PackKind.Base);
+            if (zip is null && baseItem != null && ReadyPath(baseItem) is { } r && File.Exists(r)) zip = r;
+            if (zip is null) return map;
+            using var z = ZipFile.OpenRead(zip);
+            var e = z.GetEntry("levels/ticino/info.json");
+            if (e is null) return map;
+            using var sr = new StreamReader(e.Open());
+            var info = JsonNode.Parse(sr.ReadToEnd(), documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+            var route = new HashSet<string> { "magliaso", "mid", "pura" };
+            foreach (var sp in info?["spawnPoints"]?.AsArray() ?? new JsonArray())
+            {
+                string? n = sp?["objectname"]?.GetValue<string>();
+                int k = n?.IndexOf("_spawn_", StringComparison.Ordinal) ?? -1;
+                if (n is null || k < 0) continue;
+                string zone = n[..k], slug = n[(k + 7)..];
+                if (map.ContainsKey(zone) || route.Contains(slug)) continue;
+                if (slug.EndsWith("_paese")) slug = slug[..^6];
+                map[zone] = PlaceTitle(slug);
+            }
+        }
+        catch (Exception ex) { Log.Write("place names: " + ex.Message); }
+        return map;
+    }
+
+    /// <summary>"campione_d_italia" -> "Campione d'Italia", "roveredo_gr" -> "Roveredo (GR)". The spawn names are
+    /// ASCII slugs of swissNAMES3D, which names Lugano in Romansh too (Ligiaun: the spawn took that one).</summary>
+    public static string PlaceTitle(string slug)
+    {
+        if (slug == "ligiaun") return "Lugano";
+        var w = slug.Split('_', StringSplitOptions.RemoveEmptyEntries).ToList();
+        var o = new List<string>();
+        for (int i = 0; i < w.Count; i++)
+        {
+            string x = w[i];
+            string cap = char.ToUpper(x[0], Files.Culture) + x[1..];
+            if (x == "d" && i + 1 < w.Count) { o.Add("d'" + char.ToUpper(w[i + 1][0], Files.Culture) + w[i + 1][1..]); i++; }
+            else if (x == "s" && i == 0) o.Add("S.");
+            else if (i == w.Count - 1 && i > 0 && x is ("gr" or "ur" or "vs" or "ti")) o.Add("(" + x.ToUpperInvariant() + ")");
+            else o.Add(cap);
+        }
+        return string.Join(' ', o);
     }
 
     void UpdateSummary()

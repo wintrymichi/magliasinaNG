@@ -25,8 +25,12 @@ public sealed class PackItem : Observable
     {
         PackKind.Base => "Pacchetto base",
         PackKind.Server => "Programma del server",
-        _ => "Zona " + Zone.Replace("ti_", "").Replace('_', '.'),
+        _ => "Zona " + ZoneTitle(Zone) + (Place is null ? "" : " · " + Place),
     };
+
+    string? place;
+    /// <summary>The biggest village of the zone, from the spawn points of the base pack (null without one).</summary>
+    public string? Place { get => place; set { if (Set(ref place, value)) Raise(nameof(Title)); } }
 
     PackState state;
     public PackState State
@@ -83,4 +87,11 @@ public sealed class PackItem : Observable
         PackState.Error => "",       // error
         _ => "",
     };
+
+    /// <summary>ti_m1_0 -> "−1, 0" (column and row of the 1,920 m grid, m = minus).</summary>
+    static string ZoneTitle(string zone)
+    {
+        var parts = zone.Replace("ti_", "").Split('_');
+        return string.Join(", ", parts.Select(p => p.StartsWith('m') ? "\u2212" + p[1..] : p));
+    }
 }
