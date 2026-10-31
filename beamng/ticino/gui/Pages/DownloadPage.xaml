@@ -30,8 +30,8 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <StackPanel>
-                        <TextBlock x:Name="ReleaseTitle" Text="Release" FontSize="20" FontWeight="SemiBold"
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock x:Name="ReleaseTitle" Text="Release" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                         <TextBlock x:Name="SummaryText" Style="{StaticResource BodyText}" Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -67,7 +67,7 @@
                     <Button Content="Cambia…" Click="ChangeData_Click" Padding="14,6" />
                 </StackPanel>
             </c:SettingCard>
-            <c:SettingCard Glyph="&#xE7FC;" Header="Pacchetto base" x:Name="BaseCard"
+            <c:SettingCard Glyph="&#xE7B8;" Header="Pacchetto base" x:Name="BaseCard"
                            Description="Il pacchetto base (scena, materiali, mod) va nella cartella mods di BeamNG." />
             <c:SettingCard Glyph="&#xE77B;" Header="Release" Description="Il tag della release su GitHub da cui scaricare.">
                 <TextBox x:Name="TagBox" Width="200" LostFocus="Tag_LostFocus" KeyDown="Tag_KeyDown" />

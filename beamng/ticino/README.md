@@ -40,6 +40,25 @@ A draft release can only be downloaded with the GitHub CLI logged in (`gh auth l
 Run the installer again to update. Linux or by hand: put every `ticino_*.zip` of the release into
 `<user folder>/mods`, nothing else is needed (the helper runs with `python3 helper/ticino_helper.py`).
 
+## Ticino Server app (Windows)
+
+`TicinoServer.exe` (`gui/`, `app_ticino.zip` on the release) is the map's Windows app: one self-contained exe (.NET 10,
+WPF with the Fluent theme of Windows 11), nothing to install. It runs the server mode (the zone packs outside `mods`,
+see the server's own README) and keeps everything up to date from the GitHub release:
+
+| Page | What it does |
+|---|---|
+| Home | server state (tiles ready, cache, shapes converted, where the car is), **Gioca** (server + BeamNG straight into the map), the game and user folders, warnings (zones still in `mods`, a base pack without the server's Lua) |
+| Grafica | quality Low / Medium / High / Custom and the draw distance of trees (`forest.RADIUS`), far ground (`level.farRadius`), buildings, roads and walls, details (`objects.GROUP_R`, by path prefix), helper, bursts, diagnostics: written to `settings\ticino.json`, kept fields it does not know |
+| Download e aggiornamenti | the release (tag), the data folder (proposed on the drive with the most free space; a new one moves the zips), resumable downloads (`<data>\.download\*.part`, 3 at a time) checked by sha256, automatic check at start and every 6 h, automatic download; a downloaded zip (`*.ready`) goes into place only while the server and the game are closed (they keep the zips open), old zips are deleted or moved to `<data>\old` |
+| Server | cache size, conversion processes, terrain windows ahead, `.cdae`, start with Play / stop with the game / start with the app, the server's log; installs or removes the server's test Lua in the user folder while the base pack does not carry it |
+
+The zone packs go to the data folder, the base pack to `mods`, `server_ticino.zip` is unpacked into
+`%LOCALAPPDATA%\TicinoServer\server` (or `ticino_server.exe` beside the app is used). The app stops the server with
+Ctrl+C sent to its hidden console, so the server removes its files from the user folder as when stopped by hand.
+Its own settings and log: `%LOCALAPPDATA%\TicinoServer`. Built by `ticino_gui.yml` (draft `ticino-app`, with
+screenshots of every page in both themes from `TicinoServer.exe --screenshots <folder>`).
+
 ## Play
 
 Start with the desktop shortcut (BeamNG goes straight into the map, the helper starts beside it and stops with the
@@ -129,6 +148,7 @@ All builds run on GitHub Actions (the cloud sessions cannot reach swisstopo), on
 | `zone_build.yml` | `zone_stamp.txt` (zones in `zone_list.txt`) | the full pipeline for each zone (`MAGLIASO_ZONE`), zips on the draft `ticino-zones` |
 | `ticino_all.yml` | `all_stamp.txt` (zones in `all_list.txt`; `[all base]` in the commit message: base only) | per zone `region_slice.py` -> `ticino_<zone>_<n>.zip`, then `region_base.py` -> `ticino_base_<n>.zip` (scene, welded AI roads, signals, at most 6,000 parking spots, materials, info.json with every spawn, stream.json), on the draft `ticino-all` |
 | `ticino_tools.yml` | `install/**`, `helper/**`, `tools_release.txt` | `helper_ticino.zip` (exe) and `installer_ticino.zip` on the release named in `tools_release.txt` |
+| `ticino_gui.yml` | `gui/**` | `TicinoServer.exe` (the Windows app) with screenshots on the draft `ticino-app`; on `ticino` also `app_ticino.zip` on the tools release |
 | `ticino_helper.yml` | `helper/**` | test pack of the helper with the Lua as user-folder override, draft `ticino-helper` |
 
 The zone grid and what every zone shares (terrain heights, layers, forest and ground types) are fixed in

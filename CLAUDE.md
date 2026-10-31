@@ -1124,6 +1124,20 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Force-pushing this branch or merging another thread's branch into it was blocked: hand the branch over and let
   the integrator merge it.
 
+## Ticino Server app (beamng/ticino/gui, WPF .NET 10)
+
+- The cloud container cannot install the .NET SDK (dotnet-install.sh was refused): the app is compiled only by
+  ticino_gui.yml on a Windows runner, which also renders every page in both themes (`TicinoServer.exe --screenshots`)
+  to the draft release ticino-app (app_ticino_shots.zip): read the screenshots before handing a UI change over.
+- First CI build: CS0246 for HttpClient/FileInfo in `*_wpftmp.csproj`: the temporary project WPF compiles the XAML in
+  did not get the implicit usings. GlobalUsings.cs writes them out.
+- A keyed Style `BasedOn="{StaticResource {x:Type Slider}}"` in our own dictionary may not find the Fluent style at
+  load (crash at start): style controls inline, use DynamicResource for the Fluent brushes (a missing key only falls
+  back, it does not crash).
+- The Ticino build workflows (zone_build, ticino_all, ticino_region, ticino_test, ticino_tools, ticino_helper) had no
+  branch filter: the first push of a new thread branch based on ticino counts every file as changed against main and
+  would have started 87 zone builds. They now run only on `ticino`.
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs

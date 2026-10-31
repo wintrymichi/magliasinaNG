@@ -43,7 +43,7 @@
                 <ListBoxItem Tag="download" Padding="12,9">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Icon}" Text="&#xE896;" Margin="0,0,14,0" />
-                        <TextBlock Text="Download e aggiornamenti" FontSize="14" VerticalAlignment="Center" />
+                        <TextBlock Text="Download" FontSize="14" VerticalAlignment="Center" />
                         <Border x:Name="NavBadge" Background="{DynamicResource AccentFillColorDefaultBrush}" CornerRadius="8"
                                 Padding="6,0" Margin="8,0,0,0" MinWidth="16" Height="16" Visibility="Collapsed" VerticalAlignment="Center">
                             <TextBlock x:Name="NavBadgeText" FontSize="11" Foreground="White" HorizontalAlignment="Center"

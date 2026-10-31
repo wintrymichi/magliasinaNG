@@ -38,6 +38,8 @@ static class Screenshots
                     await Idle();
                     string name = $"{p}_{(theme == ThemeMode.Dark ? "dark" : "light")}.png";
                     Save(w, Path.Combine(folder, name));
+                    if (FullPage(w) is { } full)
+                        Render(full, Path.Combine(folder, $"{p}_full_{(theme == ThemeMode.Dark ? "dark" : "light")}.png"), w);
                     Console.WriteLine("shot " + name);
                 }
             }
@@ -50,9 +52,17 @@ static class Screenshots
         Application.Current.Shutdown(code);
     }
 
-    static void Save(Window w, string path)
+    /// <summary>The whole scrolled content of the page shown (for a look at what lies below the window).</summary>
+    static FrameworkElement? FullPage(MainWindow w)
     {
-        var root = (FrameworkElement)w.Content;
+        var page = (w.FindName("Page") as System.Windows.Controls.ContentControl)?.Content as System.Windows.Controls.UserControl;
+        return (page?.Content as System.Windows.Controls.ScrollViewer)?.Content as FrameworkElement;
+    }
+
+    static void Save(Window w, string path) => Render((FrameworkElement)w.Content, path, w);
+
+    static void Render(FrameworkElement root, string path, Window w)
+    {
         double dpi = 96 * 1.25;
         int pw = (int)(root.ActualWidth * dpi / 96), ph = (int)(root.ActualHeight * dpi / 96);
         var bg = w.TryFindResource("SolidBackgroundFillColorBaseBrush") as Brush
