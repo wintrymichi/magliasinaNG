@@ -221,6 +221,8 @@ local function canCollide(e)
 end
 
 -- Distance (Chebyshev, tiles) of tile (tx, ty) from (cx, cy); nil when there is no centre yet
+local clock_ = os.clock    -- the caller's ms clock (step/stepDels set it)
+
 local function dist(tx, ty, c)
   if not c then return math.huge end
   return math.max(math.abs(tx - c[1]), math.abs(ty - c[2]))
@@ -311,8 +313,10 @@ function M.retarget(cx, cy)
   end)
   local nCol = 0
   while nCol < #q and q[nCol + 1][5] < 0 do nCol = nCol + 1 end
+  local dFrom = #q + 1        -- the deletions of drawn objects are the tail of the queue (stepDels takes them from there)
+  while dFrom > nCol + 1 and q[dFrom - 1][5] == M.WAVE_DEL_AT do dFrom = dFrom - 1 end
   S.queue, S.qpos = q, 1
-  S.colQEnd = nCol
+  S.colQEnd, S.delFrom = nCol, dFrom
   S.cell = new
   return #q
 end
@@ -320,49 +324,75 @@ end
 -- Work through the queue for at most budgetMs (clock: ms function; nil: all of it, or up to the ring untilRing).
 -- Each entry brings one object to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing
 -- left to do). Returns true when the queue is empty.
+-- Bring one object to what the car's tile wants NOW (an entry queued for an earlier tile may have nothing left to do).
+-- Returns true when it spawned a heavy object.
+local function apply(op)
+  local key, e = op[1], op[2]
+  local colR = S.cfg.collisionRadius or 1
+  local d = dist(op[3], op[4], S.cell)
+  local want = d <= (e.r or 0)
+  local col = want and canCollide(e) and d <= colR
+  local l = S.live[key]
+  if l and (not want or l.col ~= col) then
+    delete(l.id)
+    S.live[key] = nil
+    S.stats.deleted = S.stats.deleted + 1
+    l = nil
+  end
+  if want and not l then
+    local ts = clock_()
+    local ok, id = pcall(spawn, e, col)
+    local dts = clock_() - ts
+    if dts > M.SLOW_SPAWN_MS then
+      log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
+    end
+    if dts > (S.stats.maxSpawn or 0) then S.stats.maxSpawn, S.stats.maxShape = dts, e.shapeName or e.class end
+    if ok and id then
+      S.live[key] = { id = id, col = col }
+      if col then S.colDirty = true; S.stats.colMade = (S.stats.colMade or 0) + 1 end
+      S.stats.created = S.stats.created + 1
+    else
+      S.stats.failed = S.stats.failed + 1
+      if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
+    end
+    return dts > M.SLOW_SPAWN_MS
+  end
+  return false
+end
+
+-- Work through the queue for at most budgetMs (clock: ms function; nil: all of it, or up to the ring untilRing).
+-- Returns true when the queue is empty.
 function M.step(clock, budgetMs, untilRing)
+  clock_ = clock
   local t0 = clock()
   local q = S.queue
-  local colR = S.cfg.collisionRadius or 1
   while S.qpos <= #q do
     local op = q[S.qpos]
     if untilRing and (op[5] or 0) > untilRing then break end
     S.qpos = S.qpos + 1
-    local key, e = op[1], op[2]
-    local heavy = false
-    local d = dist(op[3], op[4], S.cell)
-    local want = d <= (e.r or 0)
-    local col = want and canCollide(e) and d <= colR
-    local l = S.live[key]
-    if l and (not want or l.col ~= col) then
-      delete(l.id)
-      S.live[key] = nil
-      S.stats.deleted = S.stats.deleted + 1
-      l = nil
-    end
-    if want and not l then
-      local ts = clock()
-      local ok, id = pcall(spawn, e, col)
-      local dts = clock() - ts
-      if dts > M.SLOW_SPAWN_MS then
-        log('W', 'ticino', string.format('slow object %.0f ms: %s', dts, tostring(e.shapeName or e.class)))
-      end
-      heavy = dts > M.SLOW_SPAWN_MS
-      if dts > (S.stats.maxSpawn or 0) then S.stats.maxSpawn, S.stats.maxShape = dts, e.shapeName or e.class end
-      if ok and id then
-        S.live[key] = { id = id, col = col }
-        if col then S.colDirty = true; S.stats.colMade = (S.stats.colMade or 0) + 1 end
-        S.stats.created = S.stats.created + 1
-      else
-        S.stats.failed = S.stats.failed + 1
-        if S.stats.failed <= 20 then log('W', 'ticino', 'object not made: ' .. tostring(e.shapeName) .. ' ' .. tostring(id)) end
-      end
-    end
+    local heavy = apply(op)
     -- one heavy object a frame: a second one after it would add its cost to the same frame (with no budget, at a
     -- jump while the game is paused, the step goes on: it made one object of a new zone and left the rest crawling)
     if budgetMs and ((heavy and not M.BURSTING) or clock() - t0 > budgetMs) then break end
   end
   return S.qpos > #q
+end
+
+-- The deletions of drawn objects that went out of range, from the tail of the queue, for at most budgetMs: they wait
+-- behind every new object (WAVE_DEL_AT), and at 33 m/s with one burst a second they never came (PC flight B
+-- 2026-10-31: 10,649 live objects and 45,524 queued after 5 min). Returns the number done.
+function M.stepDels(clock, budgetMs)
+  clock_ = clock
+  local t0, n = clock(), 0
+  local q = S.queue
+  while #q >= math.max(S.delFrom or #q + 1, S.qpos) do
+    local op = q[#q]
+    q[#q] = nil
+    apply(op)
+    n = n + 1
+    if clock() - t0 > budgetMs then break end
+  end
+  return n
 end
 
 -- Read (at most n) tile files the next move may need, one ring beyond the largest radius, so that retarget finds them
@@ -687,7 +717,7 @@ function M.clear()
   for _, ids in pairs(S.col.live) do for _, id in ipairs(ids) do delete(id) end end
   if S.col.job then for _, id in ipairs(S.col.job.ids) do delete(id) end end
   S.col.live, S.col.cell, S.col.job, S.col.queue, S.col.liveTris, S.col.tris = {}, nil, nil, {}, {}, 0
-  S.live, S.farLive, S.queue, S.qpos = {}, {}, {}, 1
+  S.live, S.farLive, S.queue, S.qpos, S.delFrom = {}, {}, {}, 1, nil
   S.farQueue, S.farPos = {}, 1
 end
 
@@ -699,7 +729,7 @@ function M.dropAll()
   local n = 0
   for _, l in pairs(S.live) do delete(l.id); n = n + 1 end
   if n > 0 then S.colDirty = true end
-  S.live, S.queue, S.qpos, S.colQEnd, S.cell = {}, {}, 1, 0, nil
+  S.live, S.queue, S.qpos, S.colQEnd, S.cell, S.delFrom = {}, {}, 1, 0, nil, nil
   S.stats.deleted = S.stats.deleted + n
   return n
 end
@@ -724,6 +754,12 @@ end
 
 function M.pending() return S and S.qpos <= #S.queue end
 function M.queued() return S and (#S.queue - S.qpos + 1) or 0 end
+-- objects still to make (the queue without its tail of deletions)
+function M.addsQueued()
+  if not S then return 0 end
+  return math.max(0, math.min(S.delFrom or #S.queue + 1, #S.queue + 1) - S.qpos)
+end
+function M.delsPending() return S and #S.queue >= math.max(S.delFrom or #S.queue + 1, S.qpos) end
 -- Counters for the slow-frame log (cheap: no walk over the live objects). The slowest spawn since the last call.
 function M.counts()
   if not S then return nil end

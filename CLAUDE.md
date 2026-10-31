@@ -897,6 +897,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   whether it adds 140 or 1,305 items). Hysteresis of the shares (forest.HYST) did not change them; sharing one Forest
   among BLOCK x BLOCK tiles and doing their passes in one frame did: BLOCK 3 near-forest frames 63 -> 3, frames over
   100 ms 130 -> 52. With the props fix (empty material blocks) Lugano standing still is 84.4 fps against Italy's 81.
+- Burst A/B/C flight (2026-10-31, second of two runs each): A standard (40 ms, adaptive) 80.0 fps, 1,030 frames over 50 ms;
+  B fixed 1 burst a second 89.9 fps, 504, but the deletions (WAVE_DEL_AT, behind every new object) never came: 10,649
+  live and 45,524 queued after 5 min; C BURST_MS 20 86.3 fps, 672, queue 3x A's. A deletion that waits behind the adds
+  never runs while driving: objects.stepDels now takes the tail of the queue for BURST_DEL_MS of every burst, BURST_MS
+  is 20 and the adaptive interval counts only the objects to make (addsQueued).
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.

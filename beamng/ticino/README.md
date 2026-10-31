@@ -75,7 +75,8 @@ Advanced fields that were measured on the PC (October 2026), with their defaults
 | `forest.BLOCK` | 3 | the trees of 3 x 3 tiles share one Forest and change in one frame: each frame that changes a Forest costs the engine ~200 ms whatever it adds, so fewer, bigger changes (1: one Forest a tile, 4x more such frames in a drive) |
 | `forest.HYST` | 1 | a tile keeps its trees until one ring beyond where they belong (no change on every ring crossed) |
 | `forest.RADIUS` | 4 | tiles (384 m) round the car with trees |
-| `stream.BURST_EVERY_MS`, `stream.BURST_MS` | 1000, 40 | objects, trees and far ground come in bursts of 40 ms once a second (every frame that changes the scene costs the engine, so few big changes beat many small ones) |
+| `stream.BURST_EVERY_MS`, `stream.BURST_MS` | 1000, 20 | objects, trees and far ground come in bursts of 20 ms once a second (every frame that changes the scene costs the engine, so few small changes beat many) |
+| `stream.BURST_DEL_MS` | 4 | of each burst, for removing the objects the car left behind |
 | `stream.BURST_EVERY_SLOW_MS`, `stream.SLOW_MPS` | 200, 4 | a burst every 200 ms while the car is slower than 4 m/s (a new place fills in ~2 min) |
 | `stream.BURST_QUEUE_REF` | 300 | more than this many objects waiting shortens the time between bursts (down to 200 ms) |
 

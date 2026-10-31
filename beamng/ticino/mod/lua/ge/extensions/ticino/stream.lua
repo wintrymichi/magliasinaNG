@@ -46,8 +46,10 @@ M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (rin
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
 M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
 M.BURST_EVERY_MS = 1000    -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
-M.BURST_MS = 40            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
-                           -- PC test 2026-10-30, Lugano flight 47 fps with 3 ms a frame, 94 with 40 ms bursts a second)
+M.BURST_MS = 20            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
+                           -- PC test 2026-10-30, Lugano flight 47 fps with 3 ms a frame, 94 with 40 ms bursts a second;
+                           -- 2026-10-31 flight: 40 ms 80.0 fps, 1,030 frames over 50 ms; 20 ms 86.3 fps, 672)
+M.BURST_DEL_MS = 4         -- of each burst, for the deletions of objects out of range (the tail of the queue)
 M.BURST_EVERY_SLOW_MS = 200  -- bursts this often while the car is slower than SLOW_MPS (standing: the queue of a
 M.SLOW_MPS = 4               -- new place, ~8 ms an object in the game, took minutes at one burst a second)
 M.BURST_QUEUE_REF = 300      -- objects queued over this shorten the time between bursts in proportion
@@ -817,7 +819,7 @@ local function onUpdate(dtReal)
     local every = (st.speed or 0) < M.SLOW_MPS and M.BURST_EVERY_SLOW_MS or M.BURST_EVERY_MS
     -- a long queue gets bursts more often (down to BURST_EVERY_SLOW_MS): at 33 m/s one a second left 2,776 objects
     -- waiting and the motorway without them (PC flight 2026-10-30)
-    local nq = objects.queued()
+    local nq = objects.addsQueued()
     if nq > M.BURST_QUEUE_REF then every = math.max(M.BURST_EVERY_SLOW_MS, every * M.BURST_QUEUE_REF / nq) end
     if clock() - (st.lastBurst or -1e9) < every then st.act = 'wait burst'; return end
     st.lastBurst = clock()
@@ -826,7 +828,8 @@ local function onUpdate(dtReal)
     objects.BURSTING = true
     -- the objects take the whole burst, the trees what is left: giving the trees a share (and one Forest a burst)
     -- made more slow bursts of ~220 ms (each frame that touches a Forest costs that much: PC tests H1, H2)
-    if objects.pending() then objects.step(clock, M.BURST_MS) end
+    if objects.delsPending() then objects.stepDels(clock, M.BURST_DEL_MS) end
+    if objects.pending() then objects.step(clock, math.max(1, M.BURST_MS - (clock() - t0))) end
     objects.BURSTING = false
     local left = M.BURST_MS - (clock() - t0)
     if left > 0 and forest.pending() then forest.step(clock, 1000, nil, left) end
