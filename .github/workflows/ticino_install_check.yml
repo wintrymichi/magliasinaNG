@@ -11,7 +11,7 @@ on:
       - beamng/ticino/install/check_stamp.txt
 
 permissions:
-  contents: read
+  contents: write            # only to list draft releases (nothing is uploaded)
 
 jobs:
   check:
