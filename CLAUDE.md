@@ -1766,3 +1766,19 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - A new server flag (--game-pid) was merged into the installer while server_ticino.zip on the release was still built
   without it: the shortcut would have started a server that stops at once (argparse error). Rebuild the exe (exe_stamp)
   in the same round as any installer change that passes a new flag.
+
+## View distance of Ticino (farlod.py, objects.lua FAR_LOD, 2026-11-01)
+
+- Up to ticino 8008a51 nothing stood past the far tiles (16 tiles of 384 m, ~6 km) and LevelInfo.visibleDistance was
+  12 km: the mountains ended in the sky. farlod.py (run by region_base.py) makes 3,377 coarse tiles (levels 2-5: 1.5 /
+  3 / 6 / 12 km, 33 x 33 vertices like a far tile) from the 39,300 far tiles (read by HTTP range from the slice zips in
+  ~90 s), ~300 MB raw, ~107 MB zipped in the base; objects.lua shows them as BeamNG.Earth's quadtree (~500 more drawn
+  tiles). stream.lua sets visibleDistance 60 km and haze 6e-5 (settings viewKm, fog) only when the base has them.
+- A far tile's .cdae vertices are reordered by the writer (cdae first_use) and the skirt repeats the border's xy 4 m
+  lower: read a far tile by the xy of its vertices, keeping the highest z, never by vertex index.
+- First Lua version, checked by tests/far_lod.lua (every far tile covered exactly once each frame): at a teleport the
+  old coarse tile under the new terrain window stayed drawn with the terrain (64 tiles doubled). Coarse tiles that
+  reach into the window are hidden now (a few holes round a jump while the new far tiles come, never two layers).
+- Not tested in the game yet (2026-11-01): FPS with ~500 more static tiles and 60 km view, and whether the borders
+  between levels show (each coarse border vertex is the highest far height of its stretch, skirt down to the lowest).
+

@@ -932,6 +932,8 @@ function M.stepFar(clock, budgetMs)
   return made
 end
 
+function M.hasFarLod() return S ~= nil and lodSetup() and true or false end
+
 -- old far entries still waiting for their cover
 function M.farDoomedLeft()
   if not (S and S.farDoomed) then return false end

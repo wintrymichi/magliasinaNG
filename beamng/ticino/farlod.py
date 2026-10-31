@@ -252,6 +252,35 @@ def read_release(tag, keys, tile_m, cache=None, workers=6):
     return g
 
 
+def read_slices(sl, zones, keys, tile_m, workers=6):
+    """The Ground from region_base's Slices: local slice folders, or the slice zips of its release by HTTP range."""
+    if not sl.folder:
+        import zipremote
+        from concurrent.futures import ThreadPoolExecutor
+        g = Ground(keys, tile_m)
+        items = [(z, aid) for z in zones for aid in sl.ids.get(z, [])]
+
+        def one(item):
+            zf = zipremote.open_zip(item[1])
+            return [(k, zf.read(m)) for k, m in far_members(zf) if k in g.has]
+        t0 = time.time()
+        with ThreadPoolExecutor(workers) as ex:
+            for got in ex.map(one, items):
+                for key, data in got:
+                    g.put(key, data)
+        log("far ground: %d far tiles read (%.0f s)" % (g.n, time.time() - t0))
+        return g
+    g = Ground(keys, tile_m)
+    for z in zones:
+        d = os.path.join(sl.folder, z, "levels", "ticino", "far")
+        for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+            m = re.fullmatch(r"f_(-?\d+_-?\d+)\.cdae", f)
+            if m and m.group(1) in g.has:
+                g.put(m.group(1), open(os.path.join(d, f), "rb").read())
+    log("far ground: %d far tiles read" % g.n)
+    return g
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tag", default="ticino-all")

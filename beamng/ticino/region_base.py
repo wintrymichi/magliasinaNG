@@ -29,6 +29,7 @@ sys.path.insert(0, HERE)
 import blocks  # noqa: E402
 import collision  # noqa: E402
 import dae2cdae  # noqa: E402
+import farlod  # noqa: E402
 import region  # noqa: E402
 import zipremote  # noqa: E402
 from blocks import LEVEL, log, wopen  # noqa: E402
@@ -174,7 +175,7 @@ def main():
 
     srcs = [region.Src(z, os.path.join(cache, z), grid, light=True) for z in zones]
     dst = os.path.join(a.out, "levels", LEVEL)
-    for d in ("main", "art", "blocks", "far", "col", "z", "tiles"):
+    for d in ("main", "art", "blocks", "far", "col", "z", "tiles", farlod.DIR):
         shutil.rmtree(os.path.join(dst, d), ignore_errors=True)
 
     kept_by_zone, roads, stats = [], [], collections.Counter()
@@ -293,6 +294,10 @@ def main():
         return None
     log("scene references to compiled zone shapes:", dae2cdae.rewrite_refs(dst, zpath))
 
+    # the far ground's coarse levels to the horizon (farlod.py): ~110 MB of the base, read from the slices' far tiles
+    tile_m = grid.C * grid.sq
+    far_lod = farlod.build(farlod.read_slices(sl, zones, sorted(far), tile_m), os.path.join(dst, farlod.DIR))
+
     stream = {
         "version": 2, "zone": "ticino:%d zones" % len(zones), "level": LEVEL,
         "origin": [grid.x0, grid.y0], "square": grid.sq, "z0": Z0, "maxHeight": MAXH,
@@ -304,7 +309,7 @@ def main():
                           and os.path.splitext(os.path.basename(m["baseColorBaseTex"]))[0] in base_keys],
         "baseSizeUnit": grid.cfg.get("base_size_unit", "samples"),
         "tiles": tiles, "forestTiles": ftiles, "forestTypes": plan["forestTypes"],
-        "far": sorted(far), "farRadius": int(grid.cfg.get("far_radius", 16)),
+        "far": sorted(far), "farRadius": int(grid.cfg.get("far_radius", 16)), "farLod": far_lod,
         "collisionRadius": int(grid.cfg.get("collision_radius", 1)),
         "colCell": blocks.collision_cell_m(), "colCells": sorted(cells),
         "colGroundTypes": plan["groundTypes"], "colPieceTris": blocks.collision_piece_tris(),

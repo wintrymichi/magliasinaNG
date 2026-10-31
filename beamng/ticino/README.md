@@ -80,6 +80,8 @@ when the level starts:
 | `pacing` | `true` (default), `false` | even frame pacing (from BeamNG.Earth): a frame shorter than the recent frames' 70th percentile waits the rest, so the frames come evenly and the game speed stays steady; costs a few fps; off below 30 fps |
 | `frameGate` | `true` (default), `false` | a frame that changes the scene (objects, trees, collision, a terrain move) runs only after two calm frames that changed nothing: each such frame stays a lone spike, which the game's smoothed clock drops instead of slowing down and catching up (the "scatti") |
 | `terrainShadows` | `true` (default), `false` | `false`: the terrain casts no sun shadows (BeamNG.Earth: each terrain move redrew the sun's shadow map, up to 1/3 s on slow GPUs); for tests until checked against screenshots of the mountains |
+| `viewKm` | `60` (default; `light` preset 25), `0` = the level's 12 km | how far the camera sees. The base carries the far ground in coarser levels to the whole of Ticino (`farlod/`, 1.5 / 3 / 6 / 12 km tiles beyond the 6 km of far tiles, ~500 more drawn tiles): without them in the base nothing changes |
+| `fog` | `6e-5` (default), `0` = the level's 1.3e-4 | haze density with the far levels: 45 % at 10 km, 70 % at 20 km, 90 % at 40 km |
 
 Advanced fields that were measured on the PC (October 2026), with their defaults:
 

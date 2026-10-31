@@ -81,8 +81,15 @@ M.DIAG = false             -- write ticino_frames.csv and ticino_perf.csv (setti
 M.PRESETS = {
   standard = {},
   light = { forest = { RADIUS = 3, SHARE = { [0] = 1.0, 1.0, 0.5, 0.25 }, CACHE_TILES = 80 },
-            objects = { CACHE_TILES = 250 }, level = { farRadius = 10 } },
+            objects = { CACHE_TILES = 250 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
 }
+-- How far the camera sees (michi 2026-10-31, "io voglio vedere di più da lontano"): with the far levels of the base
+-- (farlod.py, objects.lua FAR_LOD) the ground reaches the whole of Ticino, so LevelInfo.visibleDistance goes to VIEW_KM
+-- (the level file has 12 km) and the haze thins to FOG_DENSITY (the level's 1.3e-4 hid 70 % at 10 km; 6e-5: 45 % at
+-- 10 km, 70 % at 20 km, 90 % at 40 km). Both need postApply (BeamNG.Earth horizon.lua: the field alone does nothing).
+-- Settings: "viewKm" (0: the level's own), "fog" (0: the level's own).
+M.VIEW_KM = 60
+M.FOG_DENSITY = 6e-5
 M.HYST_M = 48              -- the car's tile changes only this far past its edge (michi's drive, 2026-10-26: the
                            -- window and the collision went back and forth along a tile edge)
 M.MAP_RESET_ON_JUMP = true -- read the AI map again at a jump, while the game is paused (1.9-2.5 s on the laptop)
@@ -601,6 +608,8 @@ local function readSettings(cfg)
   if type(s.pacing) == 'boolean' then M.PACING = s.pacing end
   if type(s.frameGate) == 'boolean' then M.GATE = s.frameGate end
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
+  if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
+  if type(s.fog) == 'number' and s.fog >= 0 then M.FOG_DENSITY = s.fog end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
   -- a window size of the settings (level.window, tiles of cfg.cell): the helper writes the built size only
@@ -661,10 +670,27 @@ local function start()
   if M.NO_DYNAMIC_CUBEMAP then M.dynamicCubemaps(false) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
+  M.applyView()
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, #(cfg.far or {})))
   log('I', 'ticino', string.format('stream 2026-10-28: window places %d..%d, base maps %s, collision lazy %d, '
     .. 'frame times to %s', M.FOLLOW_LO, M.FOLLOW_HI, M.BASE_MODE, objects.COL_LAZY or -1, M.FRAMES_FILE))
+end
+
+-- visibleDistance and haze for the far levels (VIEW_KM, FOG_DENSITY); the level's own values without far levels
+function M.applyView()
+  local li = scenetree.theLevelInfo or scenetree.findObject('theLevelInfo')
+  if not li then return false end
+  if not objects.hasFarLod() then
+    log('I', 'ticino', 'no far levels in the base: view distance and haze of the level')
+    return false
+  end
+  local v, d = M.VIEW_KM * 1000, M.FOG_DENSITY
+  if v > 0 then li.visibleDistance = v end
+  if d > 0 then li.fogDensity = d end
+  if li.postApply then li:postApply() end
+  log('I', 'ticino', string.format('view %s m, haze %s', tostring(li.visibleDistance), tostring(li.fogDensity)))
+  return true
 end
 
 local function stop()
@@ -936,6 +962,12 @@ local function onUpdate(dtReal)
     perfLine(st.objRec)
     st.objRec = nil
   elseif not objects.farPending() then
+    -- old far tiles whose cover came late (the Ticino server's far tiles)
+    if objects.farDoomedLeft() and mayChange() and objects.dropCovered(clock) > 0 then
+      st.act = 'far drop'
+      changed()
+      return
+    end
     st.act = 'prefetch'
     if objects.prefetch(1) == 0 then forest.prefetch(cx, cy, 1) end
   else
