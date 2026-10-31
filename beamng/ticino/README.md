@@ -175,7 +175,7 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 | AI car round Magliaso, up to 166 km/h | 1 of 61 spans with a frame over 100 ms |
 | All Ticino, after the spawn | about 1 min of stutter (12 s first window, 28-30 s AI map), then 100 fps |
 | Lugano standing still, fresh install, empty cache (2026-10-31) | queues empty after ~2 min, then 84.4 fps (1 % low 60, worst frame 17 ms); Italy at the same settings 81.0 |
-| Free camera from Manno north at 33 m/s, 300 s (2026-10-31) | 83.0 fps, 52 frames over 100 ms (terrain moves, bursts, 3 forest changes) |
+| Free camera from Manno north at 33 m/s, 300 s (2026-10-31, 83fabe4) | 94.2 fps, 87 frames over 50 ms, 25 over 100 ms (terrain moves, a few forest changes and heavy objects) |
 
 ## Troubleshooting
 
@@ -192,8 +192,8 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 Done: all 87 zones in one level, the streamer with wave loading, 64 m collision cells, the helper, settings, the
 installer, shapes shipped as .cdae, static streamed objects and bursts (standing still as fast as Italy). Open:
 
-- Driving fast: about 3 frames a second of 50-100 ms while a new area fills in at 120 km/h, the trees fall behind,
-  and a long jump (teleport) pauses the game about 10 s.
+- Driving fast: about 25 frames over 100 ms in 5 minutes at 120 km/h (terrain moves every ~1.5 km, a few forest
+  changes and heavy objects), and a long jump (teleport) pauses the game about 10 s.
 
 - **AI map.** The game builds the AI map from the 57,298 AI roads, which take their heights from the terrain: only
   the window has terrain, so outside it the AI nodes sit at height 0, 4,020 of the 4,065 traffic signals find no road

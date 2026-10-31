@@ -902,6 +902,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   live and 45,524 queued after 5 min; C BURST_MS 20 86.3 fps, 672, queue 3x A's. A deletion that waits behind the adds
   never runs while driving: objects.stepDels now takes the tail of the queue for BURST_DEL_MS of every burst, BURST_MS
   is 20 and the adaptive interval counts only the objects to make (addsQueued).
+  PC flight of 83fabe4 (D, default): 94.2 fps, 87 frames over 50 ms (A: 1,030), 25 over 100 ms, no slow bursts, 2,231
+  live at the end. E (one burst a second) 97.9 fps but the queue 3x behind: D stays the default. Left per 5 min flight:
+  ~9 forest frames ~250 ms, ~5 object frames ~450 ms (single heavy spawns), 6 terrain swaps ~250 ms, the jump.
 - BeamNG 0.40.4 GE Lua: ffi.cast('const uint8_t *', aLuaString) returns the string itself, and pointer arithmetic on
   an ffi.new('uint8_t[?]') array failed with "bad argument #1 to '__add' (invalid C type)" (aimap.lua:33/36): the
   precomputed AI map never loaded. Read binary files with string.byte / plain Lua there, and test in the game.
