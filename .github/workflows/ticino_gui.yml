@@ -96,7 +96,7 @@ jobs:
       # install.json names ("data", its "mode" still "packs"), the app's settings of 1.0.0 (no packs folder,
       # AutoDownload on), and the second zip of a zone in two zips missing. The app must take the folder over, run in
       # server mode (install.json set to "server"), turn the automatic download off and offer only that zip (as "To
-      # download", not as an update of its first piece) and the server program.
+      # download", not as an update of its first piece) and the server program (when the release has one).
       - name: Screenshots in server mode (zones moved out of mods)
         shell: pwsh
         run: |
@@ -140,11 +140,14 @@ jobs:
           $bad = @()
           if (-not ($log -match 'packs folder of the installer taken over')) { $bad += 'the packs folder of install.json was not taken over' }
           if (-not ($log -match 'automatic download turned off')) { $bad += 'AutoDownload of 1.0.0 not turned off' }
+          # that zip, and the server program when this release has one
+          $srv = [bool]($assets | Where-Object name -eq 'server_ticino.zip')
+          $want = 1 + [int]$srv
           $line = $log | Where-Object { $_ -match 'zones in place' } | Select-Object -Last 1
-          if ($line -notmatch '(\d+) of (\d+) zones in place, 2 to download or check' -or $line -match 'packs mode' -or
+          if ($line -notmatch "(\d+) of (\d+) zones in place, $want to download or check" -or $line -match 'packs mode' -or
               [int]$Matches[1] -ne [int]$Matches[2] - 1) { $bad += "not server mode with one zone short: $line" }
           $list = $log | Where-Object { $_ -match "^\S+   " } | Select-Object -Last 1
-          if ($list -notmatch [regex]::Escape("$left (To download)") -or $list -notmatch 'server_ticino.zip \(To download\)') { $bad += "to download: $list" }
+          if ($list -notmatch [regex]::Escape("$left (To download)") -or ($srv -and $list -notmatch 'server_ticino.zip \(To download\)')) { $bad += "to download: $list" }
           $mode = (Get-Content $inst -Raw | ConvertFrom-Json).mode
           if ($mode -ne 'server') { $bad += "install.json mode $mode" }
           $s = Get-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Raw | ConvertFrom-Json

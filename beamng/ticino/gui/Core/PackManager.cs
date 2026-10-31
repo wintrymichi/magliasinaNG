@@ -344,14 +344,11 @@ public sealed partial class PackManager : Observable
             it.Detail = "";
             it.Progress = 0;
             it.InPlace = false;
-            string? ready = ReadyPath(it);
-            if (ready != null && File.Exists(ready) && new FileInfo(ready).Length == it.Size)
-            {
-                it.State = PackState.Ready;
-                continue;
-            }
+            string ready = ReadyPath(it);
+            bool readyOk = File.Exists(ready) && new FileInfo(ready).Length == it.Size;
             if (it.Kind == PackKind.Server)
             {
+                if (readyOk) { it.State = PackState.Ready; continue; }
                 bool have = File.Exists(Path.Combine(ServerHome, Installer.ServerExeName));
                 bool current = st.Server == $"{it.Name}|{it.Asset.Sha256}" && (st.ServerDir ?? OwnServerDir) == ServerHome
                                || Installer.Present(cfg) && it.Asset.Sha256 != null && StampOf(Installer.ServerStamp(cfg)) == it.Asset.Sha256;
@@ -359,7 +356,7 @@ public sealed partial class PackManager : Observable
                 continue;
             }
             string? dest = Dest(it);
-            if (dest is null) { it.State = PackState.Missing; continue; }
+            if (dest is null) { it.State = readyOk ? PackState.Ready : PackState.Missing; continue; }
             var f = new FileInfo(dest);
             it.InPlace = f.Exists && f.Length == it.Size;
             if (f.Exists && f.Length == it.Size)
@@ -371,6 +368,10 @@ public sealed partial class PackManager : Observable
                 {
                     it.State = PackState.Installed;
                     st.Checked[it.Name] = key;
+                    // the zip in place IS the release's: a download of it left over (1.0.0 downloaded zips in place
+                    // again) would replace it with itself and, with the old Install, retire its other piece
+                    DropLeftovers(it);
+                    continue;
                 }
                 // this very file was hashed before with another sha256: an older build under the same name
                 else if (st.Checked.TryGetValue(it.Name, out var k) && !k.StartsWith(sha + "|") &&
@@ -388,12 +389,28 @@ public sealed partial class PackManager : Observable
                      Directory.EnumerateFiles(BeamNG.Mods(cfg), "ticino_base_*.zip").Any())
                 it.State = PackState.Update;
             else it.State = PackState.Missing;
+            // a download finished and checked: it goes into place (unless the zip there is the release's, above)
+            if (readyOk) it.State = PackState.Ready;
         }
         OldZips = local.Where(l => !relNames.Contains(l.Name) && relZones.Contains(ZoneOf(l.Name))).ToList();
         Raise(nameof(OldZips));
         var places = PlaceNames(items);
         foreach (var it in items.Where(i => i.Kind == PackKind.Zone))
             it.Place = places.TryGetValue(it.Zone, out var p) ? p : null;
+    }
+
+    /// <summary>Removes the .ready / .part of a zip whose copy in place is the release's (40 GB of them were left in
+    /// ticino_download\app on michi's PC).</summary>
+    void DropLeftovers(PackItem it)
+    {
+        foreach (var p in new[] { ReadyPath(it), PartPath(it) })
+            try
+            {
+                if (!File.Exists(p)) continue;
+                File.Delete(p);
+                Log.Write($"{Path.GetFileName(p)}: the zip in place is the release's, leftover download removed");
+            }
+            catch (Exception e) { Log.Write($"{p} not removed: {e.Message}"); }
     }
 
     /// <summary>Zone -> its biggest village, read from the spawn points in the base pack's info.json
@@ -623,12 +640,15 @@ public sealed partial class PackManager : Observable
             {
                 lock (st) st.Checked[it.Name] = Key(sha!, new FileInfo(dest));
                 it.State = PackState.Installed;
+                DropLeftovers(it);
+                Log.Write($"{it.Name}: in place and checked");
                 return;
             }
             Log.Write($"{it.Name}: the zip in place has another sha256: downloaded again");
             meter.Add(0);
         }
-        string part = PartPath(it)!, ready = ReadyPath(it)!;
+        string part = PartPath(it), ready = ReadyPath(it);
+        bool fetched = false;
         for (int attempt = 1; attempt <= 6; attempt++)
         {
             ct.ThrowIfCancellationRequested();
@@ -650,6 +670,7 @@ public sealed partial class PackManager : Observable
                     while ((n = await src.ReadAsync(buf, ct)) > 0)
                     {
                         await dst.WriteAsync(buf.AsMemory(0, n), ct);
+                        fetched = true;
                         have += n;
                         meter.Add(n);
                         if (last.ElapsedMilliseconds > 250)
@@ -693,7 +714,7 @@ public sealed partial class PackManager : Observable
             it.Progress = 100;
             it.Detail = "";
             it.State = PackState.Ready;
-            Log.Write($"{it.Name}: downloaded and checked");
+            Log.Write(fetched ? $"{it.Name}: downloaded and checked" : $"{it.Name}: checked (its download had finished before)");
             return;
         }
         it.State = PackState.Error;
