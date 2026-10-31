@@ -169,6 +169,19 @@ local function follow(c, wc, n)
   return wc
 end
 
+-- what the last frame changed in the scene (objects made/deleted, colliders, the slowest spawn, forest passes and
+-- items, collision rebuilds), for the slow-frame log line
+local function frameWork()
+  local o, f, o0, f0 = objects.counts(), forest.counts(), st.snapO, st.snapF
+  if not (o and f and o0 and f0) then return '' end
+  local s = string.format(' | objects +%d -%d (colliders +%d), forest passes %d items +%d -%d, reloads %d',
+    o.created - o0.created, o.deleted - o0.deleted, o.colMade - o0.colMade, f.touched - f0.touched,
+    f.made - f0.made, f.removed - f0.removed, (st.reloads or 0) - (st.reloadsAt or 0))
+  if o.maxSpawn > 0 then s = s .. string.format(', slowest spawn %.0f ms %s', o.maxSpawn, tostring(o.maxShape)) end
+  if f.touched > f0.touched then s = s .. ' (tile ' .. tostring(f.lastKey) .. ')' end
+  return s
+end
+
 -- frame times: every FRAMES_EVERY_MS one line of fps, the worst frame, frames over 50 and 100 ms, moves and rebuilds
 local function frameStats()
   local now = clock()
@@ -182,9 +195,10 @@ local function frameStats()
   f.last = now
   f.n = f.n + 1
   if d > M.SLOW_FRAME_MS then          -- what the streamer did in that frame (st.act, set by onUpdate)
-    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s', d, tostring(st.act)))
+    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s%s', d, tostring(st.act), frameWork()))
   end
   st.act = 'idle'
+  st.snapO, st.snapF, st.reloadsAt = objects.counts(), forest.counts(), st.reloads
   local a = st.afterSwap               -- the frames right after a swap (the frame of the swap is next1Ms)
   if a then
     a.n = a.n + 1

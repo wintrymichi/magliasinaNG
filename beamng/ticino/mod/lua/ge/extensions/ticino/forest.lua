@@ -256,7 +256,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       S.tiles[op.key] = nil
     end
     S.qpos = S.qpos + 1
-    if touched then forests = forests + 1 end
+    if touched then forests = forests + 1; S.stats.touched = (S.stats.touched or 0) + 1; S.stats.lastKey = op.key end
     if M.ONE_FOREST and touched and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
     if burstMs then
       if clock() - t0 > burstMs then break end
@@ -269,6 +269,11 @@ function M.step(clock, budgetMs, perFrame, burstMs)
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+-- Counters for the slow-frame log
+function M.counts()
+  if not S then return nil end
+  return { made = S.stats.made, removed = S.stats.removed, touched = S.stats.touched or 0, lastKey = S.stats.lastKey }
+end
 -- Are trees of the near rings (WAVE_NEAR) still queued?
 function M.nearPending() return S and S.qpos <= #S.queue and S.queue[S.qpos].near or false end
 
