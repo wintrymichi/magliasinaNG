@@ -1,0 +1,83 @@
+# Ticino installer check without touching any release: parses install/*.ps1 in pwsh and Windows PowerShell 5.1, runs
+# the installer with -ListOnly against the release in tools_release.txt in both modes (a fake user folder), and tests
+# its zip mover (Move-Zip) and base check (Test-BaseServes) on small files. Started by a change of
+# beamng/ticino/install/check_stamp.txt on any branch (ticino_tools.yml, which uploads, runs only on ticino).
+name: ticino install check
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - beamng/ticino/install/check_stamp.txt
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse (pwsh)
+        shell: pwsh
+        run: |
+          $bad = 0
+          foreach ($f in Get-ChildItem beamng/ticino/install -Filter *.ps1) {
+            $errs = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errs)
+            foreach ($e in $errs) { Write-Host "$($f.Name): $e"; $bad++ }
+          }
+          if ($bad) { exit 1 }
+      - name: Parse and unit checks (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bad = 0
+          foreach ($f in Get-ChildItem beamng/ticino/install -Filter *.ps1) {
+            $errs = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errs)
+            foreach ($e in $errs) { Write-Host "$($f.Name): $e"; $bad++ }
+          }
+          if ($bad) { exit 1 }
+          # the installer's own functions, without running the script
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path beamng/ticino/install/install_ticino.ps1), [ref]$null, [ref]$null)
+          foreach ($fn in $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+            if (@('Say', 'Move-Zip', 'Test-BaseServes') -contains $fn.Name) { Invoke-Expression $fn.Extent.Text }
+          }
+          $t = Join-Path $env:RUNNER_TEMP 'mz'
+          New-Item -ItemType Directory -Force -Path "$t\mods", "$t\data" | Out-Null
+          [IO.File]::WriteAllBytes("$t\mods\ticino_ti_0_0_1.zip", (New-Object byte[] 1000))
+          if (-not (Move-Zip "$t\mods\ticino_ti_0_0_1.zip" "$t\data\ticino_ti_0_0_1.zip")) { throw 'move failed' }
+          if ((Test-Path "$t\mods\ticino_ti_0_0_1.zip") -or -not (Test-Path "$t\data\ticino_ti_0_0_1.zip")) { throw 'move left the wrong files' }
+          [IO.File]::WriteAllBytes("$t\mods\ticino_ti_0_0_1.zip", (New-Object byte[] 1000))
+          if (-not (Move-Zip "$t\mods\ticino_ti_0_0_1.zip" "$t\data\ticino_ti_0_0_1.zip")) { throw 'twin move failed' }
+          if (Test-Path "$t\mods\ticino_ti_0_0_1.zip") { throw 'the twin in mods stayed' }
+          # a zip held open must stay where it is, with no copy left behind
+          [IO.File]::WriteAllBytes("$t\data\ticino_ti_1_0_1.zip", (New-Object byte[] 1000))
+          $h = [IO.File]::Open("$t\data\ticino_ti_1_0_1.zip", 'Open', 'Read', 'Read')
+          $r = Move-Zip "$t\data\ticino_ti_1_0_1.zip" "$t\mods\ticino_ti_1_0_1.zip"
+          $h.Dispose()
+          if ($r -or (Test-Path "$t\mods\ticino_ti_1_0_1.zip") -or -not (Test-Path "$t\data\ticino_ti_1_0_1.zip")) { throw 'held zip handled wrong' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $src = "$t\b1"; New-Item -ItemType Directory -Force -Path "$src\lua\ge\extensions\ticino" | Out-Null
+          Set-Content "$src\lua\ge\extensions\ticino\files.lua" 'x'
+          [IO.Compression.ZipFile]::CreateFromDirectory($src, "$t\base_yes.zip")
+          $src2 = "$t\b2"; New-Item -ItemType Directory -Force -Path "$src2\levels" | Out-Null
+          Set-Content "$src2\levels\x.txt" 'x'
+          [IO.Compression.ZipFile]::CreateFromDirectory($src2, "$t\base_no.zip")
+          Write-Host "base with files.lua: $(Test-BaseServes "$t\base_yes.zip"), without: $(Test-BaseServes "$t\base_no.zip")"
+          if ((Test-BaseServes "$t\base_yes.zip") -ne $true -or (Test-BaseServes "$t\base_no.zip") -ne $false) { throw 'Test-BaseServes wrong' }
+          Write-Host 'unit checks ok'
+      - name: List only, both modes (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $tag = (Get-Content beamng/ticino/tools_release.txt -Raw).Trim()
+          $u = Join-Path $env:RUNNER_TEMP 'user'
+          New-Item -ItemType Directory -Force -Path "$u\mods" | Out-Null
+          foreach ($m in @('auto', 'packs')) {
+            Write-Host "---- -Mode $m"
+            powershell -ExecutionPolicy Bypass -File beamng/ticino/install/install_ticino.ps1 -Tag $tag -UserFolder $u -Mode $m -ListOnly *>&1 | Select-Object -Last 12
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
