@@ -747,10 +747,11 @@ local function onUpdate(dtReal)
     helper.tick(x, y, st.window, lo, hi, n)
   end
   -- the server finished tiles the streamer had to skip: ask again for what the car's tile wants
-  local nearCame, farCame = files.poll()
+  local nearCame, farCame, ring = files.poll(false, st.cell and st.cell[1], st.cell and st.cell[2])
   if nearCame and st.cell then
-    objects.refresh()
-    forest.retarget(st.cell[1], st.cell[2])
+    -- the collision only when a tile that came touches the cells round the car, the trees only within their radius
+    objects.refresh(ring == nil or ring <= 1)
+    if ring == nil or ring <= forest.RADIUS then forest.retarget(st.cell[1], st.cell[2]) end
   elseif farCame then
     objects.refreshFar()
   end
@@ -885,7 +886,7 @@ function M.status()
   if not st then return 'off' end
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
-           objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), files = files.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+           act = st.act, objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), files = files.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
 end
 
 -- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).

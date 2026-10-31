@@ -581,17 +581,62 @@ def once(user, data, x, y, radius, workers, cdae):
     return srv
 
 
+def _held(p):
+    """True if another process holds p open (Windows refuses the rename of an open file; the probe renames it to a
+    name beside it and back)."""
+    probe = p + ".adopt_probe"
+    try:
+        os.rename(p, probe)
+    except OSError:
+        return True
+    os.rename(probe, p)
+    return False
+
+
 def adopt(user, data):
-    """Move the zone packs out of <user>/mods into the data folder (a rename on the same disk, else a copy)."""
+    """Move the zone packs out of <user>/mods into the data folder: a rename on the same disk, else a copy to .part
+    that becomes the pack only when it is whole, and then the original is removed. Nothing moves while a pack is held
+    open (the game, or a ticino_helper.exe left running: a PC test, 2026-10-31, got WinError 32 after shutil.move had
+    copied 1.85 GB and left both copies)."""
     os.makedirs(data, exist_ok=True)
+    packs = [p for p in sorted(glob.glob(os.path.join(user, "mods", "**", "ticino_*.zip"), recursive=True))
+             if not os.path.basename(p).startswith("ticino_base")]
+    held = [p for p in packs if _held(p)]
+    if held:
+        for p in held:
+            log("in use: %s" % p)
+        raise SystemExit("%d packs are open in another program: close BeamNG and every ticino_helper / ticino_server "
+                         "(Task Manager), then run adopt again. Nothing was moved." % len(held))
     n = 0
-    for p in sorted(glob.glob(os.path.join(user, "mods", "**", "ticino_*.zip"), recursive=True)):
+    for p in packs:
         b = os.path.basename(p)
-        if b.startswith("ticino_base"):
-            continue
         dst = os.path.join(data, b)
+        size = os.path.getsize(p)
+        if os.path.exists(dst) and os.path.getsize(dst) == size:
+            log("%s is already in %s: the copy in mods is removed" % (b, data))
+            os.remove(p)
+            n += 1
+            continue
         log("%s -> %s" % (p, dst))
-        shutil.move(p, dst)
+        try:
+            os.replace(p, dst)                   # same disk: instant
+        except OSError:
+            part = dst + ".part"
+            try:
+                shutil.copyfile(p, part)
+                if os.path.getsize(part) != size:
+                    raise OSError("copy of %s is %d bytes, not %d" % (b, os.path.getsize(part), size))
+                os.replace(part, dst)
+            except BaseException:
+                if os.path.exists(part):
+                    os.remove(part)
+                raise
+            try:
+                os.remove(p)
+            except OSError as e:
+                os.remove(dst)                   # keep one copy: the original in mods
+                raise SystemExit("%s could not be removed from mods (%s): its copy was deleted again, nothing else "
+                                 "changed. Close the program that holds it and run adopt again." % (b, e))
         n += 1
     log("%d packs moved; the base pack stays in mods" % n)
 

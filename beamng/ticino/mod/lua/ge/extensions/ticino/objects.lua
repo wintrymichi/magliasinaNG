@@ -703,12 +703,12 @@ function M.farPending() return S and S.farPos <= #S.farQueue end
 
 -- The Ticino server finished tiles that were skipped (files.lua): queue what the car's tile wants of them, the
 -- collision cells and the far ground again. Objects already made are left as they are.
-function M.refresh()
+function M.refresh(cols)
   if not S or not S.cell then return 0 end
   local c = S.cell
   S.cell = nil
   local q = M.retarget(c[1], c[2])
-  if S.colXY then M.updateCols(S.colXY[1], S.colXY[2], true) end
+  if cols ~= false and S.colXY then M.updateCols(S.colXY[1], S.colXY[2], true) end
   if S.farArgs then M.updateFar(unpack(S.farArgs)) end
   return q
 end

@@ -1686,3 +1686,15 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - ticino's own dae2cdae.py (build-time .cdae, PR #103) replaced the server's: the server calls compile_bytes(bytes).
   A shape it raises Unsupported on is counted as failed and NOT served (the tile names it as .cdae): watch "failed" in
   the server's status line. Zone packs built with the .cdae already are copied as they are.
+- PC test of the server (2026-10-31, kit c77c2de): game start 85 s -> 4 s, level load the same, flight 94 fps, but
+  standing still in Lugano from an empty cache the scene never settled (live 1,357 -> 6,943, 27 fps after 6 min). In
+  the simulator: every tile the server finished made the streamer re-queue its objects and trees and force a collision
+  rebuild (68 rebuilds against 1 with the packs). files.poll now holds the tiles that came until none came for
+  SETTLE_MS (at most SETTLE_MAX_MS, at once within URGENT_RING of the car), and a refresh rebuilds the collision only
+  for a tile within one ring and touches the forest only within its radius: 5 rebuilds, the scene still in ~40 s.
+- tests/sim_stream.lua without REALTIME=1 runs its clock on CPU time: with SPEED=0 the bursts wait forever ("wait
+  burst") in BOTH modes. Compare server and packs standing still only with REALTIME=1.
+- adopt with shutil.move hit WinError 32 on a zone zip held by a ticino_helper.exe left running (a PyInstaller onefile
+  child survives Stop-Process of its parent): the 1.85 GB copy was made and the original stayed. adopt now probes every
+  pack with a rename first and moves nothing while one is open, and a cross-disk copy goes to .part and is removed
+  again if the original cannot be.

@@ -13,6 +13,10 @@ M.DIR = '/temp/ticino/helper/'
 M.LEVEL_ROOT = '/levels/ticino/'
 M.READ_EVERY_MS = 200
 M.REFRESH_MIN_MS = 1000    -- the streamer asks again at most this often (each ask may queue a collision rebuild)
+M.SETTLE_MS = 2500         -- tiles that came are asked for together once none came for this long ...
+M.SETTLE_MAX_MS = 8000     -- ... or this long after the first of them (standing in Lugano, the server finished tiles
+                           -- one by one for minutes and every ask re-queued objects, trees and a collision rebuild)
+M.URGENT_RING = 1          -- a tile this close to the car's is asked for at once
 M.WAIT_STEP_S = 0.005
 M.START_MS = 30000         -- late tiles in the first this many ms are the start's (stats)
 
@@ -42,7 +46,7 @@ end
 -- cfg: stream.json; clock: ms; info: the helper's alive.json (helper.info()) or nil
 function M.init(cfg, clock, info)
   S = { serving = false, root = M.LEVEL_ROOT, near = {}, far = {}, gen = -1, last = -1e9, clock = clock,
-        lateNear = {}, lateFar = {}, lateN = 0, lateRun = 0, refreshes = 0, lastRefresh = -1e9, t0 = clock() }
+        lateNear = {}, lateFar = {}, came = {}, cameN = 0, cameFirst = 0, cameLast = 0, lateN = 0, lateRun = 0, refreshes = 0, lastRefresh = -1e9, t0 = clock() }
   S.tileM = cfg.cell * cfg.square
   -- the packs are in mods if any zone's slice.json is there (a test install may hold only some zones)
   local inPacks = #(cfg.zones or {}) == 0
@@ -108,9 +112,11 @@ local function toSet(list)
   return s
 end
 
--- Read ready.json (every READ_EVERY_MS unless force). Returns nearCame, farCame: true when tiles the streamer had
--- to skip are there now (at most every REFRESH_MIN_MS): it then asks again for what it skipped.
-function M.poll(force)
+-- Read ready.json (every READ_EVERY_MS unless force). Returns nearCame, farCame, ring: true when tiles the streamer had
+-- to skip are there now; it then asks again for what it skipped. Near tiles that came are held back until none came
+-- for SETTLE_MS (at most SETTLE_MAX_MS), unless one is within URGENT_RING of the car's tile (cx, cy); ring is the
+-- distance of the nearest of them from (cx, cy) (the streamer leaves out the collision when it is far).
+function M.poll(force, cx, cy)
   if not (S and S.serving) then return false, false end
   local now = S.clock()
   if not force and now - S.last < M.READ_EVERY_MS then return false, false end
@@ -120,19 +126,43 @@ function M.poll(force)
     S.gen = r.gen
     S.near, S.far, S.nearList = toSet(r.near), toSet(r.far), r.near
   end
-  if force or now - S.lastRefresh < M.REFRESH_MIN_MS then return false, false end
-  local nearCame, farCame = false, false
+  if force then return false, false end
   for k in pairs(S.lateNear) do
-    if S.near[k] then nearCame = true; S.lateNear[k] = nil end
+    if S.near[k] then
+      S.lateNear[k] = nil
+      if S.cameN == 0 then S.cameFirst = now end
+      S.came[k] = true; S.cameN = S.cameN + 1; S.cameLast = now
+    end
   end
+  local farCame = false
   for k in pairs(S.lateFar) do
     if S.far[k] then farCame = true; S.lateFar[k] = nil end
   end
+  if now - S.lastRefresh < M.REFRESH_MIN_MS then
+    if farCame then S.farPending = true end
+    return false, false
+  end
+  local nearCame, ring = false, nil
+  if S.cameN > 0 then
+    for k in pairs(S.came) do
+      local tx, ty = k:match('^(-?%d+)_(-?%d+)$')
+      if tx and cx then
+        local d = math.max(math.abs(tonumber(tx) - cx), math.abs(tonumber(ty) - cy))
+        if not ring or d < ring then ring = d end
+      end
+    end
+    if (ring and ring <= M.URGENT_RING) or now - S.cameLast >= M.SETTLE_MS or now - S.cameFirst >= M.SETTLE_MAX_MS then
+      nearCame = true
+      S.came, S.cameN = {}, 0
+    end
+  end
+  farCame = farCame or S.farPending or false
   if nearCame or farCame then
+    S.farPending = nil
     S.lastRefresh = now
     S.refreshes = S.refreshes + 1
   end
-  return nearCame, farCame
+  return nearCame, farCame, ring
 end
 
 -- At a jump (the game paused): wait up to ms for the near tiles within R of (cx, cy) that the level has (has: the
