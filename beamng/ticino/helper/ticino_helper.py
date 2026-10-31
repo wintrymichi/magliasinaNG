@@ -30,6 +30,7 @@ import json
 import os
 import signal
 import struct
+import threading
 import time
 import zipfile
 import zlib
@@ -242,16 +243,73 @@ def encode_png(rgb):
             + chunk(b"IDAT", data) + chunk(b"IEND", b""))
 
 
+STAGING = "ticino_staging"
+_staging_made = set()
+_tmp_serial = [0]
+# Windows: the first open of a new file is scanned by the antivirus, and the game paid that in its frame (BeamNG.Earth
+# server/staging.py, MIT: 20-184 ms per new tile file on a Windows PC, 0.15 ms for a second open). Reading the file
+# once here, in the helper's or the server's process, gets the scan done before the game opens it.
+WARM_READ = os.environ.get("TICINO_WARM_READ", "1" if os.name == "nt" else "0") != "0"
+
+
+def staging_dir(path):
+    """The folder for the temporary file of a write into the game's user folder (<user>/temp/...): beside the user
+    folder, on the same disk. The game watches its user folder: every file made or renamed there is an onFileChanged
+    event for every loaded extension and the engine's file watchers (BeamNG.Earth staging.py: up to ~1 s in a frame);
+    a "<path>.tmp" there made two events per file instead of one. None for a path outside a user folder's temp."""
+    p = os.path.abspath(path)
+    i = p.rfind(os.sep + "temp" + os.sep)
+    if i <= 0:
+        return None
+    return os.path.join(os.path.dirname(p[:i]), STAGING)
+
+
+def tmp_for(path):
+    d = staging_dir(path)
+    if d is not None and d not in _staging_made:
+        try:
+            os.makedirs(d, exist_ok=True)
+            _staging_made.add(d)
+        except OSError:
+            d = None
+    if d is None:
+        return path + ".tmp"
+    _tmp_serial[0] += 1
+    return os.path.join(d, "%d_%d_%d_%s.tmp" % (os.getpid(), threading.get_ident(), _tmp_serial[0],
+                                                os.path.basename(path)))
+
+
+def warm(path):
+    try:
+        with open(path, "rb") as f:
+            while f.read(1 << 20):
+                pass
+    except OSError:
+        pass
+
+
 def write_atomic(path, data):
-    tmp = path + ".tmp"
+    tmp = tmp_for(path)
     with open(tmp, "wb") as f:
         f.write(data)
     for i in range(20):                    # Windows: the game may hold the old file open for a moment
         try:
             os.replace(tmp, path)
+            if WARM_READ and staging_dir(path) is not None:
+                warm(path)
             return
         except PermissionError:
             time.sleep(0.02 * (i + 1))
+        except OSError:                    # another disk after all (EXDEV): the old way
+            if not os.path.exists(tmp):
+                raise
+            alt = path + ".tmp"
+            os.replace(tmp, alt)
+            tmp = alt
+    try:
+        os.remove(tmp)
+    except OSError:
+        pass
     raise PermissionError(path)
 
 

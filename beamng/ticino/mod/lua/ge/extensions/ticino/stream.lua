@@ -32,6 +32,7 @@ local forest = require('ticino/forest')
 local png = require('ticino/png')
 local helper = require('ticino/helper')
 local files = require('ticino/files')
+local pace = require('ticino/pace')
 
 local M = {}
 
@@ -100,6 +101,14 @@ M.HELPER_WAIT_MS = 8000    -- at a jump, wait this long for the helper's window 
 M.SERVE_WAIT_MS = 20000    -- at a jump with the Ticino server, wait this long for the tiles round the car (files.lua)
 M.SERVE_RINGS = 1          -- the rings of tiles round the car that must be there before the jump goes on
 M.GROUP = 'ticino_stream'
+M.GATE = true              -- frames that change the scene stay lone spikes between calm frames (pace.lua; settings
+                           -- "frameGate": false turns it off)
+M.PACING = true            -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": false)
+M.TERRAIN_SHADOWS = true   -- false: the TerrainBlock casts no sun shadows (BeamNG.Earth terrain.lua: every block move
+                           -- redrew the cached sun shadow map for it, 250-340 ms of RenderShadows on a GTX 1060, and
+                           -- its screenshots were pixel-identical without; settings "terrainShadows": false). Off only
+                           -- after the same screenshot check in the Alps (mountain shadows over the valleys)
+M.ENGINE_TOP = 6           -- slow-frame lines name the engine's this many largest subsystems of that frame
 
 local st = nil
 
@@ -211,7 +220,9 @@ local function frameStats()
   f.last = now
   f.n = f.n + 1
   if d > M.SLOW_FRAME_MS then          -- what the streamer did in that frame (st.act, set by onUpdate)
-    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s%s', d, tostring(st.act), frameWork()))
+    local eng = (M.ENGINE_TOP or 0) > 0 and pace.engineTop(M.ENGINE_TOP) or ''
+    log('W', 'ticino', string.format('slow frame %.0f ms, streamer: %s%s%s', d, tostring(st.act), frameWork(),
+      eng ~= '' and (' | engine ' .. eng) or ''))
   end
   st.act = 'idle'
   st.snapO, st.snapF, st.reloadsAt = objects.counts(), forest.counts(), st.reloads
@@ -550,7 +561,7 @@ end
 -- override stream.json (numbers only, e.g. farRadius).
 local function applyFields(over, cfg, what)
   if type(over) ~= 'table' then return end
-  for name, mod in pairs({ stream = M, objects = objects, forest = forest }) do
+  for name, mod in pairs({ stream = M, objects = objects, forest = forest, pace = pace }) do
     for k, v in pairs(type(over[name]) == 'table' and over[name] or {}) do
       if mod[k] ~= nil and type(mod[k]) == type(v) then
         mod[k] = v
@@ -587,6 +598,9 @@ local function readSettings(cfg)
   if type(s.helper) == 'boolean' then M.HELPER = s.helper end
   if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
   if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
+  if type(s.pacing) == 'boolean' then M.PACING = s.pacing end
+  if type(s.frameGate) == 'boolean' then M.GATE = s.frameGate end
+  if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
   -- a window size of the settings (level.window, tiles of cfg.cell): the helper writes the built size only
@@ -596,8 +610,8 @@ local function readSettings(cfg)
     cfg.window = W
   end
   if cfg.window ~= W then M.HELPER = false end
-  log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s', preset, tostring(M.HELPER),
-    tostring(M.DIAG)))
+  log('I', 'ticino', string.format('settings: preset %s, helper %s, diagnostics %s, frame gate %s, pacing %s', preset,
+    tostring(M.HELPER), tostring(M.DIAG), tostring(M.GATE), tostring(M.PACING)))
 end
 
 local function start()
@@ -626,7 +640,8 @@ local function start()
   st = { cfg = cfg, tb = tb, group = group, serial = 0, moves = 0, reloads = 0, perf = {},
          tcache = terwin.newCache(files.map('/levels/' .. M.LEVEL .. '/blocks/terrain/'), 16),
          bcache = terwin.newCache(files.map('/levels/' .. M.LEVEL .. '/blocks/base/'), 12 * #(cfg.baseTextures or {})),
-         window = { cfg.start[1], cfg.start[2] }, baseMats = {}, started = true }
+         window = { cfg.start[1], cfg.start[2] }, baseMats = {}, started = true,
+         gate = pace.newGate(), pacer = pace.newPacer() }
   -- the terrain materials whose base colour is the window's map
   for _, bm in ipairs(cfg.baseMaterials or {}) do
     local o = scenetree.findObject(bm[1])
@@ -640,6 +655,7 @@ local function start()
     else log('W', 'ticino', 'terrain material not found: ' .. bm[1]) end
   end
   if M.TB_BASE_TEX_SIZE > 0 then tb:setField('baseTexSize', 0, tostring(M.TB_BASE_TEX_SIZE)) end
+  if not M.TERRAIN_SHADOWS then tb:setField('castShadows', 0, '0') end
   st.layerKey = {}                    -- terrain material (.ter name) -> its streamed base map (BASE_COMBINED)
   for _, bm in ipairs(cfg.baseMaterials or {}) do st.layerKey[bm[2]] = bm[3] end
   if M.NO_DYNAMIC_CUBEMAP then M.dynamicCubemaps(false) end
@@ -663,9 +679,23 @@ local function stop()
   st = nil
 end
 
+-- the frame gate (pace.lua): may this frame change the scene? changed() after a step that did
+local function mayChange()
+  if not M.GATE then return true end
+  if st.gate:open() then return true end
+  st.act = 'gate'
+  return false
+end
+local function changed() st.gate:worked() end
+
 local function onUpdate(dtReal)
   if not st then return end
   frameStats()
+  do
+    local now, s = clock(), sta()
+    st.gate:beginFrame(st.gateT and (now - st.gateT) or nil, s and s.getPause and s.getPause() or false)
+    st.gateT = now
+  end
   local settled, nSettled = objects.settle(clock)
   if settled and M.DIAG then log('D', 'ticino', nSettled .. ' objects made static') end
   if st.basePending then              -- BASE_MODE 'split': one terrain material's base colour map a frame
@@ -796,8 +826,10 @@ local function onUpdate(dtReal)
   end
   -- the collision cells round the car (ProceduralMesh pieces, a few ms a frame)
   if objects.colsPending() then
+    if not mayChange() then return end
     st.act = 'cols'
     objects.stepCols(clock, M.COL_BUDGET_MS)
+    changed()
     if objects.colsPending() then return end
   end
   -- the collision rebuild first, as soon as the cells and the colliders of the queue (it starts with them) are made
@@ -806,10 +838,14 @@ local function onUpdate(dtReal)
   if objects.colDirty() then
     st.dirtySince = st.dirtySince or clock()
     local due = (objects.colUrgent and objects.colUrgent()) or clock() - st.dirtySince > M.RELOAD_DEFER_MS
-    if due and not objects.colsPending() and not objects.collidersPending() and tryReload(st.objRec) then
-      st.act = 'reload'
-      st.objRec, st.dirtySince = nil, nil
-      return
+    if due and not objects.colsPending() and not objects.collidersPending() then
+      if not mayChange() then return end
+      if tryReload(st.objRec) then
+        st.act = 'reload'
+        changed()
+        st.objRec, st.dirtySince = nil, nil
+        return
+      end
     end
   else
     st.dirtySince = nil
@@ -818,7 +854,9 @@ local function onUpdate(dtReal)
   -- come before the next window's files (a window starts moving with the car still 2 tiles from its edge) and before
   -- anything farther
   if objects.nearPending(M.NEAR_RINGS) then
+    if not mayChange() then return end
     st.act = 'near objects'
+    changed()
     -- a whole burst a frame: each frame that adds a building costs the engine ~160-480 ms whatever its spawn took
     -- (4-42 ms), and at OBJ_BUDGET_MS the near ring came one object a frame (PC flight D 2026-10-31, after the jump)
     objects.BURSTING = true
@@ -827,8 +865,10 @@ local function onUpdate(dtReal)
     return
   end
   if forest.nearPending() then
+    if not mayChange() then return end
     st.act = 'near forest'
     forest.step(clock, M.FOREST_BUDGET_MS)
+    changed()
     return
   end
   if st.objRec and st.objRec.t0 and not st.objRec.nearMs then
@@ -843,13 +883,17 @@ local function onUpdate(dtReal)
     end
   end
   if st.job then
-    st.act = 'window files'
-    if runJob(st.job, M.BUDGET_MS) then
-      local job = st.job
-      st.job = nil
-      if not job.failed then st.act = 'terrain swap'; apply(job, 'move') end
+    -- the files in Lua, a few ms a frame (no scene change); the swap itself waits for the gate, alone in its frame
+    if not st.job.done then
+      st.act = 'window files'
+      if runJob(st.job, M.BUDGET_MS) then st.job.done = true end
+      return          -- the objects wait for a frame without window work
     end
-    return            -- the objects wait for a frame without window work
+    if not mayChange() then return end
+    local job = st.job
+    st.job = nil
+    if not job.failed then st.act = 'terrain swap'; apply(job, 'move'); changed() end
+    return
   end
   -- the objects
   if M.BURST_EVERY_MS > 0 and (objects.pending() or forest.pending() or objects.farPending()) then
@@ -859,6 +903,8 @@ local function onUpdate(dtReal)
     local nq = objects.addsQueued()
     if nq > M.BURST_QUEUE_REF then every = math.max(M.BURST_EVERY_SLOW_MS, every * M.BURST_QUEUE_REF / nq) end
     if clock() - (st.lastBurst or -1e9) < every then st.act = 'wait burst'; return end
+    if not mayChange() then return end
+    changed()
     st.lastBurst = clock()
     st.act = 'burst'
     local t0 = clock()
@@ -874,13 +920,18 @@ local function onUpdate(dtReal)
     if left > 0 and objects.farPending() then objects.stepFar(clock, left) end
     return
   end
+  if (objects.pending() or forest.pending() or (objects.farPending() and not st.objRec)) and not mayChange() then
+    return
+  end
   if objects.pending() then
     st.act = 'objects'
     objects.step(clock, M.OBJ_BUDGET_MS)
     if objects.farPending() then objects.stepFar(clock, M.FAR_EVERY_MS) end
+    changed()
   elseif forest.pending() then
     st.act = 'forest'
     forest.step(clock, M.FOREST_BUDGET_MS)
+    changed()
   elseif st.objRec then
     perfLine(st.objRec)
     st.objRec = nil
@@ -890,6 +941,7 @@ local function onUpdate(dtReal)
   else
     st.act = 'far'
     objects.stepFar(clock, M.FAR_BUDGET_MS)
+    changed()
   end
 end
 
@@ -996,6 +1048,21 @@ M.onUpdate = function(dtReal)
   local t = clock()
   onUpdate(dtReal)
   if st then st.luaMs = clock() - t end
+end
+-- even frame pacing (pace.lua): after physics, before the frame is drawn; the frame's own time without the wait
+M.onPreRender = function(dtReal, dtSim)
+  if not st then return end
+  local now = clock()
+  if M.PACING and st.paceLast and (dtSim or 0) > 0 then
+    local wait = st.pacer:step(now - st.paceLast)
+    if wait > 0 then
+      if not pace.sleep(wait) then M.PACING = false; log('W', 'ticino', 'no socket.sleep: frame pacing off') end
+      now = clock()
+    end
+  elseif (dtSim or 0) <= 0 then
+    st.pacer:reset()
+  end
+  st.paceLast = now
 end
 M.onClientPostStartMission = onClientPostStartMission
 M.onClientEndMission = onClientEndMission

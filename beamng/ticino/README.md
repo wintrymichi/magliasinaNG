@@ -74,9 +74,12 @@ when the level starts:
 | `preset` | `standard` (default), `light` | `standard` is the level as built and tested. `light` is for PCs with little video memory or a slow CPU: trees shown within 3 tiles (1.2 km) instead of 4, fewer of them at a distance, far ground to 10 tiles instead of 16. The near scene (roads, buildings, collision) stays the same. |
 | `helper` | `true` (default), `false` | use the helper process when it runs |
 | `diagnostics` | `false` (default), `true` | write `ticino_perf.csv` (every terrain move, timings) and `ticino_frames.csv` (frame times every 5 s) to the user folder |
-| `stream`, `objects`, `forest` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
+| `stream`, `objects`, `forest`, `pace` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua`, `pace.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
 | `level` | object of numbers | advanced: numbers of the level's `stream.json`, e.g. `{"level": {"farRadius": 20}}` |
 | `dynamicObjects` | `false` (default), `true` | create the streamed objects dynamic, as BeamNG.Earth does: costs about 5x the frame time standing in a town (each one is drawn into every shadow cascade); for tests only |
+| `pacing` | `true` (default), `false` | even frame pacing (from BeamNG.Earth): a frame shorter than the recent frames' 70th percentile waits the rest, so the frames come evenly and the game speed stays steady; costs a few fps; off below 30 fps |
+| `frameGate` | `true` (default), `false` | a frame that changes the scene (objects, trees, collision, a terrain move) runs only after two calm frames that changed nothing: each such frame stays a lone spike, which the game's smoothed clock drops instead of slowing down and catching up (the "scatti") |
+| `terrainShadows` | `true` (default), `false` | `false`: the terrain casts no sun shadows (BeamNG.Earth: each terrain move redrew the sun's shadow map, up to 1/3 s on slow GPUs); for tests until checked against screenshots of the mountains |
 
 Advanced fields that were measured on the PC (October 2026), with their defaults:
 

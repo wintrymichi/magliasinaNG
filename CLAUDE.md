@@ -1660,6 +1660,30 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   to be force-cancelled: a plain cancel left it running; it stopped at its first step, nothing uploaded). Before
   pushing a merge of ticino, check whether it brings changes to all_stamp.txt, helper/** or install/**.
 
+## Stutters of the Ticino and what BeamNG.Earth does about them (thread "Eliminare gli scatti del Ticino", 2026-11-01)
+
+- BeamNG.Earth (github.com/TecnaGamer/BeamNG.Earth, MIT) clones fine with `git clone --depth 1` in the cloud. Its
+  answers to the same problem: (1) governor.lua: streaming gets ~2 ms a frame from a token bucket, and a heavy step
+  (terrain commit) runs alone with 2 quiet frames before and after, because the engine moves the world by a smoothed
+  frame time (median of 3 + slow average): a LONE slow frame is dropped (a hitch, game speed right), two or more in a
+  row pass and the game runs slow then fast. Our PC flights had 8 "near objects" bursts in 1.6 s, one EVERY frame,
+  exactly the bad pattern. (2) framepacer.lua: frames shorter than the recent 70th percentile sleep the rest
+  (socket.sleep in onPreRender), on by default, costs up to a tenth of the fps. (3) server/staging.py: temporary files
+  outside the user folder (the game's file watchers fire for every file made or renamed in it, up to ~1 s a frame)
+  and one read of every new file on Windows before the game opens it (the antivirus scan of a first open cost the
+  game 20-184 ms a tile file). (4) TerrainBlock castShadows 0 (every block move redrew the cached sun shadow map). (5)
+  pooled shape and Material names (the frame cost grows ~0.3 ms per 1000 distinct shape files ever loaded in a
+  session: "long sessions get more stuttery"). Not ported: (5) needs the server to serve fixed slot paths.
+- Ported (ticino/pace.lua, stream.lua): the gate (every scene-changing step: near objects, bursts, forest, collision
+  cells, rebuilds, the terrain swap waits for QUIET=2 calm frames, open while paused, CALM_TIMEOUT 30 frames), the
+  pacer (settings "pacing"), engine subsystems in the slow-frame lines (Engine.Debug.getLastPerformanceMetrics), the
+  helper/server write_atomic with staging + warm read, terrainShadows as a setting (default still on: mountain
+  shadows must be checked in screenshots first). The window job's files and its swap are now in different frames.
+- tests/sim_stream.lua cannot judge the gate: its frame "wall time" is the Lua's CPU time, so every frame is calm;
+  it only proves no Lua error and the same throughput (2,402 vs 2,406 objects in 120 s with SPAWN_MS=30).
+  tests/pace_test.lua emulates the engine's filter for the effect. sim_stream needs a level: curl ticino_base_1.zip
+  and ticino_ti_0_0_1.zip from the public pre-release ticino-v1 (2.1 GB, ~1 min) and unzip both into one folder.
+
 ## Shapes compiled to .cdae (beamng/ticino/dae2cdae.py, 2026-10-29)
 
 - The zones' shapes are all bng.write_dae files (one node `<name>_a<size>` per detail level, one <triangles> per
