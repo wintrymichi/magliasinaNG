@@ -16,8 +16,12 @@ public sealed class AppUpdate : Observable
     readonly GitHub gh = new();
     ReleaseAsset? asset;
 
-    /// <summary>This app's version (three parts: 1.1.2.0 and 1.1.2 must compare equal).</summary>
-    public static Version Current { get; } = Three(typeof(AppUpdate).Assembly.GetName().Version);
+    /// <summary>This app's version (three parts: 1.1.2.0 and 1.1.2 must compare equal). TICINO_APP_PRETEND_VERSION
+    /// (a test on the PC) makes the app take itself for an older one, so the whole update can be tried with the
+    /// release's own version.</summary>
+    public static Version Current { get; } =
+        Environment.GetEnvironmentVariable("TICINO_APP_PRETEND_VERSION") is { Length: > 0 } p && Version.TryParse(p, out var pv)
+            ? Three(pv) : Three(typeof(AppUpdate).Assembly.GetName().Version);
 
     public Version? Available { get => available; private set { if (Set(ref available, value)) Raise(nameof(IsAvailable)); } }
     Version? available;
