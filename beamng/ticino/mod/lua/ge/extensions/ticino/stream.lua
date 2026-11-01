@@ -112,6 +112,8 @@ M.GATE = true              -- frames that change the scene stay lone spikes betw
                            -- "frameGate": false turns it off)
 M.PACING = false           -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": true). Off:
                            -- PC flights 2026-11-01 showed no measurable difference (A/B twice at Manno)
+M.GC_STEP_MS = 25          -- Lua GC steps a frame during the hold (paused)
+M.GC_HOLD_MAX_MS = 3000    -- the hold may run this much longer for the collector to finish its cycle
 M.GC_AFTER_HOLD = true     -- a full Lua garbage collection at the end of the paused hold after a jump's map.reset
 M.TERRAIN_SHADOWS = true   -- false: the TerrainBlock casts no sun shadows (BeamNG.Earth terrain.lua: every block move
                            -- redrew the cached sun shadow map for it, 250-340 ms of RenderShadows on a GTX 1060, and
@@ -774,14 +776,32 @@ local function onUpdate(dtReal)
     end
     return
   end
-  if st.holdUntil and clock() >= st.holdUntil then   -- the hold after a map.reset is over
-    st.holdUntil = nil
-    -- the garbage of the map read (and of the jump) collected now, still paused: else the collector's steps came
-    -- in the first seconds of the drive (PC 2026-11-01: LuaGC up to 520 ms in one frame after the map.reset)
-    local t0 = clock()
-    if M.GC_AFTER_HOLD then collectgarbage('collect') end
-    log('I', 'ticino', string.format('hold after the AI map read over (garbage collected in %.0f ms)', clock() - t0))
-    pause(false)
+  if st.holdUntil then
+    -- the garbage of the map read (and of the jump) collected during the hold, while paused, in steps of GC_STEP_MS a
+    -- frame: else the collector's steps came in the first seconds of the drive (PC 2026-11-01: LuaGC up to 520 ms in
+    -- one frame after the map.reset), and one full collect at the end of the hold took 1.2 s in the frame the game
+    -- went on (PC, fc13b35: "near objects 1342 ms, lua 1217")
+    if M.GC_AFTER_HOLD and not st.gcDone then
+      local t0 = clock()
+      repeat
+        -- a cycle that finishes is counted; the second one began after the map read, so its garbage is gone
+        if collectgarbage('step', 0) then
+          st.gcCycles = (st.gcCycles or 0) + 1
+          if st.gcCycles >= 2 then st.gcDone = true break end
+        end
+      until clock() - t0 > M.GC_STEP_MS
+      st.gcMs = (st.gcMs or 0) + clock() - t0
+    end
+    local over = clock() >= st.holdUntil
+    if over and M.GC_AFTER_HOLD and not st.gcDone and clock() < st.holdUntil + M.GC_HOLD_MAX_MS then over = false end
+    if over then                     -- the hold after a map.reset is over: the game goes on in a frame of its own
+      st.holdUntil = nil
+      log('I', 'ticino', string.format('hold after the AI map read over (garbage %s in %.0f ms of steps)',
+        st.gcDone and 'collected' or 'not all collected', st.gcMs or 0))
+      st.gcDone, st.gcMs, st.gcCycles = nil, nil, nil
+      pause(false)
+      return
+    end
   end
   if st.rwatch then
     local w = st.rwatch
@@ -987,7 +1007,7 @@ local function onUpdate(dtReal)
       return
     end
     st.act = 'prefetch'
-    if objects.prefetch(1) == 0 then forest.prefetch(cx, cy, 1) end
+    if objects.prefetch(1) == 0 then forest.prefetch(cx, cy, 1, clock) end
   else
     st.act = 'far'
     objects.stepFar(clock, M.FAR_BUDGET_MS)

@@ -1836,4 +1836,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   After the jump's map.reset LuaGC took up to 520 ms in one frame: a full collectgarbage at the end of the paused hold
   (GC_AFTER_HOLD; the sim shows 180-245 ms there, inside the pause). A 482 ms frame with lua 0 in the streamer was other
   Lua (traffic/AI?), not looked at. Terrain swap 226-272 ms = terrainFile ~115 ms Lua + RenderShadows 102-135.
+- PC round of fc13b35 (2026-11-01, 3 runs): the full collectgarbage('collect') at the end of the hold took 1.2 s in
+  the frame the game went on ("near objects 1342 ms, lua 1217 ms, LuaGC 104": an explicit collect is counted as the
+  caller's Lua, not as LuaGC), worse than the 520 ms it was meant to remove. Now collectgarbage('step') for
+  GC_STEP_MS a frame during the paused hold until two cycles end (the hold waits up to GC_HOLD_MAX_MS more), and the
+  game goes on in a frame of its own. The "near forest" frames of 185-205 ms that added 7 trees ("forest passes 0
+  items +7", lua 177-198) were the jsonDecode of the tile's rows before the pass loop (PASS_MAX_MS only looked at the
+  clock inside the loop). forest.lua parses the rows itself, PARSE_MS a frame (a 2,593-row tile: 5 ms in luajit, same
+  rows as json.loads), prefetches the queued tiles first, and a block's next pass waits for the next frame after
+  PASS_MAX_MS. CACHE_TILES 120 was under RADIUS 4 + the prefetched ring (121 tiles): 200.
 

@@ -41,7 +41,7 @@ M.PASS_MAX_MS = 30                    -- Lua ms of a frame's forest work at most
 M.CHECK_EVERY = 8                     -- items between two looks at the clock (budget, ONE_FOREST off)
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
-M.CACHE_TILES = 120
+M.CACHE_TILES = 200                   -- (120 was under RADIUS 4 + the prefetched ring: 81 + 40)
 M.WAVE_NEAR = 1                       -- rings round the car's tile whose trees come whole before any farther tree
 M.WAVE_PART = 0.4                     -- share of its trees a farther tile gets in the first pass of the wave
 -- Shape variants (BeamNG.Earth trees.lua SHAPE_VARIANTS, 2026-10-15 probes): a frame that adds or removes Forest items
@@ -61,20 +61,63 @@ function M.init(cfg, level, markDirty)
         stats = { made = 0, removed = 0, failed = 0, missingTypes = 0 } }
 end
 
-local function rowsOf(key)
-  local r = S.rows[key]
-  if r ~= nil then return r or nil end
-  local cx, cy = key:match('^(%-?%d+)_(%-?%d+)$')
-  local ok, data = pcall(jsonDecode, readFile(files.map(string.format(M.FILE, S.level, tonumber(cx), tonumber(cy)))) or '')
-  r = (ok and type(data) == 'table') and data or false
+-- A tile's rows ([[type, x, y, z, yaw, scale], ...]) are parsed here, a slice at a time, not by jsonDecode: one
+-- decode of a 100-300 kB tile took ~170 ms of Lua in one frame (PC 2026-11-01: "near forest" frames of 185-205 ms
+-- that added 7 trees). M.PARSE_MS of parsing a frame at most when budgeted; whole while paused.
+M.PARSE_MS = 6
+local function remember(key, r)
   S.rows[key] = r
   S.rowOrder[#S.rowOrder + 1] = key
   while #S.rowOrder > M.CACHE_TILES do
     local old = table.remove(S.rowOrder, 1)
     if not S.tiles[old] then S.rows[old] = nil end
   end
-  return r or nil
 end
+
+-- Parse tile key's rows for at most budgetMs (nil: all); returns the rows when done, nil while not.
+local function parseRows(key, clock, budgetMs)
+  local r = S.rows[key]
+  if r ~= nil then return r or nil end
+  local ps = S.parsing
+  if not ps or ps.key ~= key then
+    local cx, cy = key:match('^(%-?%d+)_(%-?%d+)$')
+    local t0 = clock and clock()
+    local txt = readFile(files.map(string.format(M.FILE, S.level, tonumber(cx), tonumber(cy))))
+    if type(txt) ~= 'string' then remember(key, false); return nil end
+    ps = { key = key, txt = txt, pos = 1, rows = {}, ms = t0 and (clock() - t0) or 0 }
+    S.parsing = ps
+  end
+  local txt, rows, find, sub, tonum = ps.txt, ps.rows, string.find, string.sub, tonumber
+  local t0 = clock and clock()
+  local p, n = ps.pos, #rows
+  while true do
+    local a, b = find(txt, '%[[^%[%]]*%]', p)
+    if not a then break end
+    local row, k = {}, 0
+    local q = a + 1
+    while q < b do
+      local c = find(txt, ',', q, true)
+      if not c or c > b then c = b end
+      k = k + 1
+      row[k] = tonum(sub(txt, q, c - 1))
+      q = c + 1
+    end
+    n = n + 1
+    rows[n] = row
+    p = b + 1
+    if budgetMs and n % 64 == 0 and clock() - t0 > budgetMs then
+      ps.pos = p
+      ps.ms = ps.ms + clock() - t0
+      return nil
+    end
+  end
+  S.parsing = nil
+  S.stats.parsed = (S.stats.parsed or 0) + 1
+  S.stats.parseMs = (S.stats.parseMs or 0) + ps.ms + (t0 and clock() - t0 or 0)
+  remember(key, rows)
+  return rows
+end
+M.parseRows = function(key, clock, budgetMs) return S and parseRows(key, clock, budgetMs) end
 
 -- 'dir/name.dae' spelled 'dir/./name.dae' (v = 1), 'dir/././name.dae' (v = 2), ...
 local function variantPath(p, v)
@@ -269,7 +312,16 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       t = { share = 0, solid = op.solid, items = {}, itemSolid = {}, n = 0 }
       S.tiles[op.key] = t
     end
-    local rows = rowsOf(op.key) or {}
+    local rows = S.rows[op.key]
+    if rows == nil then
+      -- the tile's rows not parsed yet: parse them for at most PARSE_MS (whole when unbudgeted, i.e. paused), and if
+      -- they are not done, this frame does nothing more
+      local cap = (passCap or (budgetMs and budgetMs < 1000)) and M.PARSE_MS or nil
+      if cap and clock() - t0 > 1 then return false end   -- a pass already ran in this frame: parse in the next
+      rows = parseRows(op.key, clock, cap)
+      if rows == nil and S.rows[op.key] == nil then return false end
+    end
+    rows = rows or {}
     if op.pos == 1 then
       t.dirty = true
       if (t.solid or op.solid) and S.markDirty then S.markDirty() end
@@ -345,6 +397,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       same = b and b.id == fid
     end
     if M.ONE_FOREST and touched and not same and budgetMs and budgetMs < 1000 and forests >= M.FORESTS_PER_FRAME then break end
+    if same and passCap and clock() - t0 > passCap then break end   -- the rest of the block in the next frame
     if same then
       -- (no time limit between the passes of one block: a second frame on the same Forest costs as much again)
     elseif burstMs then
@@ -378,14 +431,27 @@ function M.nearPending() return S and S.qpos <= #S.queue and S.queue[S.qpos].nea
 
 -- Read (at most n) tree files of the ring just beyond RADIUS before the car gets there (a tile's JSON was read in
 -- the frame its first item was made). Returns the number read.
-function M.prefetch(cx, cy, n)
+function M.prefetch(cx, cy, n, clock, budgetMs)
   if not S then return 0 end
+  budgetMs = budgetMs or M.PARSE_MS
+  -- a tile being parsed first, then the tiles of the queue, then the ring just beyond RADIUS
+  if S.parsing then
+    parseRows(S.parsing.key, clock, clock and budgetMs or nil)
+    return 1
+  end
+  for j = S.qpos, #S.queue do
+    local key = S.queue[j].key
+    if S.rows[key] == nil and files.ready(key) then
+      parseRows(key, clock, clock and budgetMs or nil)
+      return 1
+    end
+  end
   local R, done = M.RADIUS + 1, 0
   for ty = cy - R, cy + R do
     for tx = cx - R, cx + R do
       local key = tx .. '_' .. ty
       if S.has[key] and S.rows[key] == nil and files.ready(key) then
-        rowsOf(key)
+        parseRows(key, clock, clock and budgetMs or nil)
         done = done + 1
         if done >= n then return done end
       end
