@@ -137,7 +137,7 @@ while t < seconds do
   frames = frames + 1
   if os.getenv('EVERY') and frames % tonumber(os.getenv('EVERY')) == 0 then
     local q = stream.status()
-    print(string.format("t %.1f queued %d live %d far %d farTrees %d+%d farBld %d+%d held %d forest %s", t, q.objects.queued, q.objects.live, q.objects.far, q.objects.farTrees or 0, q.objects.farTrees2 or 0, q.objects.farBld or 0, q.objects.farBld2 or 0, q.objects.bldHeld or 0, tostring(q.forest and (q.forest.queued or q.forest.items))))
+    print(string.format("t %.1f queued %d live %d far %d (coarse %d, hidden %d+%d coarse, doomed %d, queued %d) farTrees %d+%d farBld %d+%d held %d forest %s", t, q.objects.queued, q.objects.live, q.objects.far, q.objects.farLod or 0, (q.objects.farHidden or 0) - (q.objects.farLodHidden or 0), q.objects.farLodHidden or 0, q.objects.farDoomed or 0, q.objects.farQueued or 0, q.objects.farTrees or 0, q.objects.farTrees2 or 0, q.objects.farBld or 0, q.objects.farBld2 or 0, q.objects.bldHeld or 0, tostring(q.forest and (q.forest.queued or q.forest.items))))
   end
   if frames > 3 then worstLua = math.max(worstLua, ms) end
   if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
@@ -169,6 +169,7 @@ while t < seconds do
   end
 end
 local s = stream.status()
+if FARPROF then print(FARPROF()) end   -- a PROF file's own summary (its counters)
 if os.getenv("SLOW") then print(string.format("car at %.0f, %.0f", car.x, car.y)) end
 local live = 0
 for _ in pairs(objs) do live = live + 1 end

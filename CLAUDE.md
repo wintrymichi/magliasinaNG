@@ -1781,6 +1781,17 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   reach into the window are hidden now (a few holes round a jump while the new far tiles come, never two layers).
 - Not tested in the game yet (2026-11-01): FPS with ~500 more static tiles and 60 km view, and whether the borders
   between levels show (each coarse border vertex is the highest far height of its stretch, skirt down to the lowest).
+- First look in the game (PC photos from San Salvatore, 2026-11-01, bases 69a1db7 .. 4a53bd1): the ground ended ~6 km
+  out in a straight edge (the square of the fine far tiles), no coarse tile anywhere, although the log had "far levels
+  2..5: split within ..." (no override, current base, packs mode). The coarse tiles were queued and never made: after
+  the jump's FAR_JUMP_MS (which made the fine tiles, nearest first) only the bursts make far tiles, and a burst gave
+  stepFar what the objects and the forest left of BURST_MS, i.e. nothing while objects were queued (always, driving or
+  in a town). The far trees are stepped INSIDE stepFar, so they never came either (FAR_TREES_MIN_MS could not help:
+  stepFar was not called). The sim showed it only with SPAWN_MS > 0: 166 far tiles (all from the jump) for a whole
+  150 s flight with 1,255 queued; with free shapes every queue drains at once and the starved step looks fine. Now
+  stepFar gets FAR_BURST_MS (6) of every burst before the objects: REALTIME=1 sim, 1 ms a shape, 0 -> 252 coarse tiles
+  in 2 minutes of flight. Judge any budget change with REALTIME=1 and SPAWN_MS > 0 (the burst clock is CPU time
+  otherwise: 18 bursts in 60 s of driving instead of 170).
 
 ## Ticino map and spawn names (worldmap.py, 2026-11-01)
 
@@ -1860,6 +1871,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   and in the game a far ground queue that each shape takes ms of keeps the whole budget. Now the far trees get
   FAR_TREES_MIN_MS of every call, and the log says "far trees in stream.json ..." at start, "far trees at tile ..."
   at every update and "far trees: first shape ..." once: read those before guessing again.
+  The real cause (found with the missing far levels, see View distance of Ticino): stepFar itself was never called
+  in a burst while objects were queued; FAR_BURST_MS gives it a share of every burst.
 
 
 ## Far houses and the free camera (farbld.py, objects.lua far sets, stream.lua followFreeCamera, 2026-11-01)

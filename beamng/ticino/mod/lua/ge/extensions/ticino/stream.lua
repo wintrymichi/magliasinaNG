@@ -52,6 +52,10 @@ M.FAR_BLD_JUMP_MS = 300    -- far houses made at a jump after the near rings: th
                            -- (rings 2-6 as far houses, objects.lua F.fill) while its streamed houses come over a minute
 M.FAR_BLD_BURST_MS = 2     -- of each burst, for the far houses first: behind a long queue (a jump, a fast free camera)
                            -- they got only what the objects left, i.e. nothing
+M.FAR_BURST_MS = 6         -- of each burst, for the far ground and (in objects.stepFar) the far trees: they too got only
+                           -- what the objects and the forest left, so after the jump's FAR_JUMP_MS no far level and no
+                           -- far tree came while objects were queued (PC 2026-11-01 from San Salvatore: the ground ended
+                           -- ~6 km out; sim with 3 ms a shape: 166 far tiles for a whole 150 s flight)
 M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
 M.BURST_EVERY_MS = 1000    -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
 M.BURST_MS = 20            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
@@ -1088,6 +1092,7 @@ local function onUpdate(dtReal)
     -- made more slow bursts of ~220 ms (each frame that touches a Forest costs that much: PC tests H1, H2)
     if objects.delsPending() then objects.stepDels(clock, M.BURST_DEL_MS) end
     if objects.farBldPending() then objects.stepFarBld(clock, M.FAR_BLD_BURST_MS) end
+    if objects.farPending() then objects.stepFar(clock, M.FAR_BURST_MS) end
     if objects.pending() then objects.step(clock, math.max(1, M.BURST_MS - (clock() - t0))) end
     objects.BURSTING = false
     local left = M.BURST_MS - (clock() - t0)
@@ -1107,6 +1112,7 @@ local function onUpdate(dtReal)
   elseif forest.pending() then
     st.act = 'forest'
     forest.step(clock, M.FOREST_BUDGET_MS)
+    if objects.farPending() then objects.stepFar(clock, M.FAR_EVERY_MS) end
     changed()
   elseif st.objRec then
     perfLine(st.objRec)

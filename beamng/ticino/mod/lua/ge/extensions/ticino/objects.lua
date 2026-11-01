@@ -1407,11 +1407,12 @@ function M.stats()
     live = live + 1
     if l.col then col = col + 1 end
   end
-  local far, farLod, farHidden = 0, 0, 0
+  local far, farLod, farHidden, farLodHidden = 0, 0, 0, 0
   for _, f in pairs(S.farLive) do
     far = far + 1
     if (f.k or 0) > 0 then farLod = farLod + 1 end
     if f.hidden then farHidden = farHidden + 1 end
+    if f.hidden and (f.k or 0) > 0 then farLodHidden = farLodHidden + 1 end
   end
   local doomed = 0
   for _ in pairs(S.farDoomed or {}) do doomed = doomed + 1 end
@@ -1421,7 +1422,8 @@ function M.stats()
   local farBld, farBld2 = fsCount(S.fb)
   local held = 0
   for _, w in pairs(S.fb.wait) do held = held + #w end
-  return { live = live, colliders = col, far = far, farLod = farLod, farHidden = farHidden, farDoomed = doomed,
+  return { live = live, colliders = col, far = far, farLod = farLod, farHidden = farHidden, farLodHidden = farLodHidden,
+           farDoomed = doomed, farQueued = #S.farQueue - S.farPos + 1,
            farTrees = farTrees, farTrees2 = farTrees2, farBld = farBld, farBld2 = farBld2, bldHeld = held,
            farDropped = S.stats.farDropped or 0, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
            deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead,
