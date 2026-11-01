@@ -1813,8 +1813,17 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - A ProceduralMesh was no option for them: it always enters the static collision (EarthNG: disableCollision does not
   take it out; every rebuild would pay for ~400k card triangles). Render-only things must be TSStatic + collisionType None.
 - Size on ti_0_0 (397 tiles): 30 MB raw, 6.4 MB zipped; all of Ticino ~0.5 GB zipped in the base. Cells of 24 m were
-  only 20 % bigger than 28 m (most cells hold few trees). The card colours (COLOUR) are a guess: compare them with the
-  near Forest's imposters in a screenshot before keeping them. Not tested in the game yet.
+  only 20 % bigger than 28 m (most cells hold few trees). Not tested in the game yet.
+- v2 (michi 11:37Z: "gli alberi devono vedersi sempre come anche le case", "metti gli alberi low poly lontani del
+  Malcantone"): the clumps are now drawn from the side views of the Malcantone's far trees (dati/far_imposters, 8 side
+  views per model at 256 px, cells 8-9 are from above). The game bakes those imposters' albedo in LINEAR light (the
+  fir's crown reads 8,12,7 in the DDS): convert to sRGB before using one as a colour map, and it still reads pale
+  (SATURATE 1.4). The bare trunks of the imposters stood out as pale bars in a clump: below the fill line, pixels with
+  no green take the under-fill's shade too. Coarse tiles l2_<bx>_<by>.cdae (4 x 4 tiles, cards of 64 m, +20 % of the
+  fine bytes) carry the woods to FAR_TREES_RADIUS 40 tiles (~15 km); fine tiles only in the blocks within
+  FAR_TREES_BLOCKS0 (2) of the car's block. A level change keeps the old shape until its cover is there.
+  tests/far_trees.lua checks it: its first holes were the test's own (a first move of 7 tiles, and a made-up Forest
+  that dropped its old rings before the far tiles came): count a tile the Forest still shows as covered.
 - PC A/B flights at Manno (2026-11-01, base of 00:19Z, 150 s): gate+pacing on 83.1/84.6 fps vs off 90.1/80.5 (noise),
   frames over 100 ms 7-8 in every run. The gate as first written let more steps into a frame that had already changed
   the scene ("costs nothing new"): it concentrated the same cost into 2-3 frames of 400-550 ms. Now one scene-changing

@@ -81,7 +81,7 @@ M.DIAG = false             -- write ticino_frames.csv and ticino_perf.csv (setti
 M.PRESETS = {
   standard = {},
   light = { forest = { RADIUS = 3, SHARE = { [0] = 1.0, 1.0, 0.5, 0.25 }, CACHE_TILES = 80 },
-            objects = { CACHE_TILES = 250, FAR_TREES_RADIUS = 8 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
+            objects = { CACHE_TILES = 250, FAR_TREES_RADIUS = 24, FAR_TREES_BLOCKS0 = 1 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
 }
 -- How far the camera sees (michi 2026-10-31, "io voglio vedere di più da lontano"): with the far levels of the base
 -- (farlod.py, objects.lua FAR_LOD) the ground reaches the whole of Ticino, so LevelInfo.visibleDistance goes to VIEW_KM
@@ -612,7 +612,8 @@ local function readSettings(cfg)
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
   if type(s.fog) == 'number' and s.fog >= 0 then M.FOG_DENSITY = s.fog end
-  -- "treeKm": how far the far trees reach (objects.lua far trees; 0: none, only the Forest's ~1.5 km)
+  -- "treeKm": how far the far trees reach (objects.lua far trees: fine tiles near, coarse blocks beyond; 0: none,
+  -- only the Forest's ~1.5 km)
   if type(s.treeKm) == 'number' and s.treeKm >= 0 then
     objects.FAR_TREES_RADIUS = math.floor(s.treeKm * 1000 / (cfg.cell * cfg.square) + 0.5)
   end

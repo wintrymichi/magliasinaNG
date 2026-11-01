@@ -8,13 +8,16 @@ of real trees would mean more such frames. A far-tree tile is a plain TSStatic w
 ground tile (objects.lua stepFar), which costs a few ms.
 
 A tile's trees (tiles/t_<cx>_<cy>.trees.json of the slices, the rows forest.lua streams) are binned on a CELL m grid;
-every cell with trees becomes one card: two crossed vertical quads with a cut-out texture of a clump of crowns
-(fartrees.png, made here: conifers, broadleaves, narrow crowns, mixed; two of each), as wide as the cell's crowns
-cover it and as tall as its tall trees, standing on its lowest tree foot. Colours: vertex colours by the clump's kind
-(material with vertColor; the texture is a near-white shading). Normals point up: lit like the ground under them.
-Bushes, hedges and guard rails of the forest list are left out (and trees under MIN_H).
+every cell with trees becomes one card: two crossed vertical quads with a cut-out texture of a clump of trees
+(fartrees.png: conifers, broadleaves, narrow crowns, mixed; VARIANTS of each), as wide as the cell's crowns cover it
+and as tall as its tall trees, standing on its lowest tree foot. The clumps are drawn from the side views of the
+Malcantone level's own far trees (their imposters in dati/far_imposters, michi 2026-11-01: "metti gli alberi low poly
+quelli lontani del Malcantone"), so colour and shape are the same woods. Normals point up: lit like the ground.
+Coarse tiles (l2_<bx>_<by>.cdae, L2_TILES x L2_TILES tiles, cards of CELL2 m) carry the woods out to the horizon
+(michi: "gli alberi devono vedersi sempre come le case"). Bushes, hedges and guard rails are left out (and trees
+under MIN_H).
 
-    fartrees.build(read_tiles, out_dir, tile_m) -> [keys]                          (region_base.py)
+    fartrees.build(read_tiles, names, origin, tile_m, out_dir) -> ([tile keys], [L2 keys])   (region_base.py)
     python fartrees.py --trees <folder of t_*.trees.json> --stream stream.json --out <level folder>   (a test)
 """
 import argparse
@@ -34,18 +37,26 @@ import cdae  # noqa: E402
 DIR = "fartrees"
 MAT = "tc_far_trees"
 TEX = "fartrees.png"
-CELL = 28.0                 # m: one card per cell with trees
+CELL = 28.0                 # m: one card per cell with trees (far-tree tiles of 384 m)
+CELL2 = 64.0                # m: the same for the coarse far-tree tiles (L2_TILES x L2_TILES tiles, 1,536 m)
+L2_TILES = 4
 MIN_H = 5.0                 # m: shorter items are no far tree
 CROWN = 0.6                 # crown radius / bounding-box half width (the boxes are wider than the leaves)
 SINK = 1.5                  # m: a card's foot under the lowest tree foot of its cell (slopes)
-WIDTH_MIN, WIDTH_MAX = 6.0, 1.3 * CELL
+WIDTH_MIN = 6.0
 TOP_PCT = 75                # the card's top: this percentile of the cell's tree tops
-ATLAS = (1024, 512)         # 4 x 2 cells of 256 px
+ATLAS = (2048, 1024)        # 4 kinds (columns of 512 px) x VARIANTS (rows of 256 px)
+VARIANTS = 4
 KINDS = ("conifer", "broad", "narrow", "mixed")
-# vertex colours (sRGB 0..1) of a clump's kind; the texture's shading multiplies them. Darker than the meadows,
-# conifers blue-green: to be checked against the near forest's imposters in a screenshot.
-COLOUR = {"conifer": (0.20, 0.27, 0.17), "broad": (0.27, 0.34, 0.17), "narrow": (0.30, 0.36, 0.19),
-          "mixed": (0.24, 0.31, 0.17)}
+# the Malcantone's far trees (pipeline/far_trees.py), as the game baked their imposters (dati/far_imposters): the
+# clumps are drawn from their side views, so the far woods look like the far trees of the Malcantone level
+IMPOSTERS = os.path.join(HERE, "..", "dati", "far_imposters")
+MODELS = {"conifer": ["far_fir_a", "far_fir_b", "far_fir_c"],
+          "broad": ["far_broad_a", "far_broad_b", "far_broad_c"],
+          "narrow": ["far_narrow_a", "far_narrow_b", "far_narrow_c"]}
+TREES_PER_CLUMP = {"conifer": (10, 13), "broad": (6, 8), "narrow": (9, 11), "mixed": (8, 10)}
+SATURATE = 1.4             # the imposters' colours, a little more saturated (the sRGB of a linear bake is pale)
+SHADE = (0.86, 1.0)         # vertex colour of a card (a little variety between clumps; the colour is the imposters')
 SKIP = re.compile(r"bush|hedge|guardrail|^skin_")
 
 
@@ -92,8 +103,8 @@ def _hash(*v):
     return h
 
 
-def cards(rows, types, x0, y0, tile_m, key=(0, 0)):
-    """The cards of one tile: centre (n, 3) local to the tile's corner (z: the foot), width, height, kind, yaw."""
+def trees(rows, types, x0, y0):
+    """The far trees of one tile's rows: x, y local to the corner (x0, y0), foot z, height, crown radius, kind."""
     if not len(rows):
         return None
     R = np.asarray(rows, np.float64).reshape(-1, 6)
@@ -107,50 +118,59 @@ def cards(rows, types, x0, y0, tile_m, key=(0, 0)):
     R, t, H = R[big], t[big], H[big]
     if not len(R):
         return None
-    x, y, z = R[:, 1] - x0, R[:, 2] - y0, R[:, 3]
-    r = types.r[t] * R[:, 5]
-    k = types.kind[t]
-    n = int(round(tile_m / CELL))
-    ci = np.clip((x / CELL).astype(np.int64), 0, n - 1)
-    cj = np.clip((y / CELL).astype(np.int64), 0, n - 1)
-    cell = cj * n + ci
-    order = np.argsort(cell, kind="stable")
-    cell, x, y, z, H, r, k = cell[order], x[order], y[order], z[order], H[order], r[order], k[order]
-    starts = np.flatnonzero(np.r_[True, cell[1:] != cell[:-1]])
-    ends = np.r_[starts[1:], len(cell)]
-    out = []
-    for s, e in zip(starts, ends):
-        cx, cy = x[s:e].mean(), y[s:e].mean()
-        foot = z[s:e].min() - SINK
-        top = np.percentile(z[s:e] + H[s:e], TOP_PCT)
-        cover = float(np.sum(np.pi * r[s:e] ** 2))
-        w = float(np.clip(CELL * math.sqrt(min(1.0, cover / CELL ** 2)) * 1.15, WIDTH_MIN, WIDTH_MAX))
-        w = max(w, 2.2 * float(r[s:e].max()))
+    return R[:, 1] - x0, R[:, 2] - y0, R[:, 3], H, types.r[t] * R[:, 5], types.kind[t]
+
+
+def binned(tr, cell, n):
+    """Per cell of cell m (n x n over the tile) with trees: (cell index, count, mean x, mean y, foot, top, cover, max
+    crown radius, kind counts 0..2) as an (m, 11) array."""
+    x, y, z, H, r, k = tr
+    ci = np.clip((x / cell).astype(np.int64), 0, n - 1)
+    cj = np.clip((y / cell).astype(np.int64), 0, n - 1)
+    c = cj * n + ci
+    order = np.argsort(c, kind="stable")
+    c, x, y, z, H, r, k = c[order], x[order], y[order], z[order], H[order], r[order], k[order]
+    starts = np.flatnonzero(np.r_[True, c[1:] != c[:-1]])
+    ends = np.r_[starts[1:], len(c)]
+    out = np.zeros((len(starts), 11))
+    for i, (s, e) in enumerate(zip(starts, ends)):
         kc = np.bincount(k[s:e], minlength=3)
+        out[i] = (c[s], e - s, x[s:e].mean(), y[s:e].mean(), z[s:e].min() - SINK,
+                  np.percentile(z[s:e] + H[s:e], TOP_PCT), np.sum(np.pi * r[s:e] ** 2), r[s:e].max(), *kc[:3])
+    return out
+
+
+def cards(B, cell, key):
+    """Card tuples (x, y, foot, width, height, kind, yaw, variant, shade) of binned cells B."""
+    out = []
+    for c, n, cx, cy, foot, top, cover, rmax, k0, k1, k2 in B:
+        w = float(np.clip(cell * math.sqrt(min(1.0, cover / cell ** 2)) * 1.15, WIDTH_MIN, 1.3 * cell))
+        w = max(w, 2.2 * rmax)
+        kc = np.array([k0, k1, k2])
         kind = int(np.argmax(kc))
-        if kc.max() < 0.7 * (e - s):
+        if kc.max() < 0.7 * n:
             kind = 3
-        hs = _hash(key[0], key[1], cell[s])
-        out.append((cx, cy, foot, w, top - foot, kind, (hs % 900) / 10.0, (hs >> 10) % 2, (hs >> 12) % 1000))
+        hs = _hash(key[0], key[1], key[2] if len(key) > 2 else 0, int(c))
+        out.append((cx, cy, foot, w, max(top - foot, 2.0), kind, (hs % 900) / 10.0, (hs >> 10) % VARIANTS,
+                    (hs >> 12) % 1000))
     return out
 
 
 def mesh(cs):
-    """Positions, triangles, uvs (Collada: v up), colours of a tile's cards."""
+    """Positions, triangles, uvs (Collada: v up), colours of cards."""
     nc = len(cs)
     P = np.zeros((nc * 8, 3))
     UV = np.zeros((nc * 8, 2))
     C = np.zeros((nc * 8, 4), np.uint8)
     T = np.zeros((nc * 4, 3), np.int64)
-    cw, ch = 1.0 / 4, 1.0 / 2
+    cw, ch = 1.0 / 4, 1.0 / VARIANTS
     for i, (cx, cy, foot, w, h, kind, yaw, var, jit) in enumerate(cs):
         u0 = kind * cw + 0.002
         u1 = (kind + 1) * cw - 0.002
-        v0 = 1.0 - (var + 1) * ch + 0.002          # cell row var (0: the image's top row)
+        v0 = 1.0 - (var + 1) * ch + 0.002          # atlas row var (0: the image's top row)
         v1 = 1.0 - var * ch - 0.002
-        f = 0.88 + 0.24 * (jit / 1000.0)
-        col = np.clip(np.array(COLOUR[KINDS[kind]]) * f, 0, 1)
-        rgba = np.r_[np.round(col * 255), 255].astype(np.uint8)
+        f = SHADE[0] + (SHADE[1] - SHADE[0]) * (jit / 1000.0)
+        rgba = np.array([round(f * 255)] * 3 + [255], np.uint8)
         for q in range(2):
             a = math.radians(yaw + 90 * q)
             dx, dy = 0.5 * w * math.cos(a), 0.5 * w * math.sin(a)
@@ -181,86 +201,113 @@ def material(tex_path):
 
 
 # ------------------------------------------------------------------ the texture
+def _srgb(lin):
+    lin = np.clip(lin, 0, 1)
+    return np.where(lin <= 0.0031308, 12.92 * lin, 1.055 * np.power(lin, 1 / 2.4) - 0.055)
+
+
+def _views(model):
+    """The 8 side views of a far tree's imposter (RGBA float, sRGB, cropped to the tree), or [] if it is missing.
+    The game bakes the albedo in linear light (the fir's crown reads 8,12,7): turned into sRGB for a colour map."""
+    from PIL import Image
+    p = os.path.join(IMPOSTERS, model + ".dae.imposter.dds")
+    if not os.path.exists(p):
+        return []
+    a = np.asarray(Image.open(p).convert("RGBA"), np.float32) / 255.0
+    out = []
+    for i in range(8):                                   # cells 0..7: around the tree; 8..9 from above
+        c = a[(i // 4) * 256:(i // 4 + 1) * 256, (i % 4) * 256:(i % 4 + 1) * 256].copy()
+        al = c[..., 3] > 0.5
+        if not al.any():
+            continue
+        ys, xs = np.nonzero(al)
+        c = c[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        rgb = _srgb(c[..., :3])
+        g = rgb.mean(-1, keepdims=True)
+        c[..., :3] = np.clip(g + SATURATE * (rgb - g), 0, 1)     # the bake's grey cast off (lit in the game again)
+        out.append(c)
+    return out
+
+
+def _fallback_view(kind):
+    """A plain silhouette if the imposters are not there (a test without dati/far_imposters)."""
+    h, w = 120, 60
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    v, u = 1 - yy / h, xx / w - 0.5
+    if kind == "conifer":
+        inside = np.abs(u) <= 0.5 * (1 - v)
+        col = (0.19, 0.24, 0.17)
+    else:
+        inside = (u / 0.5) ** 2 + ((v - 0.6) / 0.4) ** 2 <= 1
+        col = (0.29, 0.34, 0.22)
+    c = np.zeros((h, w, 4), np.float32)
+    c[..., :3] = col
+    c[..., 3] = inside
+    return c
+
+
 def texture(path, seed=7):
-    """The clump atlas: 4 kinds (columns) x 2 variants (rows) of 256 px, near-white shading with a cut-out alpha."""
+    """The clump atlas: 4 kinds (columns of 512 px) x VARIANTS (rows of 256 px), each a row of the Malcantone's far
+    trees (their imposters' side views) standing side by side, the tallest at the back, under-filled with shaded
+    foliage below the crowns, cut out by alpha."""
     from PIL import Image
     rng = np.random.default_rng(seed)
     W, Hh = ATLAS
-    cw, ch = W // 4, Hh // 2
+    cw, ch = W // 4, Hh // VARIANTS
+    views = {k: [v for m in ms for v in _views(m)] or [_fallback_view(k)] for k, ms in MODELS.items()}
     img = np.zeros((Hh, W, 4), np.float32)
-    yy, xx = np.mgrid[0:ch, 0:cw].astype(np.float32)
-    v = 1.0 - yy / ch                  # 0 at the bottom, 1 at the top
-    u = xx / cw
-
-    def noise(scale):
-        g = rng.random((ch // scale + 2, cw // scale + 2)).astype(np.float32)
-        gy, gx = yy / scale, xx / scale
-        i, j = gy.astype(int), gx.astype(int)
-        fy, fx = gy - i, gx - j
-        a = g[i, j] * (1 - fx) + g[i, j + 1] * fx
-        b = g[i + 1, j] * (1 - fx) + g[i + 1, j + 1] * fx
-        return a * (1 - fy) + b * fy
-
-    def cone(lum, alpha, px, h, hw):
-        """a conifer: apex (px, h), half width hw at the bottom, ragged sides, lit from the left."""
-        rel = (h - v) / max(h, 1e-3)                       # 0 at the apex, 1 at the foot
-        edge = hw * np.clip(rel, 0, 1) * (0.85 + 0.3 * noise(6))
-        inside = (v <= h) & (np.abs(u - px) <= edge)
-        side = np.clip((u - px) / np.maximum(edge, 1e-3), -1, 1)
-        l = 0.80 - 0.18 * side + 0.12 * (1 - rel) + 0.12 * (noise(3) - 0.5)
-        l = l * (0.9 + 0.1 * np.sin(rel * 40 + noise(4) * 6))          # tiers of branches
-        m = inside & (alpha < 0.5)
-        lum[m], alpha[m] = l[m], 1.0
-        m = inside & (alpha >= 0.5) & (l < lum)                          # the nearer crown in front: darker overlap
-        lum[m] = 0.5 * (lum[m] + l[m])
-
-    def blob(lum, alpha, px, py, rx, ry):
-        """a broadleaf crown: a ragged ellipse, lit from the upper left, darker at its foot."""
-        dx, dy = (u - px) / rx, (v - py) / ry
-        d = np.sqrt(dx * dx + dy * dy)
-        inside = d <= 0.82 + 0.3 * noise(5) + 0.12 * noise(2)
-        nz = np.sqrt(np.clip(1 - d * d, 0, 1))
-        l = 0.62 + 0.28 * (-0.5 * dx + 0.6 * dy + 0.6 * nz) / 1.4 + 0.16 * (noise(2) - 0.5)
-        m = inside & ((alpha < 0.5) | (py < 0.5))                         # lower crowns drawn over the higher ones
-        lum[m], alpha[m] = l[m], 1.0
-
-    for kind in range(4):
-        for var in range(2):
-            lum = np.zeros((ch, cw), np.float32)
-            alpha = np.zeros((ch, cw), np.float32)
-            # crowns spread over the whole width (a card is as wide as its cell's crowns cover it), the back row first
-            if kind in (0, 3):
-                n = 8 if kind == 0 else 4
-                xs = np.sort((np.arange(n) + rng.uniform(0.2, 0.8, n)) / n)
-                for px in rng.permutation(xs):
-                    cone(lum, alpha, 0.06 + 0.88 * px, rng.uniform(0.55, 0.98), rng.uniform(0.11, 0.17))
-            if kind in (1, 3):
-                for row, (n, lo, hi) in enumerate(((4, 0.50, 0.68), (5, 0.30, 0.42))):
-                    n = n if kind == 1 else n // 2 + 1
-                    xs = (np.arange(n) + rng.uniform(0.25, 0.75, n)) / n
-                    for px in xs:
-                        py = rng.uniform(lo, hi)
-                        blob(lum, alpha, 0.08 + 0.84 * px, py, rng.uniform(0.13, 0.19), rng.uniform(0.18, 0.26))
-            if kind == 2:
-                xs = (np.arange(7) + rng.uniform(0.2, 0.8, 7)) / 7
-                for px in xs:
-                    py = rng.uniform(0.45, 0.62)
-                    blob(lum, alpha, 0.06 + 0.88 * px, py, rng.uniform(0.055, 0.08), py * 0.92)
-            # under the crowns, down to the card's foot: the shaded foliage of the lower trees (no trunks or sky
-            # under a wood seen from kilometres away)
-            covered = alpha > 0.5
+    for ki, kind in enumerate(KINDS):
+        for var in range(VARIANTS):
+            cell = np.zeros((ch, cw, 4), np.float32)
+            n = int(rng.integers(*TREES_PER_CLUMP[kind], endpoint=True))
+            pool = (["conifer", "broad"] if kind == "mixed" else [kind])
+            hs = np.sort(rng.uniform(0.62, 1.0, n))         # back to front: the tallest first
+            hs = hs[::-1]
+            xs = rng.permutation((np.arange(n) + rng.uniform(0.15, 0.85, n)) / n)
+            for h, x in zip(hs, xs):
+                k = pool[int(rng.integers(len(pool)))]
+                v = views[k][int(rng.integers(len(views[k])))]
+                th = max(8, int(round(h * (ch - 2))))
+                tw = max(4, int(round(v.shape[1] * th / v.shape[0] * rng.uniform(0.9, 1.15))))
+                im = Image.fromarray(np.clip(np.round(v * 255), 0, 255).astype(np.uint8), "RGBA")
+                t = np.asarray(im.resize((tw, th), Image.LANCZOS), np.float32) / 255.0
+                c0 = int(round(x * cw - tw / 2))
+                r0 = ch - th - int(rng.integers(0, max(1, ch // 20)))
+                # clip to the cell
+                a0, b0 = max(0, c0), min(cw, c0 + tw)
+                a1, b1 = max(0, r0), min(ch, r0 + th)
+                if a0 >= b0 or a1 >= b1:
+                    continue
+                part = t[a1 - r0:b1 - r0, a0 - c0:b0 - c0]
+                m = part[..., 3] > 0.5
+                dst = cell[a1:b1, a0:b0]
+                dst[m] = part[m]
+                dst[m, 3] = 1.0
+            covered = cell[..., 3] > 0.5
+            if covered.any():
+                fill = cell[covered, :3].mean(0)
+            else:
+                fill = np.array([0.25, 0.3, 0.2], np.float32)
+            # under the crowns down to the card's foot: the shade of the lower wood (no sky between the trunks of a
+            # wood seen from kilometres away). The line runs halfway down from the crown tops, smoothed with a running
+            # max over a tree's width so the gaps between the cones are filled too; the bare trunks below it (grey, no
+            # green) take the shade as well
+            yy = np.arange(ch)[:, None]
             any_ = covered.any(0)
-            low = np.where(any_, ch - 1 - np.argmax(covered[::-1], 0), 0)    # the lowest crown pixel of each column
-            under = (yy >= low[None, :] - 1) & any_[None, :] & ~covered
-            shade = 0.42 + 0.12 * noise(3)
-            lum[under], alpha[under] = shade[under], 1.0
-            rgb = np.clip(lum, 0, 1)[..., None] * np.array([0.96, 1.0, 0.92], np.float32)
-            # the colour of the clump under its cut-out too: no dark fringe in the mipmaps
-            fill = rgb[alpha > 0.5].mean(0) if (alpha > 0.5).any() else np.array([0.7, 0.7, 0.7])
-            rgb[alpha < 0.5] = fill
-            r0, c0 = var * ch, kind * cw
-            img[r0:r0 + ch, c0:c0 + cw, :3] = rgb
-            img[r0:r0 + ch, c0:c0 + cw, 3] = alpha
+            top = np.where(any_, np.argmax(covered, 0), ch).astype(np.float32)
+            wwin = max(3, cw // 10)
+            pad = np.pad(top, wwin, mode="edge")
+            smooth = np.array([pad[i:i + 2 * wwin + 1].min() for i in range(cw)])   # min row = highest crown
+            line = smooth + 0.45 * (ch - smooth)
+            below = yy >= line[None, :]
+            rgb = cell[..., :3]
+            bare = covered & ((rgb[..., 1] - 0.5 * (rgb[..., 0] + rgb[..., 2])) < 0.025)
+            under = below & (~covered | bare)
+            noise = 0.9 + 0.2 * rng.random((ch, cw)).astype(np.float32)
+            cell[under, :3] = fill * 0.5 * noise[under][:, None]
+            cell[under, 3] = 1.0
+            cell[cell[..., 3] < 0.5, :3] = fill          # no dark fringe in the mipmaps
+            img[var * ch:(var + 1) * ch, ki * cw:(ki + 1) * cw] = cell
     out = np.clip(np.round(img * 255), 0, 255).astype(np.uint8)
     if os.path.lexists(path):
         os.remove(path)
@@ -276,30 +323,43 @@ def _init(names, origin, tile_m, out_dir):
     _W.update(types=Types(names), origin=origin, tile_m=tile_m, out_dir=out_dir)
 
 
+def _write(path, data):
+    if os.path.lexists(path):
+        os.remove(path)
+    with open(path, "wb") as f:
+        f.write(data)
+
+
 def _one(item):
-    """Write one tile's far trees (rows as JSON bytes or a list); (key, cards, bytes) or None."""
+    """Write one tile's far trees (rows as JSON bytes or a list); returns (key, cards, bytes, coarse cards) or None.
+    The coarse cards (CELL2, positions local to the corner of the tile's L2 tile) are written by build()."""
     key, rows = item
     if isinstance(rows, (bytes, str)):
         rows = json.loads(rows)
     cx, cy = (int(v) for v in key.split("_"))
     o, tm = _W["origin"], _W["tile_m"]
-    cs = cards(rows, _W["types"], o[0] + cx * tm, o[1] + cy * tm, tm, (cx, cy))
-    if not cs:
+    tr = trees(rows, _W["types"], o[0] + cx * tm, o[1] + cy * tm)
+    if tr is None:
         return None
+    cs = cards(binned(tr, CELL, int(math.ceil(tm / CELL))), CELL, (cx, cy))
     data = tile_bytes(cs)
-    p = os.path.join(_W["out_dir"], f"t_{key}.cdae")
-    if os.path.lexists(p):
-        os.remove(p)
-    with open(p, "wb") as f:
-        f.write(data)
-    return key, len(cs), len(data)
+    _write(os.path.join(_W["out_dir"], f"t_{key}.cdae"), data)
+    # the coarse cells: tile_m is a whole number of CELL2, so a tile's cells are whole cells of its L2 tile
+    B2 = binned(tr, CELL2, int(round(tm / CELL2)))
+    c2 = cards(B2, CELL2, (cx, cy, 2))
+    ox, oy = (cx % L2_TILES) * tm, (cy % L2_TILES) * tm
+    c2 = [(c[0] + ox, c[1] + oy) + tuple(c[2:]) for c in c2]
+    return key, len(cs), len(data), c2
 
 
 def build(tiles, names, origin, tile_m, out_dir, level="ticino", workers=1):
-    """tiles: iterable of (key "cx_cy", rows or their JSON bytes). Writes out_dir/t_<key>.cdae, the texture and the
-    material; returns the keys written."""
+    """tiles: iterable of (key "cx_cy", rows or their JSON bytes). Writes out_dir/t_<key>.cdae (one per tile, CELL
+    cards), out_dir/l2_<bx>_<by>.cdae (one per L2_TILES x L2_TILES tiles, CELL2 cards), the texture and the material;
+    returns (tile keys, L2 keys)."""
+    assert abs(tile_m / CELL2 - round(tile_m / CELL2)) < 1e-9, "tile_m must be a multiple of CELL2"
     os.makedirs(out_dir, exist_ok=True)
     keys, ncards, nbytes = [], 0, 0
+    coarse = {}
     t0 = time.time()
     if workers > 1:
         import multiprocessing as mp
@@ -315,17 +375,28 @@ def build(tiles, names, origin, tile_m, out_dir, level="ticino", workers=1):
         keys.append(r[0])
         ncards += r[1]
         nbytes += r[2]
+        cx, cy = (int(v) for v in r[0].split("_"))
+        coarse.setdefault("%d_%d" % (cx // L2_TILES, cy // L2_TILES), []).extend(r[3])
         if len(keys) % 2000 == 0:
             log("far trees: %d tiles, %d cards, %.0f MB (%.0f s)" % (len(keys), ncards, nbytes / 1e6, time.time() - t0))
     if pool:
         pool.close()
         pool.join()
+    n2, b2 = 0, 0
+    for k, cs in coarse.items():
+        if not cs:
+            continue
+        data = tile_bytes(cs)
+        _write(os.path.join(out_dir, f"l2_{k}.cdae"), data)
+        n2 += len(cs)
+        b2 += len(data)
     texture(os.path.join(out_dir, TEX))
     from blocks import bng
     bng.write_materials(os.path.join(out_dir, "fartrees.materials.json"),
                         [material(f"/levels/{level}/{DIR}/{TEX}")])
-    log("far trees: %d tiles, %d cards, %.0f MB in %.0f s" % (len(keys), ncards, nbytes / 1e6, time.time() - t0))
-    return sorted(keys)
+    log("far trees: %d tiles, %d cards, %.0f MB; %d coarse tiles, %d cards, %.0f MB; in %.0f s" % (
+        len(keys), ncards, nbytes / 1e6, len(coarse), n2, b2 / 1e6, time.time() - t0))
+    return sorted(keys), sorted(k for k, cs in coarse.items() if cs)
 
 
 def tree_members(zf):
@@ -378,8 +449,9 @@ def main():
             m = re.fullmatch(r"t_(-?\d+_-?\d+)\.trees\.json", f)
             if m:
                 yield m.group(1), open(os.path.join(a.trees, f), "rb").read()
-    keys = build(tiles(), st["forestTypes"], st["origin"], tile_m, os.path.join(a.out, DIR), workers=a.workers)
-    print(len(keys), "tiles")
+    keys, keys2 = build(tiles(), st["forestTypes"], st["origin"], tile_m, os.path.join(a.out, DIR),
+                        workers=a.workers)
+    print(len(keys), "tiles", len(keys2), "coarse tiles")
 
 
 if __name__ == "__main__":

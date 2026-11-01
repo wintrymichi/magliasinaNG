@@ -125,7 +125,7 @@ while t < seconds do
   frames = frames + 1
   if os.getenv('EVERY') and frames % tonumber(os.getenv('EVERY')) == 0 then
     local q = stream.status()
-    print(string.format("t %.1f queued %d live %d far %d farTrees %d forest %s", t, q.objects.queued, q.objects.live, q.objects.far, q.objects.farTrees or 0, tostring(q.forest and (q.forest.queued or q.forest.items))))
+    print(string.format("t %.1f queued %d live %d far %d farTrees %d+%d forest %s", t, q.objects.queued, q.objects.live, q.objects.far, q.objects.farTrees or 0, q.objects.farTrees2 or 0, tostring(q.forest and (q.forest.queued or q.forest.items))))
   end
   if frames > 3 then worstLua = math.max(worstLua, ms) end
   if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
