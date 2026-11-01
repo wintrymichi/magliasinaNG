@@ -5,3 +5,4 @@
 2026-11-01 base: map in English, spawn names prefer villages
 2026-11-01T12:01:16Z far trees v2: Malcantone clumps, coarse tiles to 15 km
 2026-11-01 base: spawn names, one official name per place
+2026-11-01T12:14:50Z GC steps in the hold, forest rows parsed in slices
