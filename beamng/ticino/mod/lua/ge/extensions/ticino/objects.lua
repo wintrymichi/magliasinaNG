@@ -182,6 +182,16 @@ local function fresh(id)
   S.fresh[#S.fresh + 1] = id
 end
 
+-- distinct shape files made this session: BeamNG.Earth measured the frame cost growing ~0.3 ms per 1,000 distinct
+-- shapes ever loaded in a session (the counts line shows how many ours are)
+local function seen(name)
+  if not name then return end
+  S.seen = S.seen or {}
+  if S.seen[name] then return end
+  S.seen[name] = true
+  S.nSeen = (S.nSeen or 0) + 1
+end
+
 -- the fresh dynamic objects turned static in one frame: true when it did (stream.lua calls it every frame)
 function M.settle(clock)
   local f = S and S.fresh
@@ -390,6 +400,7 @@ local function apply(op)
       S.failedKey[key] = nil
       if col then S.colDirty = true; S.stats.colMade = (S.stats.colMade or 0) + 1 end
       S.stats.created = S.stats.created + 1
+      seen(e.shapeName)
     else
       S.failedKey[key] = true
       S.stats.failed = S.stats.failed + 1
@@ -965,9 +976,11 @@ function M.stepFar(clock, budgetMs)
         end
       end
       local o = createObject('TSStatic')
-      o:setField('shapeName', 0, k == 0 and (S.farFine and string.format(S.farFine, S.level, tx, ty)
+      local shape = k == 0 and (S.farFine and string.format(S.farFine, S.level, tx, ty)
           or files.map(string.format(M.FAR_SHAPE, S.level, tx, ty)))
-        or string.format(M.FARLOD_FILE, S.level, k, tx, ty))
+        or string.format(M.FARLOD_FILE, S.level, k, tx, ty)
+      o:setField('shapeName', 0, shape)
+      seen(shape)
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
       o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
@@ -1095,11 +1108,17 @@ local function fsUpdate(F, cx, cy)
   local bcx, bcy = fsBlock(F, cx, cy)
   local B0, B2 = fp(F, '_BLOCKS0'), math.ceil(R / B)
   F.cell = { cx, cy }
+  -- A doomed shape's wait counts from when it was first doomed for the same cover: reset at every update (a tile change
+  -- every 11.6 s at 33 m/s, under the 20 s hold of the trees) it never ran out, and the coarse blocks the fine trees
+  -- behind the car waited for came last in the queue: 428 fine far trees live, none removed, fps 91 -> 50 along the
+  -- flight (PC l_A / l_A2 of 1860ef2). The blocks such tiles wait for are made first (urgent).
+  local urgent = {}
   for key, f in pairs(F.live) do
     local d, tx, ty = cheb(key, cx, cy)
     local bx, by = fsBlock(F, tx, ty)
     local bk, bd = bx .. '_' .. by, math.max(math.abs(bx - bcx), math.abs(by - bcy))
-    f.doomed, f.doomedAt = nil, nil
+    local was = f.doomed
+    f.doomed = nil
     if R <= I then
       delete(f.id)
       F.live[key] = nil
@@ -1111,15 +1130,18 @@ local function fsUpdate(F, cx, cy)
     elseif F.two and F.has2[bk] and bd <= B2 then
       f.inner, f.innerAt = nil, nil
       f.doomed = bk                      -- dropped once the coarse block is there
+      if not F.live2[bk] then urgent[bk] = true end
     else
       delete(f.id)
       F.live[key] = nil
       n = n + 1
     end
+    if f.doomed ~= was then f.doomedAt = nil end
   end
   for bk, f in pairs(F.live2) do
     local bd = cheb(bk, bcx, bcy)
-    f.doomed, f.doomedAt = nil, nil
+    local was = f.doomed
+    f.doomed = nil
     if R <= I or bd > B2 + 1 then
       delete(f.id)
       F.live2[bk] = nil
@@ -1127,9 +1149,14 @@ local function fsUpdate(F, cx, cy)
     elseif bd <= B0 then
       f.doomed = true                    -- dropped once its fine tiles are there
     end
+    if f.doomed ~= was then f.doomedAt = nil end
   end
+  F.removed = (F.removed or 0) + n
   local q = {}
   local tm = S.cfg.cell * S.cfg.square
+  -- the fine tiles still to make in each block: a coarse block that waits for its fine tiles waits while they are queued
+  F.pend2 = {}
+  local nUrgent = 0
   if R > I then
     local W = F.two and (B0 + 1) * B - 1 or math.min(R, fp(F, '_FINE_MAX'))
     for ty = cy - W, cy + W do
@@ -1139,6 +1166,9 @@ local function fsUpdate(F, cx, cy)
           local d = math.max(math.abs(tx - cx), math.abs(ty - cy))
           if fsWantFine(F, tx, ty, d, cx, cy) or (d <= I and fsFillWanted(F, key)) then
             q[#q + 1] = { key, d * tm, tx, ty, 0 }
+            local bx, by = fsBlock(F, tx, ty)
+            local bk = bx .. '_' .. by
+            F.pend2[bk] = (F.pend2[bk] or 0) + 1
           end
         end
       end
@@ -1148,7 +1178,10 @@ local function fsUpdate(F, cx, cy)
         for bx = bcx - B2, bcx + B2 do
           local bk = bx .. '_' .. by
           local bd = math.max(math.abs(bx - bcx), math.abs(by - bcy))
-          if bd > B0 and F.has2[bk] and not F.live2[bk] then q[#q + 1] = { bk, bd * B * tm, bx, by, 2 } end
+          if bd > B0 and F.has2[bk] and not F.live2[bk] then
+            q[#q + 1] = { bk, urgent[bk] and -1 or bd * B * tm, bx, by, 2 }
+            if urgent[bk] then nUrgent = nUrgent + 1 end
+          end
         end
       end
     end
@@ -1156,9 +1189,9 @@ local function fsUpdate(F, cx, cy)
   table.sort(q, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
   F.queue, F.pos = q, 1
   local live, live2 = fsCount(F)
-  log('I', 'ticino', string.format('%s at tile %d,%d: %d to make, live %d fine + %d coarse, %d removed '
-    .. '(radius %d tiles, fine within %d blocks, %s)', F.what, cx, cy, #q, live, live2, n, R, B0,
-    F.two and 'coarse blocks in the base' or 'no coarse blocks in the base'))
+  log('I', 'ticino', string.format('%s at tile %d,%d: %d to make (%d first: covers of shapes behind), live %d fine + '
+    .. '%d coarse, %d removed (radius %d tiles, fine within %d blocks, %s)', F.what, cx, cy, #q, nUrgent, live, live2,
+    n, R, B0, F.two and 'coarse blocks in the base' or 'no coarse blocks in the base'))
   return n
 end
 
@@ -1186,21 +1219,25 @@ local function fsDrop(F, clock)
   if F.checkAt and now - F.checkAt < 500 then return 0 end
   F.checkAt = now
   local H = fp(F, '_HOLD_MS')
-  -- a hold counts only from when nothing more is coming for it: the doomed shapes wait while the set's own queue
-  -- still has shapes to make (their cover), an inner tile while its real things are still queued (F.coming: the
-  -- houses, the objects queue has objects left to make). After a jump to Lugano the queues took minutes, and at 60 s
-  -- the far houses of the town went: a band of bare paved ground with no house between the made houses and the far
-  -- ones (PC photos from San Salvatore of 547c25a)
-  local busy = F.pos <= #F.queue
+  -- a hold counts only from when nothing more is coming for it: an inner tile while its real things are still queued
+  -- (F.coming: the houses, the objects queue has objects left to make; after a jump to Lugano the queues took minutes,
+  -- and at 60 s the far houses of the town went: a band of bare paved ground with no house between the made houses and
+  -- the far ones, PC photos from San Salvatore of 547c25a), a coarse block that waits for its fine tiles while they are
+  -- still queued (F.pend2). A fine tile behind the car waits from when it was doomed: its coarse block is made first
+  -- (fsUpdate), and a wait reset while the set's queue was busy never ran out on a flight (PC l_A of 1860ef2)
   local coming = F.coming ~= nil and F.coming()
+  local pend2 = F.pend2 or {}
+  local timedOut = 0
   for key, f in pairs(F.live) do
     local gone = false
     if f.inner then
       if not f.innerAt or coming then f.innerAt = now end
-      gone = (F.innerMade and F.innerMade(key) == true) or now - f.innerAt > H
+      gone = (F.innerMade and F.innerMade(key) == true)
+      if not gone and now - f.innerAt > H then gone = true; timedOut = timedOut + 1 end
     elseif f.doomed then
-      if not f.doomedAt or busy then f.doomedAt = now end
-      gone = F.live2[f.doomed] ~= nil or now - f.doomedAt > H
+      f.doomedAt = f.doomedAt or now
+      gone = F.live2[f.doomed] ~= nil
+      if not gone and now - f.doomedAt > H then gone = true; timedOut = timedOut + 1 end
     end
     if gone then
       delete(f.id)
@@ -1210,14 +1247,18 @@ local function fsDrop(F, clock)
   end
   for bk, f in pairs(F.live2) do
     if f.doomed then
-      if not f.doomedAt or busy then f.doomedAt = now end
-      if fsFineCovered(F, bk) or now - f.doomedAt > H then
+      if not f.doomedAt or (pend2[bk] or 0) > 0 then f.doomedAt = now end
+      local gone = fsFineCovered(F, bk)
+      if not gone and now - f.doomedAt > H then gone = true; timedOut = timedOut + 1 end
+      if gone then
         delete(f.id)
         F.live2[bk] = nil
         n = n + 1
       end
     end
   end
+  F.dropped = (F.dropped or 0) + n
+  F.timedOut = (F.timedOut or 0) + timedOut
   if F.onCheck then F.onCheck(now) end
   return n
 end
@@ -1236,6 +1277,11 @@ local function fsStep(F, clock, budgetMs)
     local key, tx, ty, lvl = w[1], w[3], w[4], w[5]
     local live = lvl == 2 and F.live2 or F.live
     local inner = lvl ~= 2 and c ~= nil and math.max(math.abs(tx - c[1]), math.abs(ty - c[2])) <= I
+    if lvl ~= 2 and F.pend2 then
+      local bx, by = fsBlock(F, tx, ty)
+      local bk = bx .. '_' .. by
+      if F.pend2[bk] then F.pend2[bk] = F.pend2[bk] - 1 end
+    end
     -- an inner tile only while its real things are still missing (they may have come since it was queued)
     if not live[key] and (not inner or fsFillWanted(F, key)) then
       local ts = clock()
@@ -1248,6 +1294,7 @@ local function fsStep(F, clock, budgetMs)
       local file, size = fp(F, '_FILE'), tm
       if lvl == 2 then file, size = fp(F, '2_FILE'), tm * F.B end
       o:setField('shapeName', 0, string.format(file, S.level, tx, ty))
+      seen(string.format(file, S.level, tx, ty))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
       o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
@@ -1489,6 +1536,29 @@ function M.stats()
            farDropped = S.stats.farDropped or 0, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
            deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead,
            colFailed = S.col.failed or 0, colTris = S.col.tris or 0, colFfi = hasFfi and not S.col.noFfi }
+end
+
+-- One line of what lives and what waits (stream.lua logs it every COUNTS_EVERY_MS): what grows along a flight shows
+-- next to the fps (the far trees of 1860ef2 grew 0 -> 428 unseen: the far set lines came only at tile changes)
+function M.countsLine()
+  if not S then return '' end
+  local s = M.stats()
+  local function fsLine(F)
+    if not F or not F.any then return 'none' end
+    local a, b = fsCount(F)
+    local inner, doomed = 0, 0
+    for _, f in pairs(F.live) do
+      if f.inner then inner = inner + 1 elseif f.doomed then doomed = doomed + 1 end
+    end
+    for _, f in pairs(F.live2) do if f.doomed then doomed = doomed + 1 end end
+    return string.format('%d fine + %d coarse (%d to make, %d over real ones, %d waiting for a cover; dropped %d, '
+      .. 'timed out %d, removed %d)', a, b, math.max(0, #F.queue - F.pos + 1), inner, doomed, F.dropped or 0,
+      F.timedOut or 0, F.removed or 0)
+  end
+  return string.format('objects %d live (%d to make, %d to delete, %d houses held), far ground %d (%d coarse, %d hidden, '
+    .. '%d to make, %d waiting), far trees %s, far houses %s, collision cells %d, shapes seen %d',
+    s.live, M.addsQueued(), math.max(0, s.queued - M.addsQueued()), s.bldHeld, s.far, s.farLod, s.farHidden,
+    math.max(0, s.farQueued), s.farDoomed, fsLine(S.ft), fsLine(S.fb), s.colCells, S.nSeen or 0)
 end
 
 local function warmWaiting() return S.waitWarm ~= nil and #S.waitWarm > 0 end

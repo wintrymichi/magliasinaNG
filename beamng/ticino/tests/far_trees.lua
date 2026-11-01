@@ -129,6 +129,55 @@ for x = 21, 70 do go('drive', x, 20 + math.floor(x / 3)) end
 before = {}
 go('jump', 100, 30)
 for y = 31, 60 do go('drive2', 100, y) end
+-- A flight whose queue never drains (PC l_A of 1860ef2: the far trees made ~2 shapes a second, a tile change every
+-- 11.6 s, and the fine tiles behind the car were never removed: 0 -> 428 live, fps 91 -> 50). One shape a frame, 20
+-- frames of 580 ms a tile, the game's 20 s hold: what lives must stay near what the car's tile wants, not grow.
+do
+  local T = t
+  local function clk() T = T + 1; return T end
+  objects.FAR_TREES_HOLD_MS = 20000
+  local cx, cy = 60, 0
+  local function wanted()
+    local n = 0
+    local R, I, B0 = objects.FAR_TREES_RADIUS, objects.FAR_TREES_INNER, objects.FAR_TREES_BLOCKS0
+    local bcx, bcy = math.floor(cx / B), math.floor(cy / B)
+    for k in pairs(has) do
+      local x, y = k:match('^(%-?%d+)_(%-?%d+)$')
+      x, y = tonumber(x), tonumber(y)
+      local d = math.max(math.abs(x - cx), math.abs(y - cy))
+      local bd = math.max(math.abs(math.floor(x / B) - bcx), math.abs(math.floor(y / B) - bcy))
+      if d > I and d <= R and bd <= B0 then n = n + 1 end
+    end
+    for k in pairs(blk) do
+      local bx, by = k:match('^(%-?%d+)_(%-?%d+)$')
+      local bd = math.max(math.abs(tonumber(bx) - bcx), math.abs(tonumber(by) - bcy))
+      if bd > B0 and bd <= math.ceil(objects.FAR_TREES_RADIUS / B) then n = n + 1 end
+    end
+    return n
+  end
+  local at40, maxRatio = nil, 0
+  for i = 1, 120 do
+    cy = i
+    forestAround(cx, cy)
+    objects.updateFarTrees(cx, cy)
+    for f = 1, 20 do
+      T = T + 580
+      objects.dropFarTrees(clk)
+      objects.stepFarTrees(clk, 0)
+    end
+    local s = objects.stats()
+    local live = s.farTrees + s.farTrees2
+    local r = live / wanted()
+    if r > maxRatio then maxRatio = r end
+    if i == 40 then at40 = live end
+    if i == 120 then
+      print(string.format('starved flight: live %d at tile 40, %d at tile 120 (%d wanted), at most %.2f times what the '
+        .. 'tile wants', at40, live, wanted(), maxRatio))
+      if live > at40 * 1.15 or maxRatio > 1.6 then print('BAD starved flight: the far trees pile up') bad = bad + 1 end
+    end
+  end
+  t = T
+end
 objects.FAR_TREES_RADIUS = 0
 objects.updateFarTrees(100, 60)
 local left = 0

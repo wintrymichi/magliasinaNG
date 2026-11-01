@@ -57,6 +57,10 @@ M.FAR_BURST_MS = 6         -- of each burst, for the far ground and (in objects.
                            -- what the objects and the forest left, so after the jump's FAR_JUMP_MS no far level and no
                            -- far tree came while objects were queued (PC 2026-11-01 from San Salvatore: the ground ended
                            -- ~6 km out; sim with 3 ms a shape: 166 far tiles for a whole 150 s flight)
+M.FAR_TREES_BURST_MS = 2   -- of each burst, for the far trees after the far houses: with only their minimum in turn
+                           -- inside stepFar they made ~2 shapes a second, under the ~3 a 33 m/s flight needs, and the
+                           -- coarse blocks never came (PC l_A of 1860ef2: 0 coarse after 250 s)
+M.COUNTS_EVERY_MS = 10000  -- a line of counts in the log this often (0: none): what lives and waits, next to the fps
 M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
 M.BURST_EVERY_MS = 1000    -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
 M.BURST_MS = 20            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
@@ -378,6 +382,24 @@ local function frameStats()
   end
   st.act = 'idle'
   st.snapO, st.snapF, st.reloadsAt = objects.counts(), forest.counts(), st.reloads
+  -- a line of counts every COUNTS_EVERY_MS: what lives and what waits next to the fps of those seconds (the far trees
+  -- of 1860ef2 grew unseen along a flight: their lines came only at tile changes)
+  if (M.COUNTS_EVERY_MS or 0) > 0 then
+    local c = st.cnt
+    if not c then
+      st.cnt = { t0 = now, n = 0, over50 = 0 }
+    else
+      c.n = c.n + 1
+      if d > 50 then c.over50 = c.over50 + 1 end
+      if now - c.t0 >= M.COUNTS_EVERY_MS then
+        local fs = forest.stats() or {}
+        log('I', 'ticino', string.format('counts: %.1f fps, %d frames over 50 ms in %.0f s | %s | forest %d items in %d '
+          .. 'tiles (%d queued) | Lua %.0f MB', c.n * 1000 / (now - c.t0), c.over50, (now - c.t0) / 1000,
+          objects.countsLine(), fs.items or 0, fs.tiles or 0, fs.queued or 0, collectgarbage('count') / 1024))
+        st.cnt = { t0 = now, n = 0, over50 = 0 }
+      end
+    end
+  end
   local a = st.afterSwap               -- the frames right after a swap (the frame of the swap is next1Ms)
   if a then
     a.n = a.n + 1
@@ -1197,7 +1219,15 @@ local function onUpdate(dtReal)
     -- ~15 burst frames of 120-430 ms a flight once the far trees and houses came)
     local function left() return M.BURST_MS - (clock() - t0) end
     if objects.delsPending() then objects.stepDels(clock, M.BURST_DEL_MS) end
+    -- the far shapes whose cover is there go in every burst (each looks at most every 500 ms): the far trees' check ran
+    -- only inside their own step, and over the real Forest their tiles stayed while other queues worked (PC photo
+    -- under the Lema of 1860ef2: dark flat canopy pieces among the near trees)
+    objects.dropFarBld(clock)
+    objects.dropFarTrees(clock)
     if objects.farBldPending() and left() > 0 then objects.stepFarBld(clock, math.min(M.FAR_BLD_BURST_MS, left())) end
+    if objects.farTreesPending() and left() > 0 then
+      objects.stepFarTrees(clock, math.min(M.FAR_TREES_BURST_MS, left()))
+    end
     if objects.farPending() and left() > 0 then objects.stepFar(clock, math.min(M.FAR_BURST_MS, left())) end
     if objects.pending() and left() > 0 then objects.step(clock, left()) end
     objects.BURSTING = false
@@ -1214,11 +1244,15 @@ local function onUpdate(dtReal)
     st.act = 'objects'
     objects.step(clock, M.OBJ_BUDGET_MS)
     if objects.farPending() then objects.stepFar(clock, M.FAR_EVERY_MS) end
+    objects.dropFarBld(clock)
+    objects.dropFarTrees(clock)
     changed()
   elseif forest.pending() then
     st.act = 'forest'
     forest.step(clock, M.FOREST_BUDGET_MS)
     if objects.farPending() then objects.stepFar(clock, M.FAR_EVERY_MS) end
+    objects.dropFarBld(clock)
+    objects.dropFarTrees(clock)
     changed()
   elseif st.objRec then
     perfLine(st.objRec)
@@ -1290,6 +1324,20 @@ end
 
 function M.followCamera(on)
   if st then st.useCamera = on and true or false end
+end
+
+-- Console (tests): how far the far trees and the far houses reach, in km, at run time (0: none, nil: unchanged); the
+-- far sets are updated at once. An A/B of their frame cost standing still, without a restart:
+--   extensions.ticino_stream.farSets(0, nil)   -- no far trees
+function M.farSets(treeKm, bldKm)
+  if not st then return 'off' end
+  local tm = st.cfg.cell * st.cfg.square
+  if treeKm then objects.FAR_TREES_RADIUS = math.floor(treeKm * 1000 / tm + 0.5) end
+  if bldKm then objects.FAR_BLD_RADIUS = math.floor(bldKm * 1000 / tm + 0.5) end
+  objects.refreshFar()
+  log('I', 'ticino', string.format('far sets: trees %d tiles, houses %d tiles', objects.FAR_TREES_RADIUS,
+    objects.FAR_BLD_RADIUS))
+  return { trees = objects.FAR_TREES_RADIUS, houses = objects.FAR_BLD_RADIUS }
 end
 
 -- the materials with dynamicCubemap: listed (nil), or turned off (false), with a fixed cubemap so metal still shines

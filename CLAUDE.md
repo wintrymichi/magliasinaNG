@@ -1969,6 +1969,26 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (a few are scaled to 40-50 m) a pinnacle on the skyline: crown-weighted heights smoothed over the vertices round it.
   A pinnacle that stays in a render may be the far ground's own (a rock outcrop): render without the canopy first.
   Isolated garden trees are no canopy (cover under COVER_MIN): towns from afar have only their woods.
+- PC flights of the canopy (1860ef2, l_A cold / l_A2 warm, 2026-11-01): the woods looked right, but the fps fell along
+  the flight (78-91 -> 55-60) while the far trees grew 0 -> 448 live, "removed 0" on every far trees line. Three faults
+  of the far sets, all found in the log lines, none in tests/far_trees.lua (it let every move settle): (1) fsUpdate
+  cleared every shape's doomed timer at every tile change, every 11.6 s at 33 m/s, under the trees' 20 s hold (so since
+  the far sets were written); (2) 1860ef2's "busy" rule restarted it while the set's queue had anything to make, and the
+  trees' queue never emptied (~2 shapes a second from their 1 ms minimum in turn inside stepFar; a 33 m/s flight needs
+  ~3); (3) the coarse blocks the fine tiles behind waited for were queued by distance, after every fine tile, and never
+  came (0 coarse after 250 s). Now a wait counts from when the shape was first doomed for the same cover, the covering
+  blocks go first in the queue, a coarse block waits only while its own fine tiles are queued (F.pend2), the trees get
+  FAR_TREES_BURST_MS of every burst. tests/far_trees.lua "starved flight" (one shape a frame, 20 frames a tile, the
+  20 s hold): the old code held 1.71 times the shapes the tile wants, the new 0.51. A test of a hold must run with the
+  queue slower than the moves, not settled after each one.
+- The dark flat pieces among the near trees under the Lema (PC photo of 1860ef2): canopy tiles kept over the real Forest
+  (inner tiles wait for forest.made). Their drop check (fsDrop) ran only inside the set's own step (while its queue had
+  work) or when every queue was idle, so while the objects or the forest worked it never ran: now in every burst.
+- stream.lua logs a "counts:" line every COUNTS_EVERY_MS (10 s): fps and frames over 50 ms of those seconds, objects
+  live / to make / to delete / houses held, far ground, far trees and far houses (live, to make, over real ones, waiting
+  for a cover, dropped, timed out), collision cells, distinct shapes seen in the session, forest items, Lua heap. Read
+  what grows next to the fps before guessing. extensions.ticino_stream.farSets(treeKm, bldKm) sets the far sets' reach
+  at run time (0: none) for an A/B standing still.
 
 
 ## Far houses and the free camera (farbld.py, objects.lua far sets, stream.lua followFreeCamera, 2026-11-01)
