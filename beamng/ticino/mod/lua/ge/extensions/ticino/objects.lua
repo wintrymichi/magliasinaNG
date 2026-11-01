@@ -913,7 +913,7 @@ end
 function M.stepFar(clock, budgetMs)
   local t0, made = clock(), 0
   local q = S.farQueue
-  while S.farPos <= #q do
+  while S.farPos <= #q and not (budgetMs and budgetMs <= 0) do
     local w = q[S.farPos]
     S.farPos = S.farPos + 1
     local key, k, tx, ty = w[1], w[2], w[3], w[4]
@@ -955,9 +955,20 @@ function M.stepFar(clock, budgetMs)
   if made > 0 and S.lod then M.dropCovered(clock, S.farPos > #q) end
   -- the far houses before the far trees (the inner ones fill the town round the car while its houses come); each
   -- set gets at least its <P>_MIN_MS of every call: behind a far ground queue that kept its whole budget the far trees
-  -- never came (PC 2026-11-01, treeKm 15 and 0 gave the same picture)
-  made = made + M.stepFarBld(clock, budgetMs and math.max(M.FAR_BLD_MIN_MS, budgetMs - (clock() - t0)) or nil)
-  made = made + M.stepFarTrees(clock, budgetMs and math.max(M.FAR_TREES_MIN_MS, budgetMs - (clock() - t0)) or nil)
+  -- never came (PC 2026-11-01, treeKm 15 and 0 gave the same picture). The minimum is given only to a set whose turn it
+  -- is (every other call): a minimum on every call made one more shape after the budget each, and bursts took 66-79
+  -- ms of Lua instead of 20 (PC flights of 00e48dc)
+  S.farTurn = ((S.farTurn or 0) + 1) % 2
+  local function share(minMs, turn)
+    if not budgetMs then return nil end
+    local rest = budgetMs - (clock() - t0)
+    if S.farTurn == turn then return math.max(minMs, rest) end
+    return rest
+  end
+  local b = share(M.FAR_BLD_MIN_MS, 0)
+  if not b or b > 0 then made = made + M.stepFarBld(clock, b) end
+  b = share(M.FAR_TREES_MIN_MS, 1)
+  if not b or b > 0 then made = made + M.stepFarTrees(clock, b) end
   return made
 end
 

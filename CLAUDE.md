@@ -1882,6 +1882,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   makes 24 Forests at init, and the slow-frame line gives the step's parse / new Forest / slowest item ms to tell.
   terrainShadows false moved the swap's RenderShadows 110-122 ms into Render: no gain, stays on. A "wait burst"
   frame of 443-519 ms (Lua 382-435, streamer lua 0) ~10 s after the hold in every run is another extension's Lua.
+- PC flights of 00e48dc (server mode): near-forest frames gone (POOL_WARM), frames over 100 ms 4-5, but over 50 ms
+  190-226: ~15 "burst" frames of 120-430 ms, lua 66-79 + LuaGC 36-336. Each part of a burst (deletions, far houses,
+  far ground, the far sets' <P>_MIN_MS inside stepFar, objects) looks at the clock only AFTER a spawn, so each made
+  one shape past the burst's 20 ms. The burst now passes each part only the time left, and stepFar gives the minimum
+  to one far set a call in turn. The forest row cache was a table a row (~600k live tables in 200 tiles), walked by
+  the collector every cycle: the rows are one flat array a tile now.
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,

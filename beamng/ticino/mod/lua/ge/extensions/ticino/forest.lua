@@ -100,26 +100,31 @@ local function parseRows(key, clock, budgetMs)
     local t0 = clock and clock()
     local txt = readFile(files.map(string.format(M.FILE, S.level, tonumber(cx), tonumber(cy))))
     if type(txt) ~= 'string' then remember(key, false); return nil end
-    ps = { key = key, txt = txt, pos = 1, rows = {}, ms = t0 and (clock() - t0) or 0 }
+    ps = { key = key, txt = txt, pos = 1, rows = { n = 0 }, ms = t0 and (clock() - t0) or 0 }
     S.parsing = ps
   end
   local txt, rows, find, sub, tonum = ps.txt, ps.rows, string.find, string.sub, tonumber
   local t0 = clock and clock()
-  local p, n = ps.pos, #rows
+  -- the rows go into ONE flat array (row i at (i - 1) * 6 + 1..6, yaw 0 and scale 1 when missing), rows.n of them:
+  -- a table a row kept ~600k small tables alive in the cache (200 tiles), and the collector walks every live table
+  -- in each cycle (PC flights of 00e48dc: LuaGC up to 336 ms in a frame)
+  local p, n = ps.pos, rows.n
   while true do
     local a, b = find(txt, '%[[^%[%]]*%]', p)
     if not a then break end
-    local row, k = {}, 0
+    local o, k = n * 6, 0
     local q = a + 1
-    while q < b do
+    while q < b and k < 6 do
       local c = find(txt, ',', q, true)
       if not c or c > b then c = b end
       k = k + 1
-      row[k] = tonum(sub(txt, q, c - 1))
+      rows[o + k] = tonum(sub(txt, q, c - 1))
       q = c + 1
     end
+    if k < 5 then rows[o + 5] = 0 end
+    if k < 6 then rows[o + 6] = 1 end
     n = n + 1
-    rows[n] = row
+    rows.n = n
     p = b + 1
     if budgetMs and n % 64 == 0 and clock() - t0 > budgetMs then
       ps.pos = p
@@ -340,14 +345,15 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       S.tm.parse = S.tm.parse + clock() - tp
       if rows == nil and S.rows[op.key] == nil then return false end
     end
-    rows = rows or {}
+    rows = rows or { n = 0 }
+    local nrows = rows.n
     if op.pos == 1 then
       t.dirty = true
       if (t.solid or op.solid) and S.markDirty then S.markDirty() end
     end
     local fd
     local i = op.pos
-    while i <= #rows and left > 0 do
+    while i <= nrows and left > 0 do
       local want = shown(i, op.share)
       local it = t.items[i]
       if it and (not want or t.itemSolid[i] ~= op.solid) then
@@ -360,15 +366,15 @@ function M.step(clock, budgetMs, perFrame, burstMs)
         it = nil
       end
       if want and not it then
-        local r = rows[i]
-        local d = itemType(r[1], op.solid, variantOf(op.key))
+        local o = (i - 1) * 6
+        local d = itemType(rows[o + 1], op.solid, variantOf(op.key))
         if d then
           fd = fd or forestOf(t, op.key):getData()
           local m = MatrixF(true)
-          m:setFromEuler(vec3(0, 0, -math.rad(r[5] or 0)))
-          m:setPosition(vec3(r[2], r[3], r[4]))
+          m:setFromEuler(vec3(0, 0, -math.rad(rows[o + 5])))
+          m:setPosition(vec3(rows[o + 2], rows[o + 3], rows[o + 4]))
           local tc = clock()
-          local ok, made = pcall(function() return fd:createNewItem(d, m, r[6] or 1) end)
+          local ok, made = pcall(function() return fd:createNewItem(d, m, rows[o + 6]) end)
           tc = clock() - tc
           if tc > S.tm.slowest then S.tm.slowest = tc end
           if ok and made then
@@ -390,7 +396,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       if passCap and i % M.CHECK_EVERY == 0 and clock() - t0 > passCap then break end
     end
     op.pos = i
-    if i <= #rows then return false end
+    if i <= nrows then return false end
     local touched = fd ~= nil
     t.share, t.solid, t.dirty = op.share, op.solid, nil
     local fid = t.forestId

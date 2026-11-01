@@ -1090,10 +1090,14 @@ local function onUpdate(dtReal)
     objects.BURSTING = true
     -- the objects take the whole burst, the trees what is left: giving the trees a share (and one Forest a burst)
     -- made more slow bursts of ~220 ms (each frame that touches a Forest costs that much: PC tests H1, H2)
+    -- every part gets its share only while the burst has time left: each part looks at the clock after a spawn, so
+    -- five parts that each made one more shape after the budget made bursts of 66-79 ms of Lua (PC flights of 00e48dc,
+    -- ~15 burst frames of 120-430 ms a flight once the far trees and houses came)
+    local function left() return M.BURST_MS - (clock() - t0) end
     if objects.delsPending() then objects.stepDels(clock, M.BURST_DEL_MS) end
-    if objects.farBldPending() then objects.stepFarBld(clock, M.FAR_BLD_BURST_MS) end
-    if objects.farPending() then objects.stepFar(clock, M.FAR_BURST_MS) end
-    if objects.pending() then objects.step(clock, math.max(1, M.BURST_MS - (clock() - t0))) end
+    if objects.farBldPending() and left() > 0 then objects.stepFarBld(clock, math.min(M.FAR_BLD_BURST_MS, left())) end
+    if objects.farPending() and left() > 0 then objects.stepFar(clock, math.min(M.FAR_BURST_MS, left())) end
+    if objects.pending() and left() > 0 then objects.step(clock, left()) end
     objects.BURSTING = false
     local left = M.BURST_MS - (clock() - t0)
     if left > 0 and forest.pending() then forest.step(clock, 1000, nil, left) end
