@@ -1909,6 +1909,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   michi 2026-11-01 17:38Z ("intanto disattivala completamente"): stream.AI_MAP false by default (settings "aiMap"):
   stream.noAIMap deletes every AI DecalRoad at the start and reads the map empty (map.lua drops the graph it built at
   the load), no map.reset, hold or minimap build at the jumps. No AI traffic or AI driver in Ticino meanwhile.
+- "IMPORTING TEXTURE" on the house walls (PC 2026-11-01, server mode, cold cache, still there after 10 min): the log
+  had t_bld_plaster_b / t_bld_ashlar_b cooked without error but no "reloadResource File changed" for them (there was one
+  for plaster_nm and ashlar_ao): a material bound while its colour map is being cooked keeps the placeholder. No
+  descriptor or slot error. texwarm.lua now draws one quad per material of the level art (113: buildings, roads, walls,
+  skin, trees; not the 4,000 sign/prop plates) for 120 frames at the start, game paused, before any streamed object
+  (settings "texWarm"). Not seen in the game yet. The same log: "Could not open /levels/ticino/z/ti_0_0/.../
+  cableway_ropes.cdae" (and pylons, cabins, lema_summit): the base scene's landmarks name zone files, which in server
+  mode are not there at the load. region_base.static_shapes copies them into the base (static/<zone>/...).
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,

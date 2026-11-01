@@ -34,6 +34,7 @@ local png = require('ticino/png')
 local helper = require('ticino/helper')
 local files = require('ticino/files')
 local pace = require('ticino/pace')
+local texwarm = require('ticino/texwarm')
 
 local M = {}
 
@@ -80,6 +81,7 @@ M.POS_MODE = 'setPosition' -- how the block moves: 'setPosition' (0.1-0.16 s on 
 M.RELOAD_DEFER_MS = 3000   -- a rebuild only for props or trees waits for the next one of the collision cells, at most this
 M.BASE_COMBINED = true     -- one base colour map for all the streamed materials (each pixel from the map of the material
                            -- under it): the game re-packs one texture at a move instead of 7 (~45 ms each)
+M.TEX_WARM = true          -- cook the level art's textures before the first object (texwarm.lua; settings "texWarm")
 M.AI_MAP = false           -- no AI map at all (michi 2026-11-01, "disattivala completamente"): the 57k AI DecalRoads are
                            -- deleted at the start and the map read empty, never again at a jump (the 1.1 GB AI map was
                            -- the live Lua heap every garbage collection walked: the LuaGC frames). Settings "aiMap": true
@@ -741,6 +743,7 @@ local function readSettings(cfg)
   if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
   if type(s.pacing) == 'boolean' then M.PACING = s.pacing end
   if type(s.aiMap) == 'boolean' then M.AI_MAP = s.aiMap end
+  if type(s.texWarm) == 'boolean' then M.TEX_WARM = s.texWarm end
   if type(s.frameGate) == 'boolean' then M.GATE = s.frameGate end
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
@@ -826,6 +829,7 @@ local function start()
   if capB and capB < objects.FAR_BLD_INNER then objects.FAR_BLD_INNER = capB end
   M.applyView()
   if not M.AI_MAP then M.noAIMap() end
+  if M.TEX_WARM then texwarm.start(M.LEVEL) end
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, cfg.farCount or 0))
   log('I', 'ticino', string.format('stream 2026-10-28: window places %d..%d, base maps %s, collision lazy %d, '
@@ -857,6 +861,7 @@ local function stop()
   if st.job then removeFiles(st.job) end
   helper.stop()
   files.stop()
+  texwarm.clear()
   st = nil
 end
 
@@ -872,6 +877,13 @@ local function changed() st.gate:worked() end
 local function onUpdate(dtReal)
   if not st then return end
   frameStats()
+  -- the textures of the level art are cooked before any streamed object binds them (texwarm.lua), the game paused
+  if texwarm.running() then
+    if not st.warmPaused then pause(true); st.warmPaused = true end
+    if texwarm.step() then return end
+    st.warmPaused = nil
+    pause(false)
+  end
   do
     local now, s = clock(), sta()
     st.gate:beginFrame(st.gateT and (now - st.gateT) or nil, s and s.getPause and s.getPause() or false)

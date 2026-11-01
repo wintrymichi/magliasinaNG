@@ -131,6 +131,39 @@ def fetch_shared(zone, asset_id, names, cache):
     return len(names)
 
 
+def static_shapes(dst, sl):
+    """Copies every zone shape the base scene names (z/<zone>/...) to static/<zone>/... and points the scene at it."""
+    pat = re.compile(r'"(/levels/%s/z/(ti_[m0-9]+_[m0-9]+)/([^"]+\.c?dae))"' % LEVEL)
+    copied, n = {}, 0
+    for dp, _, fs in os.walk(os.path.join(dst, "main")):
+        for f in fs:
+            if not f.endswith(".json"):
+                continue
+            p = os.path.join(dp, f)
+            text = open(p, encoding="utf-8").read()
+
+            def sub(m):
+                path, zone, rest = m.group(1), m.group(2), m.group(3)
+                if path not in copied:
+                    b = sl.read(zone, f"z/{zone}/{rest}")
+                    if b is None:
+                        copied[path] = None
+                    else:
+                        out = os.path.join(dst, "static", zone, *rest.split("/"))
+                        os.makedirs(os.path.dirname(out), exist_ok=True)
+                        with wopen(out, "wb") as fo:
+                            fo.write(b)
+                        copied[path] = f"/levels/{LEVEL}/static/{zone}/{rest}"
+                return '"%s"' % copied[path] if copied[path] else m.group(0)
+            new = pat.sub(sub, text)
+            if new != text:
+                n += 1
+                with wopen(p, "w") as fo:
+                    fo.write(new)
+    return {"shapes": sum(1 for v in copied.values() if v), "missing": sum(1 for v in copied.values() if not v),
+            "files": n}
+
+
 def level_shapes(zone, cache):
     """The level paths of the zone's own shapes, relative to its level ("/art/shapes/...")."""
     sc = blocks.scene_files(os.path.join(cache, zone, "levels", zone))
@@ -307,6 +340,11 @@ def main():
             return p[:-4] + ".cdae"
         return None
     log("scene references to compiled zone shapes:", dae2cdae.rewrite_refs(dst, zpath))
+
+    # the scene's static objects (landmarks: the Monte Lema cable car) that name a zone's own shape under z/<zone>/:
+    # in server mode no zone file is there when the level loads ("Could not open .../cableway_ropes.cdae", PC
+    # 2026-11-01). Those few shapes are copied into the base (static/<zone>/...) and the scene names the copy.
+    log("scene shapes copied into the base:", static_shapes(dst, sl))
 
     # the Ticino map of the M key (worldmap.py, ui/ui-vue/mods/ticino): the far ground's colours and the AI roads
     worldmap.build(ground.H, ground.C, grid.x0 + ground.cx0 * tile_m, grid.y0 + ground.cy0 * tile_m, tile_m / farlod.K,
