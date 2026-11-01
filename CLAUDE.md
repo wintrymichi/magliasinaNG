@@ -1809,4 +1809,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Size on ti_0_0 (397 tiles): 30 MB raw, 6.4 MB zipped; all of Ticino ~0.5 GB zipped in the base. Cells of 24 m were
   only 20 % bigger than 28 m (most cells hold few trees). The card colours (COLOUR) are a guess: compare them with the
   near Forest's imposters in a screenshot before keeping them. Not tested in the game yet.
+- PC A/B flights at Manno (2026-11-01, base of 00:19Z, 150 s): gate+pacing on 83.1/84.6 fps vs off 90.1/80.5 (noise),
+  frames over 100 ms 7-8 in every run. The gate as first written let more steps into a frame that had already changed
+  the scene ("costs nothing new"): it concentrated the same cost into 2-3 frames of 400-550 ms. Now one scene-changing
+  step a frame (pace.SAME_FRAME false). Pacing: no measurable difference, off by default. SHAPE_VARIANTS 4 was worse
+  (a 537 ms near-forest frame with 255 ms "Ticking"): stays 1. The near-forest frames of 195-270 ms were the streamer's
+  OWN Lua (createNewItem ~70 us a tree, 2,400-4,000 trees a pass), not the engine: forest.PASS_MAX_MS (30) splits a pass.
+  After the jump's map.reset LuaGC took up to 520 ms in one frame: a full collectgarbage at the end of the paused hold
+  (GC_AFTER_HOLD; the sim shows 180-245 ms there, inside the pause). A 482 ms frame with lua 0 in the streamer was other
+  Lua (traffic/AI?), not looked at. Terrain swap 226-272 ms = terrainFile ~115 ms Lua + RenderShadows 102-135.
 

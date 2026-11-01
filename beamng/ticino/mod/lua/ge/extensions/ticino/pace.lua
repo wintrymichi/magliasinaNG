@@ -25,6 +25,7 @@ M.CALM_MARGIN_MS = 2.0     -- a calm frame is no longer than the median frame + 
 M.CALM_SHARE = 0.25
 M.CALM_TIMEOUT = 30        -- frames a waiting gate holds at most
 M.BASE_FRAMES = 64         -- the median of this many frames that changed nothing
+M.SAME_FRAME = false       -- may a second scene-changing step run in a frame that changed the scene already?
 -- the pacer
 M.WINDOW = 120             -- frames the target is taken over (~1-2 s)
 M.EVERY = 30               -- frames between recomputes
@@ -81,7 +82,9 @@ end
 -- May a scene-changing step run in this frame? (Then the caller runs it and calls worked().)
 function G:open()
   if self.paused then return true end
-  if self.workedNow then return true end            -- this frame changes the scene already: more of it costs nothing new
+  -- one scene-changing step a frame: letting more in once a frame had worked piled cells, near objects and forest
+  -- into the same frame (PC 2026-11-01: 2-3 gate frames of 400-550 ms instead of 8-9 smaller ones)
+  if self.workedNow then return M.SAME_FRAME end
   if self.frame - self.lastWork <= M.QUIET then return false end
   self.waitSince = self.waitSince or self.frame
   if self:calm() then return true end

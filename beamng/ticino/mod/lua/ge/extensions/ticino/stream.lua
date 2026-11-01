@@ -110,7 +110,9 @@ M.SERVE_RINGS = 1          -- the rings of tiles round the car that must be ther
 M.GROUP = 'ticino_stream'
 M.GATE = true              -- frames that change the scene stay lone spikes between calm frames (pace.lua; settings
                            -- "frameGate": false turns it off)
-M.PACING = true            -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": false)
+M.PACING = false           -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": true). Off:
+                           -- PC flights 2026-11-01 showed no measurable difference (A/B twice at Manno)
+M.GC_AFTER_HOLD = true     -- a full Lua garbage collection at the end of the paused hold after a jump's map.reset
 M.TERRAIN_SHADOWS = true   -- false: the TerrainBlock casts no sun shadows (BeamNG.Earth terrain.lua: every block move
                            -- redrew the cached sun shadow map for it, 250-340 ms of RenderShadows on a GTX 1060, and
                            -- its screenshots were pixel-identical without; settings "terrainShadows": false). Off only
@@ -773,7 +775,11 @@ local function onUpdate(dtReal)
   end
   if st.holdUntil and clock() >= st.holdUntil then   -- the hold after a map.reset is over
     st.holdUntil = nil
-    log('I', 'ticino', 'hold after the AI map read over')
+    -- the garbage of the map read (and of the jump) collected now, still paused: else the collector's steps came
+    -- in the first seconds of the drive (PC 2026-11-01: LuaGC up to 520 ms in one frame after the map.reset)
+    local t0 = clock()
+    if M.GC_AFTER_HOLD then collectgarbage('collect') end
+    log('I', 'ticino', string.format('hold after the AI map read over (garbage collected in %.0f ms)', clock() - t0))
     pause(false)
   end
   if st.rwatch then

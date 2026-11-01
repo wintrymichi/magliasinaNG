@@ -37,6 +37,7 @@ M.BLOCK = 3                           -- tiles of a BLOCK x BLOCK square share o
                                       -- 11 with 3). PC flight 2026-10-31: near-forest frames 63 -> 7 (2) -> 3 (3),
                                       -- frames over 100 ms 130 -> 70 -> 52, 80.5 -> 83.0 fps; a Forest of ~3,000
                                       -- items still costs ~250 ms a touch, so its size adds little.
+M.PASS_MAX_MS = 30                    -- Lua ms of a frame's forest work at most (budgeted calls; 0: no cap)
 M.CHECK_EVERY = 8                     -- items between two looks at the clock (budget, ONE_FOREST off)
 M.SOLID_RADIUS = 0                    -- tiles round the car's whose items collide
 M.FILE = '/levels/%s/tiles/t_%d_%d.trees.json'
@@ -257,6 +258,7 @@ end
 function M.step(clock, budgetMs, perFrame, burstMs)
   if not S then return true end
   local t0 = clock()
+  local passCap = M.PASS_MAX_MS > 0 and ((budgetMs and budgetMs < 1000) or burstMs) and M.PASS_MAX_MS or nil
   local left = perFrame or M.PER_FRAME
   local q = S.queue
   local forests, ids = 0, {}
@@ -309,6 +311,9 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       end
       i = i + 1
       if budgetMs and not M.ONE_FOREST and i % M.CHECK_EVERY == 0 and clock() - t0 > budgetMs then break end
+      -- a pass split over frames when the Lua of one frame passes PASS_MAX_MS (createNewItem ~70 us a tree: a whole
+      -- near tile of 2,400-4,000 trees was 195-270 ms of streamer Lua in one frame, PC 2026-11-01); not while paused
+      if passCap and i % M.CHECK_EVERY == 0 and clock() - t0 > passCap then break end
     end
     op.pos = i
     if i <= #rows then return false end

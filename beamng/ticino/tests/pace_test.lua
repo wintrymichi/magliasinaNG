@@ -91,7 +91,7 @@ do
   for i = 1, 70 do g:beginFrame(10, false) end
   check(g:open(), 'open after calm frames')
   g:worked()
-  check(g:open(), 'open again in the same frame')
+  check(not g:open(), 'one scene-changing step a frame (SAME_FRAME false)')
   g:beginFrame(200, false)
   check(not g:open(), 'closed the frame after a scene change')
   g:beginFrame(60, false)
