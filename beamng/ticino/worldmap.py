@@ -18,7 +18,7 @@ route and called them spawn_magliaso / spawn_mid / spawn_pura after the Malcanto
 point by the settlements of swissNAMES3D (swisstopo, OBJEKTART "Ort"): a village point keeps its village's name, a route
 point takes the nearest place, a bigger place counting as nearer than a farm (_weight): within NEAR_M its plain name,
 beyond it or when another point has that name "<place> (2.3 km NE)". A place's name is its official one (swissNAMES3D
-lists Bellinzona also as Bellinzone and Bellenz). Without the gazetteer (no network) the
+lists Bellinzona also as Bellinzone and Bellenz, Lugano as Ligiaun: exonyms never name a place). Without the gazetteer (no network) the
 village slugs are turned back into words and the route points are named after the nearest village point.
 
     python worldmap.py --ground <ground.npz> --base <levels/ticino folder> --out <folder>     (a test on a base)
@@ -237,18 +237,20 @@ def fetch_settlements(cache_dir=None, timeout=60):
                 st = "%s/%s/%s" % (d.get("STATUS", ""), d.get("SPRACHCODE", ""), d.get("NAMEN_TYP", ""))
                 stat[st] = stat.get(st, 0) + 1
                 key = d.get("UUID") or (d["E"], d["N"])   # one place, its names in several languages and forms
-                rank = 0 if "offiz" in d.get("STATUS", "").lower() else 1
+                # the place's own name first: official and no exonym (Lugano, not its Romansh Ligiaun)
+                rank = (0 if "offiz" in d.get("STATUS", "").lower() else 2) + ("exonym" in d.get("NAMEN_TYP", "").lower())
                 if key not in places:
                     x, y = lv95_to_local(float(d["E"]), float(d["N"]))
                     cat = d.get("EINWOHNERKATEGORIE", "")
                     cats[cat] = cats.get(cat, 0) + 1
                     places[key] = [rank, d["NAME"], x, y, population(cat), []]
                 pl = places[key]
-                pl[5].append(d["NAME"])
+                pl[5].append((rank, d["NAME"]))
                 if rank < pl[0]:
                     pl[0], pl[1] = rank, d["NAME"]
             # (name, x, y, population, every name of the place): Bellinzona, not its French Bellinzone
-            out = [(pl[1], pl[2], pl[3], pl[4], tuple(pl[5])) for pl in places.values()]
+            out = [(pl[1], pl[2], pl[3], pl[4], tuple(n for r, n in sorted(pl[5], key=lambda q: q[0])),
+                    tuple(n for r, n in pl[5] if r == pl[0])) for pl in places.values()]
         log("swissNAMES3D names (status/language/type): %s" % json.dumps(stat, ensure_ascii=False))
         log("swissNAMES3D: %d settlements (%s), population classes %s" % (
             len(out), os.path.basename(path), json.dumps(cats, ensure_ascii=False)))
@@ -326,7 +328,8 @@ def spawn_names(spawns, settlements):
         names, by_slug = [], {}
         for k, s in enumerate(settlements):
             alts = s[4] if len(s) > 4 else (s[0],)
-            own = [a for a in alts if _slug(a) in villages]   # the name the zone's village point was made from
+            best = s[5] if len(s) > 5 else alts       # the names of the best rank (several official languages)
+            own = [a for a in best if _slug(a) in villages]   # the name the zone's village point was made from
             names.append(own[0] if own else s[0])
             for a in alts:
                 by_slug.setdefault(_slug(a), []).append(k)
