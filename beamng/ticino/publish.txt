@@ -12,4 +12,4 @@ app=ticino-app
 level=keep
 # all (default): installer, helper, server and app; app: the app alone (tools built for a newer level stay on their draft)
 only=app
-stamp=2026-11-01 app 1.1.2
+stamp=2026-11-01 app 1.1.3
