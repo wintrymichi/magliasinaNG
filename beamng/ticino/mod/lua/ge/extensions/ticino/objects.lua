@@ -73,6 +73,18 @@ local S = nil     -- state: cfg, level, group, tiles (cache), live, farLive, que
 local farSets     -- the far trees and far houses of the base (far sets, below)
 local bldHold     -- a streamed house's deletion waits for its far houses (far buildings, below)
 
+-- A tile or cell key as a number: a set of 307,000 "x_y" strings (colCells) made every Lua garbage collection
+-- cycle sweep them (a full collection of that set alone 47-51 ms in luajit, as numbers 2 ms).
+local function nk(a, b) return (a + 32768) * 65536 + (b + 32768) end
+local function numSet(keys)
+  local set, n = {}, 0
+  for _, k in ipairs(keys or {}) do
+    local a, b = k:match('^(-?%d+)_(-?%d+)$')
+    if a then set[nk(tonumber(a), tonumber(b))] = true; n = n + 1 end
+  end
+  return set, n
+end
+
 function M.init(cfg, level, group)
   S = { cfg = cfg, level = level, group = group, tiles = {}, tileOrder = {}, live = {}, farLive = {},
         queue = {}, qpos = 1, colDirty = false, maxR = 0,
@@ -81,8 +93,8 @@ function M.init(cfg, level, group)
   S.noCol = {}                      -- groups that never collide (setCollision)
   S.farQueue, S.farPos = {}, 1
   S.has = cfg.tiles or {}
-  S.farHas = {}
-  for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
+  S.farHas, cfg.farCount = numSet(cfg.far)
+  cfg.far = nil                     -- the list is garbage now (numSet: no string a far tile in the live heap)
   S.farFine = M.USE_FAR_FINE and type(cfg.farFine) == 'string' and cfg.farFine ~= '' and ('/levels/%s/' .. cfg.farFine)
     or nil
   S.failedKey = {}                  -- entries whose object could not be made (far houses do not wait for them)
@@ -94,7 +106,8 @@ function M.init(cfg, level, group)
   -- the cells of 64 m (stream.json colCell; colDir if not col: the rebuild cost follows the cells' triangles)
   M.COL_FILE = '/levels/%s/' .. (cfg.colDir or 'col') .. '/c_%d_%d.bin'
   if cfg.colCell and cfg.colCell < 128 then M.COL_HYST_M = cfg.colCell / 8 end
-  for _, k in ipairs(cfg.colCells or {}) do S.col.has[k] = true end
+  S.col.has = numSet(cfg.colCells)
+  cfg.colCells = nil
 end
 
 local function tile(cx, cy)
@@ -477,8 +490,8 @@ function M.updateCols(x, y, force)
   if R >= 0 then
     for b = j - R, j + R do
       for a = i - R, i + R do
-        local k = a .. '_' .. b
-        if C.has[k] and files.near(files.serving() and files.colTile(a, b, C.size) or k) then want[k] = { a, b } end
+        local k = C.has[nk(a, b)] and a .. '_' .. b
+        if k and files.near(files.serving() and files.colTile(a, b, C.size) or k) then want[k] = { a, b } end
       end
     end
   end
@@ -730,8 +743,8 @@ local function lodWant(cx, cy)
       else
         for ty = y0, y0 + s - 1 do
           for tx = x0, x0 + s - 1 do
-            local key = tx .. '_' .. ty
-            if S.farHas[key] then
+            if S.farHas[nk(tx, ty)] then
+              local key = tx .. '_' .. ty
               want[key] = { key, 0, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) }
             end
           end
@@ -782,8 +795,7 @@ function M.updateFar(cx, cy, wcx, wcy, n)
     end
     for ty = cy - R, cy + R do
       for tx = cx - R, cx + R do
-        local key = tx .. '_' .. ty
-        if S.farHas[key] then want[key] = { key, 0, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) } end
+        if S.farHas[nk(tx, ty)] then local key = tx .. '_' .. ty; want[key] = { key, 0, tx, ty, math.max(math.abs(tx - cx), math.abs(ty - cy)) } end
       end
     end
   end

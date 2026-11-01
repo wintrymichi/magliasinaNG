@@ -1901,6 +1901,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (long-distance-gps.md 1.4). stream.lua now resets and builds it in the paused hold, once onNavgraphReloaded says
   the new map is there (map.reset lands a few frames after its call). The hold after the map read holds a live Lua
   heap of 1.1 GB (the AI map): every GC cycle walks it, the root of the LuaGC frames; a smaller AI map is the lever.
+  PC flight with the minimap off (2026-11-01): the ~420-460 ms frame gone; left 3 bursts of 143-395 ms, nearly all LuaGC.
+  The streamer's own share of every GC cycle: stream.json's colCells (307,321 "x_y" strings) and far (39,300) were kept
+  as string sets and as the decoded lists in cfg: a full collection of such a set alone took 47-51 ms in luajit (lupa),
+  as number keys 2 ms. objects.lua keeps both as number sets (nk) and drops the lists. tiles / forestTiles (~50k
+  strings) are still string sets. A set of many string keys costs every cycle: use number keys for big lookups.
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,

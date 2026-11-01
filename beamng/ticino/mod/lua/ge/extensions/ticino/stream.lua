@@ -822,7 +822,7 @@ local function start()
   if capB and capB < objects.FAR_BLD_INNER then objects.FAR_BLD_INNER = capB end
   M.applyView()
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
-    tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, #(cfg.far or {})))
+    tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, cfg.farCount or 0))
   log('I', 'ticino', string.format('stream 2026-10-28: window places %d..%d, base maps %s, collision lazy %d, '
     .. 'frame times to %s', M.FOLLOW_LO, M.FOLLOW_HI, M.BASE_MODE, objects.COL_LAZY or -1, M.FRAMES_FILE))
 end
