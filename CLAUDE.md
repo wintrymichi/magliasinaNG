@@ -871,6 +871,18 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   session (gone on a second lap in the same session, back after a restart with the temp .dds still there): first use of
   shapes/materials in memory, not texture cooking (only temp\art\terrainMaterialCache\*.dds is written, one per
   terrain swap). Sun shadows off: +18 fps but the same slow frames.
+- 2026-11-01 PC test mistakes: (1) a PowerShell chain started by a session survives when the session drops (Bash ones
+  die): last night's chain kept launching BeamNG at 10:35 and 11:02 and made the new chain abort "GAME RUNNING" -
+  after a reconnect trace the parent of any running BeamNG before starting; long chains now run detached
+  (Start-Process -WindowStyle Hidden, pid in results\chain_*_pid.txt). (2) The "fatal Lua error" michi saw was the test
+  mod's own ticinotest.lua:15 (pointAt with no legs on a screenshot-only route, 5,629 times a run), not ticino/*.lua.
+  (3) snap.ps1 captures the whole primary screen: with michi at the PC it captured his browser (deleted). Game views
+  are now taken inside the game with createScreenshot2 (as lua/ge/screenshot.lua), saved next to the test's out.txt.
+  (4) The old installer (packs) and the app's Move ran at the same time on 31-10 and split the zones between mods and
+  D:\ticino zones. (5) In PowerShell 5.1 `gh ... > file` writes UTF-16 text: download binaries from bash.
+- The "| engine" part of the slow frame lines (base 00:19Z) shows where the time goes: the frames after map.reset are
+  LuaGC (up to 520 ms); a near forest pass is ~190 ms of the streamer's own Lua even when it adds only 7 trees (fc13b35),
+  so not createNewItem; a terrain swap is ~115 ms Lua (terrainFile) + ~110-140 ms RenderShadows.
 
 ## Data from the cloud sessions
 
