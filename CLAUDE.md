@@ -1148,6 +1148,99 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Force-pushing this branch or merging another thread's branch into it was blocked: hand the branch over and let
   the integrator merge it.
 
+## Ticino Server app (beamng/ticino/gui, WPF .NET 10)
+
+- The cloud container cannot install the .NET SDK (dotnet-install.sh was refused): the app is compiled only by
+  ticino_gui.yml on a Windows runner, which also renders every page in both themes (`TicinoServer.exe --screenshots`)
+  to the draft release ticino-app (app_ticino_shots.zip): read the screenshots before handing a UI change over.
+- First CI build: CS0246 for HttpClient/FileInfo in `*_wpftmp.csproj`: the temporary project WPF compiles the XAML in
+  did not get the implicit usings. GlobalUsings.cs writes them out.
+- A keyed Style `BasedOn="{StaticResource {x:Type Slider}}"` in our own dictionary may not find the Fluent style at
+  load (crash at start): style controls inline, use DynamicResource for the Fluent brushes (a missing key only falls
+  back, it does not crash).
+- The Ticino build workflows (zone_build, ticino_all, ticino_region, ticino_test, ticino_tools, ticino_helper) had no
+  branch filter: the first push of a new thread branch based on ticino counts every file as changed against main and
+  would have started 87 zone builds. They now run only on `ticino`.
+- The light-theme shots of the Download page showed "reading the release" and an empty list: the window's own startup
+  check was running and PackManager.Refresh returns at once while a check runs. Screenshot mode (App.ShotMode) now
+  skips the startup check and the 6 h timer and waits for Checking to end before the first shot.
+- The app names zones by the first village spawn of each zone in the base pack's info.json (after the three route
+  spawns spawn_magliaso/_mid/_pura, which every zone reuses as names). The Lugano zone's first village spawn is
+  `ti_1_0_spawn_ligiaun`: places.villages() took swissNAMES3D's Romansh name of Lugano. The app maps it back; the
+  spawn name itself is not fixed in the pipeline.
+- Merging ticino (with PR #104) into the app branch: the branch filter for the new ticino_server_exe.yml was edited
+  after `git merge --no-commit` but not staged, so `git commit` took the merge without it, and the push (exe_stamp.txt
+  new in the range) started ticino server exe on the thread branch; cancelled at its checkout, nothing uploaded. After
+  a `--no-commit` merge, `git add` the extra edits (check `git status` before the commit), and give every new workflow
+  with push paths `branches: [ticino]` before a merge brings it to a thread branch.
+- The app first unpacked the whole server_ticino.zip into its server folder, lua folder included: that folder is the
+  server's TEST override (it hides the base pack's Lua if copied to the user folder) and the Server page even offered to
+  copy it there. Only ticino_server.exe is installed now, into the installer's ticino_tools when install.json is there
+  (one exe for the app and Start Ticino, stamp server.sha256), and the page only removes a leftover override.
+- Two programs start the server (the app, Start Ticino with --game-pid): Start Ticino skips its server while any
+  ticino_server process runs, and the app treats such a process as a running server of its own (no second start; on
+  "game closed" it does not send Ctrl+C, the server stops itself). Count processes by name: a PyInstaller onefile exe is
+  two processes, and only one Ctrl+C per console (a second one cuts the server's clean-up).
+- PC test of the app 1.0.0 (2026-10-31, DESKTOP-OUPOLOA, installed in packs mode: 90 zips in mods, hashed by the
+  installer): the app looked for zones only in its packs folder and showed 0/89 and "90 to download, 56.1 GB"; with
+  "download automatically" on by default it could have started 52 GB on its own. A zone now counts in the packs
+  folder or in mods (as the installer's Find-Zip), the installer's ticino_download\checked.json is trusted (same key
+  sha|length|ticks), AutoDownload is off by default and never downloads to a suggested folder. Packs mode (install.json
+  "mode": "packs", or zones only in mods) keeps new zones in mods and Play starts the game and the helper as Start
+  Ticino does; 1.0.0 asked for the server there ("not downloaded yet") and started nothing. Moving the zones out of mods
+  sets install.json "mode": "server" (else Start Ticino would not start the server for them).
+- Same test: app.log said "0 to download" while the page said 90 (Refresh logged before UpdateSummary ran); the
+  About page showed the commit twice (the SDK appends +<full sha> to InformationalVersion on top of the workflow's
+  +<short sha>: IncludeSourceRevisionInInformationalVersion false); sizes were decimal GB (56.1) against the
+  installer's 52.5 (units of 1024): one unit everywhere, as Explorer.
+- settings\ticino.json: the app wrote every field (BURST_MS, GROUP_R...) with the values it took for the mod's defaults,
+  which would pin them when a mod changes a default. It writes only what differs from the mod's own values now, and a
+  "light" file without GROUP_R loads with the build's radii (light changes forest and far ground, not GROUP_R).
+- The merge of ticino into the app branch (8c30692) was committed with conflict markers left in beamng/ticino/README.md
+  (<<<<<<< HEAD ... >>>>>>> origin/ticino round the server section) and pushed; found only while writing the release
+  notes (2026-10-31). After resolving a merge, `git grep -n -E '^(<<<<<<<|=======$|>>>>>>>)'` before the commit.
+- Publishing (michi 2026-10-31, "Subito come pre-release"): the cloud session cannot create or edit releases, so
+  ticino_publish.yml (push trigger on beamng/ticino/publish.txt, thread branch only) copies the draft build to the
+  public pre-release ticino-v1: GitHub has no server-side copy of a release asset, every zip is downloaded and uploaded
+  again by six runner jobs (about 52 GB), and the release is published only when names, sizes and sha256 match the
+  source. A loop that reads a list on stdin and runs curl/gh inside must read from another fd (`read -u 3 ... 3< f`).
+  First run: the app's new default tag (ticino-v1) broke the packs-mode screenshot test, which made its fake zips from
+  ticino-all (0 of 9 zones), so no app was uploaded and the publish run's last job would have waited 40 min for it:
+  cancelled (the 20 zips already copied are skipped by the next run). A test that fakes a release must pin its tag.
+  Republishing app 1.1 (2026-11-01): the first run (level=keep) would have also put the installer/helper/server of the
+  draft ticino-all on ticino-v1, rebuilt 23:48Z for a NEWER base than ticino-v1 has (helper staging, frame gate): cancelled.
+  `only=app` publishes the app alone. The second run then waited 40 min for "the app of this commit": a push of
+  publish.txt alone starts no app build. The publish now takes an app whose VERSION.txt commit is an ancestor with the
+  same gui sources. Before publishing tools to a release, check which base they were built for. That test first ran
+  git in tools/, where the path beamng/ticino/gui means tools/beamng/...: no diff, and the old app went out for 1.1.1.
+  Give git a pathspec from the top (`git -C "$GITHUB_WORKSPACE"`) in a step that cds.
+- michi's own use of 1.0.0 (2026-10-31 evening, "l'app è rotta"; read from his app.log by the PC thread): Move took the
+  89 zones from mods (C:) to "D:\ticino zones" in 10 min with no progress shown (the page's refresh overwrote the bar's
+  text every second), then said "0 of 89 zones in place" (the copies were dated now, so no sha256|length|ticks key of
+  checked.json/state.json matched: Files.MoveAsync keeps the times now, and a move rewrites the keys), and at the next
+  start AutoDownload downloaded the 52 GB again: DownloadAll set every item to Queued BEFORE One() looked for
+  "Unchecked", so a zip in place was never hashed, always downloaded. The set of zips in place is taken before the
+  states change. AutoDownload was on because 1.0.0 saved its old default into settings.json: settings without
+  SettingsVersion get it turned off once. A test of a download path must look at what the job DID (log lines per zip),
+  not at the state the page shows before it.
+- Same evening: the app moved ticino_ti_1_0_1.zip to "old" when it installed ticino_ti_1_0_2.zip and downloaded it
+  again: a zone too big for one zip comes in pieces _1, _2 (ticino-all-cdae: ti_1_0, ti_1_2), and Install retired
+  "every other zip of the zone". It retires only another copy of the same name now; zips of names the release no longer
+  has go through OldZips as before. The zone count is per zone (87), not per zip (89).
+- Same evening: an old installer (packs) ran beside the app and the new installer (server): zones in both folders and
+  install.json saying the wrong mode, and with no packs folder in settings.json the app showed 0 of 89 and "not chosen
+  yet" although install.json named "D:\ticino zones". The app now takes the installer's folder whenever it holds zones,
+  decides the mode by where the zones are (install.json only on a tie) and writes that mode back for Start Ticino;
+  Move skips a zip the folder already has with the same size (the mods copy goes to ticino_download\old, on its disk).
+- PC test of 1.1 (2026-11-01, release ticino-all-cdae from install.json): Move worked (82 zips the folder already had
+  went to ticino_download\old in 4 s, mode server), but the server program never came: the draft map builds carry the
+  zones and the base only, server_ticino.zip is on the tools release (ticino-all, tools_release.txt) and on ticino-v1.
+  The app now takes it from ServerTag / ticino-all / ticino-v1 when the map's release has none, and downloads it at the
+  check when server mode has no server exe. The copies put aside were ~50 GB on C:: a same-size copy of a release zip
+  is deleted on a move, and the old folders lose every copy of a zip in place and checked (PruneOld). The Move
+  dialog said "the zips are copied" when all were there already: it counts them now. The Yes/No box is a Win32
+  MessageBox the PC session could only click with the mouse (no UIA pattern).
+
 ## Working with cat (the owner)
 
 - Show the 3D renders and wait for cat's OK before running the GitHub Actions rebuild workflow. No PRs
