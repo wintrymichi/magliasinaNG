@@ -20,3 +20,4 @@
 2026-11-01T17:47:39Z texture warm-up at start, landmark shapes in the base
 2026-11-01T18:18:57Z far trees as a canopy surface, free camera only after the camera was at the car
 2026-11-01T18:31:05Z AI map: map.reset error logged, retried
+2026-11-01T18:37:23Z sign plates warmed a few a frame before their shape

@@ -1920,6 +1920,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   (settings "texWarm"). Not seen in the game yet. The same log: "Could not open /levels/ticino/z/ti_0_0/.../
   cableway_ropes.cdae" (and pylons, cabins, lema_summit): the base scene's landmarks name zone files, which in server
   mode are not there at the load. region_base.static_shapes copies them into the base (static/<zone>/...).
+  PC flight j_A of 76c3d7e: no placeholder walls, no cableway error. Left: the first spawn of a zone's sign shapes in
+  one frame (direction_signs.cdae 195 ms, props_signs 230 ms in ti_0_1, warm cache): one shape names 45-270 sign
+  materials, each a PNG of its own. texwarm.roll (settings "signWarm") holds such a shape in the objects queue
+  (objects.warmReady, S.waitWarm) until each sign material it names (warmup_mats.json, found in the last 128 KB of
+  the .cdae, where the material names are plain strings) was drawn on a 4 mm quad 0.5 m in front of the camera, 3 new
+  a frame for 3 frames, at most ROLL_WAIT_MS. Sim at tile 20,19: 271 materials of 3 shapes, scans 27 ms. Not seen in
+  the game yet: if the spawn frames stay, the cost is the material instances, not the textures.
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,

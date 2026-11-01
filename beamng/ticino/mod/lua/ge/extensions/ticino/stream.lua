@@ -81,6 +81,7 @@ M.POS_MODE = 'setPosition' -- how the block moves: 'setPosition' (0.1-0.16 s on 
 M.RELOAD_DEFER_MS = 3000   -- a rebuild only for props or trees waits for the next one of the collision cells, at most this
 M.BASE_COMBINED = true     -- one base colour map for all the streamed materials (each pixel from the map of the material
                            -- under it): the game re-packs one texture at a move instead of 7 (~45 ms each)
+M.SIGN_WARM = true         -- sign plates warmed a few a frame before their shape is made (texwarm.roll; "signWarm")
 M.TEX_WARM = true          -- cook the level art's textures before the first object (texwarm.lua; settings "texWarm")
 M.AI_MAP = false           -- no AI map at all (michi 2026-11-01, "disattivala completamente"): the 57k AI DecalRoads are
                            -- deleted at the start and the map read empty, never again at a jump (the 1.1 GB AI map was
@@ -768,6 +769,7 @@ local function readSettings(cfg)
   if type(s.pacing) == 'boolean' then M.PACING = s.pacing end
   if type(s.aiMap) == 'boolean' then M.AI_MAP = s.aiMap end
   if type(s.texWarm) == 'boolean' then M.TEX_WARM = s.texWarm end
+  if type(s.signWarm) == 'boolean' then M.SIGN_WARM = s.signWarm end
   if type(s.frameGate) == 'boolean' then M.GATE = s.frameGate end
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
@@ -854,6 +856,10 @@ local function start()
   M.applyView()
   if not M.AI_MAP then M.noAIMap() end
   if M.TEX_WARM then texwarm.start(M.LEVEL) end
+  if M.SIGN_WARM then
+    texwarm.rollInit(M.LEVEL)
+    objects.warmReady = texwarm.shapeReady
+  end
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, cfg.farCount or 0))
   log('I', 'ticino', string.format('stream 2026-10-28: window places %d..%d, base maps %s, collision lazy %d, '
@@ -886,6 +892,8 @@ local function stop()
   helper.stop()
   files.stop()
   texwarm.clear()
+  texwarm.rollClear()
+  objects.warmReady = function() return true end
   st = nil
 end
 
@@ -909,6 +917,8 @@ local function onUpdate(dtReal)
     pause(false)
   end
   M.retryEmptyMap()
+  -- the sign plates of the shapes held in the queue, a few a frame (texwarm.lua rolling warm-up)
+  if M.SIGN_WARM then texwarm.roll() end
   do
     local now, s = clock(), sta()
     st.gate:beginFrame(st.gateT and (now - st.gateT) or nil, s and s.getPause and s.getPause() or false)

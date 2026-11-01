@@ -143,6 +143,9 @@ end
 -- The shape file to load: the zones' shapes are compiled to .cdae at build time (dae2cdae.py: no Collada import while
 -- driving). Should a tile name a .cdae that is not installed (an older zone zip beside a newer one) the .dae is
 -- taken, and a .dae with a .cdae beside it takes the .cdae. Cached by name.
+-- may a shape be made now? (stream.lua sets texwarm.shapeReady: sign plates warmed first)
+M.warmReady = function() return true end
+
 local function shapeFile(name)
   local v = S.shapeFile[name]
   if v then return v end
@@ -403,19 +406,38 @@ function M.step(clock, budgetMs, untilRing)
   clock_ = clock
   local t0 = clock()
   local q = S.queue
+  -- shapes whose sign plates are warm now go back to the head of the queue (warmReady, texwarm.lua)
+  local w = S.waitWarm
+  if w and #w > 0 then
+    for i = #w, 1, -1 do
+      local op = w[i]
+      if M.warmReady(shapeFile(op[2].shapeName), clock) then
+        table.remove(w, i)
+        if S.qpos > 1 then S.qpos = S.qpos - 1; q[S.qpos] = op else table.insert(q, 1, op) end
+      end
+    end
+  end
   while S.qpos <= #q do
     local op = q[S.qpos]
     if untilRing and (op[5] or 0) > untilRing then break end
     S.qpos = S.qpos + 1
+    local e = op[2]
+    if e.shapeName and not S.live[op[1]] and not M.warmReady(shapeFile(e.shapeName), clock) then
+      S.waitWarm = S.waitWarm or {}
+      S.waitWarm[#S.waitWarm + 1] = op
+      S.stats.warmHeld = (S.stats.warmHeld or 0) + 1
+      goto continue
+    end
     local heavy = apply(op)
     -- one heavy object a frame: a second one after it would add its cost to the same frame (with no budget, at a
     -- jump while the game is paused, the step goes on: it made one object of a new zone and left the rest crawling)
     if budgetMs and ((heavy and not M.BURSTING) or clock() - t0 > budgetMs) then break end
+    ::continue::
   end
   -- far houses over tiles whose streamed houses are made now go (looked at every 500 ms at most): the queue may run for
   -- minutes after a jump, the idle frames that drop them would not come before
   if S.fb and S.fb.any then M.dropFarBld(clock) end
-  return S.qpos > #q
+  return S.qpos > #q and not (S.waitWarm and #S.waitWarm > 0)
 end
 
 -- The deletions of drawn objects that went out of range, from the tail of the queue, for at most budgetMs: they wait
@@ -1404,7 +1426,7 @@ function M.clear()
   for _, ids in pairs(S.col.live) do for _, id in ipairs(ids) do delete(id) end end
   if S.col.job then for _, id in ipairs(S.col.job.ids) do delete(id) end end
   S.col.live, S.col.cell, S.col.job, S.col.queue, S.col.liveTris, S.col.tris = {}, nil, nil, {}, {}, 0
-  S.live, S.farLive, S.queue, S.qpos, S.delFrom = {}, {}, {}, 1, nil
+  S.live, S.farLive, S.queue, S.qpos, S.delFrom, S.waitWarm = {}, {}, {}, 1, nil, nil
   S.farQueue, S.farPos, S.farDoomed, S.farWant = {}, 1, nil, nil
   for _, F in ipairs({ S.ft, S.fb }) do
     for _, f in pairs(F.live) do delete(f.id) end
@@ -1422,7 +1444,7 @@ function M.dropAll()
   local n = 0
   for _, l in pairs(S.live) do delete(l.id); n = n + 1 end
   if n > 0 then S.colDirty = true end
-  S.live, S.queue, S.qpos, S.colQEnd, S.cell, S.delFrom = {}, {}, 1, 0, nil, nil
+  S.live, S.queue, S.qpos, S.colQEnd, S.cell, S.delFrom, S.waitWarm = {}, {}, 1, 0, nil, nil, nil
   S.fb.wait, S.failedKey = {}, {}       -- (the houses held for their far ones are gone too)
   S.stats.deleted = S.stats.deleted + n
   return n
@@ -1460,7 +1482,8 @@ function M.stats()
            colFailed = S.col.failed or 0, colTris = S.col.tris or 0, colFfi = hasFfi and not S.col.noFfi }
 end
 
-function M.pending() return S and S.qpos <= #S.queue end
+local function warmWaiting() return S.waitWarm ~= nil and #S.waitWarm > 0 end
+function M.pending() return S and (S.qpos <= #S.queue or warmWaiting()) end
 function M.queued() return S and (#S.queue - S.qpos + 1) or 0 end
 -- objects still to make (the queue without its tail of deletions)
 function M.addsQueued()
