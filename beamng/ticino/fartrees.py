@@ -29,6 +29,7 @@ import os
 import re
 import sys
 import time
+import uuid
 
 import numpy as np
 
@@ -244,8 +245,10 @@ def tile_bytes(cs):
 
 def material(tex_path):
     from blocks import bng
+    # a persistentId of its own name, not bng's random one: the same material is the same bytes in every base
+    pid = str(uuid.uuid5(uuid.NAMESPACE_URL, "ticino/" + MAT))
     return bng.material(MAT, color_map=tex_path, base_color=[1, 1, 1, 1], vert_color=True, roughness=1.0,
-                        alpha_test=70, extra={"castShadows": False})
+                        alpha_test=70, extra={"castShadows": False, "persistentId": pid})
 
 
 # ------------------------------------------------------------------ the texture
@@ -427,13 +430,16 @@ def build(tiles, names, origin, tile_m, out_dir, level="ticino", workers=1):
         ncards += r[1]
         nbytes += r[2]
         cx, cy = (int(v) for v in r[0].split("_"))
-        coarse.setdefault("%d_%d" % (cx // L2_TILES, cy // L2_TILES), []).extend(r[3])
+        coarse.setdefault("%d_%d" % (cx // L2_TILES, cy // L2_TILES), {})[(cx, cy)] = r[3]
         if len(keys) % 2000 == 0:
             log("far trees: %d tiles, %d cards, %.0f MB (%.0f s)" % (len(keys), ncards, nbytes / 1e6, time.time() - t0))
     if pool:
         pool.close()
         pool.join()
     n2, b2 = 0, 0
+    # the coarse cards in the order of their tiles, not in the order the workers finished them: a coarse tile made
+    # again from the same rows is the same bytes (the base's part 3 is downloaded again only when it changed)
+    coarse = {k: [c for t in sorted(by_tile) for c in by_tile[t]] for k, by_tile in sorted(coarse.items())}
     for k, cs in coarse.items():
         if not cs:
             continue

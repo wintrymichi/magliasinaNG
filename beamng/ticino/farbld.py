@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import time
+import uuid
 
 import numpy as np
 
@@ -466,7 +467,10 @@ def block_mesh(rec, x0, y0):
 
 def material():
     from blocks import bng
-    return bng.material(MAT, base_color=[1, 1, 1, 1], vert_color=True, roughness=0.9, extra={"castShadows": False})
+    # a persistentId of its own name, not bng's random one: the same material is the same bytes in every base
+    pid = str(uuid.uuid5(uuid.NAMESPACE_URL, "ticino/" + MAT))
+    return bng.material(MAT, base_color=[1, 1, 1, 1], vert_color=True, roughness=0.9,
+                        extra={"castShadows": False, "persistentId": pid})
 
 
 # ------------------------------------------------------------------ the whole level
@@ -575,9 +579,11 @@ def build(tiles, origin, tile_m, out_dir, tex_mean=TEX_MEAN, workers=1, records_
 def build_blocks(recs, origin, tile_m, out_dir):
     """The coarse blocks (l2_<bx>_<by>.cdae) of the records {tile key: records}; returns their sorted keys."""
     by_block = collections.defaultdict(list)
-    for key, rec in recs.items():
+    # in the order of the tiles, not the order the workers finished them: a block made again from the same houses is
+    # the same bytes (the base's part 4 is downloaded again only when it changed)
+    for key in sorted(recs, key=lambda k: tuple(int(v) for v in k.split("_"))):
         cx, cy = (int(v) for v in key.split("_"))
-        by_block[(cx // L2_TILES, cy // L2_TILES)].append(rec)
+        by_block[(cx // L2_TILES, cy // L2_TILES)].append(recs[key])
     keys2, nh, ntri, nbytes, cut = [], 0, 0, 0, 0
     bm = tile_m * L2_TILES
     for (bx, by), lst in sorted(by_block.items()):

@@ -1809,6 +1809,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the release lists and read info.json / files.lua from ticino_base_1.zip: the server's download command removed every
   other ticino_base_*.zip when it took one (fixed in ticino_server.py, exe not rebuilt) and the GUI app of PR #106
   retired the others and read the last-sorted one.
+- A fixed packing is not enough: the FILES must be the same bytes too. Part 4 changed between two bases with no change
+  to farbld (the sha256 of the 6705113 base), and two local runs of fartrees on the same rows differed in 30 of the 36
+  coarse tiles: the coarse tiles and blocks were assembled in the order the pool's imap_unordered handed the tiles
+  back, and bng.material gives every material a random uuid4 persistentId (pipeline/bng.py pid()). The coarse sets
+  are now joined in tile order and the far materials take a uuid5 of their name: two runs with 4 workers, 0 of 390
+  (trees) and 287 (houses) files differ. Build a part twice and compare the files before trusting it to stay put.
 
 ## Ticino map and spawn names (worldmap.py, 2026-11-01)
 
