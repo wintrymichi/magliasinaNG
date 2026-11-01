@@ -1257,6 +1257,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   copies the exe and starts it. ticino_gui.yml checks the range read against the uploaded zip (--probe-update). An
   update of builds before 1.1.3 still needs a hand copy. TICINO_APP_PRETEND_VERSION=1.0.0 makes an app offer its own
   version, to try the whole update on the PC.
+- PC test of 1.1.3 (2026-11-01): michi's Downloads copy replaced by hand (old one kept as TicinoServer_old_1.0.0.exe),
+  the self-update with PRETEND 1.0.0 closed and reopened the app in ~25 s, the four-part base (ticino_base_1..4) was
+  downloaded, checked and kept whole in mods. Two test artefacts: the restarted app inherited the PRETEND variable
+  (offered the update again) and logged "updated to 1.0.0": the cmd now starts without it and the log names the built
+  version (AppUpdate.Built). Built must stand above Current in the file: C# runs static initializers in file order,
+  and a Current that reads a Built declared after it gets null.
 
 ## Working with cat (the owner)
 

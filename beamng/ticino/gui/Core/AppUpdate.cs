@@ -16,12 +16,18 @@ public sealed class AppUpdate : Observable
     readonly GitHub gh = new();
     ReleaseAsset? asset;
 
+    /// <summary>The version this exe was built as, whatever TICINO_APP_PRETEND_VERSION says (declared
+    /// before Current: static initializers run in the order of the file).</summary>
+    public static Version Built { get; } = Three(typeof(AppUpdate).Assembly.GetName().Version);
+
     /// <summary>This app's version (three parts: 1.1.2.0 and 1.1.2 must compare equal). TICINO_APP_PRETEND_VERSION
     /// (a test on the PC) makes the app take itself for an older one, so the whole update can be tried with the
     /// release's own version.</summary>
     public static Version Current { get; } =
-        Environment.GetEnvironmentVariable("TICINO_APP_PRETEND_VERSION") is { Length: > 0 } p && Version.TryParse(p, out var pv)
-            ? Three(pv) : Three(typeof(AppUpdate).Assembly.GetName().Version);
+        Environment.GetEnvironmentVariable(PretendVar) is { Length: > 0 } p && Version.TryParse(p, out var pv)
+            ? Three(pv) : Built;
+
+    const string PretendVar = "TICINO_APP_PRETEND_VERSION";
 
     public Version? Available { get => available; private set { if (Set(ref available, value)) Raise(nameof(IsAvailable)); } }
     Version? available;
@@ -152,10 +158,13 @@ public sealed class AppUpdate : Observable
                 ":start",
                 $"start \"\" \"{exe}\" --after-update",
                 "") );
-            Process.Start(new ProcessStartInfo("cmd.exe", $"/c \"{cmd}\"")
+            var psi = new ProcessStartInfo("cmd.exe", $"/c \"{cmd}\"")
             {
                 UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = dir,
-            });
+            };
+            // the new app must not take itself for an older one again (PC test of 1.1.3: it offered the update twice)
+            psi.Environment.Remove(PretendVar);
+            Process.Start(psi);
             Log.Write($"app update to {Available} downloaded: the app closes and starts again");
             Text = "Restarting…";
             return true;
@@ -173,7 +182,7 @@ public sealed class AppUpdate : Observable
     public static void CleanUp(bool afterUpdate)
     {
         string dir = Path.Combine(AppConfig.Dir, "update");
-        if (afterUpdate) Log.Write($"updated to Ticino Server {Current}");
+        if (afterUpdate) Log.Write($"updated to Ticino Server {Built}");
         try { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
         catch { /* the script may still be closing: next start */ }
     }
