@@ -16,8 +16,9 @@ Spawn names (michi 2026-10-31: "voglio i nomi degli spawn accurati"): every zone
 route and called them spawn_magliaso / spawn_mid / spawn_pura after the Malcantone level they came from (an
 "ti_m3_7_spawn_magliaso" stands at Airolo), and one per village with an ASCII slug of its name. spawn_names() names each
 point by the settlements of swissNAMES3D (swisstopo, OBJEKTART "Ort"): a village point keeps its village's name, a route
-point takes the nearest place no other point has, a bigger place counting as nearer than a farm (_weight), within
-NEAR_M its plain name, beyond it "<place> (2.3 km NE)". Without the gazetteer (no network) the
+point takes the nearest place, a bigger place counting as nearer than a farm (_weight): within NEAR_M its plain name,
+beyond it or when another point has that name "<place> (2.3 km NE)". A place's name is its official one (swissNAMES3D
+lists Bellinzona also as Bellinzone and Bellenz). Without the gazetteer (no network) the
 village slugs are turned back into words and the route points are named after the nearest village point.
 
     python worldmap.py --ground <ground.npz> --base <levels/ticino folder> --out <folder>     (a test on a base)
@@ -50,7 +51,7 @@ QUALITY = 82
 E0, N0, K = 2710830.0, 1094360.0, 1.0001374973449562
 NAMES_STAC = "https://data.geo.admin.ch/api/stac/v0.9/collections/ch.swisstopo.swissnames3d/items"
 NEAR_M = 1200.0             # a spawn point this close to a settlement takes its name (x its _weight)
-FAR_M = 4000.0              # beyond it "<place> (5 km NE)" from the biggest place around
+FAR_M = 4000.0              # farther from every place: the nearest one of any size, with its distance
 GENERIC = ("magliaso", "mid", "pura")   # the route points of every zone (build_level.stage_spawns)
 
 # road styles: (min zoom level drawn up to, width px at level 0, colour, casing colour)
@@ -228,19 +229,27 @@ def fetch_settlements(cache_dir=None, timeout=60):
             r = csv.reader(io.TextIOWrapper(z.open(member), encoding="utf-8-sig"), delimiter=";")
             head = next(r)
             log("swissNAMES3D columns: %s" % ";".join(head))
-            seen, cats = set(), {}
+            places, cats, stat = {}, {}, {}
             for row in r:
                 d = dict(zip(head, row))
                 if d.get("OBJEKTART") != "Ort":
                     continue
-                x, y = lv95_to_local(float(d["E"]), float(d["N"]))
-                key = (d["NAME"], round(x), round(y))
-                if key in seen:                  # the same name of the same place listed twice
-                    continue
-                seen.add(key)
-                cat = d.get("EINWOHNERKATEGORIE", "")
-                cats[cat] = cats.get(cat, 0) + 1
-                out.append((d["NAME"], x, y, population(cat)))
+                st = "%s/%s/%s" % (d.get("STATUS", ""), d.get("SPRACHCODE", ""), d.get("NAMEN_TYP", ""))
+                stat[st] = stat.get(st, 0) + 1
+                key = d.get("UUID") or (d["E"], d["N"])   # one place, its names in several languages and forms
+                rank = 0 if "offiz" in d.get("STATUS", "").lower() else 1
+                if key not in places:
+                    x, y = lv95_to_local(float(d["E"]), float(d["N"]))
+                    cat = d.get("EINWOHNERKATEGORIE", "")
+                    cats[cat] = cats.get(cat, 0) + 1
+                    places[key] = [rank, d["NAME"], x, y, population(cat), []]
+                pl = places[key]
+                pl[5].append(d["NAME"])
+                if rank < pl[0]:
+                    pl[0], pl[1] = rank, d["NAME"]
+            # (name, x, y, population, every name of the place): Bellinzona, not its French Bellinzone
+            out = [(pl[1], pl[2], pl[3], pl[4], tuple(pl[5])) for pl in places.values()]
+        log("swissNAMES3D names (status/language/type): %s" % json.dumps(stat, ensure_ascii=False))
         log("swissNAMES3D: %d settlements (%s), population classes %s" % (
             len(out), os.path.basename(path), json.dumps(cats, ensure_ascii=False)))
         return out
@@ -285,67 +294,68 @@ def _away(x, y, px, py):
     return d, DIRS[int((a + 22.5) // 45) % 8]
 
 
-def _weight(pop, village):
-    """How much farther a bigger place may be than a hamlet and still name a point (village: a village point's name)."""
-    w = 1.0 + (pop >= 50) * 0.3 + (pop >= 200) * 0.5 + (pop >= 1000) * 0.7
-    return max(w, 2.0) if village else w
+def _weight(pop):
+    """How much farther a bigger place may be than a hamlet and still be the one a point is named after."""
+    return 1.0 if pop < 20 else 1.3 if pop < 100 else 1.8 if pop < 1000 else 2.5
 
 
-def _with_dist(lab, d, dirn):
-    return "%s (%s km %s)" % (lab, ("%.1f" % (d / 1000)) if d < 1950 else "%.0f" % (d / 1000), dirn)
+def _with_dist(lab, d, dirn, fine=False):
+    km = ("%.1f" % (d / 1000)) if d < 1950 or fine else "%.0f" % (d / 1000)
+    return "%s (%s km %s)" % (lab, km, dirn)
 
 
 def spawn_names(spawns, settlements):
     """{objectname: label} for the SpawnSphere objects (name, position) of the base, from the settlements.
 
-    A village point (spawn_<slug>) takes its village's name. A route point (GENERIC) takes the name of the place that
-    is nearest when a bigger place counts as nearer (_weight: a village 1.2 km off beats a farm 0.6 km off) and
-    no other point has: within NEAR_M x weight the plain name, else "<place> (2.3 km NE)" from the best place within
-    FAR_M, else from the biggest near place. A name still given twice gets a number."""
+    A village point (spawn_<slug>) takes its village's name. A route point (GENERIC) takes the place that is nearest
+    when a bigger place counts as nearer (_weight: a village 1.5 km off beats a farm 0.7 km off): within NEAR_M x
+    weight its plain name, or "<place> (0.6 km S)" when another point has that name already; farther than FAR_M from
+    every place, the nearest place of any size with its distance. A label still given twice gets one decimal more,
+    then a number."""
     pts = [(o["name"], float(o["position"][0]), float(o["position"][1])) for o in spawns]
     slugs = {}
     for name, x, y in pts:
         m = re.fullmatch(r"ti_[m0-9]+_[m0-9]+_spawn_(.+)", name) or re.fullmatch(r"spawn_(.+)", name)
-        slug = m.group(1) if m else name
-        slugs[name] = slug                       # spawn_magliaso_paese: the village Magliaso, not a route point
+        slugs[name] = m.group(1) if m else name  # spawn_magliaso_paese: the village Magliaso, not a route point
     village_of = {n: s[:-6] if s.endswith("_paese") else s for n, s in slugs.items()}
     villages = {village_of[n] for n, s in slugs.items() if s not in GENERIC}
-    out, used = {}, set()
+    out, fine = {}, {}
     if settlements:
         S = np.array([[s[1], s[2]] for s in settlements])
-        W = np.array([_weight(s[3] if len(s) > 3 else 0, _slug(s[0]) in villages) for s in settlements])
-        by_slug = {}
+        W = np.array([_weight(s[3] if len(s) > 3 else 0) for s in settlements])
+        names, by_slug = [], {}
         for k, s in enumerate(settlements):
-            by_slug.setdefault(_slug(s[0]), []).append(k)
-        # the village points first: their own name (the nearest place of that name)
-        for name, x, y in pts:
+            alts = s[4] if len(s) > 4 else (s[0],)
+            own = [a for a in alts if _slug(a) in villages]   # the name the zone's village point was made from
+            names.append(own[0] if own else s[0])
+            for a in alts:
+                by_slug.setdefault(_slug(a), []).append(k)
+        used = set()
+        for name, x, y in pts:                    # the village points first: their own name
             if slugs[name] in GENERIC:
                 continue
-            slug = village_of[name]
-            ks = [q for q in by_slug.get(slug, ()) if math.hypot(S[q, 0] - x, S[q, 1] - y) <= 3 * NEAR_M]
+            ks = [q for q in by_slug.get(village_of[name], ())
+                  if math.hypot(S[q, 0] - x, S[q, 1] - y) <= 3 * NEAR_M]
             if ks:
                 k = min(ks, key=lambda q: (S[q, 0] - x) ** 2 + (S[q, 1] - y) ** 2)
             else:
                 k = int(np.argmin(((S - [x, y]) ** 2).sum(1) / W ** 2))
             d, dirn = _away(x, y, S[k, 0], S[k, 1])
-            out[name] = settlements[k][0] if d <= NEAR_M * W[k] else _with_dist(settlements[k][0], d, dirn)
-            used.add(settlements[k][0])
+            out[name] = names[k] if d <= NEAR_M * W[k] else _with_dist(names[k], d, dirn)
+            fine[name] = (names[k], d, dirn)
+            used.add(k)
         for name, x, y in sorted(pts):
             if slugs[name] not in GENERIC:
                 continue
             d = np.hypot(S[:, 0] - x, S[:, 1] - y)
-            order = np.argsort(d / W)
-            lab = None
-            for k in order[:60]:
-                if d[k] > FAR_M or settlements[k][0] in used:
-                    continue
-                lab = settlements[k][0] if d[k] <= NEAR_M * W[k] else _with_dist(settlements[k][0], *_away(x, y, *S[k]))
-                break
-            if lab is None:                      # nothing free near: the best place, with distance and direction
-                k = int(order[0])
-                lab = _with_dist(settlements[k][0], *_away(x, y, *S[k]))
-            out[name] = lab
-            used.add(settlements[k][0])
+            k = int(np.argmin(d / W))
+            if d[k] > FAR_M:
+                k = int(np.argmin(d))
+            dd, dirn = _away(x, y, S[k, 0], S[k, 1])
+            plain = dd <= NEAR_M * W[k] and k not in used
+            out[name] = names[k] if plain else _with_dist(names[k], max(dd, 100.0), dirn)
+            fine[name] = (names[k], max(dd, 100.0), dirn)
+            used.add(k)
     else:                                        # no gazetteer: the village slugs as words, route points after them
         named = [(_unslug(village_of[n]), x, y) for n, x, y in pts if slugs[n] not in GENERIC]
         for name, x, y in pts:
@@ -354,19 +364,22 @@ def spawn_names(spawns, settlements):
             elif named:
                 lab, px, py = min(named, key=lambda q: (q[1] - x) ** 2 + (q[2] - y) ** 2)
                 d, dirn = _away(x, y, px, py)
-                out[name] = lab if d <= NEAR_M else _with_dist(lab, d, dirn)
+                out[name] = lab if d <= NEAR_M else _with_dist(lab, max(d, 100.0), dirn)
+                fine[name] = (lab, max(d, 100.0), dirn)
             else:
                 out[name] = name
-    # a label still given twice: a number (the village points keep the plain name)
-    count = {}
+    # a label still given twice: one decimal more, then a number (the village points keep the plain name)
+    count = set()
     for name in sorted(out, key=lambda n: (slugs[n] in GENERIC, n)):
         lab = out[name]
-        n = 2
+        if lab in count and name in fine:
+            lab = _with_dist(*fine[name], fine=True)
+        n, base = 2, lab
         while lab in count:
-            lab = "%s %d" % (out[name], n)
+            lab = "%s %d" % (base, n)
             n += 1
         out[name] = lab
-        count[lab] = 1
+        count.add(lab)
     return out
 
 
