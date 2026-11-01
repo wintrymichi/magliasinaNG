@@ -75,6 +75,7 @@ public partial class MainWindow : Window
     public async Task CheckForUpdates(bool startup)
     {
         await App.Packs.Refresh();
+        await App.Update.Check(App.Config, App.Packs.Release);
         // only to a folder the user has chosen (or mods in packs mode): never 52 GB to a suggestion
         if (App.Config.AutoDownload && App.Packs.ZoneHome != null && App.Packs.NeedCount > 0 && App.Packs.Error is null)
         {

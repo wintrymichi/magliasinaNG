@@ -19,7 +19,7 @@ public static class Installer
     /// <summary>The installer has set up this user folder (install.json in ticino_tools).</summary>
     public static bool Present(AppConfig c) => File.Exists(InstallJson(c));
 
-    public sealed record Info(string? Tag, string? Game, string? User, string? Mode, string? Data);
+    public sealed record Info(string? Tag, string? Game, string? User, string? Mode, string? Data, string? Base);
 
     public static Info? Read(AppConfig c)
     {
@@ -27,7 +27,7 @@ public static class Installer
         {
             if (!Present(c)) return null;
             if (JsonNode.Parse(File.ReadAllText(InstallJson(c))) is not JsonObject o) return null;
-            return new Info(Str(o, "tag"), Str(o, "game"), Str(o, "user"), Str(o, "mode"), Str(o, "data"));
+            return new Info(Str(o, "tag"), Str(o, "game"), Str(o, "user"), Str(o, "mode"), Str(o, "data"), Str(o, "base"));
         }
         catch (Exception e)
         {
@@ -137,13 +137,15 @@ public static class Installer
     /// <summary>A new base pack went into mods: install.json "base" and the installer's ticino_download\installed.json
     /// name it as the installer does ("name|sha256"). The PC test of 1.1.1 found install.json still naming the base of
     /// the installer's run after the app had installed a newer one, and the installer clears the level cache whenever
-    /// installed.json names another base.</summary>
+    /// installed.json names another base. Also called when the base in mods is the release's and checked (the PC test
+    /// of 1.1.2: an old value stayed until the app installed the next base).</summary>
     public static void SetBase(AppConfig c, string tag)
     {
         if (!Present(c)) return;
+        bool changed = false;
         foreach (var f in new[] { InstallJson(c), Path.Combine(BeamNG.UserFolder(c), "ticino_download", "installed.json") })
-            if (File.Exists(f)) Merge(f, o => o["base"] = tag);
-        Log.Write($"install.json: base {tag.Split('|')[0]}");
+            if (File.Exists(f)) changed |= Merge(f, o => o["base"] = tag);
+        if (changed) Log.Write($"install.json: base {tag.Split('|')[0]}");
     }
 
     /// <summary>"Start Ticino" (the desktop shortcut runs ticino_tools\Start Ticino.bat, which runs start_ticino.ps1)
@@ -174,7 +176,8 @@ public static class Installer
         Files.WriteAtomic(path, m.ToArray());
     }
 
-    static void Merge(string path, Action<JsonObject> set)
+    /// <summary>Sets keys of a JSON file, keeping the others. True when the file was written.</summary>
+    static bool Merge(string path, Action<JsonObject> set)
     {
         try
         {
@@ -185,9 +188,14 @@ public static class Installer
             string before = o.ToJsonString();
             set(o);
             string after = o.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-            if (o.ToJsonString() == before && File.Exists(path)) return;
+            if (o.ToJsonString() == before && File.Exists(path)) return false;
             Files.WriteAtomic(path, after);
+            return true;
         }
-        catch (Exception e) { Log.Write($"{Path.GetFileName(path)} not written: {e.Message}"); }
+        catch (Exception e)
+        {
+            Log.Write($"{Path.GetFileName(path)} not written: {e.Message}");
+            return false;
+        }
     }
 }

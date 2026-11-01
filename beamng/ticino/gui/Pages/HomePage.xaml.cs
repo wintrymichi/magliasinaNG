@@ -76,6 +76,12 @@ public partial class HomePage : UserControl, ITickable
         ShapesValue.Text = S.IsRunning ? $"{S.Converted}" : "–";
 
         // bars
+        var U = App.Update;
+        AppBar.Visibility = U.IsAvailable ? Visibility.Visible : Visibility.Collapsed;
+        AppBar.Severity = U.Text.StartsWith("The update failed") ? "Error" : "Info";
+        AppBar.Message = U.Text.Length > 0 ? U.Text
+            : $"Ticino Server {U.Available} is on GitHub (this is {AppUpdate.Current}). It downloads about 55 MB and starts again; the map and the settings stay as they are.";
+        AppUpdateButton.IsEnabled = !U.Busy;
         UpdateBar.Visibility = P.NeedCount > 0 && !P.Busy && P.ZoneHome != null && P.InstalledZones > 0 ? Visibility.Visible : Visibility.Collapsed;
         UpdateBar.Message = P.NeedBytes > 0 ? $"{P.NeedCount} new or changed packs ({Files.Size(P.NeedBytes)})."
             : $"{P.NeedCount} packs in place to check against the release (sha256, no download).";
@@ -147,6 +153,16 @@ public partial class HomePage : UserControl, ITickable
         var p = BeamNG.Start(C);
         if (p is null) Ui.Info("BeamNG.drive not found: choose its folder on the Home page.");
         else Log.Write("BeamNG started into the Ticino map");
+    }
+
+    async void AppUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (AppUpdate.Blocker() is { } why) { Ui.Info(why); return; }
+        Log.Write("Update the app pressed");
+        var run = App.Update.Install();
+        Refresh();
+        if (await run) Application.Current.Shutdown();
+        else Refresh();
     }
 
     async void Update_Click(object sender, RoutedEventArgs e)

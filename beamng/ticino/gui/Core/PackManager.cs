@@ -404,6 +404,7 @@ public sealed partial class PackManager : Observable
                 {
                     it.State = PackState.Installed;
                     st.Checked[it.Name] = key;
+                    if (it.Kind == PackKind.Base) Installer.SetBase(cfg, $"{it.Name}|{sha}");
                     // the zip in place IS the release's: a download of it left over (1.0.0 downloaded zips in place
                     // again) would replace it with itself and, with the old Install, retire its other piece
                     DropLeftovers(it);

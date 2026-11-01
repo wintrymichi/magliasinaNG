@@ -142,6 +142,24 @@ public sealed class GitHub
         return rel;
     }
 
+    /// <summary>Bytes from..to (inclusive) of an asset, synchronously: a file inside a zip on the release is read
+    /// without downloading the zip (AppUpdate).</summary>
+    public byte[] ReadRange(ReleaseAsset a, long from, long to)
+    {
+        var req = Token != null ? Request(a.ApiUrl, "application/octet-stream") : Request(a.BrowserUrl, "application/octet-stream");
+        req.Headers.Range = new RangeHeaderValue(from, to);
+        using var r = Http.Send(req, HttpCompletionOption.ResponseHeadersRead);
+        r.EnsureSuccessStatusCode();
+        using var s = r.Content.ReadAsStream();
+        using var m = new MemoryStream();
+        s.CopyTo(m);
+        var b = m.ToArray();
+        if (r.StatusCode == HttpStatusCode.PartialContent) return b;
+        // a server that ignores the range answers the whole file
+        if (b.LongLength < to + 1) throw new IOException("short answer to a range request");
+        return b[(int)from..(int)(to + 1)];
+    }
+
     /// <summary>The asset's bytes from offset `from` (resume): drafts through the API with the token, published ones
     /// through the public link.</summary>
     public async Task<HttpResponseMessage> OpenAsset(ReleaseAsset a, long from, CancellationToken ct)

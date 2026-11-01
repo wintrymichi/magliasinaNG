@@ -16,6 +16,7 @@ public partial class App : Application
     public static AppConfig Config { get; private set; } = null!;
     public static PackManager Packs { get; private set; } = null!;
     public static ServerHost Server { get; private set; } = null!;
+    public static AppUpdate Update { get; } = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -28,6 +29,13 @@ public partial class App : Application
         string? shots = null;
         for (int i = 0; i < e.Args.Length; i++)
             if (e.Args[i] == "--screenshots" && i + 1 < e.Args.Length) shots = e.Args[++i];
+        // ticino_gui.yml: the version of app_ticino.zip on a release, read as the update check reads it
+        int probe = Array.IndexOf(e.Args, "--probe-update");
+        if (probe >= 0 && probe + 2 < e.Args.Length)
+        {
+            _ = ProbeUpdate(e.Args[probe + 1], e.Args[probe + 2]);
+            return;
+        }
 
         ShotMode = shots != null;
         if (shots is null)
@@ -52,6 +60,7 @@ public partial class App : Application
         Server.PacksMode = () => Packs.PacksMode;
         if (!ShotMode) Packs.ScanMods();
         Log.Write($"Ticino Server {typeof(App).Assembly.GetName().Version} started");
+        if (!ShotMode) AppUpdate.CleanUp(e.Args.Contains("--after-update"));
 
         var w = new MainWindow();
         MainWindow = w;
@@ -61,6 +70,21 @@ public partial class App : Application
             return;
         }
         w.Show();
+    }
+
+    async Task ProbeUpdate(string tag, string output)
+    {
+        string result;
+        try
+        {
+            var rel = await new GitHub().GetRelease(AppConfig.Load().Repo, tag, CancellationToken.None);
+            var a = rel.Assets.FirstOrDefault(x => x.Name == AppUpdate.AssetName)
+                    ?? throw new InvalidOperationException($"no {AppUpdate.AssetName} on {tag}");
+            result = await Task.Run(() => Update.RemoteVersion(a)) ?? "none";
+        }
+        catch (Exception x) { result = "error: " + x.Message; }
+        File.WriteAllText(output, result);
+        Shutdown();
     }
 
     void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)

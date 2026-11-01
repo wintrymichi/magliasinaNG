@@ -8,6 +8,10 @@
             <TextBlock Style="{StaticResource SubtitleText}"
                        Text="All of Canton Ticino in BeamNG.drive. The server keeps the map on this PC and hands the game only what is around the car, so the game no longer mounts 52 GB of zips at every start." />
 
+            <c:InfoBar x:Name="AppBar" Severity="Info" Title="New version of Ticino Server" Visibility="Collapsed">
+                <Button x:Name="AppUpdateButton" Content="Update the app" Click="AppUpdate_Click"
+                        Style="{DynamicResource AccentButtonStyle}" />
+            </c:InfoBar>
             <c:InfoBar x:Name="UpdateBar" Severity="Info" Title="Update available" Visibility="Collapsed">
                 <Button Content="Update" Click="Update_Click" Style="{DynamicResource AccentButtonStyle}"
                         AutomationProperties.Name="Update the map" />

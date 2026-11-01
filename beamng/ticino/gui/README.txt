@@ -19,5 +19,7 @@ is shown as running (the app does not start a second one). A "Start Ticino" of a
 (it starts only the game and the helper) is replaced by the app's own, which starts the server in server mode.
 
 The app's own files are in %LOCALAPPDATA%\TicinoServer (settings.json, app.log, server\).
+A newer Ticino Server on GitHub is shown on the Home page ("Update the app"): it downloads the new exe, checks its
+sha256, closes, puts it in place of this one and starts again (BeamNG closed and the server stopped first).
 It downloads from the public pre-release ticino-v1. Another release can be set on the Downloads page; a draft release
 can only be downloaded with GitHub CLI logged in (gh auth login).

@@ -38,7 +38,9 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.1.2+$($env:GITHUB_SHA.Substring(0,7))"
+          # one version, in the csproj: the app's About page, VERSION.txt and the update check read it
+          $v = (Select-Xml -Path beamng/ticino/gui/TicinoServer.csproj -XPath '//Version').Node.InnerText
+          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="$v+$($env:GITHUB_SHA.Substring(0,7))"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem out | Format-Table Name, Length
       - name: Screenshots
@@ -173,6 +175,9 @@ jobs:
           cp out/TicinoServer.exe pack/
           cp beamng/ticino/gui/README.txt pack/
           echo "commit ${GITHUB_SHA}" > pack/VERSION.txt
+          # the app's update check reads this line from the zip on the release (Core/AppUpdate.cs)
+          echo "version $(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' beamng/ticino/gui/TicinoServer.csproj | head -1)" >> pack/VERSION.txt
+          cat pack/VERSION.txt
           (cd pack && 7z a -tzip ../app_ticino.zip . > /dev/null)
           (cd shots && 7z a -tzip ../app_ticino_shots.zip . > /dev/null)
           ls -l *.zip
@@ -186,3 +191,15 @@ jobs:
             TAG=$(tr -d ' \r\n' < beamng/ticino/tools_release.txt)
             gh release upload "$TAG" app_ticino.zip --clobber
           fi
+      # the app's own update check as it runs on a PC: VERSION.txt of the zip just uploaded, read by range requests
+      - name: Update check
+        shell: pwsh
+        run: |
+          $want = (Select-Xml -Path beamng/ticino/gui/TicinoServer.csproj -XPath '//Version').Node.InnerText
+          $env:TICINO_APP_DIR = Join-Path $env:RUNNER_TEMP 'appdir_probe'
+          $out = Join-Path $env:RUNNER_TEMP 'probe.txt'
+          $p = Start-Process -FilePath out/TicinoServer.exe -ArgumentList @('--probe-update', 'ticino-app', $out) -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'probe timeout' }
+          $got = (Get-Content $out -Raw).Trim()
+          Write-Host "the update check reads version '$got' on ticino-app (this build: $want)"
+          if ($got -ne $want) { exit 1 }
