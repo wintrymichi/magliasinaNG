@@ -45,6 +45,7 @@ public partial class App : Application
         Config = AppConfig.Load();
         // also in screenshot mode: the workflow's test of a moved install needs it (no install.json on the runner otherwise)
         if (Installer.Adopt(Config, firstStart) || Config.Migrated) Config.Save();
+        Installer.UpdateLauncher(Config);
         Packs = new PackManager(Config);
         Server = new ServerHost(Config);
         Packs.ServerRunning = () => Server.IsRunning;

@@ -9,7 +9,8 @@
                        Text="All of Canton Ticino in BeamNG.drive. The server keeps the map on this PC and hands the game only what is around the car, so the game no longer mounts 52 GB of zips at every start." />
 
             <c:InfoBar x:Name="UpdateBar" Severity="Info" Title="Update available" Visibility="Collapsed">
-                <Button Content="Update" Click="Update_Click" Style="{DynamicResource AccentButtonStyle}" />
+                <Button Content="Update" Click="Update_Click" Style="{DynamicResource AccentButtonStyle}"
+                        AutomationProperties.Name="Update the map" />
             </c:InfoBar>
             <c:InfoBar x:Name="SetupBar" Severity="Warning" Title="Before you play" Visibility="Collapsed">
                 <Button Content="Go to Downloads" Click="GoDownload_Click" />

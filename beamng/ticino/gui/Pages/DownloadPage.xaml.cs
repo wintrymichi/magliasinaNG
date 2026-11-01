@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Automation;
 using System.Windows.Data;
 using System.Windows.Input;
 using TicinoServer.Core;
@@ -67,6 +68,9 @@ public partial class DownloadPage : UserControl, ITickable
         DownloadLabel.Text = P.Busy ? "Pause" : P.Items.Any(i => i.State == PackState.Update) ? "Update"
             : P.NeedCount > 0 && P.NeedCount == P.UncheckedCount ? "Check" : "Download";
         DownloadGlyph.Text = P.Busy ? "" : "";
+        // the name UI Automation reads (a screen reader, the PC tests): the button's content is a panel, not text
+        AutomationProperties.SetName(DownloadButton, DownloadLabel.Text);
+        DownloadButton.ToolTip = P.Busy ? "Pause the download: the next one resumes where it stopped" : null;
         ProgressPanel.Visibility = P.Busy || P.Moving || P.ProgressText.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         Overall.IsIndeterminate = P.Moving;
         Overall.Value = P.Overall;
@@ -78,8 +82,10 @@ public partial class DownloadPage : UserControl, ITickable
 
     async void Download_Click(object sender, RoutedEventArgs e)
     {
-        if (P.Busy) { P.Pause(); return; }
-        await P.DownloadAll();
+        if (P.Busy) { P.Pause(); Refresh(); return; }
+        var run = P.DownloadAll();
+        Refresh();                                          // "Pause" at once, not at the next tick
+        await run;
     }
 
     async void Apply_Click(object sender, RoutedEventArgs e)

@@ -156,7 +156,7 @@ jobs:
             # 09627d5 went out again for 27d6f91)
             local g=(git -C "$GITHUB_WORKSPACE")
             [ -n "$c" ] && "${g[@]}" cat-file -e "$c^{commit}" 2>/dev/null && "${g[@]}" merge-base --is-ancestor "$c" "$GITHUB_SHA" &&
-              "${g[@]}" diff --quiet "$c" "$GITHUB_SHA" -- beamng/ticino/gui .github/workflows/ticino_gui.yml
+              "${g[@]}" diff --quiet "$c" "$GITHUB_SHA" -- beamng/ticino/gui beamng/ticino/install/start_ticino.ps1 "beamng/ticino/install/Start Ticino.bat" .github/workflows/ticino_gui.yml
           }
           for w in $(seq 1 40); do
             if get "$a" app_ticino.zip && same; then break; fi

@@ -532,7 +532,14 @@ public sealed partial class PackManager : Observable
     }
 
     // ------------------------------------------------------------------------------------------- download
-    public void Pause() => cts?.Cancel();
+    /// <summary>Stops the running download; the .part files stay and the next download resumes them. Logged: the PC
+    /// test of 1.1.1 pressed Update a second time, which paused the download with no line in the log.</summary>
+    public void Pause(string why = "by the user")
+    {
+        if (cts is null || cts.IsCancellationRequested || !Busy) return;
+        Log.Write($"download paused {why}");
+        cts.Cancel();
+    }
 
     /// <summary>Checks the sha256 of the zips in place that were never checked (after a move to another disk without
     /// the installer's checked.json, or zips copied by hand): no download, unless one turns out different.</summary>
@@ -547,21 +554,32 @@ public sealed partial class PackManager : Observable
     /// up to date, or only the items <paramref name="only"/> picks. Call on the UI thread.</summary>
     public async Task DownloadAll(Func<PackItem, bool>? only = null)
     {
-        if (Busy || Moving) return;
+        if (Busy || Moving)
+        {
+            Log.Write(Busy ? "download not started: one is running already" : "download not started: the zones are being moved");
+            return;
+        }
         var todo = Items.Where(i => (i.NeedsDownload || i.State == PackState.Unchecked) && (only is null || only(i))).ToList();
         // a zone to download needs its folder; checking zips in place, the base and the server do not
         if (ZoneHome is null && todo.Any(i => i.Kind == PackKind.Zone && i.State != PackState.Unchecked))
         {
             Error = "Choose the packs folder first.";
+            Log.Write("download not started: no packs folder chosen");
             return;
         }
-        if (todo.Count == 0) { await ApplyPending(); return; }
+        if (todo.Count == 0)
+        {
+            Log.Write("nothing to download: installing what is ready");
+            await ApplyPending();
+            return;
+        }
         long need = todo.Where(i => i.State != PackState.Unchecked).Sum(i => i.Size - PartLength(i));
         string disk = ZoneHome ?? BeamNG.Mods(cfg);
         long free = Files.FreeSpace(disk);
         if (free > 0 && free < need + (2L << 30))
         {
             Error = $"Not enough space on {Path.GetPathRoot(disk)}: {Files.Size(free)} free, {Files.Size(need)} + 2 GB needed.";
+            Log.Write("download not started: " + Error);
             return;
         }
         Error = null;
@@ -578,6 +596,7 @@ public sealed partial class PackManager : Observable
         long bytes = todo.Where(i => !inPlace.Contains(i)).Sum(i => i.Size);
         var meter = new Meter(bytes);
         foreach (var it in todo) meter.Add(PartLength(it));
+        Log.Write($"download started: {todo.Count - inPlace.Count} zips to download ({Files.Size(bytes)}), {inPlace.Count} in place to check");
         try
         {
             using var gate = new SemaphoreSlim(Math.Clamp(cfg.ParallelDownloads, 1, 6));
@@ -616,7 +635,10 @@ public sealed partial class PackManager : Observable
             try { await Task.WhenAll(tasks); }
             catch (OperationCanceledException) { }
             Overall = bytes == 0 ? 100 : meter.Fraction * 100;
-            ProgressText = ct.IsCancellationRequested ? "Paused: it resumes where it stopped." : "";
+            ProgressText = ct.IsCancellationRequested ? "Paused. Download again to resume where it stopped." : "";
+            int failed = todo.Count(i => i.State == PackState.Error);
+            Log.Write(ct.IsCancellationRequested ? "download paused: the .part files stay for the next one"
+                : $"download ended: {todo.Count - failed} of {todo.Count} done{(failed > 0 ? $", {failed} failed" : "")}");
         }
         finally
         {
@@ -894,6 +916,7 @@ public sealed partial class PackManager : Observable
                     if (Directory.Exists(cache)) { Directory.Delete(cache, true); Log.Write("level cache cleared"); }
                     st.Base = tag;
                 }
+                Installer.SetBase(cfg, tag);
                 EnableMods();
                 break;
             }

@@ -14,7 +14,7 @@
     <RootNamespace>TicinoServer</RootNamespace>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <!-- the workflow sets InformationalVersion <Version>+<short sha>: without this the SDK added the full sha again -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Ticino Server</Product>
@@ -39,6 +39,13 @@
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\logo.png" />
+  </ItemGroup>
+
+  <!-- the launcher of beamng/ticino/install: put into ticino_tools when the installer's one predates the server mode
+       (Core/Installer.cs UpdateLauncher) -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\install\start_ticino.ps1" LogicalName="start_ticino.ps1" />
+    <EmbeddedResource Include="..\install\Start Ticino.bat" LogicalName="Start Ticino.bat" />
   </ItemGroup>
 
 </Project>

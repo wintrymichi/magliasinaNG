@@ -14,6 +14,14 @@ public static class Files
         File.Move(tmp, path, true);
     }
 
+    public static void WriteAtomic(string path, byte[] bytes)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        string tmp = path + ".tmp";
+        File.WriteAllBytes(tmp, bytes);
+        File.Move(tmp, path, true);
+    }
+
     public static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-GB");
 
     /// <summary>Sizes as Windows Explorer and install_ticino.ps1 show them: units of 1024, called GB/MB/KB (the map's

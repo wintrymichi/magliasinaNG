@@ -151,6 +151,7 @@ public partial class HomePage : UserControl, ITickable
 
     async void Update_Click(object sender, RoutedEventArgs e)
     {
+        Log.Write("Update pressed on Home");
         Ui.Main.Navigate("download");
         await P.DownloadAll();
     }

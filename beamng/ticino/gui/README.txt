@@ -15,7 +15,8 @@ TicinoServer.exe is the Windows app of the Ticino map of MagliasinaNG. It needs 
 If you installed the map with "Install Ticino", the app uses the same folders: the zone packs in the installer's
 data folder (<user folder>\ticino_data by default) and the server in <user folder>\ticino_tools. Its settings go into
 ticino_tools\ticino_server.json, so "Start Ticino" runs the server the same way, and a server started by the shortcut
-is shown as running (the app does not start a second one).
+is shown as running (the app does not start a second one). A "Start Ticino" of an installer older than the server mode
+(it starts only the game and the helper) is replaced by the app's own, which starts the server in server mode.
 
 The app's own files are in %LOCALAPPDATA%\TicinoServer (settings.json, app.log, server\).
 It downloads from the public pre-release ticino-v1. Another release can be set on the Downloads page; a draft release

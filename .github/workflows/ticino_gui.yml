@@ -11,6 +11,8 @@ on:
     branches: [ticino, claude/project-thread-9w6q31]
     paths:
       - beamng/ticino/gui/**
+      - beamng/ticino/install/start_ticino.ps1
+      - beamng/ticino/install/Start Ticino.bat
       - .github/workflows/ticino_gui.yml
 
 permissions:
@@ -36,7 +38,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.1.1+$($env:GITHUB_SHA.Substring(0,7))"
+          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.1.2+$($env:GITHUB_SHA.Substring(0,7))"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem out | Format-Table Name, Length
       - name: Screenshots
@@ -125,6 +127,9 @@ jobs:
           $checked | ConvertTo-Json | Set-Content (Join-Path $user 'ticino_download/checked.json') -Encoding ASCII
           $inst = Join-Path $user 'ticino_tools/install.json'
           [ordered]@{ tag = $tag; user = $user; mode = 'packs'; data = $data } | ConvertTo-Json | Set-Content $inst -Encoding ASCII
+          # the launcher of an installer older than the server mode (12c25f3: game + helper only)
+          $launcher = Join-Path $user 'ticino_tools/start_ticino.ps1'
+          Set-Content $launcher "# Starts BeamNG.drive in the Ticino map with the streaming helper (old launcher)" -Encoding ASCII
           Write-Host "$($checked.Count) sparse zips, zones in $data, left out: $left"
           $env:TICINO_APP_DIR = Join-Path $env:RUNNER_TEMP 'appdir_srv'
           New-Item -ItemType Directory -Force -Path $env:TICINO_APP_DIR | Out-Null
@@ -154,6 +159,9 @@ jobs:
           if ($list -notmatch [regex]::Escape("$left (To download)") -or ($srv -and $list -notmatch 'server_ticino.zip \(To download\)')) { $bad += "to download: $list" }
           $mode = (Get-Content $inst -Raw | ConvertFrom-Json).mode
           if ($mode -ne 'server') { $bad += "install.json mode $mode" }
+          if (-not (Select-String -Path $launcher -Pattern 'ticino_server.exe' -Quiet) -or
+              -not (Test-Path (Join-Path $user 'ticino_tools/Start Ticino.bat'))) { $bad += 'Start Ticino not updated to the server mode' }
+          if (-not ($log -match 'Start Ticino updated')) { $bad += 'no log line for the launcher' }
           $s = Get-Content (Join-Path $env:TICINO_APP_DIR 'settings.json') -Raw | ConvertFrom-Json
           if ($s.AutoDownload -or $s.DataFolder -ne $data) { $bad += "settings.json: AutoDownload $($s.AutoDownload), DataFolder $($s.DataFolder)" }
           if ($bad) { $bad | ForEach-Object { Write-Host "FAIL: $_" }; exit 1 }

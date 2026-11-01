@@ -131,6 +131,47 @@ public static class Installer
             if (data != null) o["data"] = data;
         });
         Log.Write($"install.json: mode {mode}");
+        UpdateLauncher(c);
+    }
+
+    /// <summary>A new base pack went into mods: install.json "base" and the installer's ticino_download\installed.json
+    /// name it as the installer does ("name|sha256"). The PC test of 1.1.1 found install.json still naming the base of
+    /// the installer's run after the app had installed a newer one, and the installer clears the level cache whenever
+    /// installed.json names another base.</summary>
+    public static void SetBase(AppConfig c, string tag)
+    {
+        if (!Present(c)) return;
+        foreach (var f in new[] { InstallJson(c), Path.Combine(BeamNG.UserFolder(c), "ticino_download", "installed.json") })
+            if (File.Exists(f)) Merge(f, o => o["base"] = tag);
+        Log.Write($"install.json: base {tag.Split('|')[0]}");
+    }
+
+    /// <summary>"Start Ticino" (the desktop shortcut runs ticino_tools\Start Ticino.bat, which runs start_ticino.ps1)
+    /// of an installer older than the server mode starts the game and the helper only: with the zones out of mods the
+    /// map then loads with no zone at all ("the zone packs are neither in mods nor served", PC test of 1.1.1, script of
+    /// 12c25f3). The app carries the launcher of its commit (beamng/ticino/install) and puts it in place when the one
+    /// there does not know the server; a newer one from the installer is left alone.</summary>
+    public static void UpdateLauncher(AppConfig c)
+    {
+        if (!Present(c)) return;
+        try
+        {
+            string dir = ToolsDir(c), ps1 = Path.Combine(dir, "start_ticino.ps1"), bat = Path.Combine(dir, "Start Ticino.bat");
+            bool old = !File.Exists(ps1) || !File.ReadAllText(ps1).Contains(ServerExeName, StringComparison.OrdinalIgnoreCase);
+            if (old) WriteResource("start_ticino.ps1", ps1);
+            if (!File.Exists(bat)) WriteResource("Start Ticino.bat", bat);
+            if (old) Log.Write($"Start Ticino updated: {ps1} now starts the server in server mode");
+        }
+        catch (Exception e) { Log.Write("Start Ticino not updated: " + e.Message); }
+    }
+
+    static void WriteResource(string name, string path)
+    {
+        using var s = typeof(Installer).Assembly.GetManifestResourceStream(name)
+                      ?? throw new InvalidOperationException($"{name} is not in the app");
+        using var m = new MemoryStream();
+        s.CopyTo(m);
+        Files.WriteAtomic(path, m.ToArray());
     }
 
     static void Merge(string path, Action<JsonObject> set)

@@ -157,7 +157,7 @@ public partial class MainWindow : Window
                 "Ticino Server", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (r != MessageBoxResult.Yes) { e.Cancel = true; return; }
         }
-        if (App.Packs.Busy) App.Packs.Pause();
+        if (App.Packs.Busy) App.Packs.Pause("(the app closes)");
         base.OnClosing(e);
     }
 }
