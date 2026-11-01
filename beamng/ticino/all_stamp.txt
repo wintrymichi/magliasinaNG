@@ -4,3 +4,4 @@
 2026-11-01T11:01:41Z gate one step a frame, forest passes split, GC in the hold, pacing off
 2026-11-01 base: map in English, spawn names prefer villages
 2026-11-01T12:01:16Z far trees v2: Malcantone clumps, coarse tiles to 15 km
+2026-11-01 base: spawn names, one official name per place
