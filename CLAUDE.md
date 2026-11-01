@@ -1211,7 +1211,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   draft ticino-all on ticino-v1, rebuilt 23:48Z for a NEWER base than ticino-v1 has (helper staging, frame gate): cancelled.
   `only=app` publishes the app alone. The second run then waited 40 min for "the app of this commit": a push of
   publish.txt alone starts no app build. The publish now takes an app whose VERSION.txt commit is an ancestor with the
-  same gui sources. Before publishing tools to a release, check which base they were built for.
+  same gui sources. Before publishing tools to a release, check which base they were built for. That test first ran
+  git in tools/, where the path beamng/ticino/gui means tools/beamng/...: no diff, and the old app went out for 1.1.1.
+  Give git a pathspec from the top (`git -C "$GITHUB_WORKSPACE"`) in a step that cds.
 - michi's own use of 1.0.0 (2026-10-31 evening, "l'app è rotta"; read from his app.log by the PC thread): Move took the
   89 zones from mods (C:) to "D:\ticino zones" in 10 min with no progress shown (the page's refresh overwrote the bar's
   text every second), then said "0 of 89 zones in place" (the copies were dated now, so no sha256|length|ticks key of

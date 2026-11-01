@@ -152,8 +152,11 @@ jobs:
           # app sources (a push that changes only this workflow or publish.txt starts no app build): wait for it
           same() {   # VERSION.txt's commit builds the app of this commit
             local c; c=$(unzip -p app_ticino.zip VERSION.txt | sed -n 's/^commit //p' | head -1)
-            [ -n "$c" ] && git cat-file -e "$c^{commit}" 2>/dev/null && git merge-base --is-ancestor "$c" "$GITHUB_SHA" &&
-              git diff --quiet "$c" "$GITHUB_SHA" -- beamng/ticino/gui .github/workflows/ticino_gui.yml
+            # git -C the checkout: in tools/ the paths would be read as tools/beamng/... (no diff: the 1.1 app of
+            # 09627d5 went out again for 27d6f91)
+            local g=(git -C "$GITHUB_WORKSPACE")
+            [ -n "$c" ] && "${g[@]}" cat-file -e "$c^{commit}" 2>/dev/null && "${g[@]}" merge-base --is-ancestor "$c" "$GITHUB_SHA" &&
+              "${g[@]}" diff --quiet "$c" "$GITHUB_SHA" -- beamng/ticino/gui .github/workflows/ticino_gui.yml
           }
           for w in $(seq 1 40); do
             if get "$a" app_ticino.zip && same; then break; fi
