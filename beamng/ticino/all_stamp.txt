@@ -23,3 +23,4 @@
 2026-11-01T18:37:23Z sign plates warmed a few a frame before their shape
 2026-11-01T18:40:56Z far houses stay over the town while its houses are still queued (no bare band after a jump), the window paved ground toned like the far ground
 2026-11-01T19:58:43Z far trees behind the car dropped (wait from when doomed, covers first, burst share, drop check every burst), counts line every 10 s
+2026-11-01T20:43:53Z far houses in levels to the view distance (3/6/12 km blocks of cell boxes on the far ground the game draws), tile cache eviction no longer hides houses, band keeps only shapes of the level drawn there
