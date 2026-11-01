@@ -883,6 +883,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - The "| engine" part of the slow frame lines (base 00:19Z) shows where the time goes: the frames after map.reset are
   LuaGC (up to 520 ms); a near forest pass is ~190 ms of the streamer's own Lua even when it adds only 7 trees (fc13b35),
   so not createNewItem; a terrain swap is ~115 ms Lua (terrainFile) + ~110-140 ms RenderShadows.
+- 2026-11-01 evening (PC, bases 75961a1 / 547c25a): (1) the ~410-460 ms "wait burst | lua 0 ms | engine Lua" frame once
+  per run is the stock minimap (gone with the minimap app off); it comes right after "Setting minimap transform".
+  (2) 547c25a never ran the hold after map.reset (no "hold after the AI map read over", no "minimap roads" line in 5
+  runs): the start camera is 6.2 km from the car, so st.away is set ("free camera off, 6161 m from the car"), the jump
+  back to the car comes ~14 s after map.reset and stream.lua clears holdUntil silently ("a jump during the hold"), so
+  neither the GC steps nor the minimap prebuild ran and both slow frames came back. (3) My chain waited with
+  `[datetime]'2026-11-01T16:20:00Z'`: PowerShell 5.1 turns it into local time (17:20 WEST) and compares it to a
+  UTC value without kind, so it waited an hour longer and installed the next base; use [DateTimeOffset]::Parse. (4)
+  After a cold level cache, houses at Manno kept the "IMPORTING TEXTURE" placeholder on their walls 9 minutes after
+  t_bld_plaster_b was cooked without errors (no reloadResource line for the colour maps).
 
 ## Data from the cloud sessions
 
