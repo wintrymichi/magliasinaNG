@@ -26,7 +26,8 @@ scenetree = { findObjectById = function(id) return objs[id] end, findObject = fu
 function vec3(x, y, z) return { x = x, y = y, z = z } end
 function MatrixF() return { setFromEuler = function() end, setPosition = function() end } end
 TILES = {}
-function readFile(p) return p end
+TEXT = {}   -- the tree rows as text: forest.lua parses them itself
+function readFile(p) return TEXT[p] or p end
 function jsonDecode(p) local t = TILES[p]; if not t then error('no ' .. p) end; return t end
 local objects = require('ticino/objects')
 local forest = require('ticino/forest')
@@ -40,8 +41,8 @@ for x = -12, 12 do for y = -12, 12 do
     { class = 'TSStatic', p = { 0, 0, 0 }, r = 5, shapeName = 'road', tx = x, ty = y },
     { class = 'TSStatic', p = { 0, 0, 0 }, r = 2, shapeName = 'clutter_pallet', tx = x, ty = y } }
   local rows = {}
-  for i = 1, 100 do rows[i] = { 0, 1, 2, 3, 0, 1 } end
-  TILES[string.format('/levels/L/tiles/t_%d_%d.trees.json', x, y)] = rows
+  for i = 1, 100 do rows[i] = '[0,1,2,3,0,1]' end
+  TEXT[string.format('/levels/L/tiles/t_%d_%d.trees.json', x, y)] = '[' .. table.concat(rows, ',') .. ']'
 end end
 objects.init(cfg, 'L', { addObject = function() end })
 forest.init(cfg, 'L', function() end)
