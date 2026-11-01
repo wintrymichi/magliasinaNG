@@ -308,6 +308,14 @@ def main():
         return None
     log("scene references to compiled zone shapes:", dae2cdae.rewrite_refs(dst, zpath))
 
+    # the Ticino map of the M key (worldmap.py, ui/ui-vue/mods/ticino): the far ground's colours and the AI roads
+    worldmap.build(ground.H, ground.C, grid.x0 + ground.cx0 * tile_m, grid.y0 + ground.cy0 * tile_m, tile_m / farlod.K,
+                   worldmap.roads_of([o for objs in kept.values() for o in objs]), os.path.join(dst, worldmap.DIR),
+                   places)
+    # the far ground of the villages: under the buildings the colour round them (the far houses stand there), the light
+    # greys toned down (the footprints spread by the 12 m vertices and the orthophoto's roofs and paving were pale
+    # patches like rock or snow on every village from the air)
+    log("far ground: samples under buildings filled, light greys toned down: %d, %d" % farlod.fill_buildings(ground))
     # the far ground's coarse levels to the horizon (farlod.py): ~110 MB of the base, from the slices' far tiles
     far_lod = farlod.build(ground, os.path.join(dst, farlod.DIR))
     # level 0: the far tiles themselves again from the same grid with the far ground's normals (farlod.build_fine, ~1.1
@@ -323,10 +331,6 @@ def main():
     # own building shapes, so a far house is the house the car finds when it gets there
     far_bld, far_bld2 = farbld.build(farbld.read_slices(sl, zones), [grid.x0, grid.y0], tile_m,
                                      os.path.join(dst, farbld.DIR), farbld.texture_means(dst), workers=4)
-    # the Ticino map of the M key (worldmap.py, ui/ui-vue/mods/ticino): the far ground's colours and the AI roads
-    worldmap.build(ground.H, ground.C, grid.x0 + ground.cx0 * tile_m, grid.y0 + ground.cy0 * tile_m, tile_m / farlod.K,
-                   worldmap.roads_of([o for objs in kept.values() for o in objs]), os.path.join(dst, worldmap.DIR),
-                   places)
 
     stream = {
         "version": 2, "zone": "ticino:%d zones" % len(zones), "level": LEVEL,

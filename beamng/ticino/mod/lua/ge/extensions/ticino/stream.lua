@@ -151,6 +151,7 @@ M.FOLLOW_FREE_CAMERA = true
 M.FREE_AWAY_M = 500
 M.FREE_BACK_M = 400
 M.FREE_BACK_FRAMES = 3     -- frames after the camera came back before the game goes on (the car's rings queued first)
+M.FREE_FAR_M = 1500        -- any camera this far from the car takes the streaming along, free camera reported or not
 
 local st = nil
 
@@ -218,17 +219,29 @@ local function holdCar()
   end
 end
 
--- Is the view the free camera? (as BeamNG.Earth core.lua freeCamera: commands.isFreeCamera, else the active camera)
+-- Is the view the free camera? (as BeamNG.Earth core.lua freeCamera: commands.isFreeCamera, else the active camera's
+-- name; each asked with the player 0 and without, any one saying so is enough). The PC's first try (2026-11-01) wrote
+-- no "free camera away" line at all: which way answered is logged once, and the free camera turning on or off too.
+local freeHow = nil
 local function freeCamera()
   local c = rawget(_G, 'commands')
   if c and c.isFreeCamera then
-    local ok, v = pcall(c.isFreeCamera)
-    if ok then return v and true or false end
+    for _, a in ipairs({ 0, false }) do
+      local ok, v
+      if a then ok, v = pcall(c.isFreeCamera, a) else ok, v = pcall(c.isFreeCamera) end
+      if ok and v then freeHow = freeHow or ('commands.isFreeCamera(' .. (a and '0' or '') .. ')'); return true end
+    end
   end
   local cam = rawget(_G, 'core_camera')
   if cam and cam.getActiveCamName then
-    local ok, n = pcall(cam.getActiveCamName)
-    if ok then return n == 'free' end
+    for _, a in ipairs({ 0, false }) do
+      local ok, n
+      if a then ok, n = pcall(cam.getActiveCamName, a) else ok, n = pcall(cam.getActiveCamName) end
+      if ok and n == 'free' then
+        freeHow = freeHow or ('core_camera.getActiveCamName(' .. (a and '0' or '') .. ')')
+        return true
+      end
+    end
   end
   return false
 end
@@ -247,9 +260,18 @@ local function focus()
   local veh = getPlayerVehicle and getPlayerVehicle(0)
   if veh then
     local p = veh:getPosition()
-    if M.FOLLOW_FREE_CAMERA and cx and freeCamera() then
+    if M.FOLLOW_FREE_CAMERA and cx then
+      local d2 = (cx - p.x) ^ 2 + (cy - p.y) ^ 2
+      local free = freeCamera()
+      if free ~= st.freeOn then
+        st.freeOn = free
+        log('I', 'ticino', string.format('free camera %s, %.0f m from the car%s', free and 'on' or 'off', math.sqrt(d2),
+          free and freeHow and (' (' .. freeHow .. ')') or ''))
+      end
+      -- a camera this far from the car is no camera of the car whatever the game says (a test's setPosRot, a
+      -- free camera the calls above do not report): it takes the streaming too
       local lim = st.away and M.FREE_BACK_M or M.FREE_AWAY_M
-      if (cx - p.x) ^ 2 + (cy - p.y) ^ 2 > lim * lim then return cx, cy, true end
+      if (free and d2 > lim * lim) or d2 > M.FREE_FAR_M * M.FREE_FAR_M then return cx, cy, true end
     end
     return p.x, p.y, false
   end
@@ -722,6 +744,7 @@ local function readSettings(cfg)
   if type(s.followFreeCamera) == 'boolean' then M.FOLLOW_FREE_CAMERA = s.followFreeCamera end
   if type(s.freeCameraAwayM) == 'number' and s.freeCameraAwayM >= 0 then
     M.FREE_AWAY_M, M.FREE_BACK_M = s.freeCameraAwayM, s.freeCameraAwayM * 0.8
+    M.FREE_FAR_M = math.max(M.FREE_FAR_M, 2 * s.freeCameraAwayM)
   end
   -- "treeKm": how far the far trees reach (objects.lua far trees: fine tiles near, coarse blocks beyond; 0: none,
   -- only the Forest's ~1.5 km)

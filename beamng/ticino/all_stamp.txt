@@ -15,3 +15,4 @@
 2026-11-01T14:53:02Z far ground with its own normals (no lines along the tile edges), base in 4 fixed parts
 2026-11-01 16:05 burst deadline + flat forest rows
 2026-11-01 16:20 minimap roads in the hold
+2026-11-01T16:25Z far trees dark with side normals, far ground of the villages toned, free camera fallback

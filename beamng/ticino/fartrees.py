@@ -12,7 +12,8 @@ every cell with trees becomes one card: two crossed vertical quads with a cut-ou
 (fartrees.png: conifers, broadleaves, narrow crowns, mixed; VARIANTS of each), as wide as the cell's crowns cover it
 and as tall as its tall trees, standing on its lowest tree foot. The clumps are drawn from the side views of the
 Malcantone level's own far trees (their imposters in dati/far_imposters, michi 2026-11-01: "metti gli alberi low poly
-quelli lontani del Malcantone"), so colour and shape are the same woods. Normals point up: lit like the ground.
+quelli lontani del Malcantone"), so the shapes are the same woods; their colour is darkened to a wood seen from afar
+(CROWN_RGB). Each quad is two single-sided faces back to back, each with the normal of its side tilted up (TILT).
 Coarse tiles (l2_<bx>_<by>.cdae, L2_TILES x L2_TILES tiles, cards of CELL2 m) carry the woods out to the horizon
 (michi: "gli alberi devono vedersi sempre come le case"). Bushes, hedges and guard rails are left out (and trees
 under MIN_H).
@@ -57,6 +58,16 @@ MODELS = {"conifer": ["far_fir_a", "far_fir_b", "far_fir_c"],
 TREES_PER_CLUMP = {"conifer": (10, 13), "broad": (6, 8), "narrow": (9, 11), "mixed": (8, 10)}
 SATURATE = 1.4             # the imposters' colours, a little more saturated (the sRGB of a linear bake is pale)
 SHADE = (0.86, 1.0)         # vertex colour of a card (a little variety between clumps; the colour is the imposters')
+# The crowns' mean colour (sRGB) per kind: the imposters' detail scaled to it. A card is one flat face, lit like a
+# meadow: the self-shadowing that makes a real wood dark from afar has to be in its colour. The first atlas kept the
+# imposters' own mean (broadleaves 80,94,73, twice the far ground's forest 62,65,41 in linear light) and the cards
+# stood out as pale grey-green blocks on every hill (PC photos from San Salvatore, 2026-11-01).
+CROWN_RGB = {"conifer": (36, 48, 30), "broad": (50, 64, 34), "narrow": (48, 62, 34), "mixed": (43, 56, 32)}
+UNDER = 0.65                # the foliage under the crowns: this share of the crowns' colour (one dark mass, no box)
+# A card's two faces are single-sided, back to back, each with its own normal: its side, TILT degrees up. The first
+# cards had one double-sided face with normals straight up: seen from the side (every far view) the light met them at
+# a grazing angle and they took the sky's reflection, pale blue-white; a back face flipped to a normal straight down.
+TILT = 40.0
 SKIP = re.compile(r"bush|hedge|guardrail|^skin_")
 
 
@@ -157,13 +168,16 @@ def cards(B, cell, key):
 
 
 def mesh(cs):
-    """Positions, triangles, uvs (Collada: v up), colours of cards."""
+    """Positions, triangles, normals, uvs (Collada: v up), colours of cards: two crossed quads each, every quad two
+    single-sided faces back to back (counter-clockwise from their side) with the normal of their side, TILT up."""
     nc = len(cs)
-    P = np.zeros((nc * 8, 3))
-    UV = np.zeros((nc * 8, 2))
-    C = np.zeros((nc * 8, 4), np.uint8)
-    T = np.zeros((nc * 4, 3), np.int64)
+    P = np.zeros((nc * 16, 3))
+    N = np.zeros((nc * 16, 3))
+    UV = np.zeros((nc * 16, 2))
+    C = np.zeros((nc * 16, 4), np.uint8)
+    T = np.zeros((nc * 8, 3), np.int64)
     cw, ch = 1.0 / 4, 1.0 / VARIANTS
+    ct, stl = math.cos(math.radians(TILT)), math.sin(math.radians(TILT))
     for i, (cx, cy, foot, w, h, kind, yaw, var, jit) in enumerate(cs):
         u0 = kind * cw + 0.002
         u1 = (kind + 1) * cw - 0.002
@@ -173,31 +187,39 @@ def mesh(cs):
         rgba = np.array([round(f * 255)] * 3 + [255], np.uint8)
         for q in range(2):
             a = math.radians(yaw + 90 * q)
-            dx, dy = 0.5 * w * math.cos(a), 0.5 * w * math.sin(a)
-            b = i * 8 + q * 4
-            P[b:b + 4] = [(cx - dx, cy - dy, foot), (cx + dx, cy + dy, foot),
-                          (cx + dx, cy + dy, foot + h), (cx - dx, cy - dy, foot + h)]
-            # the second quad mirrored in u: the two faces of a card do not show the same clump
-            if q == 0:
-                UV[b:b + 4] = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
-            else:
-                UV[b:b + 4] = [(u1, v0), (u0, v0), (u0, v1), (u1, v1)]
-            C[b:b + 4] = rgba
-            T[i * 4 + q * 2] = (b, b + 1, b + 2)
-            T[i * 4 + q * 2 + 1] = (b, b + 2, b + 3)
-    return P, T, UV, C
+            ex, ey = math.cos(a), math.sin(a)
+            dx, dy = 0.5 * w * ex, 0.5 * w * ey
+            quad = [(cx - dx, cy - dy, foot), (cx + dx, cy + dy, foot),
+                    (cx + dx, cy + dy, foot + h), (cx - dx, cy - dy, foot + h)]
+            # the second quad mirrored in u: the two quads of a card do not show the same clump
+            uv = ([(u0, v0), (u1, v0), (u1, v1), (u0, v1)] if q == 0 else
+                  [(u1, v0), (u0, v0), (u0, v1), (u1, v1)])
+            for s in range(2):
+                b = i * 16 + q * 8 + s * 4
+                t = i * 8 + q * 4 + s * 2
+                P[b:b + 4] = quad
+                UV[b:b + 4] = uv
+                C[b:b + 4] = rgba
+                # (p1 - p0) x (p2 - p0) of (b, b+1, b+2) is (ey, -ex, 0): that face looks that way; the other is
+                # the same quad wound the other way round
+                sx, sy = (ey, -ex) if s == 0 else (-ey, ex)
+                N[b:b + 4] = (ct * sx, ct * sy, stl)
+                if s == 0:
+                    T[t], T[t + 1] = (b, b + 1, b + 2), (b, b + 2, b + 3)
+                else:
+                    T[t], T[t + 1] = (b, b + 2, b + 1), (b, b + 3, b + 2)
+    return P, T, N, UV, C
 
 
 def tile_bytes(cs):
-    P, T, UV, C = mesh(cs)
-    N = np.tile([0.0, 0.0, 1.0], (len(P), 1))
+    P, T, N, UV, C = mesh(cs)
     return cdae.encode(P, T, normals=N, uvs=UV, material=MAT, colors=C, object_name="fartrees")
 
 
 def material(tex_path):
     from blocks import bng
     return bng.material(MAT, color_map=tex_path, base_color=[1, 1, 1, 1], vert_color=True, roughness=1.0,
-                        alpha_test=70, double_sided=True, extra={"castShadows": False})
+                        alpha_test=70, extra={"castShadows": False})
 
 
 # ------------------------------------------------------------------ the texture
@@ -284,10 +306,7 @@ def texture(path, seed=7):
                 dst[m] = part[m]
                 dst[m, 3] = 1.0
             covered = cell[..., 3] > 0.5
-            if covered.any():
-                fill = cell[covered, :3].mean(0)
-            else:
-                fill = np.array([0.25, 0.3, 0.2], np.float32)
+            fill = np.array(CROWN_RGB[kind], np.float32) / 255.0
             # under the crowns down to the card's foot: the shade of the lower wood (no sky between the trunks of a
             # wood seen from kilometres away). The line runs halfway down from the crown tops, smoothed with a running
             # max over a tree's width so the gaps between the cones are filled too; the bare trunks below it (grey, no
@@ -303,8 +322,14 @@ def texture(path, seed=7):
             rgb = cell[..., :3]
             bare = covered & ((rgb[..., 1] - 0.5 * (rgb[..., 0] + rgb[..., 2])) < 0.025)
             under = below & (~covered | bare)
+            # the crowns' detail kept, their mean colour the kind's (CROWN_RGB); told from the trunks before (scaled,
+            # a grey trunk turns green enough to pass as a crown and stood as a light bar in the under-fill)
+            crowns = covered & ~under
+            if crowns.any():
+                mean = np.maximum(cell[crowns, :3].mean(0), 1e-3)
+                cell[crowns, :3] = np.clip(cell[crowns, :3] * (fill / mean), 0, 1)
             noise = 0.9 + 0.2 * rng.random((ch, cw)).astype(np.float32)
-            cell[under, :3] = fill * 0.5 * noise[under][:, None]
+            cell[under, :3] = fill * UNDER * noise[under][:, None]
             cell[under, 3] = 1.0
             cell[cell[..., 3] < 0.5, :3] = fill          # no dark fringe in the mipmaps
             img[var * ch:(var + 1) * ch, ki * cw:(ki + 1) * cw] = cell

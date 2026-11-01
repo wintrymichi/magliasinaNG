@@ -1903,6 +1903,18 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   at every update and "far trees: first shape ..." once: read those before guessing again.
   The real cause (found with the missing far levels, see View distance of Ticino): stepFar itself was never called
   in a burst while objects were queued; FAR_BURST_MS gives it a share of every burst.
+- PC photos of base 00e48dc (2026-11-01, San Salvatore, far trees on): the far trees were PALE grey-green boxes in a
+  checkerboard over every hill, far brighter than the far ground's forest beside them (~165,180,170 against ~90,100,95
+  on screen at 3 km). Three causes, all in fartrees.py: (1) the card normals pointed straight up, so every far view saw
+  them at a grazing angle (N.V ~0.1) and they took the sky's reflection (Fresnel), pale blue-white; a double-sided back
+  face may also get the normal flipped straight down (dark), hence a bright and a dark face per card; (2) the atlas kept
+  the imposters' own mean colour (broadleaves 80,94,73 sRGB: twice the far ground's forest 62,65,41 in linear light),
+  while a flat card has none of the self-shadowing that makes a wood dark from afar; (3) the dark under-fill below pale
+  crowns made each card read as a box. Now each quad is two single-sided faces back to back, counter-clockwise from
+  their side, each with its side's normal tilted TILT (40) degrees up (no doubleSided), the crowns are scaled to
+  CROWN_RGB per kind (36,48,30 conifers .. 50,64,34 broadleaves) and the under-fill is UNDER (0.65) of them. The
+  trunks are told from the crowns BEFORE the scaling (scaled, a grey trunk passed as green and stood as a light bar).
+  The tiles are twice the bytes (16 vertices a card): base part 3 ~0.42 -> ~0.83 GB. Not seen in the game yet.
 
 
 ## Far houses and the free camera (farbld.py, objects.lua far sets, stream.lua followFreeCamera, 2026-11-01)
@@ -1936,6 +1948,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   the log lines now live in the generic far set (fsUpdate/fsStep log "<far trees|far houses> at tile ...", "...: first
   shape ...", farSet "... in stream.json: ..."), and both sets get their <P>_MIN_MS of every stepFar call.
 - `local function` defined BELOW its first caller is a nil global at the call (fsCount used by fsUpdate): move it up.
+- PC test of the free camera (base 00e48dc, 2026-11-01): no "free camera away" line in the log after a flight far from
+  the car. Not explained (the calls are BeamNG.Earth's; a scripted flight leaves followCamera(true) on, which skips
+  the free camera logic, and the flight may have stayed within 500 m). freeCamera() now asks commands.isFreeCamera and
+  core_camera.getActiveCamName with the player 0 and without, logs "free camera on/off, <m> from the car (<which call>)"
+  at every change, and any camera more than FREE_FAR_M (1,500 m, or twice freeCameraAwayM) from the car takes the
+  streaming whatever the game reports (tests/sim_stream.lua FREECAM: on, away, off, back in order).
 
 ## White patches and lines on the lake from above (PC photos from San Salvatore, 2026-11-01)
 
@@ -1962,3 +1980,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   plain world lattice (0, 0) 318 cells were both (dams of the alpine lakes): pick the lattice per lake.
   The base zips also gave every block the name LagoDiLugano_NN of its zone (duplicate names in one scene): now
   Lake<level>_NNN. Not seen in the game yet: if lines stay, look at the window edge and the far tiles under the water.
+- With baseFlat the window was right, but the PC photos with the far trees off (2026-11-01) still had pale patches "like
+  rock or snow" on the villages 2-6 km out (Collina d'Oro): the FAR ground's colours. Under every building its terrain
+  layer is Concrete at the fixed 156,154,148, and one 12 m vertex on a footprint spread that grey over the squares round
+  it; the orthophoto maps of the open ground carry the roofs, streets and yards as greys up to 200 (17 % of the far
+  ground of the Collina d'Oro was a grey over 130). farlod.fill_buildings (region_base, after worldmap so the M map
+  keeps the footprints) gives the footprints the nearest other ground's colour (the far houses stand there) and tones
+  greys over GREY_CAP (130) down, half way to a warm grey (scaled alone, the faint casts of 200,195,197 made the towns
+  mauve); the mountains' rock (133,133,121) stays. Over all Ticino: 183,119 samples filled, 1,100,428 toned. Checked in
+  the ray-cast render of the far ground (scratch view/shade.py), not in the game yet.

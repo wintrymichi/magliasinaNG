@@ -126,6 +126,45 @@ class Ground:
         return g
 
 
+# the ground under every building: the Concrete layer (terrain classes edificio, bacino_idrico) has this fixed colour
+# in every zone (dati/terrain_colors.json, terrain_colors.FIXED), so the far tiles carry it exactly
+BUILDING_RGB = (156, 154, 148)
+
+
+GREY_CAP = 130.0            # the far ground's light greys (paving, roofs in the orthophoto maps) at most this bright
+GREY_SAT = 40.0             # (max - min channel): greyer than this
+GREY_TINT = (1.02, 1.0, 0.94)
+
+
+def fill_buildings(g, rgb=BUILDING_RGB, cap=GREY_CAP):
+    """The far ground of the villages, in place: under buildings the colour of the nearest ground round them, and the
+    light greys toned down to cap (mean of the channels); returns (samples filled, samples toned down). The far houses
+    (farbld.py) stand on the footprints, and every 12 m vertex on one spread the light grey over the squares round it;
+    the orthophoto maps of the open ground carry the roofs, streets and yards as greys up to 200: the villages were pale
+    patches like rock or snow from the air (PC photos from San Salvatore, 2026-11-01). The rock of the mountains
+    (133,133,121) is under the cap. The map of the M key keeps the footprints (worldmap.py runs before)."""
+    from scipy import ndimage
+    ok = np.isfinite(g.H)
+    m = np.all(np.abs(g.C - np.array(rgb, np.float32)) < 0.5, axis=2) & ok
+    n = int(m.sum())
+    if n:
+        src = ~m & ok
+        if src.any():
+            idx = ndimage.distance_transform_edt(~src, return_distances=False, return_indices=True)
+            r, c = np.nonzero(m)
+            g.C[r, c] = g.C[idx[0][r, c], idx[1][r, c]]
+            del idx
+    lum = g.C.mean(2)
+    grey = ok & (lum > cap) & (g.C.max(2) - g.C.min(2) < GREY_SAT)
+    k = int(grey.sum())
+    if k:
+        # half way to a plain warm grey: scaled alone, the orthophoto's faint casts (200,195,197) turned the towns mauve
+        c = g.C[grey] / lum[grey][:, None]
+        c = 0.5 * c + 0.5 * np.array(GREY_TINT, np.float32) / np.mean(GREY_TINT)
+        g.C[grey] = cap * c
+    return n, k
+
+
 def normals_at(g, R, C, s):
     """Unit normals (..., 3) of the far ground at grid samples (R, C) (int arrays of one shape), from the heights s
     samples to either side: central differences, one-sided where a side has no far tile, up where neither has. The

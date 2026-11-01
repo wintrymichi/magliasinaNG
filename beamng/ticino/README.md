@@ -143,7 +143,10 @@ The streamer is the GE extension `ticino_stream` (`mod/lua/ge/extensions/ticino/
 - **Jumps.** A spawn or a teleport far away pauses the game, makes the window and the near objects at once, and goes
   on.
 - **Free camera.** The streaming follows the free camera (Shift+C) once it is more than 500 m from the car (setting
-  `freeCameraAwayM`), with the game paused until the camera is back and the car's ground is there again.
+  `freeCameraAwayM`), with the game paused until the camera is back and the car's ground is there again. Any camera
+  more than 1.5 km from the car (twice `freeCameraAwayM` if that is more) takes the streaming along too, whether the
+  game reports it as the free camera or not. The log says `free camera on` / `off` with the distance to the car, and
+  `free camera away from the car` / `back at the car` when the streaming moves.
 - **Warm-up.** Optional, from the console inside the level: `extensions.load('ticino_warmup')` loads once every shape
   of the zones within 3 km and cooks the sign textures, so the game writes its cache now instead of stuttering the
   first time it sees them (about 15 min a region; drive elsewhere and run it again there).
