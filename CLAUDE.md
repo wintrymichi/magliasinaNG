@@ -1207,6 +1207,11 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   First run: the app's new default tag (ticino-v1) broke the packs-mode screenshot test, which made its fake zips from
   ticino-all (0 of 9 zones), so no app was uploaded and the publish run's last job would have waited 40 min for it:
   cancelled (the 20 zips already copied are skipped by the next run). A test that fakes a release must pin its tag.
+  Republishing app 1.1 (2026-11-01): the first run (level=keep) would have also put the installer/helper/server of the
+  draft ticino-all on ticino-v1, rebuilt 23:48Z for a NEWER base than ticino-v1 has (helper staging, frame gate): cancelled.
+  `only=app` publishes the app alone. The second run then waited 40 min for "the app of this commit": a push of
+  publish.txt alone starts no app build. The publish now takes an app whose VERSION.txt commit is an ancestor with the
+  same gui sources. Before publishing tools to a release, check which base they were built for.
 - michi's own use of 1.0.0 (2026-10-31 evening, "l'app è rotta"; read from his app.log by the PC thread): Move took the
   89 zones from mods (C:) to "D:\ticino zones" in 10 min with no progress shown (the page's refresh overwrote the bar's
   text every second), then said "0 of 89 zones in place" (the copies were dated now, so no sha256|length|ticks key of
