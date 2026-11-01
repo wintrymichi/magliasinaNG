@@ -1240,6 +1240,16 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   is deleted on a move, and the old folders lose every copy of a zip in place and checked (PruneOld). The Move
   dialog said "the zips are copied" when all were there already: it counts them now. The Yes/No box is a Win32
   MessageBox the PC session could only click with the mouse (no UIA pattern).
+- PC test of 1.1.1 (2026-11-01, round 3): Play in server mode worked (level 46 s, the server ends with the game), but the
+  desktop shortcut "Start Ticino" ran the start_ticino.ps1 the OLD installer had put in ticino_tools (12c25f3: game +
+  helper only, no server mode), so after the app's Move the map loaded with no zones ("the zone packs are neither in
+  mods nor served"). Switching the mode in install.json is not enough: the launcher beside it must know the mode. The
+  app now carries the launcher of beamng/ticino/install (embedded) and replaces one that does not name
+  ticino_server.exe. Also: install.json "base" kept the installer's base after the app installed newer ones (the
+  installer clears the level cache when installed.json names another base); a second press of Update paused the
+  download silently (the label turned "Pause" only at the next tick, and nothing was logged); the Home banner's Update
+  left no line in app.log, so whether it ran could not be told. Log every start, early return, pause and end of a
+  download, and give buttons whose content is a panel an AutomationProperties.Name (UIA reads no name from a panel).
 
 ## Working with cat (the owner)
 
