@@ -77,6 +77,8 @@ function M.init(cfg, level, group)
   S.has = cfg.tiles or {}
   S.farHas = {}
   for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
+  S.ftHas, S.ftLive, S.ftQueue, S.ftPos = {}, {}, {}, 1
+  for _, k in ipairs(cfg.farTrees or {}) do S.ftHas[k] = true end
   S.col = { size = cfg.colCell, R = (cfg.colRadius or 1) + M.COL_LAZY, has = {}, live = {}, cell = nil, queue = {},
             types = cfg.colGroundTypes or {} }
   S.noColShape = {}
@@ -773,7 +775,7 @@ function M.updateFar(cx, cy, wcx, wcy, n)
   table.sort(q, function(a, b) if a[5] ~= b[5] then return a[5] < b[5] end return a[1] < b[1] end)
   S.farQueue, S.farPos = q, 1
   for _, f in pairs(S.farLive) do M._farHide(f) end
-  return deleted
+  return deleted + M.updateFarTrees(cx, cy)
 end
 
 function M._farHide(f)
@@ -929,8 +931,121 @@ function M.stepFar(clock, budgetMs)
     if budgetMs and clock() - t0 > budgetMs then break end
   end
   if made > 0 and S.lod then M.dropCovered(clock, S.farPos > #q) end
+  if not budgetMs or clock() - t0 <= budgetMs then
+    made = made + M.stepFarTrees(clock, budgetMs and math.max(0, budgetMs - (clock() - t0)) or nil)
+  end
   return made
 end
+
+-- ------------------------------------------------------------------ far trees
+-- The woods beyond the streamed Forest (fartrees.py: one static shape of tree clumps per 384 m tile, stream.json
+-- farTrees), shown from FAR_TREES_INNER (the Forest's RADIUS, set by stream.lua) out to FAR_TREES_RADIUS tiles of the
+-- car's tile (michi 2026-11-01, "non puoi anche aumentare la distanza degli alberi?"). Plain TSStatics with no
+-- collision made a few a frame with the far ground: no Forest is touched, so none of the ~200 ms Forest frames.
+-- A tile coming inside the Forest's rings keeps its far trees until the Forest has made it (M.forestMade, at most
+-- FAR_TREES_HOLD_MS): no hole at the line where the real trees begin.
+M.FAR_TREES_FILE = '/levels/%s/fartrees/t_%d_%d.cdae'
+M.FAR_TREES_RADIUS = 12     -- tiles (Chebyshev) of far trees round the car's tile (settings "treeKm"); 0: none
+M.FAR_TREES_INNER = 4       -- tiles that have the real Forest (stream.lua: forest.RADIUS)
+M.FAR_TREES_HOLD_MS = 20000
+M.forestMade = nil          -- function(key): true once the Forest shows tile key (stream.lua: forest.made)
+
+local function cheb(key, cx, cy)
+  local tx, ty = parse2(key)
+  return math.max(math.abs(tx - cx), math.abs(ty - cy)), tx, ty
+end
+
+function M.updateFarTrees(cx, cy)
+  if not S or not S.ftHas then return 0 end
+  local R, I, n = M.FAR_TREES_RADIUS, M.FAR_TREES_INNER, 0
+  S.ftCell = { cx, cy }
+  for key, f in pairs(S.ftLive) do
+    local d = cheb(key, cx, cy)
+    if d > R + 1 or R <= I then
+      delete(f.id)
+      S.ftLive[key] = nil
+      n = n + 1
+    elseif d <= I then
+      f.inner = f.inner or true          -- dropped by stepFarTrees once the Forest has the tile
+    else
+      f.inner, f.innerAt = nil, nil
+    end
+  end
+  local q = {}
+  if R > I then
+    for ty = cy - R, cy + R do
+      for tx = cx - R, cx + R do
+        local key = tx .. '_' .. ty
+        local d = math.max(math.abs(tx - cx), math.abs(ty - cy))
+        if d > I and S.ftHas[key] and not S.ftLive[key] then q[#q + 1] = { key, d, tx, ty } end
+      end
+    end
+  end
+  table.sort(q, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
+  S.ftQueue, S.ftPos = q, 1
+  return n
+end
+
+-- Make queued far-tree tiles and drop the ones the Forest has taken over, for at most budgetMs; returns the number made.
+function M.stepFarTrees(clock, budgetMs)
+  if not S or not S.ftHas then return 0 end
+  local t0, made = clock(), 0
+  M.dropFarTrees(clock)
+  local q, cfg = S.ftQueue, S.cfg
+  local tm = cfg.cell * cfg.square
+  while S.ftPos <= #q do
+    local w = q[S.ftPos]
+    S.ftPos = S.ftPos + 1
+    local key, tx, ty = w[1], w[3], w[4]
+    if not S.ftLive[key] then
+      local ts = clock()
+      local o = createObject('TSStatic')
+      o:setField('shapeName', 0, string.format(M.FAR_TREES_FILE, S.level, tx, ty))
+      o:setField('collisionType', 0, 'None')
+      o:setField('decalType', 0, 'None')
+      o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
+      o.canSave = false
+      o:setPosition(vec3(cfg.origin[1] + tx * tm, cfg.origin[2] + ty * tm, 0))
+      o:registerObject('')
+      S.group:addObject(o)
+      fresh(o:getID())
+      S.ftLive[key] = { id = o:getID() }
+      made = made + 1
+      S.stats.farTrees = (S.stats.farTrees or 0) + 1
+      local dts = clock() - ts
+      if dts > M.SLOW_SPAWN_MS then log('W', 'ticino', string.format('slow far trees %.0f ms: %s', dts, key)) end
+    end
+    if budgetMs and clock() - t0 > budgetMs then break end
+  end
+  return made
+end
+
+-- Drop the far trees of tiles the Forest has made (looked at every 500 ms at most); returns the number dropped.
+function M.dropFarTrees(clock)
+  if not S or not S.ftLive then return 0 end
+  local now, n = clock(), 0
+  if S.ftCheckAt and now - S.ftCheckAt < 500 then return 0 end
+  S.ftCheckAt = now
+  for key, f in pairs(S.ftLive) do
+    if f.inner then
+      f.innerAt = f.innerAt or now
+      if (M.forestMade and M.forestMade(key)) or now - f.innerAt > M.FAR_TREES_HOLD_MS then
+        delete(f.id)
+        S.ftLive[key] = nil
+        n = n + 1
+      end
+    end
+  end
+  return n
+end
+
+-- Are far trees waiting for the Forest to take their tile over?
+function M.farTreesHeld()
+  for _, f in pairs(S and S.ftLive or {}) do if f.inner then return true end end
+  return false
+end
+
+function M.farTreesPending() return S and S.ftHas and S.ftPos <= #S.ftQueue or false end
 
 function M.hasFarLod() return S ~= nil and lodSetup() and true or false end
 
@@ -940,7 +1055,7 @@ function M.farDoomedLeft()
   return next(S.farDoomed) ~= nil
 end
 
-function M.farPending() return S and S.farPos <= #S.farQueue end
+function M.farPending() return S and (S.farPos <= #S.farQueue or M.farTreesPending()) or false end
 
 -- The Ticino server finished tiles that were skipped (files.lua): queue what the car's tile wants of them, the
 -- collision cells and the far ground again. Objects already made are left as they are.
@@ -1015,7 +1130,10 @@ function M.stats()
   for _ in pairs(S.farDoomed or {}) do doomed = doomed + 1 end
   local cells = 0
   for _ in pairs(S.col.live) do cells = cells + 1 end
+  local farTrees = 0
+  for _ in pairs(S.ftLive or {}) do farTrees = farTrees + 1 end
   return { live = live, colliders = col, far = far, farLod = farLod, farHidden = farHidden, farDoomed = doomed,
+           farTrees = farTrees,
            farDropped = S.stats.farDropped or 0, colCells = cells, queued = #S.queue - S.qpos + 1, created = S.stats.created,
            deleted = S.stats.deleted, failed = S.stats.failed, tilesRead = S.stats.tilesRead,
            colFailed = S.col.failed or 0, colTris = S.col.tris or 0, colFfi = hasFfi and not S.col.noFfi }

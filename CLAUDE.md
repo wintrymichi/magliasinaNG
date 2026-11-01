@@ -1796,3 +1796,17 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   blocked in the cloud: worldmap.fetch_settlements falls back to the slugs; check `spawn_names.json` of the base run.
 - Lua 5.5 (lupa, for a quick stub test of a mod file) has no math.atan2; LuaJIT in the game does.
 
+## Far trees of Ticino (fartrees.py, objects.lua far trees, 2026-11-01)
+
+- michi: "non puoi anche aumentare la distanza degli alberi?". More rings of Forest were not the way: every frame that
+  touches a Forest cost ~200 ms on the PC. fartrees.py (run by region_base.py) bins each tile's tree rows (the slices'
+  t_*.trees.json, read by HTTP range) on a 28 m grid, one card per cell (two crossed quads, a clump texture made in
+  numpy: fartrees.png 4 kinds x 2), and objects.lua shows them as plain TSStatics (collisionType None) from the Forest's
+  RADIUS out to FAR_TREES_RADIUS (12 tiles, settings "treeKm"). A tile coming into the Forest's rings keeps its cards
+  until forest.made(key) (at most 20 s): no gap at the line where the real trees begin.
+- A ProceduralMesh was no option for them: it always enters the static collision (EarthNG: disableCollision does not
+  take it out; every rebuild would pay for ~400k card triangles). Render-only things must be TSStatic + collisionType None.
+- Size on ti_0_0 (397 tiles): 30 MB raw, 6.4 MB zipped; all of Ticino ~0.5 GB zipped in the base. Cells of 24 m were
+  only 20 % bigger than 28 m (most cells hold few trees). The card colours (COLOUR) are a guess: compare them with the
+  near Forest's imposters in a screenshot before keeping them. Not tested in the game yet.
+

@@ -81,7 +81,7 @@ M.DIAG = false             -- write ticino_frames.csv and ticino_perf.csv (setti
 M.PRESETS = {
   standard = {},
   light = { forest = { RADIUS = 3, SHARE = { [0] = 1.0, 1.0, 0.5, 0.25 }, CACHE_TILES = 80 },
-            objects = { CACHE_TILES = 250 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
+            objects = { CACHE_TILES = 250, FAR_TREES_RADIUS = 8 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
 }
 -- How far the camera sees (michi 2026-10-31, "io voglio vedere di più da lontano"): with the far levels of the base
 -- (farlod.py, objects.lua FAR_LOD) the ground reaches the whole of Ticino, so LevelInfo.visibleDistance goes to VIEW_KM
@@ -610,6 +610,10 @@ local function readSettings(cfg)
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
   if type(s.fog) == 'number' and s.fog >= 0 then M.FOG_DENSITY = s.fog end
+  -- "treeKm": how far the far trees reach (objects.lua far trees; 0: none, only the Forest's ~1.5 km)
+  if type(s.treeKm) == 'number' and s.treeKm >= 0 then
+    objects.FAR_TREES_RADIUS = math.floor(s.treeKm * 1000 / (cfg.cell * cfg.square) + 0.5)
+  end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
   -- a window size of the settings (level.window, tiles of cfg.cell): the helper writes the built size only
@@ -670,6 +674,7 @@ local function start()
   if M.NO_DYNAMIC_CUBEMAP then M.dynamicCubemaps(false) end
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
+  objects.FAR_TREES_INNER, objects.forestMade = forest.RADIUS, forest.made   -- far trees from the Forest's edge
   M.applyView()
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, #(cfg.far or {})))
@@ -965,6 +970,12 @@ local function onUpdate(dtReal)
     -- old far tiles whose cover came late (the Ticino server's far tiles)
     if objects.farDoomedLeft() and mayChange() and objects.dropCovered(clock) > 0 then
       st.act = 'far drop'
+      changed()
+      return
+    end
+    -- far trees whose tile the Forest has made now (objects.lua far trees)
+    if objects.farTreesHeld() and mayChange() and objects.dropFarTrees(clock) > 0 then
+      st.act = 'far trees drop'
       changed()
       return
     end

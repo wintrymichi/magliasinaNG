@@ -30,6 +30,7 @@ import blocks  # noqa: E402
 import collision  # noqa: E402
 import dae2cdae  # noqa: E402
 import farlod  # noqa: E402
+import fartrees  # noqa: E402
 import worldmap  # noqa: E402
 import region  # noqa: E402
 import zipremote  # noqa: E402
@@ -176,7 +177,7 @@ def main():
 
     srcs = [region.Src(z, os.path.join(cache, z), grid, light=True) for z in zones]
     dst = os.path.join(a.out, "levels", LEVEL)
-    for d in ("main", "art", "blocks", "far", "col", "z", "tiles", farlod.DIR):
+    for d in ("main", "art", "blocks", "far", "col", "z", "tiles", farlod.DIR, fartrees.DIR):
         shutil.rmtree(os.path.join(dst, d), ignore_errors=True)
 
     kept_by_zone, roads, stats = [], [], collections.Counter()
@@ -305,6 +306,9 @@ def main():
     tile_m = grid.C * grid.sq
     ground = farlod.read_slices(sl, zones, sorted(far), tile_m)
     far_lod = farlod.build(ground, os.path.join(dst, farlod.DIR))
+    # the woods beyond the streamed Forest as static far-tree tiles (fartrees.py), from the slices' tree tiles
+    far_trees = fartrees.build(fartrees.read_slices(sl, zones), plan["forestTypes"], [grid.x0, grid.y0], tile_m,
+                               os.path.join(dst, fartrees.DIR), level=LEVEL, workers=4)
     # the Ticino map of the M key (worldmap.py, ui/ui-vue/mods/ticino): the far ground's colours and the AI roads
     worldmap.build(ground.H, ground.C, grid.x0 + ground.cx0 * tile_m, grid.y0 + ground.cy0 * tile_m, tile_m / farlod.K,
                    worldmap.roads_of([o for objs in kept.values() for o in objs]), os.path.join(dst, worldmap.DIR),
@@ -322,6 +326,7 @@ def main():
         "baseSizeUnit": grid.cfg.get("base_size_unit", "samples"),
         "tiles": tiles, "forestTiles": ftiles, "forestTypes": plan["forestTypes"],
         "far": sorted(far), "farRadius": int(grid.cfg.get("far_radius", 16)), "farLod": far_lod,
+        "farTrees": far_trees,
         "collisionRadius": int(grid.cfg.get("collision_radius", 1)),
         "colCell": blocks.collision_cell_m(), "colCells": sorted(cells),
         "colGroundTypes": plan["groundTypes"], "colPieceTris": blocks.collision_piece_tris(),

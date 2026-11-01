@@ -353,6 +353,16 @@ function M.step(clock, budgetMs, perFrame, burstMs)
 end
 
 function M.pending() return S and S.qpos <= #S.queue end
+
+-- Does the Forest show tile key (made, no pass of it left in the queue)? (objects.lua: far trees drop then)
+function M.made(key)
+  local t = S and S.tiles[key]
+  if not t or (t.share or 0) <= 0 then return false end
+  for i = S.qpos, #S.queue do
+    if S.queue[i].key == key then return false end
+  end
+  return true
+end
 -- Counters for the slow-frame log
 function M.counts()
   if not S then return nil end
