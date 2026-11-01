@@ -1250,6 +1250,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   download silently (the label turned "Pause" only at the next tick, and nothing was logged); the Home banner's Update
   left no line in app.log, so whether it ran could not be told. Log every start, early return, pause and end of a
   download, and give buttons whose content is a panel an AutomationProperties.Name (UIA reads no name from a panel).
+- The recheck of 1.1.2 passed, but michi's own copy in Downloads was still an old build after three releases (the app
+  never told anyone a newer one exists). 1.1.3 updates itself: VERSION.txt in app_ticino.zip carries "version x.y.z"
+  (one version, the csproj's), read from the release with HTTP range requests (ZipArchive over a seekable range stream:
+  one request); "Update the app" downloads the zip, checks the sha256 and leaves a cmd that waits for the app's PID,
+  copies the exe and starts it. ticino_gui.yml checks the range read against the uploaded zip (--probe-update). An
+  update of builds before 1.1.3 still needs a hand copy. TICINO_APP_PRETEND_VERSION=1.0.0 makes an app offer its own
+  version, to try the whole update on the PC.
 
 ## Working with cat (the owner)
 
