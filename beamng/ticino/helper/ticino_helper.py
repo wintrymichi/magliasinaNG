@@ -152,11 +152,18 @@ class Windows:
         self.B, self.W, self.P = cfg["block"], cfg["window"], cfg["basePx"]
         self.keys = list(cfg.get("baseTextures") or [])
         layer_key = {bm[1]: bm[2] for bm in cfg.get("baseMaterials") or []}
-        # layer index of the .ter -> index of its base map in keys (stream.lua combinedRows: missing -> the first)
+        flat = cfg.get("baseFlat") or {}
+        # layer index of the .ter -> index of its base map in keys, or -1 and its own colour (stream.json baseFlat:
+        # the forest floors, concrete, banks); neither -> the first map (stream.lua combinedRows)
         self.lk = np.zeros(256, np.intp)
+        self.flat = np.zeros((256, 3), np.uint8)
         for i, name in enumerate(cfg.get("materials") or []):
             k = layer_key.get(name)
-            self.lk[i] = self.keys.index(k) if k in self.keys else 0
+            if k in self.keys:
+                self.lk[i] = self.keys.index(k)
+            elif name in flat:
+                self.lk[i] = -1
+                self.flat[i] = flat[name][:3]
         tail = [struct.pack("<I", len(cfg["materials"]))]
         for m in cfg["materials"]:
             b = m.encode("latin-1")
@@ -212,7 +219,7 @@ class Windows:
         half = P // 2
         layers = L[half::P, half::P][:Wp, :Wp]             # rows south
         idx = self.lk[layers]
-        out = np.empty((Wp, Wp, 3), np.uint8)
+        out = self.flat[layers]                            # the materials with no streamed map: their own colour
         for k, key in enumerate(self.keys):
             m = idx == k
             if not m.any():

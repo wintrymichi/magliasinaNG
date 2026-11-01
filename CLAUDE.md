@@ -1853,3 +1853,61 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   FAR_TREES_MIN_MS of every call, and the log says "far trees in stream.json ..." at start, "far trees at tile ..."
   at every update and "far trees: first shape ..." once: read those before guessing again.
 
+
+## Far houses and the free camera (farbld.py, objects.lua far sets, stream.lua followFreeCamera, 2026-11-01)
+
+- michi 11:37Z: "ottimizza la mappa in modo che si possano fare riprese aeree comunque dettagliate", "gli alberi devono
+  vedersi sempre come anche le case"; 12:12Z: "nello streaming puoi fare che segue anche la cam libera quando schiaccio
+  SHIFT + C?". Up to here the houses ended at the buildings' radius (6 tiles, ~2.3 km) and the far ground beyond was
+  bare. farbld.py (run by region_base.py after fartrees) makes far houses from the level's OWN building shapes (the
+  buildings group of each o tile, read from the slices by HTTP range): fine b_<cx>_<cy>.cdae per tile = the roof planes
+  (rims, tile heads and ridge caps of roof_details dropped: pieces under MIN_AREA / MIN_WIDTH) + plain walls down from
+  every free roof edge to the house's foot; coarse l2_<bx>_<by>.cdae per 4 x 4 tiles = one box per house of 40 m2 or
+  more in the roof's colour. Lugano (ti_1_0, the densest zone): 256 tiles, 30,605 houses, 1.0 M triangles, 93 MB raw
+  in 7 s; 30 blocks 18 MB. Roof winding: the engine's is clockwise seen from outside (normal = (p2-p0) x (p1-p0)).
+- The far trees' code in objects.lua is now one "far set" for both (farSet/fsUpdate/fsStep/fsDrop; S.ft, S.fb):
+  tests/far_trees.lua gives the same result as before the change (3,024 moves with a moment of two layers). The houses
+  need it both ways: a streamed house leaving the radius is held in the objects queue until its far tile or block is
+  made (bldHold, released to the queue's tail by onMade or after FAR_BLD_HOLD_MS), and an inner tile whose streamed
+  houses are not all made (after a jump, a long queue, a fast free camera) shows its far tile until they are (F.fill,
+  objects.bldMade). After a jump the objects took every burst and the far queue never ran: far houses get
+  FAR_BLD_JUMP_MS in the jump frame and FAR_BLD_BURST_MS of each burst. tests/far_bld.lua: its first run reported 48
+  holes at a jump that were the test's own (dropAll removes the old place's houses at once, by design): reset the
+  "drawn before" set at a jump.
+- The free camera: commands.isFreeCamera, else core_camera.getActiveCamName() == 'free' (BeamNG.Earth core.lua).
+  Beyond FREE_AWAY_M (500 m; back at FREE_BACK_M 400) the focus is the camera and the game is paused (the car would be
+  left without ground and collision); collision cells and rebuilds stay with the car meanwhile; the game goes on
+  FREE_BACK_FRAMES after the car's near rings and cells are made again. A jump's own pause runs as usual inside it
+  (pause(false) never unpauses while st.carHold is set). Not tested in the game yet.
+- tests/sim_stream.lua FREECAM="x,y,t0,t1[,v]" emulates it (the sim's car time stops while paused, so t0/t1 count
+  frames). A release asset being replaced answers 404 for a minute (the base was being uploaded): list the assets again.
+- Merging the far sets with the other thread's far-tree fix (9af14dc, FAR_TREES_MIN_MS and its log lines): the fix and
+  the log lines now live in the generic far set (fsUpdate/fsStep log "<far trees|far houses> at tile ...", "...: first
+  shape ...", farSet "... in stream.json: ..."), and both sets get their <P>_MIN_MS of every stepFar call.
+- `local function` defined BELOW its first caller is a nil global at the call (fsCount used by fsUpdate): move it up.
+
+## White patches and lines on the lake from above (PC photos from San Salvatore, 2026-11-01)
+
+- The light grey / white patches "like rock or snow" on the plain and the slopes from ~1 km out were the combined base
+  colour map of the terrain window (stream.lua combinedRows, BASE_COMBINED): each pixel took the streamed map of the
+  material under it, and the materials WITHOUT a streamed map (base texture under 2048: ForestFloor*, Bank*, Concrete
+  and their twins, 61 % of the ground of ti_0_0) took the first one, t_base_asphalt_b, light grey (166). The near
+  ground looked right (detail textures), the base colour shows from the detail distance on. The far tiles' colours were
+  right (dark forest). Now stream.json baseFlat (blocks.base_flat: the mean of each material's window base texture)
+  gives those pixels their own colour, in the Lua and the helper (tests/test_helper.py: .ter and map identical).
+  Seen in a render of the map before guessing: decode a window's combined map from the blocks (scratch combined.py).
+- tests/test_helper.py had been failing since the csv files became opt-in ("diagnostics"): the sim never wrote
+  ticino_perf_sim.csv. sim_stream.lua now sets stream.DIAG (DIAG=0 turns it off).
+- The straight light and dark lines across the lake: every zone lays its lake with WaterBlocks on its OWN 25 m lattice
+  (water.py: rectangles of 25 m cells, gridElementSize 25, reaching far under higher ground) at its OWN level (median of
+  its DTM over the lake: Lugano 270.477-270.482), and region.clip_box cut them at the zone cores into sizes that are no
+  whole cells, side by side with blocks of other lattices and levels. In the Malcantone level (one lattice, one level)
+  no line was ever seen. region.unify_water (region_base, before write_scene) lays every lake again on ONE lattice
+  (the offset of a zone's own blocks that leaves the fewest cells to decide; a lake inside one zone keeps its blocks)
+  at one level: a cut cell is water when half covered, always when the far ground in its covered part is under the
+  lake (the carved bed must stay wet), never when the far ground in its uncovered part is 0.5 m under the lake (a
+  river below a weir, the foot of a dam: water.py's forbidden cells). Region of 87 zones: 52 lakes, 335 -> 300 blocks,
+  Lugano 52 -> 34 on one lattice, 459.4 -> 460.0 km2, 4 cells both wet and dry (keep the zones' own pieces). With the
+  plain world lattice (0, 0) 318 cells were both (dams of the alpine lakes): pick the lattice per lake.
+  The base zips also gave every block the name LagoDiLugano_NN of its zone (duplicate names in one scene): now
+  Lake<level>_NNN. Not seen in the game yet: if lines stay, look at the window edge and the far tiles under the water.

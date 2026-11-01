@@ -95,6 +95,18 @@ class Ground:
     def save(self, path):
         np.savez(path, H=self.H, C=self.C.astype(np.uint8), o=[self.cx0, self.cy0, self.ncx, self.ncy, self.tile_m])
 
+    def heights(self, x, y, origin):
+        """The far ground's height at world points (x, y arrays; origin: the level's [x0, y0] of tile 0_0), the
+        nearest sample; NaN where no far tile is."""
+        step = self.tile_m / K
+        x, y = np.asarray(x, np.float64), np.asarray(y, np.float64)
+        c = np.rint((x - origin[0] - self.cx0 * self.tile_m) / step).astype(np.int64)
+        r = np.rint((y - origin[1] - self.cy0 * self.tile_m) / step).astype(np.int64)
+        ok = (c >= 0) & (c < self.H.shape[1]) & (r >= 0) & (r < self.H.shape[0])
+        out = np.full(x.shape, np.nan)
+        out[ok] = self.H[r[ok], c[ok]]
+        return out
+
     @classmethod
     def load(cls, path, keys):
         d = np.load(path)

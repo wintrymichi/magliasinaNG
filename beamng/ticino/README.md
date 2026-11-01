@@ -77,18 +77,21 @@ when the level starts:
 
 | Field | Values | What it does |
 |---|---|---|
-| `preset` | `standard` (default), `light` | `standard` is the level as built and tested. `light` is for PCs with little video memory or a slow CPU: trees shown within 3 tiles (1.2 km) instead of 4, fewer of them at a distance, far ground to 10 tiles instead of 16. The near scene (roads, buildings, collision) stays the same. |
+| `preset` | `standard` (default), `light`, `aerial` | `standard` is the level as built and tested. `light` is for PCs with little video memory or a slow CPU: trees shown within 3 tiles (1.2 km) instead of 4, fewer of them at a distance, far ground to 10 tiles instead of 16, far trees and far houses to ~9 km. `aerial` is for aerial shots (free camera, drone videos): the camera sees 80 km, far trees and far houses reach ~21 km (56 tiles) with the detailed far shapes within ~5 km, far ground to 20 tiles, and the free camera takes the streaming from 200 m from the car; it costs more video memory and frame time (not measured yet). The near scene (roads, buildings, collision) stays the same. |
 | `helper` | `true` (default), `false` | use the helper process when it runs |
 | `diagnostics` | `false` (default), `true` | write `ticino_perf.csv` (every terrain move, timings) and `ticino_frames.csv` (frame times every 5 s) to the user folder |
 | `stream`, `objects`, `forest`, `pace` | objects of fields | advanced: any constant of `stream.lua`, `objects.lua`, `forest.lua`, `pace.lua` of the same type, e.g. `{"forest": {"RADIUS": 5}}` |
 | `level` | object of numbers | advanced: numbers of the level's `stream.json`, e.g. `{"level": {"farRadius": 20}}` |
 | `dynamicObjects` | `false` (default), `true` | create the streamed objects dynamic, as BeamNG.Earth does: costs about 5x the frame time standing in a town (each one is drawn into every shadow cascade); for tests only |
-| `pacing` | `true` (default), `false` | even frame pacing (from BeamNG.Earth): a frame shorter than the recent frames' 70th percentile waits the rest, so the frames come evenly and the game speed stays steady; costs a few fps; off below 30 fps |
+| `pacing` | `false` (default), `true` | even frame pacing (from BeamNG.Earth): a frame shorter than the recent frames' 70th percentile waits the rest, so the frames come evenly and the game speed stays steady; costs a few fps; off below 30 fps. Off by default: the PC flights of 2026-11-01 showed no measurable difference |
 | `frameGate` | `true` (default), `false` | a frame that changes the scene (objects, trees, collision, a terrain move) runs only after two calm frames that changed nothing: each such frame stays a lone spike, which the game's smoothed clock drops instead of slowing down and catching up (the "scatti") |
 | `terrainShadows` | `true` (default), `false` | `false`: the terrain casts no sun shadows (BeamNG.Earth: each terrain move redrew the sun's shadow map, up to 1/3 s on slow GPUs); for tests until checked against screenshots of the mountains |
 | `viewKm` | `60` (default; `light` preset 25), `0` = the level's 12 km | how far the camera sees. The base carries the far ground in coarser levels to the whole of Ticino (`farlod/`, 1.5 / 3 / 6 / 12 km tiles beyond the 6 km of far tiles, ~500 more drawn tiles): without them in the base nothing changes |
 | `treeKm` | `15` (default, 40 tiles; `light` preset 9), `0` = none | how far the woods reach. Up to ~1.5 km the trees are the game's Forest; beyond it, from the base's `fartrees/`: static shapes of tree clumps drawn from the Malcantone's far trees, one per 384 m tile out to ~3-4 km and one per 1.5 km block (coarser clumps) beyond, no collision, made like the far ground, so driving adds no Forest frames for them |
 | `fog` | `6e-5` (default), `0` = the level's 1.3e-4 | haze density with the far levels: 45 % at 10 km, 70 % at 20 km, 90 % at 40 km |
+| `bldKm` | `15` (default, 40 tiles; `light` preset 9), `0` = none | how far the houses reach. Up to ~2.3 km (6 tiles) they are the streamed buildings; beyond, from the base's `farbld/`: the same houses as plain shapes made from the level's own buildings (their roofs with plain walls, one shape per 384 m tile out to ~3-4 km; one box per house in the roof's colour, one shape per 1.5 km block, beyond), no collision. A streamed house leaving the radius goes only once its far shape is there, and after a jump the far shapes stand in for the streamed houses until they are made |
+| `followFreeCamera` | `true` (default), `false` | the streaming (terrain, objects, trees, far ground, far houses) follows the free camera (Shift+C) once it is more than `freeCameraAwayM` from the car. Meanwhile the game is paused, since the car's surroundings are left behind; it goes on when the camera is back near the car and the car's ground and collision are made again. Within that distance the streaming stays with the car and nothing pauses |
+| `freeCameraAwayM` | `500` (default; `aerial` preset 200) | metres between the free camera and the car before the streaming follows the camera (it comes back to the car at 80 % of it) |
 
 Advanced fields that were measured on the PC (October 2026), with their defaults:
 
@@ -113,8 +116,10 @@ JSON. `ticino_stream_cfg.json` in the user folder root still overrides everythin
 | Terrain block (data unit) | 1,280 x 1,280 samples at 1.5 m = 1,920 m | `blocks/terrain/t_<bx>_<by>.bin` |
 | Tile (objects, trees, window step) | 256 samples = 384 m | `tiles/o_<cx>_<cy>.json`, `tiles/t_<cx>_<cy>.trees.json` |
 | Terrain window in the game | one TerrainBlock of 2,048 x 2,048 samples (3.07 km) | written to `<user>/temp/ticino/` |
-| Base colour of the open ground | 4 samples a pixel, one combined map for the window | `blocks/base/<texture>_<bx>_<by>.rgb` |
+| Base colour of the open ground | 4 samples a pixel, one combined map for the window (woods, banks and concrete in their own colour, `stream.json` `baseFlat`) | `blocks/base/<texture>_<bx>_<by>.rgb` |
+| Lakes | WaterBlocks of 25 m cells, one lattice and one level per lake for all the zones | `main/MissionGroup/level_objects/Water` (base) |
 | Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, no collision, 16 tiles round the car | `far/f_<cx>_<cy>.cdae` |
+| Far houses (beyond the buildings' 6 tiles) | the level's own houses: roofs with plain walls per tile; one box per house per 1.5 km block beyond ~4 km; vertex colours, no collision | `farbld/b_<cx>_<cy>.cdae`, `farbld/l2_<bx>_<by>.cdae` (base) |
 | Collision cell | 64 m, the level's own meshes as collision only (roads exact, skin and houses simplified), ProceduralMesh pieces of at most 1,200 triangles per ground type, 3 x 3 cells round the car | `col/c_<i>_<j>.bin` |
 
 The streamer is the GE extension `ticino_stream` (`mod/lua/ge/extensions/ticino/`, loaded by
@@ -131,8 +136,13 @@ The streamer is the GE extension `ticino_stream` (`mod/lua/ge/extensions/ticino/
   the 3 x 3 collision cells of 64 m round the car do, with the right ground type for the tyres. Small street clutter
   never collides. No rebuild runs within 3 frames and 150 ms of a terrain swap.
 - **Forest.** Every tile's trees are made within 4 tiles of the car, all of them near, a share far (`forest.lua`).
+- **Far houses and far trees.** Beyond the streamed buildings and the Forest, static shapes with no collision drawn
+  from the base (`farbld/`, `fartrees/`): one per tile near, one per 1.5 km block far, made a few a frame like the far
+  ground. Whatever changes from one to the other stays until its replacement is there, so a town never opens a hole.
 - **Jumps.** A spawn or a teleport far away pauses the game, makes the window and the near objects at once, and goes
   on.
+- **Free camera.** The streaming follows the free camera (Shift+C) once it is more than 500 m from the car (setting
+  `freeCameraAwayM`), with the game paused until the camera is back and the car's ground is there again.
 - **Warm-up.** Optional, from the console inside the level: `extensions.load('ticino_warmup')` loads once every shape
   of the zones within 3 km and cooks the sign textures, so the game writes its cache now instead of stuttering the
   first time it sees them (about 15 min a region; drive elsewhere and run it again there).

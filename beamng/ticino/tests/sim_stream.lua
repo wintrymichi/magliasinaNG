@@ -1,7 +1,8 @@
 -- Outside the game: stream.lua driven along a straight line at 120 km/h with the game's API stubbed, to catch Lua
 -- errors and count what it does (jumps, moves, objects made and kept, far tiles hidden).
 --   luajit sim_stream.lua <out dir of blocks.py> [seconds]
--- env: SPEED (km/h, 0 stands still), SPAWN_MS (engine cost of a shape to emulate), EVERY (frames between status lines)
+-- env: SPEED (km/h, 0 stands still), SPAWN_MS (engine cost of a shape to emulate), EVERY (frames between status lines),
+-- START="x,y", DIR="dx,dy", TELEPORT="x,y,s", FREECAM="x,y,t0,t1[,v]" (the free camera, below)
 local here = arg[0]:gsub('[^/]*$', '')
 package.path = here .. '../mod/lua/ge/extensions/?.lua;' .. package.path
 local root, seconds = arg[1], tonumber(arg[2] or '120')
@@ -104,6 +105,7 @@ map = map or { reset = function() print("sim: map.reset") end, getMap = function
 if os.getenv('PROF') then dofile(os.getenv('PROF')) end
 local stream = require('ticino/stream')
 stream.PERF_FILE = '/ticino_perf_sim.csv'   -- (root/temp/ticino_perf_sim.csv)
+stream.DIAG = os.getenv('DIAG') ~= '0'      -- the perf csv (tests/test_helper.py reads it); off with DIAG=0
 -- start at the default spawn (Magliaso), drive west-north-west at 120 km/h
 car.x, car.y = 747, -1094
 if os.getenv('START') then car.x, car.y = os.getenv('START'):match('^(%-?[%d.]+),(%-?[%d.]+)$') end
@@ -116,6 +118,16 @@ if os.getenv('DIR') then local a, b = os.getenv('DIR'):match('^(%-?[%d.]+),(%-?[
 local worstLua, t = 0, 0
 local tele = os.getenv('TELEPORT') and {}
 if tele then for v in os.getenv('TELEPORT'):gmatch('[^,]+') do tele[#tele + 1] = tonumber(v) end end
+-- FREECAM="x,y,t0,t1[,v]": the free camera (Shift+C) leaves the car at t0 (seconds of frames, paused or not), flies to
+-- (x, y) at v m/s (no v: there at once) and goes back to the car at t1
+local fc = os.getenv('FREECAM') and {}
+local cam = { free = false }
+if fc then
+  for v in os.getenv('FREECAM'):gmatch('[^,]+') do fc[#fc + 1] = tonumber(v) end
+  commands = { isFreeCamera = function() return cam.free end }
+  core_camera = { getPositionXYZ = function() if cam.free then return cam.x, cam.y, 800 end return car.x, car.y, 2 end }
+end
+local wt, lastAway, lastPaused = 0, nil, nil
 local frames = 0
 while t < seconds do
   local c0 = os.clock()
@@ -125,11 +137,30 @@ while t < seconds do
   frames = frames + 1
   if os.getenv('EVERY') and frames % tonumber(os.getenv('EVERY')) == 0 then
     local q = stream.status()
-    print(string.format("t %.1f queued %d live %d far %d farTrees %d+%d forest %s", t, q.objects.queued, q.objects.live, q.objects.far, q.objects.farTrees or 0, q.objects.farTrees2 or 0, tostring(q.forest and (q.forest.queued or q.forest.items))))
+    print(string.format("t %.1f queued %d live %d far %d farTrees %d+%d farBld %d+%d held %d forest %s", t, q.objects.queued, q.objects.live, q.objects.far, q.objects.farTrees or 0, q.objects.farTrees2 or 0, q.objects.farBld or 0, q.objects.farBld2 or 0, q.objects.bldHeld or 0, tostring(q.forest and (q.forest.queued or q.forest.items))))
   end
   if frames > 3 then worstLua = math.max(worstLua, ms) end
   if os.getenv("SLOW") and frames > 3 and ms > 10 then print(string.format("frame %d: %.1f ms", frames, ms)) end
   if not paused then car.x, car.y = car.x + dir[1] * v * dt, car.y + dir[2] * v * dt; t = t + dt end
+  wt = wt + dt
+  if fc then
+    if wt >= fc[3] and wt < fc[4] then
+      if not cam.free then cam.free, cam.x, cam.y = true, car.x, car.y; print(string.format('free camera on at %.1f s', wt)) end
+      local dx, dy = fc[1] - cam.x, fc[2] - cam.y
+      local d, step = math.sqrt(dx * dx + dy * dy), (fc[5] or 1e9) * dt
+      if d <= step then cam.x, cam.y = fc[1], fc[2] else cam.x, cam.y = cam.x + dx / d * step, cam.y + dy / d * step end
+    elseif cam.free and wt >= fc[4] then
+      cam.free = false
+      print(string.format('free camera off at %.1f s', wt))
+    end
+    local q = stream.status()
+    if q.freeCameraAway ~= lastAway or paused ~= lastPaused then
+      print(string.format('%.1f s: away %s, car held %s, paused %s, car %.0f,%.0f, live %d, far houses %d+%d held %d',
+        wt, tostring(q.freeCameraAway), tostring(q.carHeld), tostring(paused), car.x, car.y, q.objects.live,
+        q.objects.farBld or 0, q.objects.farBld2 or 0, q.objects.bldHeld or 0))
+      lastAway, lastPaused = q.freeCameraAway, paused
+    end
+  end
   -- TELEPORT="x,y,s": put the car at (x, y) after s seconds (a long jump, e.g. Manno -> Bellinzona)
   if tele and t >= tele[3] then
     car.x, car.y = tele[1], tele[2]

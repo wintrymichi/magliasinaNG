@@ -660,6 +660,216 @@ def clip_box(o, core):
                 scale=[round(x1 - x0, 3), round(y1 - y0, 3), sz])
 
 
+# ------------------------------------------------------------------ lakes
+# Every zone covers its lake with WaterBlocks on its own 25 m lattice (water.py: rectangles that may reach far under
+# higher ground, where the water stays under it) at its own level (the median of its DTM over the lake: Lugano
+# 270.477-270.482). clip_box cuts them at the zone cores into sizes that are no longer whole lattice cells, next to
+# blocks of another lattice and level: from San Salvatore straight light and dark lines ran across the lake along the
+# core edges and block sides (PC photos, 2026-11-01). unify_water lays each lake again on ONE lattice at ONE level, as
+# the Malcantone level had it within itself (no lines there).
+WATER_GRID = 25.0        # m: the lattice (water.py GRID and GRID_ELEMENT, the surface grid of the blocks)
+WATER_LEVEL_TOL = 0.05   # m: blocks this close in level are one lake
+WATER_LOW = 0.5          # m: water.py LOW, ground this far under the lake outside the zones' blocks stays dry
+WATER_WET = 0.05         # m: ground this far under the lake inside the zones' blocks stays under water (the lake bed)
+WATER_SAMPLES = 6        # ground samples a side in a cell the lattice cuts
+
+
+def _rects(mask):
+    """Rectangles (r0, r1, c0, c1) that cover every True cell of mask once: the run from the first free cell of a
+    row, grown down while the whole run is free in the next rows."""
+    m = mask.copy()
+    H, W = m.shape
+    out = []
+    for r in range(H):
+        c = 0
+        while c < W:
+            nz = np.flatnonzero(m[r, c:])
+            if not len(nz):
+                break
+            c0 = c + int(nz[0])
+            z = np.flatnonzero(~m[r, c0:])
+            c1 = c0 + (int(z[0]) if len(z) else W - c0)
+            r1 = r + 1
+            while r1 < H and m[r1, c0:c1].all():
+                r1 += 1
+            m[r:r1, c0:c1] = False
+            out.append((r, r1, c0, c1))
+            c = c1
+    return out
+
+
+def _lattice(R, G, ox, oy):
+    """Lattice lines gx, gy (offset ox, oy mod G) over the rectangles R (n, 4: x0, x1, y0, y1) and the share of each
+    cell (rows along y) they cover."""
+    gx = np.arange(math.floor((R[:, 0].min() - ox) / G), math.ceil((R[:, 1].max() - ox) / G) + 1) * G + ox
+    gy = np.arange(math.floor((R[:, 2].min() - oy) / G), math.ceil((R[:, 3].max() - oy) / G) + 1) * G + oy
+    f = np.zeros((len(gy) - 1, len(gx) - 1))
+    for x0, x1, y0, y1 in R:
+        ax = np.clip(np.minimum(gx[1:], x1) - np.maximum(gx[:-1], x0), 0, None) / G
+        ay = np.clip(np.minimum(gy[1:], y1) - np.maximum(gy[:-1], y0), 0, None) / G
+        f += ay[:, None] * ax[None, :]
+    return gx, gy, np.minimum(f, 1.0)
+
+
+def _cut_cells(R, gx, gy, f, level, height):
+    """The cells the rectangles cover in part: rows, cols, must stay wet (ground under the lake in the covered part:
+    the carved bed), must stay dry (ground WATER_LOW under the lake in the part not covered)."""
+    G = gx[1] - gx[0]
+    part = (f > 1e-6) & (f < 1 - 1e-6)
+    rr, cc = np.nonzero(part)
+    wet_, dry_ = np.zeros(len(rr), bool), np.zeros(len(rr), bool)
+    if height is not None and len(rr):
+        s = (np.arange(WATER_SAMPLES) + 0.5) / WATER_SAMPLES * G
+        PX, PY = np.broadcast_arrays(gx[cc][:, None, None] + s[None, None, :], gy[rr][:, None, None] + s[None, :, None])
+        cov = np.zeros(PX.shape, bool)
+        for x0, x1, y0, y1 in R:
+            cov |= (PX >= x0) & (PX < x1) & (PY >= y0) & (PY < y1)
+        g = np.asarray(height(PX.ravel(), PY.ravel()), np.float64).reshape(PX.shape)
+        with np.errstate(invalid="ignore"):
+            wet_ = np.any(cov & (g < level - WATER_WET), axis=(1, 2))
+            dry_ = np.any(~cov & (g < level - WATER_LOW), axis=(1, 2))
+    return rr, cc, wet_, dry_
+
+
+def unify_water(kept, height=None, grid=WATER_GRID):
+    """The WaterBlocks of kept ({group path: [objects]}, after merge_kept) of each lake laid again on one lattice of
+    grid metres at one level (the area-weighted mean of its blocks'). The lattice is the one of a zone's own blocks
+    (the offset that leaves the fewest cells to decide; a lake inside one zone keeps its blocks as they are). A cell
+    the zones' blocks cover in part is water when they cover half of it or more, and in any case when ground under
+    the lake lies in the part they cover (height(x, y): the far ground, NaN unknown: the carved lake bed stays under
+    water), never when ground WATER_LOW under the lake lies in the part they do not cover (a river below a weir, the
+    foot of a dam: water.py's forbidden cells). A cell that is both keeps the zones' blocks as they are in it.
+    Changes kept in place; returns a report."""
+    rep = {"blocks_before": 0, "blocks_after": 0, "lakes": 0, "km2_before": 0.0, "km2_after": 0.0,
+           "cells_kept_wet": 0, "cells_kept_dry": 0, "cells_both": 0}
+    found = []
+    for path, objs in kept.items():
+        for o in objs:
+            if o.get("class") == "WaterBlock" and o.get("rotationMatrix") in (None, [1, 0, 0, 0, 1, 0, 0, 0, 1]):
+                found.append((path, o))
+    if not found:
+        return rep
+    rep["blocks_before"] = len(found)
+    drop = {id(o) for _, o in found}
+    for path in {p for p, _ in found}:
+        kept[path] = [o for o in kept[path] if id(o) not in drop]
+    # lakes: the blocks by level
+    found.sort(key=lambda po: po[1]["position"][2])
+    lakes, cur = [], []
+    for po in found:
+        if cur and po[1]["position"][2] - cur[-1][1]["position"][2] > WATER_LEVEL_TOL:
+            lakes.append(cur)
+            cur = []
+        cur.append(po)
+    lakes.append(cur)
+    G = float(grid)
+    for blocks_ in lakes:
+        R = np.array([[o["position"][0] - o["scale"][0] / 2, o["position"][0] + o["scale"][0] / 2,
+                       o["position"][1] - o["scale"][1] / 2, o["position"][1] + o["scale"][1] / 2]
+                      for _, o in blocks_], np.float64)
+        area = (R[:, 1] - R[:, 0]) * (R[:, 3] - R[:, 2])
+        level = round(float(np.sum(area * [o["position"][2] for _, o in blocks_]) / area.sum()), 3)
+        best = None
+        for ox in sorted({round(float(v) % G, 3) % G for v in np.r_[R[:, 0], R[:, 1]]}):
+            for oy in sorted({round(float(v) % G, 3) % G for v in np.r_[R[:, 2], R[:, 3]]}):
+                gx, gy, f = _lattice(R, G, ox, oy)
+                cut = _cut_cells(R, gx, gy, f, level, height)
+                key = (int((cut[2] & cut[3]).sum()), len(cut[0]))
+                if best is None or key < best[0]:
+                    best = (key, gx, gy, f, cut)
+        _, gx, gy, f, (rr, cc, must_wet, must_dry) = best
+        wet = f >= 0.5
+        rep["cells_kept_wet"] += int((must_wet & ~must_dry & ~wet[rr, cc]).sum())
+        rep["cells_kept_dry"] += int((must_dry & ~must_wet & wet[rr, cc]).sum())
+        wet[rr[must_dry], cc[must_dry]] = False
+        wet[rr[must_wet], cc[must_wet]] = True
+        both = must_wet & must_dry
+        rep["cells_both"] += int(both.sum())
+        wet[rr[both], cc[both]] = False
+        rects = [(gx[c0], gx[c1], gy[r0], gy[r1]) for r0, r1, c0, c1 in _rects(wet)]
+        # a cell that must stay wet and dry (the zones' blocks end at a dam or a weir inside it): their own pieces
+        for r, c in zip(rr[both], cc[both]):
+            for x0, x1, y0, y1 in R:
+                a0, a1, b0, b1 = max(x0, gx[c]), min(x1, gx[c + 1]), max(y0, gy[r]), min(y1, gy[r + 1])
+                if a1 - a0 > 1e-3 and b1 - b0 > 1e-3:
+                    rects.append((a0, a1, b0, b1))
+        rep["km2_before"] += float(area.sum()) / 1e6
+        rep["km2_after"] += sum((x1 - x0) * (y1 - y0) for x0, x1, y0, y1 in rects) / 1e6
+        # the fields of the biggest block (the zones write the same water.py params)
+        path, proto = blocks_[int(np.argmax(area))]
+        for i, (x0, x1, y0, y1) in enumerate(rects):
+            o = dict(proto, name="Lake%d_%03d" % (int(round(level)), i),
+                     position=[round((x0 + x1) / 2, 3), round((y0 + y1) / 2, 3), level],
+                     scale=[round(x1 - x0, 3), round(y1 - y0, 3), proto["scale"][2]])
+            o.pop("persistentId", None)
+            kept[path].append(o)
+            rep["blocks_after"] += 1
+        rep["lakes"] += 1
+    rep["km2_before"], rep["km2_after"] = round(float(rep["km2_before"]), 2), round(float(rep["km2_after"]), 2)
+    return rep
+    rep["blocks_before"] = len(found)
+    drop = {id(o) for _, o in found}
+    for path in {p for p, _ in found}:
+        kept[path] = [o for o in kept[path] if id(o) not in drop]
+    # lakes: the blocks by level
+    found.sort(key=lambda po: po[1]["position"][2])
+    lakes, cur = [], []
+    for po in found:
+        if cur and po[1]["position"][2] - cur[-1][1]["position"][2] > WATER_LEVEL_TOL:
+            lakes.append(cur)
+            cur = []
+        cur.append(po)
+    lakes.append(cur)
+    G = float(grid)
+    for blocks_ in lakes:
+        R = np.array([[o["position"][0] - o["scale"][0] / 2, o["position"][0] + o["scale"][0] / 2,
+                       o["position"][1] - o["scale"][1] / 2, o["position"][1] + o["scale"][1] / 2]
+                      for _, o in blocks_], np.float64)
+        area = (R[:, 1] - R[:, 0]) * (R[:, 3] - R[:, 2])
+        level = round(float(np.sum(area * [o["position"][2] for _, o in blocks_]) / area.sum()), 3)
+        gx = np.arange(math.floor(R[:, 0].min() / G), math.ceil(R[:, 1].max() / G) + 1) * G
+        gy = np.arange(math.floor(R[:, 2].min() / G), math.ceil(R[:, 3].max() / G) + 1) * G
+        f = np.zeros((len(gy) - 1, len(gx) - 1))
+        for x0, x1, y0, y1 in R:
+            ax = np.clip(np.minimum(gx[1:], x1) - np.maximum(gx[:-1], x0), 0, None) / G
+            ay = np.clip(np.minimum(gy[1:], y1) - np.maximum(gy[:-1], y0), 0, None) / G
+            f += ay[:, None] * ax[None, :]
+        f = np.minimum(f, 1.0)
+        wet = f >= 0.5
+        part = (f > 1e-6) & (f < 1 - 1e-6)
+        if height is not None and part.any():
+            rr, cc = np.nonzero(part)
+            s = (np.arange(WATER_SAMPLES) + 0.5) / WATER_SAMPLES * G
+            PX, PY = np.broadcast_arrays(gx[cc][:, None, None] + s[None, None, :], gy[rr][:, None, None] + s[None, :, None])
+            cov = np.zeros(PX.shape, bool)
+            for x0, x1, y0, y1 in R:
+                cov |= (PX >= x0) & (PX < x1) & (PY >= y0) & (PY < y1)
+            g = np.asarray(height(PX.ravel(), PY.ravel()), np.float64).reshape(PX.shape)
+            with np.errstate(invalid="ignore"):
+                must_wet = np.any(cov & (g < level - WATER_WET), axis=(1, 2))
+                must_dry = np.any(~cov & (g < level - WATER_LOW), axis=(1, 2))
+            rep["cells_kept_wet"] += int((must_wet & ~wet[rr, cc]).sum())
+            rep["cells_kept_dry"] += int((must_dry & ~must_wet & wet[rr, cc]).sum())
+            rep["cells_both"] += int((must_wet & must_dry).sum())
+            wet[rr[must_dry], cc[must_dry]] = False
+            wet[rr[must_wet], cc[must_wet]] = True
+        rep["km2_before"] += float(area.sum()) / 1e6
+        rep["km2_after"] += float(wet.sum()) * G * G / 1e6
+        # the fields of the biggest block (the zones write the same water.py params)
+        base = blocks_[int(np.argmax(area))]
+        path, proto = base
+        for i, (r0, r1, c0, c1) in enumerate(_rects(wet)):
+            x0, x1, y0, y1 = gx[c0], gx[c1], gy[r0], gy[r1]
+            o = dict(proto, name="Lake%d_%03d" % (int(round(level)), i),
+                     position=[round((x0 + x1) / 2, 3), round((y0 + y1) / 2, 3), level],
+                     scale=[round(x1 - x0, 3), round(y1 - y0, 3), proto["scale"][2]])
+            o.pop("persistentId", None)
+            kept[path].append(o)
+            rep["blocks_after"] += 1
+        rep["lakes"] += 1
+    return rep
+
+
 # ------------------------------------------------------------------ forest
 def forest_zone(grid, s, types, tiles, item_data, fixed=False):
     """The zone's forest items in its core into tiles {(cx, cy): [rows]}; rows [type, x, y, z, yaw deg, scale].

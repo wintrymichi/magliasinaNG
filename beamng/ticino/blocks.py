@@ -531,6 +531,26 @@ def resized_textures(level_dir, src_mats, base_keys, zone, src_level, dst):
     log("terrain base textures at", px, "px:", len(done))
 
 
+def base_flat(mats, wdir):
+    """{internalName: [r, g, b]} of every terrain material: the mean of its window base texture (art/terrains/w/).
+    The combined base map of the window (stream.lua combinedRows, the helper's base_rgb) gives it to the pixels of a
+    material that has no streamed map (the forest floors, concrete, banks: tiling textures): up to 2026-11-01 those
+    took the first streamed map, the asphalt's light grey (white patches over every wood seen from above)."""
+    from PIL import Image
+    out, mean = {}, {}
+    for m in mats.values():
+        if m.get("class") != "TerrainMaterial" or not m.get("baseColorBaseTex"):
+            continue
+        key = os.path.basename(m["baseColorBaseTex"])
+        if key not in mean:
+            p = os.path.join(wdir, key)
+            mean[key] = [int(round(float(v))) for v in np.asarray(Image.open(p).convert("RGB"), np.float64)
+                         .reshape(-1, 3).mean(0)] if os.path.isfile(p) else None
+        if mean[key] is not None:
+            out[m["internalName"]] = mean[key]
+    return out
+
+
 def collision_cell_m():
     import collision
     return collision.CELL_M
@@ -624,6 +644,7 @@ def main():
         "baseMaterials": [[k, m["internalName"], base_keys[m["baseColorBaseTex"]]] for k, m in src_mats.items()
                           if m.get("class") == "TerrainMaterial" and m["baseColorBaseTex"] in base_keys],
         "baseSizeUnit": zone.cfg.get("base_size_unit", "samples"),
+        "baseFlat": base_flat(mats, os.path.join(dst, "art", "terrains", "w")),
         "tiles": tiles, "far": far, "farRadius": int(zone.cfg.get("far_radius", 16)),
         "collisionRadius": int(zone.cfg.get("collision_radius", 1)),
         # the collision cells (collision.py): cell size in m, the cells that exist, how many round the car's collide

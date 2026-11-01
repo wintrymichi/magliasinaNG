@@ -29,6 +29,7 @@ sys.path.insert(0, HERE)
 import blocks  # noqa: E402
 import collision  # noqa: E402
 import dae2cdae  # noqa: E402
+import farbld  # noqa: E402
 import farlod  # noqa: E402
 import fartrees  # noqa: E402
 import worldmap  # noqa: E402
@@ -177,7 +178,7 @@ def main():
 
     srcs = [region.Src(z, os.path.join(cache, z), grid, light=True) for z in zones]
     dst = os.path.join(a.out, "levels", LEVEL)
-    for d in ("main", "art", "blocks", "far", "col", "z", "tiles", farlod.DIR, fartrees.DIR):
+    for d in ("main", "art", "blocks", "far", "col", "z", "tiles", farlod.DIR, fartrees.DIR, farbld.DIR):
         shutil.rmtree(os.path.join(dst, d), ignore_errors=True)
 
     kept_by_zone, roads, stats = [], [], collections.Counter()
@@ -267,6 +268,11 @@ def main():
     tb_new["terrainFile"] = f"/levels/{LEVEL}/start.ter"
     tb_new["materialTextureSet"] = LEVEL + "TerrainMaterialTextureSet"
     blocks.bng.write_terrain_json(os.path.join(dst, "start.terrain.json"), LEVEL, "start", grid.W, layers)
+    # the far ground (also the coarse levels' source, farlod below) tells the lakes' carved bed from dry low ground: the
+    # zones' WaterBlocks of every lake laid again on one lattice at one level (lines across the lake at the core edges)
+    tile_m = grid.C * grid.sq
+    ground = farlod.read_slices(sl, zones, sorted(far), tile_m)
+    log("lakes on one lattice:", region.unify_water(kept, lambda x, y: ground.heights(x, y, [grid.x0, grid.y0])))
     region.write_scene(kept, dst, tb_new)
 
     info["title"] = "Ticino"
@@ -302,13 +308,15 @@ def main():
         return None
     log("scene references to compiled zone shapes:", dae2cdae.rewrite_refs(dst, zpath))
 
-    # the far ground's coarse levels to the horizon (farlod.py): ~110 MB of the base, read from the slices' far tiles
-    tile_m = grid.C * grid.sq
-    ground = farlod.read_slices(sl, zones, sorted(far), tile_m)
+    # the far ground's coarse levels to the horizon (farlod.py): ~110 MB of the base, from the slices' far tiles
     far_lod = farlod.build(ground, os.path.join(dst, farlod.DIR))
     # the woods beyond the streamed Forest as static far-tree tiles (fartrees.py), from the slices' tree tiles
     far_trees, far_trees2 = fartrees.build(fartrees.read_slices(sl, zones), plan["forestTypes"], [grid.x0, grid.y0],
                                            tile_m, os.path.join(dst, fartrees.DIR), level=LEVEL, workers=4)
+    # the houses beyond the streamed buildings as static far-house tiles and blocks (farbld.py), made from the slices'
+    # own building shapes, so a far house is the house the car finds when it gets there
+    far_bld, far_bld2 = farbld.build(farbld.read_slices(sl, zones), [grid.x0, grid.y0], tile_m,
+                                     os.path.join(dst, farbld.DIR), farbld.texture_means(dst), workers=4)
     # the Ticino map of the M key (worldmap.py, ui/ui-vue/mods/ticino): the far ground's colours and the AI roads
     worldmap.build(ground.H, ground.C, grid.x0 + ground.cx0 * tile_m, grid.y0 + ground.cy0 * tile_m, tile_m / farlod.K,
                    worldmap.roads_of([o for objs in kept.values() for o in objs]), os.path.join(dst, worldmap.DIR),
@@ -324,10 +332,12 @@ def main():
                           for k, m in mats.items() if m.get("class") == "TerrainMaterial"
                           and os.path.splitext(os.path.basename(m["baseColorBaseTex"]))[0] in base_keys],
         "baseSizeUnit": grid.cfg.get("base_size_unit", "samples"),
+        "baseFlat": blocks.base_flat(wm, os.path.join(dst, "art", "terrains", "w")),
         "tiles": tiles, "forestTiles": ftiles, "forestTypes": plan["forestTypes"],
         "far": sorted(far), "farRadius": int(grid.cfg.get("far_radius", 16)), "farLod": far_lod,
         "farTrees": far_trees,
         "farTrees2": far_trees2, "farTrees2Tiles": fartrees.L2_TILES,
+        "farBld": far_bld, "farBld2": far_bld2, "farBld2Tiles": farbld.L2_TILES,
         "collisionRadius": int(grid.cfg.get("collision_radius", 1)),
         "colCell": blocks.collision_cell_m(), "colCells": sorted(cells),
         "colGroundTypes": plan["groundTypes"], "colPieceTris": blocks.collision_piece_tris(),

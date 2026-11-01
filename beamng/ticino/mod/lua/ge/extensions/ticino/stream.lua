@@ -21,7 +21,8 @@
 -- Console:
 --   ticino_stream.status()            what is loaded, the last moves' timings
 --   ticino_stream.setFocus(x, y)      stream around (x, y) instead of the car (nil: back to the car); for tests
---   ticino_stream.followCamera(true)  stream around the camera (free camera flights)
+--   ticino_stream.followCamera(true)  stream around the camera always (tests; the free camera away from the car is
+--                                     followed by itself, FOLLOW_FREE_CAMERA)
 --   ticino_stream.dropAIRoads()       delete the AI DecalRoads once the AI map is built (each re-clips on every
 --                                     terrain change: to measure)
 -- With "diagnostics": true in <user folder>/settings/ticino.json every move is logged to <user folder>/ticino_perf.csv.
@@ -47,6 +48,10 @@ M.FOREST_JUMP_MS = 1000    -- forest items made at a jump, while the game is pau
 M.FAR_JUMP_MS = 500        -- far ground tiles made at a jump (the mountains round the new place; the rest comes after)
 M.OBJ_JUMP_MS = 1500       -- objects of rings 1..NEAR_RINGS made at a jump (ring 0 is always made whole)
 M.FAR_EVERY_MS = 1         -- far ground made each frame beside the objects' queue (it came only when all was idle)
+M.FAR_BLD_JUMP_MS = 300    -- far houses made at a jump after the near rings: the town round the new place stands at once
+                           -- (rings 2-6 as far houses, objects.lua F.fill) while its streamed houses come over a minute
+M.FAR_BLD_BURST_MS = 2     -- of each burst, for the far houses first: behind a long queue (a jump, a fast free camera)
+                           -- they got only what the objects left, i.e. nothing
 M.NO_DYNAMIC_CUBEMAP = false  -- turn off dynamicCubemap on the level's materials at the start (PC test 2026-10-30)
 M.BURST_EVERY_MS = 1000    -- > 0: the far objects, trees and far ground come in bursts of BURST_MS once every this
 M.BURST_MS = 20            -- many ms, not a few ms in every frame (each frame that changes the scene costs the engine:
@@ -81,7 +86,13 @@ M.DIAG = false             -- write ticino_frames.csv and ticino_perf.csv (setti
 M.PRESETS = {
   standard = {},
   light = { forest = { RADIUS = 3, SHARE = { [0] = 1.0, 1.0, 0.5, 0.25 }, CACHE_TILES = 80 },
-            objects = { CACHE_TILES = 250, FAR_TREES_RADIUS = 24, FAR_TREES_BLOCKS0 = 1 }, level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
+            objects = { CACHE_TILES = 250, FAR_TREES_RADIUS = 24, FAR_TREES_BLOCKS0 = 1, FAR_BLD_RADIUS = 24 },
+            level = { farRadius = 10 }, stream = { VIEW_KM = 25 } },
+  -- aerial shots (michi 2026-11-01, "riprese aeree comunque dettagliate"): the far trees and houses in their fine
+  -- level one block farther (4.6-5.8 km) and both out to ~21 km, the 12 m far ground to ~7 km, 80 km of view, and the
+  -- free camera taking the streaming from 200 m. More to draw: for recording, not for driving on a weak PC
+  aerial = { objects = { FAR_TREES_RADIUS = 56, FAR_TREES_BLOCKS0 = 3, FAR_BLD_RADIUS = 56, FAR_BLD_BLOCKS0 = 3 },
+             level = { farRadius = 20 }, stream = { VIEW_KM = 80, FREE_AWAY_M = 200, FREE_BACK_M = 160 } },
 }
 -- How far the camera sees (michi 2026-10-31, "io voglio vedere di più da lontano"): with the far levels of the base
 -- (farlod.py, objects.lua FAR_LOD) the ground reaches the whole of Ticino, so LevelInfo.visibleDistance goes to VIEW_KM
@@ -120,6 +131,17 @@ M.TERRAIN_SHADOWS = true   -- false: the TerrainBlock casts no sun shadows (Beam
                            -- its screenshots were pixel-identical without; settings "terrainShadows": false). Off only
                            -- after the same screenshot check in the Alps (mountain shadows over the valleys)
 M.ENGINE_TOP = 6           -- slow-frame lines name the engine's this many largest subsystems of that frame
+-- The free camera (Shift+C) farther than FREE_AWAY_M from the car takes the streaming along: the terrain window, the
+-- objects, the trees and the far things follow the camera (michi 2026-11-01: "nello streaming puoi fare che segue anche
+-- la cam libera quando schiaccio SHIFT + C?"). The car's ground (the window) and its collision stay behind, so the game
+-- is paused meanwhile (the car and the traffic wait where they are) and goes on once the camera is back within
+-- FREE_BACK_M or the free camera is off, and the car's surroundings are made again. Nearer than FREE_AWAY_M (drone shots
+-- of the car) the streaming stays with the car and nothing is paused. Settings: "followFreeCamera": false turns it off,
+-- "freeCameraAwayM" the distance.
+M.FOLLOW_FREE_CAMERA = true
+M.FREE_AWAY_M = 500
+M.FREE_BACK_M = 400
+M.FREE_BACK_FRAMES = 3     -- frames after the camera came back before the game goes on (the car's rings queued first)
 
 local st = nil
 
@@ -147,24 +169,82 @@ local function pause(on)
     if st.holdUntil then st.holdUntil = nil   -- a jump during the hold after a map.reset: keep its wasPaused
     else st.wasPaused = s.getPause and s.getPause() or false end
     s.pause(true)
-  elseif not st.wasPaused then
+  elseif not st.wasPaused and not st.carHold then
     s.pause(false)
   end
 end
 
-local function focus()
-  if st.focus then return st.focus[1], st.focus[2] end
-  if not st.useCamera then
-    local veh = getPlayerVehicle and getPlayerVehicle(0)
-    if veh then
-      local p = veh:getPosition()
-      return p.x, p.y
+-- The game paused while the free camera has the streaming away from the car (st.away), and going on once it is back
+-- and the car's near rings, collision cells and collision rebuild are made again. A jump's own pause (st.resumeIn, the
+-- hold after a map.reset) runs as usual meanwhile, but never unpauses while st.carHold is set (pause(false)); the
+-- player's own pause state is taken before either pause (st.wasPaused during a jump). Unpaused by hand while away (the
+-- car has no ground under it there): paused again.
+local function holdCar()
+  local s = sta()
+  if not s or not s.pause then return end
+  local busy = st.resumeIn or st.holdUntil
+  if st.away then
+    st.backFrames = nil
+    if not st.carHold then
+      -- (not "busy and st.wasPaused or getPause()": with wasPaused false that gave the jump's own pause, true, and
+      -- the game never went on again; tests/sim_stream.lua FREECAM during the hold after the start's map.reset)
+      local userPaused
+      if busy then userPaused = st.wasPaused or false
+      else userPaused = s.getPause and s.getPause() or false end
+      st.carHold = { userPaused = userPaused }
+      if not busy then s.pause(true) end
+      log('I', 'ticino', 'free camera away from the car: the streaming follows the camera, the game is paused')
+    elseif not busy and s.getPause and not s.getPause() then
+      s.pause(true)
     end
+  elseif st.carHold then
+    if busy then return end            -- back during a jump's pause: the car's rings are checked after it
+    st.backFrames = (st.backFrames or M.FREE_BACK_FRAMES) - 1
+    if st.backFrames > 0 or objects.nearPending(M.NEAR_RINGS) or objects.colsPending() or objects.colDirty() then
+      return
+    end
+    if not st.carHold.userPaused then s.pause(false) end
+    st.carHold, st.backFrames = nil, nil
+    log('I', 'ticino', 'free camera back at the car: the game goes on')
   end
-  if core_camera and core_camera.getPositionXYZ then
-    local x, y = core_camera.getPositionXYZ()
-    return x, y
+end
+
+-- Is the view the free camera? (as BeamNG.Earth core.lua freeCamera: commands.isFreeCamera, else the active camera)
+local function freeCamera()
+  local c = rawget(_G, 'commands')
+  if c and c.isFreeCamera then
+    local ok, v = pcall(c.isFreeCamera)
+    if ok then return v and true or false end
   end
+  local cam = rawget(_G, 'core_camera')
+  if cam and cam.getActiveCamName then
+    local ok, n = pcall(cam.getActiveCamName)
+    if ok then return n == 'free' end
+  end
+  return false
+end
+
+-- The point the streaming follows: a set focus, the camera (followCamera(true); the free camera away from the car,
+-- FOLLOW_FREE_CAMERA), else the car. The third value: the free camera took the streaming from the car (st.away).
+local function focus()
+  if st.focus then return st.focus[1], st.focus[2], false end
+  local cx, cy
+  local cam = rawget(_G, 'core_camera')
+  if cam and cam.getPositionXYZ then
+    local ok, x, y = pcall(cam.getPositionXYZ)
+    if ok and type(x) == 'number' then cx, cy = x, y end
+  end
+  if st.useCamera and cx then return cx, cy, false end
+  local veh = getPlayerVehicle and getPlayerVehicle(0)
+  if veh then
+    local p = veh:getPosition()
+    if M.FOLLOW_FREE_CAMERA and cx and freeCamera() then
+      local lim = st.away and M.FREE_BACK_M or M.FREE_AWAY_M
+      if (cx - p.x) ^ 2 + (cy - p.y) ^ 2 > lim * lim then return cx, cy, true end
+    end
+    return p.x, p.y, false
+  end
+  if cx then return cx, cy, false end
   return nil
 end
 
@@ -305,7 +385,10 @@ local function baseRows(key, wx, wy, yieldFn)
 end
 
 -- BASE_COMBINED: one map whose every pixel comes from the base map of the material under its centre sample (the
--- .ter's layer rows: terParts[W + 3 + row from the south]); materials without a streamed map take the first one.
+-- .ter's layer rows: terParts[W + 3 + row from the south]). A material without a streamed map (the forest floors,
+-- concrete, banks: tiling textures) gives its pixels its own colour (stream.json baseFlat: the mean of its texture);
+-- up to 2026-11-01 they took the first map, the asphalt's light grey: white patches over every wood from San Salvatore.
+-- A base without baseFlat keeps that old way.
 local function combinedRows(terParts, wx, wy, yieldFn)
   local cfg = st.cfg
   local P, W = cfg.basePx, cfg.window
@@ -316,10 +399,14 @@ local function combinedRows(terParts, wx, wy, yieldFn)
     keyRows[i] = baseRows(key, wx, wy, yieldFn)
     keyIdx[key] = i
   end
-  local lk = {}
+  local lk, flat = {}, {}
+  local bf = cfg.baseFlat or {}
   for li, name in ipairs(cfg.materials or {}) do
     local key = st.layerKey[name]
-    lk[li - 1] = key and keyIdx[key] or 1
+    local c = bf[name]
+    if key and keyIdx[key] then lk[li - 1] = keyIdx[key]
+    elseif c then flat[li - 1] = string.char(c[1], c[2], c[3])
+    else lk[li - 1] = 1 end
   end
   local out = {}
   for i = 0, Wp - 1 do
@@ -327,8 +414,14 @@ local function combinedRows(terParts, wx, wy, yieldFn)
     local lrow = terParts[W + 3 + rs * P + half]
     local buf = {}
     for x = 0, Wp - 1 do
-      local src = keyRows[lk[lrow:byte(x * P + half + 1)] or 1][i + 1]
-      buf[x + 1] = src:sub(3 * x + 1, 3 * x + 3)
+      local l = lrow:byte(x * P + half + 1)
+      local f = flat[l]
+      if f then
+        buf[x + 1] = f
+      else
+        local src = keyRows[lk[l] or 1][i + 1]
+        buf[x + 1] = src:sub(3 * x + 1, 3 * x + 3)
+      end
     end
     out[i + 1] = table.concat(buf)
     if i % 32 == 31 then yieldFn() end
@@ -531,12 +624,15 @@ local function jump(x, y)
   while not objects.step(clock, math.max(1, M.OBJ_JUMP_MS - (clock() - tObj)), M.NEAR_RINGS)
     and clock() - tObj < M.OBJ_JUMP_MS and objects.nearPending(M.NEAR_RINGS) do end
   mark('objects')
-  objects.updateCols(x, y, true)
-  objects.stepCols(clock, nil)
+  if not st.away then                 -- (the free camera away from the car: its cells stay where they are)
+    objects.updateCols(x, y, true)
+    objects.stepCols(clock, nil)
+  end
   mark('cols')
   forest.retarget(cx, cy)
   forest.step(clock, M.FOREST_JUMP_MS, 1e9)
   mark('forest')
+  objects.stepFarBld(clock, M.FAR_BLD_JUMP_MS)
   objects.stepFar(clock, M.FAR_JUMP_MS)
   mark('far')
   log('I', 'ticino', string.format('jump to tile (%d, %d)%s: %d objects and %d trees of the old place removed, far ground '
@@ -614,10 +710,19 @@ local function readSettings(cfg)
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
   if type(s.fog) == 'number' and s.fog >= 0 then M.FOG_DENSITY = s.fog end
+  if type(s.followFreeCamera) == 'boolean' then M.FOLLOW_FREE_CAMERA = s.followFreeCamera end
+  if type(s.freeCameraAwayM) == 'number' and s.freeCameraAwayM >= 0 then
+    M.FREE_AWAY_M, M.FREE_BACK_M = s.freeCameraAwayM, s.freeCameraAwayM * 0.8
+  end
   -- "treeKm": how far the far trees reach (objects.lua far trees: fine tiles near, coarse blocks beyond; 0: none,
   -- only the Forest's ~1.5 km)
   if type(s.treeKm) == 'number' and s.treeKm >= 0 then
     objects.FAR_TREES_RADIUS = math.floor(s.treeKm * 1000 / (cfg.cell * cfg.square) + 0.5)
+  end
+  -- "bldKm": how far the far houses reach (objects.lua far buildings: the houses' own roofs near, boxes beyond; 0: none,
+  -- only the streamed houses' ~2.3 km)
+  if type(s.bldKm) == 'number' and s.bldKm >= 0 then
+    objects.FAR_BLD_RADIUS = math.floor(s.bldKm * 1000 / (cfg.cell * cfg.square) + 0.5)
   end
   applyFields(s, cfg, 'setting')
   applyFields(readJson(M.CFG_FILE), cfg, 'override')
@@ -680,6 +785,9 @@ local function start()
   objects.init(cfg, M.LEVEL, group)
   forest.init(cfg, M.LEVEL, objects.markColDirty)
   objects.FAR_TREES_INNER, objects.forestMade = forest.RADIUS, forest.made   -- far trees from the Forest's edge
+  -- far houses from the streamed houses' radius (a preset may cap it with objects.GROUP_R)
+  local capB = objects.GROUP_R and objects.GROUP_R[objects.FAR_BLD_GROUP]
+  if capB and capB < objects.FAR_BLD_INNER then objects.FAR_BLD_INNER = capB end
   M.applyView()
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, #(cfg.far or {})))
@@ -838,8 +946,10 @@ local function onUpdate(dtReal)
       log('I', 'ticino', string.format('AI map read again after the window move: %.1f ms%s', ms, ok and '' or ' (failed)'))
     end
   end
-  local x, y = focus()
+  local x, y, away = focus()
   if not x then return end
+  st.away = away or nil
+  holdCar()
   if st.lastXY and dtReal and dtReal > 0 then        -- the car's speed, smoothed over ~1 s
     local v = math.sqrt((x - st.lastXY[1]) ^ 2 + (y - st.lastXY[2]) ^ 2) / dtReal
     st.speed = (st.speed or v) + (v - (st.speed or v)) * math.min(1, dtReal)
@@ -870,7 +980,8 @@ local function onUpdate(dtReal)
     return
   end
   cx, cy = cellHyst(x, y)
-  if objects.updateCols(x, y) and not st.objRec then
+  -- the collision cells stay round the car while the free camera has the streaming (the game is paused meanwhile)
+  if not st.away and objects.updateCols(x, y) and not st.objRec then
     local c = objects.colCell and objects.colCell()
     st.objRec = { time = os.date('%H:%M:%S'), kind = 'colcell', wx = c and c[1], wy = c and c[2], objsQueued = 0 }
   end
@@ -893,7 +1004,7 @@ local function onUpdate(dtReal)
   -- the collision rebuild first, as soon as the cells and the colliders of the queue (it starts with them) are made
   -- and no terrain swap is too recent: the window's files and the drawn objects wait a frame. A rebuild only for props
   -- or trees waits (RELOAD_DEFER_MS at most) for the next one of the collision cells, which then takes them along.
-  if objects.colDirty() then
+  if objects.colDirty() and not st.away then
     st.dirtySince = st.dirtySince or clock()
     local due = (objects.colUrgent and objects.colUrgent()) or clock() - st.dirtySince > M.RELOAD_DEFER_MS
     if due and not objects.colsPending() and not objects.collidersPending() then
@@ -970,6 +1081,7 @@ local function onUpdate(dtReal)
     -- the objects take the whole burst, the trees what is left: giving the trees a share (and one Forest a burst)
     -- made more slow bursts of ~220 ms (each frame that touches a Forest costs that much: PC tests H1, H2)
     if objects.delsPending() then objects.stepDels(clock, M.BURST_DEL_MS) end
+    if objects.farBldPending() then objects.stepFarBld(clock, M.FAR_BLD_BURST_MS) end
     if objects.pending() then objects.step(clock, math.max(1, M.BURST_MS - (clock() - t0))) end
     objects.BURSTING = false
     local left = M.BURST_MS - (clock() - t0)
@@ -1000,7 +1112,12 @@ local function onUpdate(dtReal)
       changed()
       return
     end
-    -- far trees whose tile the Forest has made now (objects.lua far trees)
+    -- far houses whose streamed houses are made now, far trees whose tile the Forest has made now (objects.lua)
+    if objects.farBldHeld() and mayChange() and objects.dropFarBld(clock) > 0 then
+      st.act = 'far houses drop'
+      changed()
+      return
+    end
     if objects.farTreesHeld() and mayChange() and objects.dropFarTrees(clock) > 0 then
       st.act = 'far trees drop'
       changed()
@@ -1029,7 +1146,7 @@ function M.status()
   if not st then return 'off' end
   local s = objects.stats()
   return { window = st.window, cell = st.cell, moves = st.moves, job = st.job and { st.job.wx, st.job.wy } or nil,
-           act = st.act, objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), files = files.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
+           act = st.act, freeCameraAway = st.away or false, carHeld = st.carHold ~= nil, objects = s, forest = forest.stats(), last = st.perf[#st.perf], helper = helper.stats(), files = files.stats(), tcacheMisses = st.tcache.misses, bcacheMisses = st.bcache.misses }
 end
 
 -- Collision at run time (tests): radius in tiles, list of groups that never collide (e.g. {'level_objects/terrain_skin'}).
