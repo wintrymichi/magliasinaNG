@@ -21,7 +21,8 @@ a GPU with 8 GB of video memory or more.
 
 The installer (`install/install_ticino.ps1`):
 
-- downloads the zips of the release (90 in October 2026: `ticino_base_<n>.zip` with the scene and the streaming mod, one
+- downloads the zips of the release (93 in November 2026: the base in four parts, `ticino_base_1.zip` with the scene,
+  the streaming mod and the map, `_2` the far ground, `_3` the far trees, `_4` the far houses; one
   `ticino_<zone>_<n>.zip` per zone) into `mods`, resumes a broken download where it stopped and checks every zip
   by its sha256 before it goes into `mods` (a zip already there and checked is skipped: an update downloads only
   the zips that changed);
@@ -118,7 +119,7 @@ JSON. `ticino_stream_cfg.json` in the user folder root still overrides everythin
 | Terrain window in the game | one TerrainBlock of 2,048 x 2,048 samples (3.07 km) | written to `<user>/temp/ticino/` |
 | Base colour of the open ground | 4 samples a pixel, one combined map for the window (woods, banks and concrete in their own colour, `stream.json` `baseFlat`) | `blocks/base/<texture>_<bx>_<by>.rgb` |
 | Lakes | WaterBlocks of 25 m cells, one lattice and one level per lake for all the zones | `main/MissionGroup/level_objects/Water` (base) |
-| Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, no collision, 16 tiles round the car | `far/f_<cx>_<cy>.cdae` |
+| Far ground (outside the window) | a mesh every 12 m per tile, vertex colours, the far ground's own normals (continuous across tiles), no collision, 16 tiles round the car | `farlod/l0_<cx>_<cy>.cdae` (base, `stream.json` `farFine`; the slices' `far/f_<cx>_<cy>.cdae` are its source) |
 | Far houses (beyond the buildings' 6 tiles) | the level's own houses: roofs with plain walls per tile; one box per house per 1.5 km block beyond ~4 km; vertex colours, no collision | `farbld/b_<cx>_<cy>.cdae`, `farbld/l2_<bx>_<by>.cdae` (base) |
 | Collision cell | 64 m, the level's own meshes as collision only (roads exact, skin and houses simplified), ProceduralMesh pieces of at most 1,200 triangles per ground type, 3 x 3 cells round the car | `col/c_<i>_<j>.bin` |
 
@@ -228,7 +229,8 @@ On michi's PC (RTX 4070, 2560 x 1440, BeamNG 0.40.3-0.40.4), October 2026:
 
 ## Ticino server (server mode)
 
-In server mode only the base pack (`ticino_base_*.zip`, 270 MB: the level, materials, textures, Lua) is in
+In server mode only the base packs (`ticino_base_*.zip`: the level, materials, textures, Lua, the far ground, trees and
+houses) are in
 `<user>/mods`; the 87 zone packs (51.6 GB) stay in a data folder (`<user>\ticino_data` by default). While the game
 runs, `ticino_server.exe` (`server/ticino_server.py`) puts the files of the tiles round the car into
 `<user>/temp/ticino/srv/` (objects and trees files, collision cells, far ground, and every level shape converted to

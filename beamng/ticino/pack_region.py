@@ -57,6 +57,31 @@ def pack(files, dist, name, limit_gb=LIMIT_GB, level=6):
     return made
 
 
+FIXED_DATE = (2026, 1, 1, 0, 0, 0)
+
+
+def pack_fixed(files, path, level=6, limit_gb=LIMIT_GB):
+    """files [(path, name in the mod)] into ONE zip at path whose bytes depend only on the names and contents of the
+    files (sorted by name, one date, one mode): a part made again from the same files is byte for byte the same zip, so
+    the installer, which keeps a zip in mods with the release's size and sha256, does not download it again. The base
+    comes in such parts (region_base: the far ground, trees and houses change far less often than the scene and the
+    Lua). Returns path; stops when the zip would pass limit_gb (a release asset must stay under 2 GB)."""
+    tmp = path + ".part"
+    with zipfile.ZipFile(tmp, "w", allowZip64=True) as z:
+        for p, n in sorted(files, key=lambda t: t[1]):
+            zi = zipfile.ZipInfo(n, date_time=FIXED_DATE)
+            zi.external_attr = 0o644 << 16
+            stored = n.lower().endswith(package.STORED) or "/blocks/" in n
+            zi.compress_type = zipfile.ZIP_STORED if stored else zipfile.ZIP_DEFLATED
+            with open(p, "rb") as f:
+                z.writestr(zi, f.read(), compresslevel=None if stored else level)
+            if z.fp.tell() > limit_gb * 1e9:
+                raise SystemExit("%s passes %.1f GB: split the part" % (os.path.basename(path), limit_gb))
+    os.replace(tmp, path)
+    print("%s %.2f GB (%d files)" % (os.path.basename(path), os.path.getsize(path) / 1e9, len(files)), flush=True)
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", required=True)

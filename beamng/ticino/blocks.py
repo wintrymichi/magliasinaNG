@@ -371,17 +371,42 @@ def write_far(zone, H, L, z0, maxh, materials, level_dir, src_mats, src_level, o
                         f = g.shape[0] / n
                         rr, cc = np.meshgrid((r * f).astype(int), (c * f).astype(int), indexing="ij")
                         col[sel] = g[np.clip(rr, 0, g.shape[0] - 1), np.clip(cc, 0, g.shape[1] - 1)][sel]
-            far_cell(os.path.join(out_dir, f"f_{cx}_{cy}.cdae"), h, col, k, step, zone.sq)
+            far_cell(os.path.join(out_dir, f"f_{cx}_{cy}.cdae"), h, col, k, step, zone.sq,
+                     far_normals(H, r, c, step, zone.sq, z0, maxh))
             keys.append(f"{cx}_{cy}")
     bng.write_materials(os.path.join(out_dir, "far.materials.json"), [far_material()])
     log("far ground:", len(keys), "cells,", k - 1, "x", k - 1, "squares of", step * zone.sq, "m each")
     return keys
 
 
-def far_cell(path, h, col, k, step, sq):
-    """One far tile: k x k heights h and colours col (0..1) every step samples of sq m, from the cell's corner."""
+def far_normals(H, r, c, step, sq, z0, maxh):
+    """Unit normals (k, k, 3) of the far ground at the samples r x c of H (uint16 heights): central differences one far
+    step to either side, read beyond the tile, so a border vertex has the same normal in both tiles. Without them cdae
+    took the normals from the faces, the skirt's too: every border vertex leant 45 degrees out of its tile, a line of
+    shade along every tile edge seen from the air (PC photos from San Salvatore, 2026-11-01)."""
+    n = H.shape[0]
+    rr = np.clip(np.concatenate([[r[0] - step], r, [r[-1] + step]]), 0, n - 1)
+    cc = np.clip(np.concatenate([[c[0] - step], c, [c[-1] + step]]), 0, n - 1)
+    hh = H[rr][:, cc].astype(np.float64) / 65535.0 * maxh + z0
+    dr = (rr[2:] - rr[:-2]) * sq
+    dc = (cc[2:] - cc[:-2]) * sq
+    dzdy = (hh[2:, 1:-1] - hh[:-2, 1:-1]) / np.where(dr > 0, dr, 1.0)[:, None] * (dr > 0)[:, None]
+    dzdx = (hh[1:-1, 2:] - hh[1:-1, :-2]) / np.where(dc > 0, dc, 1.0)[None, :] * (dc > 0)[None, :]
+    N = np.stack([-dzdx, -dzdy, np.ones_like(dzdx)], -1)
+    return N / np.linalg.norm(N, axis=-1, keepdims=True)
+
+
+def far_cell(path, h, col, k, step, sq, normals=None):
+    """One far tile: k x k heights h and colours col (0..1) every step samples of sq m, from the cell's corner;
+    normals (k, k, 3) (far_normals; None: from h alone, one-sided at the tile's edge). The skirt takes its border
+    vertex's normal and colour (where it shows, it looks like the ground over it)."""
     X, Y = np.meshgrid(np.arange(k) * step * sq, np.arange(k) * step * sq)
     V = np.stack([X, Y, h], -1).reshape(-1, 3)
+    if normals is None:
+        gy, gx = np.gradient(np.asarray(h, np.float64), step * sq)
+        normals = np.stack([-gx, -gy, np.ones_like(gx)], -1)
+        normals = normals / np.linalg.norm(normals, axis=-1, keepdims=True)
+    N = np.asarray(normals, np.float64).reshape(-1, 3)
     cols = np.concatenate([col.reshape(-1, 3), np.ones((k * k, 1))], 1)
     ii = np.arange(k * k).reshape(k, k)
     a, b, c2, d = ii[:-1, :-1].ravel(), ii[:-1, 1:].ravel(), ii[1:, :-1].ravel(), ii[1:, 1:].ravel()
@@ -400,7 +425,7 @@ def far_cell(path, h, col, k, step, sq):
     C8 = np.clip(np.round(np.concatenate([cols, cols[ring]]) * 255), 0, 255).astype(np.uint8)
     if os.path.lexists(path):
         os.remove(path)
-    cdae.write(path, np.concatenate([V, Vs]), np.concatenate([T, Ts]),
+    cdae.write(path, np.concatenate([V, Vs]), np.concatenate([T, Ts]), normals=np.concatenate([N, N[ring]]),
                uvs=np.zeros((base + nr, 2)), material=FAR_MAT, colors=C8, object_name="farground")
 
 

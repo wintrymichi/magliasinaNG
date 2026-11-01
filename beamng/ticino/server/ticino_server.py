@@ -729,8 +729,11 @@ def download(user, data, tag, zones=None):
                 os.remove(part)
                 raise SystemExit("%s: sha256 differs, removed; run download again" % a["name"])
         if base:
+            # an older base, not the other parts of this one (the base comes as ticino_base_1..4.zip since 2026-11-01)
+            names = {b["name"] for b in assets if b["name"].startswith("ticino_base")}
             for old in glob.glob(os.path.join(mods, "ticino_base_*.zip")):
-                os.remove(old)
+                if os.path.basename(old) not in names:
+                    os.remove(old)
         os.replace(part, dst)
         done += a["size"]
         log("%s %.0f MB in %.0f s (%.1f of %.1f GB)" % (a["name"], a["size"] / 1e6, time.time() - t0, done / 1e9,

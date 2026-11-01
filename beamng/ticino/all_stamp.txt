@@ -12,3 +12,4 @@
 2026-11-01T13:37:44Z far houses: a failing tile is left out, NaN corners dropped
 2026-11-01 14:10 forest pool warm + GC hold by frames
 2026-11-01T14:14:32Z far ground and far trees get a share of every burst (FAR_BURST_MS)
+2026-11-01T14:53:02Z far ground with its own normals (no lines along the tile edges), base in 4 fixed parts

@@ -41,6 +41,10 @@ M.COL_LAZY = 0             -- 1 tried: 25 cells of 128 m were 1.1 M triangles, a
 M.SLOW_SPAWN_MS = 40       -- an object (or far tile) that takes longer to make is logged with its shape
 M.CACHE_TILES = 400
 M.FAR_SHAPE = '/levels/%s/far/f_%d_%d.cdae'
+-- The base's own far tiles (stream.json farFine, farlod.build_fine: the slices' far tiles made again with the far
+-- ground's normals; the slices' lean 45 degrees at every border, a line of shade along every tile edge seen from the
+-- air): in the base, so loaded as they are, never waited for from the Ticino server.
+M.USE_FAR_FINE = true
 M.TILE_FILE = '/levels/%s/tiles/o_%d_%d.json'
 M.COL_FILE = '/levels/%s/col/c_%d_%d.bin'
 M.COL_XY_OFF_CM = 16384     -- collision.XY_OFF_CM
@@ -79,6 +83,8 @@ function M.init(cfg, level, group)
   S.has = cfg.tiles or {}
   S.farHas = {}
   for _, k in ipairs(cfg.far or {}) do S.farHas[k] = true end
+  S.farFine = M.USE_FAR_FINE and type(cfg.farFine) == 'string' and cfg.farFine ~= '' and ('/levels/%s/' .. cfg.farFine)
+    or nil
   S.failedKey = {}                  -- entries whose object could not be made (far houses do not wait for them)
   farSets(cfg)
   S.col = { size = cfg.colCell, R = (cfg.colRadius or 1) + M.COL_LAZY, has = {}, live = {}, cell = nil, queue = {},
@@ -785,7 +791,7 @@ function M.updateFar(cx, cy, wcx, wcy, n)
   -- making all 1,000 at once took 7.8 s at the first jump)
   local q = {}
   for key, w in pairs(want) do
-    if not S.farLive[key] and (w[2] > 0 or files.far(key)) then q[#q + 1] = w end
+    if not S.farLive[key] and (w[2] > 0 or S.farFine or files.far(key)) then q[#q + 1] = w end
   end
   table.sort(q, function(a, b) if a[5] ~= b[5] then return a[5] < b[5] end return a[1] < b[1] end)
   S.farQueue, S.farPos = q, 1
@@ -925,7 +931,8 @@ function M.stepFar(clock, budgetMs)
         end
       end
       local o = createObject('TSStatic')
-      o:setField('shapeName', 0, k == 0 and files.map(string.format(M.FAR_SHAPE, S.level, tx, ty))
+      o:setField('shapeName', 0, k == 0 and (S.farFine and string.format(S.farFine, S.level, tx, ty)
+          or files.map(string.format(M.FAR_SHAPE, S.level, tx, ty)))
         or string.format(M.FARLOD_FILE, S.level, k, tx, ty))
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')

@@ -230,7 +230,8 @@ def write_far(grid, owner, srcs, layers, out_dir):
                                 f = g.shape[0] / s.n
                                 rr, cc = np.meshgrid((r * f).astype(int), (c * f).astype(int), indexing="ij")
                                 col[sel] = g[np.clip(rr, 0, g.shape[0] - 1), np.clip(cc, 0, g.shape[1] - 1)][sel]
-                    blocks.far_cell(os.path.join(out_dir, f"f_{gcx}_{gcy}.cdae"), h, col, k, step, grid.sq)
+                    blocks.far_cell(os.path.join(out_dir, f"f_{gcx}_{gcy}.cdae"), h, col, k, step, grid.sq,
+                                    blocks.far_normals(s.H, r, c, step, grid.sq, s.z0, s.maxh))
                     keys.append(f"{gcx}_{gcy}")
         log("far ground of", s.name)
     blocks.bng.write_materials(os.path.join(out_dir, "far.materials.json"), [blocks.far_material()])

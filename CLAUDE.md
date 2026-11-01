@@ -1792,6 +1792,23 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   stepFar gets FAR_BURST_MS (6) of every burst before the objects: REALTIME=1 sim, 1 ms a shape, 0 -> 252 coarse tiles
   in 2 minutes of flight. Judge any budget change with REALTIME=1 and SPAWN_MS > 0 (the burst clock is CPU time
   otherwise: 18 bursts in 60 s of driving instead of 170).
+- The thin dark straight lines over the plain and the lake in the same photos (they ran on from the land into the lake,
+  so not the WaterBlocks) were the far tiles' NORMALS: cdae.write without normals takes face_normal_sum, and the
+  skirt's vertical faces share the border vertices, so every border vertex leant 45 degrees out of its tile (a slice's
+  far tile: border median 45.0, inside 0): a line of shade along every 384 m tile edge, and every coarse tile edge. A
+  ray-cast render with Lambert shading of those normals made the photo's grid of lines; with central differences on the
+  height grid they were gone (scratch view/shade.py). farlod.build_fine now writes the far tiles again in the base
+  (farlod/l0_<cx>_<cy>.cdae, stream.json farFine, objects.lua loads them as they are, never from the server): the
+  slices' heights and colours to the mm, the far ground's own normals across tile and zone borders (normals_at), 39,300
+  tiles in ~30 s; the coarse levels get normals_at too, blocks.far_cell far_normals (for a future slice build). Give
+  any mesh whose border vertices are shared with a skirt or other extra faces its own normals.
+- Since then the base comes in four parts (region_base, pack_region.pack_fixed: sorted, one date and mode, bytes that
+  depend only on the files): 1 scene, Lua, map, textures and the rest; 2 the far ground (farlod levels 0-5, ~1.2 GB);
+  3 the far trees; 4 the far houses. The installer keeps a zip with the release's size and sha256, so a base rebuilt for
+  its Lua sends ~0.3 GB instead of everything. Anything that handles "the base zip" must take every ticino_base_<n>.zip
+  the release lists and read info.json / files.lua from ticino_base_1.zip: the server's download command removed every
+  other ticino_base_*.zip when it took one (fixed in ticino_server.py, exe not rebuilt) and the GUI app of PR #106
+  retired the others and read the last-sorted one.
 
 ## Ticino map and spawn names (worldmap.py, 2026-11-01)
 

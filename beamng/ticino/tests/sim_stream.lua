@@ -1,7 +1,8 @@
 -- Outside the game: stream.lua driven along a straight line at 120 km/h with the game's API stubbed, to catch Lua
 -- errors and count what it does (jumps, moves, objects made and kept, far tiles hidden).
 --   luajit sim_stream.lua <out dir of blocks.py> [seconds]
--- env: SPEED (km/h, 0 stands still), SPAWN_MS (engine cost of a shape to emulate), EVERY (frames between status lines),
+-- env: SPEED (km/h, 0 stands still), SPAWN_MS (engine cost of a shape to emulate; FAR_SPAWN_MS for the far shapes),
+-- EVERY (frames between status lines),
 -- START="x,y", DIR="dx,dy", TELEPORT="x,y,s", FREECAM="x,y,t0,t1[,v]" (the free camera, below)
 local here = arg[0]:gsub('[^/]*$', '')
 package.path = here .. '../mod/lua/ge/extensions/?.lua;' .. package.path
@@ -71,7 +72,14 @@ function Obj:setPosition(p) self.pos = p end
 function Obj:getPosition() return self.pos or vec3(0, 0, 0) end
 function Obj:setPosRot(x, y, z) self.pos = vec3(x, y, z) end
 function Obj:setScale() end
-function Obj:registerObject(name) self.name = name; local w = tonumber(os.getenv('SPAWN_MS') or '0') / 1000; if w > 0 and self.f.shapeName then local c = os.clock(); while os.clock() - c < w do end end end
+-- SPAWN_MS: what a shape costs the game to create (~8 ms a building on the PC); FAR_SPAWN_MS (default SPAWN_MS): the
+-- far shapes' own cost (far ground, far levels, far trees, far houses: small render-only meshes)
+local function spawnCost(shape)
+  local far = shape:find('/far/', 1, true) or shape:find('/farlod/', 1, true) or shape:find('/fartrees/', 1, true)
+    or shape:find('/farbld/', 1, true)
+  return tonumber(far and os.getenv('FAR_SPAWN_MS') or os.getenv('SPAWN_MS') or '0') / 1000
+end
+function Obj:registerObject(name) self.name = name; local w = self.f.shapeName and spawnCost(self.f.shapeName) or 0; if w > 0 then local c = os.clock(); while os.clock() - c < w do end end end
 function Obj:getID() return self.id end
 function Obj:delete() objs[self.id] = nil; counts.deleted = counts.deleted + 1 end
 function Obj:setHidden(h) self.hidden = h end

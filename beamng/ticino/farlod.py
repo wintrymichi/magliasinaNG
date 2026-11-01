@@ -14,7 +14,14 @@ height along their stretch of the border, and the skirt goes down to the lowest 
 edge is never under the finer tile beside it, and its skirt closes the step to it. Colours are the mean of the far
 tiles' vertex colours round each vertex. Material, shading and colours are those of the far tiles (no new look).
 
-    farlod.build(read_far, keys, origin, tile_m, out_dir) -> {level: [keys]}       (region_base.py)
+Level 0 (build_fine) is the far tiles themselves made again from the same grid: l0_<cx>_<cy>.cdae, stream.json farFine.
+Every tile carries the far ground's own normals (normals_at: central differences on the grid, across tile and zone
+borders). Without them cdae took the normals from the faces, the skirt's vertical faces too, and every border vertex
+leant 45 degrees out of its tile: a line of shade along every tile edge, the grid of thin dark lines over the plain and
+the lake in the PC photos from San Salvatore (2026-11-01). The slices' own far tiles (blocks.far_cell) are only read here.
+
+    farlod.build(g, out_dir) -> {level: [keys]}                                     (region_base.py)
+    farlod.build_fine(g, out_dir) -> [keys]                                        (region_base.py, level 0)
     python farlod.py --tag ticino-all --out <folder>                                (a test: all zones of a release)
 """
 import argparse
@@ -36,6 +43,7 @@ import cdae  # noqa: E402
 LEVELS = (2, 3, 4, 5)
 K = 32                      # squares per far tile edge (blocks.write_far: cell 256 samples / far_step 8)
 SKIRT_MARGIN = 3.0          # m under the lowest finer height along a border stretch
+FINE_SKIRT = 4.0            # m, the skirt of a level 0 tile (blocks.far_cell's): against the terrain window's edge
 FAR_MAT = "tc_far_ground"   # blocks.FAR_MAT
 DIR = "farlod"
 
@@ -118,8 +126,98 @@ class Ground:
         return g
 
 
+def normals_at(g, R, C, s):
+    """Unit normals (..., 3) of the far ground at grid samples (R, C) (int arrays of one shape), from the heights s
+    samples to either side: central differences, one-sided where a side has no far tile, up where neither has. The
+    same at a sample whichever tile it belongs to, so the shade runs on across tile and zone borders."""
+    Hn, Wn = g.H.shape
+    step = g.tile_m / K * s
+
+    def at(r, c):
+        ok = (r >= 0) & (r < Hn) & (c >= 0) & (c < Wn)
+        out = np.full(np.shape(r), np.nan)
+        out[ok] = g.H[r[ok], c[ok]]
+        return out
+
+    R, C = np.asarray(R), np.asarray(C)
+    h0 = at(R, C)
+
+    def slope(lo, hi):
+        both = np.isfinite(lo) & np.isfinite(hi)
+        out = np.zeros(h0.shape)
+        out[both] = (hi - lo)[both] / (2 * step)
+        up = ~both & np.isfinite(hi) & np.isfinite(h0)
+        out[up] = (hi - h0)[up] / step
+        dn = ~both & np.isfinite(lo) & np.isfinite(h0)
+        out[dn] = (h0 - lo)[dn] / step
+        return out
+
+    dx = slope(at(R, C - s), at(R, C + s))
+    dy = slope(at(R - s, C), at(R + s, C))
+    n = np.stack([-dx, -dy, np.ones(h0.shape)], -1)
+    return n / np.linalg.norm(n, axis=-1, keepdims=True)
+
+
+def _skirt(V, h, valid, ring, drop, cols8, N):
+    """The tile with its skirt (the border ring again, drop m lower; the skirt keeps its border vertex's colour and
+    normal, so where it shows it looks like the ground over it): positions, triangles, colours, normals of the used
+    vertices (NaN corners outside Ticino dropped)."""
+    K1 = int(round(np.sqrt(len(V))))
+    ii = np.arange(K1 * K1).reshape(K1, K1)
+    a, b, c2, d = ii[:-1, :-1].ravel(), ii[:-1, 1:].ravel(), ii[1:, :-1].ravel(), ii[1:, 1:].ravel()
+    T = np.concatenate([np.stack([a, b, d], 1), np.stack([a, d, c2], 1)])
+    T = T[valid[T].all(1)]
+    if not len(T):
+        return None
+    Vs = V[ring] - np.stack([np.zeros(len(ring)), np.zeros(len(ring)), drop], 1)
+    base = len(V)
+    nr = len(ring)
+    j_ = np.arange(nr)
+    A, Bn = ring[j_], ring[(j_ + 1) % nr]
+    As, Bs = base + j_, base + (j_ + 1) % nr
+    Ts = np.concatenate([np.stack([A, As, Bs], 1), np.stack([A, Bs, Bn], 1)])
+    okq = valid[A] & valid[Bn]
+    Ts = Ts[np.concatenate([okq, okq])]
+    C8 = np.clip(np.round(np.concatenate([cols8, cols8[ring]])), 0, 255).astype(np.uint8)
+    P = np.concatenate([V, Vs])
+    NN = np.concatenate([N, N[ring]])
+    TT = np.concatenate([T, Ts])
+    used = np.zeros(len(P), bool)
+    used[TT.ravel()] = True
+    remap = np.cumsum(used) - 1
+    return P[used], remap[TT], C8[used], NN[used]
+
+
+def _ring(K1):
+    ii = np.arange(K1 * K1).reshape(K1, K1)
+    return np.concatenate([ii[0, :], ii[1:, -1], ii[-1, -2::-1], ii[-2:0:-1, 0]])
+
+
+def fine_tile(g, cx, cy):
+    """Level 0: the far tile (cx, cy) made again from the grid (its own heights and colours, a FINE_SKIRT skirt as
+    blocks.far_cell's) with the far ground's normals. positions from the tile's corner, triangles, colours (n, 4)
+    uint8, normals; None if it has no square."""
+    r0, c0 = (cy - g.cy0) * K, (cx - g.cx0) * K
+    R, C = np.meshgrid(r0 + np.arange(K + 1), c0 + np.arange(K + 1), indexing="ij")
+    Hn, Wn = g.H.shape
+    if r0 < 0 or c0 < 0 or r0 + K >= Hn or c0 + K >= Wn:
+        return None
+    h = g.H[R, C].astype(np.float64)
+    valid = np.isfinite(h).ravel()
+    if not valid.any():
+        return None
+    step = g.tile_m / K
+    X, Y = np.meshgrid(np.arange(K + 1) * step, np.arange(K + 1) * step)
+    V = np.stack([X.ravel(), Y.ravel(), np.nan_to_num(h).ravel()], 1)
+    cols8 = np.concatenate([g.C[R, C].reshape(-1, 3).astype(np.float64), np.full(((K + 1) ** 2, 1), 255.0)], 1)
+    N = normals_at(g, R, C, 1).reshape(-1, 3)
+    ring = _ring(K + 1)
+    return _skirt(V, h, valid, ring, np.full(len(ring), FINE_SKIRT), cols8, N)
+
+
 def coarse_tile(g, k, i, j):
-    """positions (n, 3) from the tile's corner, triangles, colours (n, 4) uint8 of level k tile (i, j); None if empty."""
+    """positions (n, 3) from the tile's corner, triangles, colours (n, 4) uint8, normals of level k tile (i, j); None if
+    empty."""
     s = 1 << k                                   # far-grid squares between two vertices (and far tiles per edge)
     r0 = (j * s - g.cy0) * K                     # the tile's corner on the far grid
     c0 = (i * s - g.cx0) * K
@@ -171,34 +269,14 @@ def coarse_tile(g, k, i, j):
     X, Y = np.meshgrid(np.arange(K + 1) * step, np.arange(K + 1) * step)
     valid = np.isfinite(h).ravel()
     V = np.stack([X.ravel(), Y.ravel(), np.nan_to_num(h).ravel()], 1)
-    ii = np.arange((K + 1) ** 2).reshape(K + 1, K + 1)
-    a, b, c2, d = ii[:-1, :-1].ravel(), ii[:-1, 1:].ravel(), ii[1:, :-1].ravel(), ii[1:, 1:].ravel()
-    T = np.concatenate([np.stack([a, b, d], 1), np.stack([a, d, c2], 1)])
-    T = T[valid[T].all(1)]
-    if not len(T):
-        return None
     # skirt: the border ring again, down to under the lowest finer height of its stretch
-    ring = np.concatenate([ii[0, :], ii[1:, -1], ii[-1, -2::-1], ii[-2:0:-1, 0]])
+    ring = _ring(K + 1)
     hz, lz = h.ravel(), lo.ravel()
     drop = np.where(np.isfinite(lz), hz - lz, 0.0) + SKIRT_MARGIN + 0.5 * s
-    Vs = V[ring] - np.stack([np.zeros(len(ring)), np.zeros(len(ring)), drop[ring]], 1)
-    base = len(V)
-    nr = len(ring)
-    j_ = np.arange(nr)
-    A, Bn = ring[j_], ring[(j_ + 1) % nr]
-    As, Bs = base + j_, base + (j_ + 1) % nr
-    Ts = np.concatenate([np.stack([A, As, Bs], 1), np.stack([A, Bs, Bn], 1)])
-    okq = valid[A] & valid[Bn]
-    Ts = Ts[np.concatenate([okq, okq])]
     cols8 = np.concatenate([col.reshape(-1, 3), np.full(((K + 1) ** 2, 1), 255.0)], 1)
-    C8 = np.clip(np.round(np.concatenate([cols8, cols8[ring]])), 0, 255).astype(np.uint8)
-    P = np.concatenate([V, Vs])
-    TT = np.concatenate([T, Ts])
-    # drop the vertices no triangle uses (NaN corners outside Ticino)
-    used = np.zeros(len(P), bool)
-    used[TT.ravel()] = True
-    remap = np.cumsum(used) - 1
-    return P[used], remap[TT], C8[used]
+    # the far ground's slope over this level's spacing (the raised border heights would lean the border normals)
+    N = normals_at(g, R, C, s).reshape(-1, 3)
+    return _skirt(V, h, valid, ring, drop[ring], cols8, N)
 
 
 def build(g, out_dir, levels=LEVELS):
@@ -216,15 +294,61 @@ def build(g, out_dir, levels=LEVELS):
             t = coarse_tile(g, k, i, j)
             if t is None:
                 continue
-            P, T, C8 = t
+            P, T, C8, N = t
             key = f"{i}_{j}"
-            nbytes += cdae.write(os.path.join(out_dir, f"l{k}_{key}.cdae"), P, T,
+            nbytes += cdae.write(os.path.join(out_dir, f"l{k}_{key}.cdae"), P, T, normals=N,
                                  uvs=np.zeros((len(P), 2)), material=FAR_MAT, colors=C8, object_name="farground")
             keys.append(key)
         out[str(k)] = keys
         log("far level %d (%d m tiles): %d tiles" % (k, int(g.tile_m) << k, len(keys)))
     log("far levels: %.1f MB" % (nbytes / 1e6))
     return out
+
+
+_FINE = {}
+
+
+def _fine_part(args):
+    """Level 0 tiles of keys into out_dir (a pool worker: the grid comes with the fork, _FINE["g"])."""
+    keys, out_dir = args
+    g = _FINE["g"]
+    done, nbytes = [], 0
+    for key in keys:
+        cx, cy = map(int, key.split("_"))
+        t = fine_tile(g, cx, cy)
+        if t is None:
+            continue
+        P, T, C8, N = t
+        nbytes += cdae.write(os.path.join(out_dir, f"l0_{key}.cdae"), P, T, normals=N, uvs=np.zeros((len(P), 2)),
+                             material=FAR_MAT, colors=C8, object_name="farground")
+        done.append(key)
+    return done, nbytes
+
+
+def build_fine(g, out_dir, workers=4):
+    """Level 0: every far tile of g again as out_dir/l0_<cx>_<cy>.cdae with the far ground's normals (the slices'
+    far tiles lean their border normals: blocks.far_cell before 2026-11-01). Returns the keys written."""
+    import multiprocessing as mp
+    os.makedirs(out_dir, exist_ok=True)
+    keys = sorted(g.has)
+    t0 = time.time()
+    _FINE["g"] = g
+    parts = [(keys[i::max(1, workers * 8)], out_dir) for i in range(max(1, workers * 8))]
+    done, nbytes = [], 0
+    if workers > 1 and "fork" in mp.get_all_start_methods():
+        with mp.get_context("fork").Pool(workers) as pool:
+            for d, nb in pool.imap_unordered(_fine_part, parts):
+                done += d
+                nbytes += nb
+    else:
+        for p in parts:
+            d, nb = _fine_part(p)
+            done += d
+            nbytes += nb
+    _FINE.clear()
+    log("far level 0 (%d m tiles): %d tiles, %.1f MB (%.0f s)" % (int(g.tile_m), len(done), nbytes / 1e6,
+                                                                   time.time() - t0))
+    return sorted(done)
 
 
 def far_members(zf):

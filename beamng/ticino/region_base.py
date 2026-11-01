@@ -310,6 +310,12 @@ def main():
 
     # the far ground's coarse levels to the horizon (farlod.py): ~110 MB of the base, from the slices' far tiles
     far_lod = farlod.build(ground, os.path.join(dst, farlod.DIR))
+    # level 0: the far tiles themselves again from the same grid with the far ground's normals (farlod.build_fine, ~1.1
+    # GB zipped, its own part of the base): the slices' far tiles lean their border normals 45 degrees, a grid of thin
+    # dark lines over the plain and the lake from the air (PC photos from San Salvatore, 2026-11-01)
+    far_fine = farlod.build_fine(ground, os.path.join(dst, farlod.DIR), workers=4)
+    if len(far_fine) != len(far):
+        log("far level 0: %d of the %d far tiles (the rest have no square)" % (len(far_fine), len(far)))
     # the woods beyond the streamed Forest as static far-tree tiles (fartrees.py), from the slices' tree tiles
     far_trees, far_trees2 = fartrees.build(fartrees.read_slices(sl, zones), plan["forestTypes"], [grid.x0, grid.y0],
                                            tile_m, os.path.join(dst, fartrees.DIR), level=LEVEL, workers=4)
@@ -334,7 +340,8 @@ def main():
         "baseSizeUnit": grid.cfg.get("base_size_unit", "samples"),
         "baseFlat": blocks.base_flat(wm, os.path.join(dst, "art", "terrains", "w")),
         "tiles": tiles, "forestTiles": ftiles, "forestTypes": plan["forestTypes"],
-        "far": sorted(far), "farRadius": int(grid.cfg.get("far_radius", 16)), "farLod": far_lod,
+        "far": sorted(far_fine or far), "farRadius": int(grid.cfg.get("far_radius", 16)), "farLod": far_lod,
+        "farFine": farlod.DIR + "/l0_%d_%d.cdae" if far_fine else None,
         "farTrees": far_trees,
         "farTrees2": far_trees2, "farTrees2Tiles": fartrees.L2_TILES,
         "farBld": far_bld, "farBld2": far_bld2, "farBld2Tiles": farbld.L2_TILES,
@@ -354,7 +361,17 @@ def main():
     if a.dist:
         import package
         import pack_region
-        pack_region.pack(package.entries(a.out), a.dist, "ticino_base")
+        # the base in parts whose bytes depend only on their files (pack_region.pack_fixed): 1 the scene, the Lua, the
+        # map, textures and the rest; 2 the far ground (farlod, levels 0-5); 3 the far trees; 4 the far houses. A base
+        # rebuilt for its Lua changes part 1 alone (~0.3 GB), and the installer keeps the parts that did not change
+        os.makedirs(a.dist, exist_ok=True)
+        kinds = {farlod.DIR: 2, fartrees.DIR: 3, farbld.DIR: 4}
+        parts = collections.defaultdict(list)
+        for p, n in package.entries(a.out):
+            seg = n.split("/")
+            parts[kinds.get(seg[2], 1) if len(seg) > 3 and seg[:2] == ["levels", LEVEL] else 1].append((p, n))
+        for k in sorted(parts):
+            pack_region.pack_fixed(parts[k], os.path.join(a.dist, "ticino_base_%d.zip" % k))
 
 
 if __name__ == "__main__":

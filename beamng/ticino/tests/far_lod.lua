@@ -43,7 +43,9 @@ for k = 2, 5 do
   for key in pairs(set) do table.insert(lod[tostring(k)], key) end
 end
 local cfg = { tiles = {}, forestTiles = {}, maxRadius = 6, origin = { 0, 0 }, cell = 256, square = 1.5, far = far,
-              farRadius = 16, farLod = lod }
+              farRadius = 16, farLod = lod,
+              -- FAR_FINE=1: the base's level 0 tiles (farlod.build_fine) instead of the slices' far tiles
+              farFine = os.getenv('FAR_FINE') and 'farlod/l0_%d_%d.cdae' or nil }
 local group = { addObject = function() end }
 objects.init(cfg, 'L', group)
 local t = 0
@@ -86,7 +88,7 @@ end
 
 local function count()
   local n, nl = 0, 0
-  for _, o in pairs(objs) do if o.cls == 'TSStatic' then n = n + 1; if o.f.shapeName:find('/l%d_') then nl = nl + 1 end end end
+  for _, o in pairs(objs) do if o.cls == 'TSStatic' then n = n + 1; if o.f.shapeName:find('/l[1-9]_') then nl = nl + 1 end end end
   return n, nl
 end
 
