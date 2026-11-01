@@ -169,9 +169,16 @@ public partial class HomePage : UserControl, ITickable
             if (to is null) return;
         }
         string size = Files.Size(P.ZonesInMods.Sum(f => f.Length));
-        string how = Files.SameDrive(BeamNG.Mods(C), to)
-            ? "Same disk: the zips are only renamed, it takes a moment."
-            : "Another disk: the zips are copied (several minutes); the app shows how far it is.";
+        // zips the folder already has (same name and size): nothing to copy, the copy in mods goes
+        var there = P.ZonesInMods.Where(f => new FileInfo(Path.Combine(to, f.Name)) is { Exists: true } d && d.Length == f.Length).ToList();
+        int copy = P.ZonesInMods.Count - there.Count;
+        string dup = there.Count == 0 ? ""
+            : there.Count == P.ZonesInMods.Count ? "The folder already has all of them (same size): the copies in mods are deleted, nothing is copied."
+            : $"{there.Count} are already there (same size): their copies in mods are deleted. ";
+        string how = there.Count == P.ZonesInMods.Count ? dup
+            : dup + (Files.SameDrive(BeamNG.Mods(C), to)
+                ? $"Same disk: the {(there.Count > 0 ? $"other {copy}" : "zips")} are only renamed, it takes a moment."
+                : $"Another disk: the {(there.Count > 0 ? $"other {copy} ({Files.Size(P.ZonesInMods.Except(there).Sum(f => f.Length))})" : "zips")} are copied (several minutes); the app shows how far it is.");
         if (!Ui.Ask($"Move {P.ZonesInMods.Count} zones ({size}) from\n{BeamNG.Mods(C)}\nto\n{to}?\n\n{how}\n\nFrom then on the server loads the zones around the car, and \"Start Ticino\" starts it too.")) return;
         try
         {

@@ -24,9 +24,13 @@ public sealed class PackItem : Observable
     public string Title => Kind switch
     {
         PackKind.Base => "Base pack",
-        PackKind.Server => "Server program",
+        PackKind.Server => "Server program" + (From is null ? "" : " (from " + From + ")"),
         _ => "Zone " + ZoneTitle(Zone) + (Place is null ? "" : " · " + Place) + (Part is null ? "" : " (" + Part + ")"),
     };
+
+    /// <summary>The release the zip comes from when it is not the map's own (the server program of a draft build
+    /// that carries only the zones and the base), else null.</summary>
+    public string? From { get; init; }
 
     /// <summary>The zip is on this PC with the release's size (its sha256 may still wait to be checked).</summary>
     public bool InPlace { get; set; }

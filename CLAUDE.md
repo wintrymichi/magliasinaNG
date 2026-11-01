@@ -1230,6 +1230,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   yet" although install.json named "D:\ticino zones". The app now takes the installer's folder whenever it holds zones,
   decides the mode by where the zones are (install.json only on a tie) and writes that mode back for Start Ticino;
   Move skips a zip the folder already has with the same size (the mods copy goes to ticino_download\old, on its disk).
+- PC test of 1.1 (2026-11-01, release ticino-all-cdae from install.json): Move worked (82 zips the folder already had
+  went to ticino_download\old in 4 s, mode server), but the server program never came: the draft map builds carry the
+  zones and the base only, server_ticino.zip is on the tools release (ticino-all, tools_release.txt) and on ticino-v1.
+  The app now takes it from ServerTag / ticino-all / ticino-v1 when the map's release has none, and downloads it at the
+  check when server mode has no server exe. The copies put aside were ~50 GB on C:: a same-size copy of a release zip
+  is deleted on a move, and the old folders lose every copy of a zip in place and checked (PruneOld). The Move
+  dialog said "the zips are copied" when all were there already: it counts them now. The Yes/No box is a Win32
+  MessageBox the PC session could only click with the mouse (no UIA pattern).
 
 ## Working with cat (the owner)
 

@@ -278,19 +278,28 @@ public sealed partial class PackManager : Observable
         {
             var rel = await Task.Run(() => gh.GetRelease(cfg.Repo, cfg.Tag, CancellationToken.None));
             await Task.Run(ScanMods);
+            // the draft builds (ticino-all-cdae) carry the zones and the base only: the server program of their
+            // branch is on the tools release (PC test of 1.1, 2026-11-01: "The server program is missing" for good)
+            var assets = rel.Assets.ToList();
+            string? serverFrom = null;
+            if (!assets.Any(a => a.Name == ServerAsset) && cfg.UpdateServer && !PacksMode)
+            {
+                var (sa, from) = await Task.Run(() => ServerElsewhere(rel.Tag));
+                if (sa != null) { assets.Add(sa); serverFrom = from; }
+            }
             Release = rel;
             cfg.LastCheck = DateTime.Now;
             cfg.Save();
             var keepBusy = Items.Where(i => i.IsBusy || i.State == PackState.Queued).ToDictionary(i => i.Name);
             Items.Clear();
-            foreach (var a in rel.Assets.OrderBy(a => a.Name.StartsWith("ticino_base") ? 0 : a.Name == ServerAsset ? 1 : 2)
+            foreach (var a in assets.OrderBy(a => a.Name.StartsWith("ticino_base") ? 0 : a.Name == ServerAsset ? 1 : 2)
                          .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
             {
                 PackItem? it = null;
                 if (a.Name == ServerAsset)
                 {
                     // packs mode runs no server; moving the zones out of mods (MoveZonesFromMods) gets it
-                    if (cfg.UpdateServer && !PacksMode) it = new PackItem(a, PackKind.Server, "server");
+                    if (cfg.UpdateServer && !PacksMode) it = new PackItem(a, PackKind.Server, "server") { From = serverFrom };
                 }
                 else if (a.Name.StartsWith("ticino_base_", StringComparison.OrdinalIgnoreCase) && a.Name.EndsWith(".zip"))
                     it = new PackItem(a, PackKind.Base, "base");
@@ -326,6 +335,33 @@ public sealed partial class PackManager : Observable
             UpdateSummary();
         }
     }
+
+    /// <summary>Releases that carry the server program for a map release without one: the setting ServerTag, the
+    /// tools release of the ticino branch (beamng/ticino/tools_release.txt), the public pre-release.</summary>
+    static readonly string[] ToolReleases = { "ticino-all", "ticino-v1" };
+
+    async Task<(ReleaseAsset?, string?)> ServerElsewhere(string tag)
+    {
+        foreach (var t in new[] { cfg.ServerTag }.Concat(ToolReleases).OfType<string>()
+                     .Where(t => t.Length > 0 && t != tag).Distinct())
+        {
+            try
+            {
+                var r = await gh.GetRelease(cfg.Repo, t, CancellationToken.None);
+                if (r.Assets.FirstOrDefault(x => x.Name == ServerAsset) is { } a)
+                {
+                    if (lastServerFrom != t) Log.Write($"release {tag} has no {ServerAsset}: the server program comes from {t}");
+                    lastServerFrom = t;
+                    return (a, t);
+                }
+            }
+            catch (Exception e) { Log.Write($"{ServerAsset} not looked up in {t}: {e.Message}"); }
+        }
+        Log.Write($"no {ServerAsset} in {tag} nor in {string.Join(", ", ToolReleases)}");
+        return (null, null);
+    }
+
+    string? lastServerFrom;
 
     /// <summary>The state of each item from the files on disk (no hashing: a zip in place but never checked is
     /// Unchecked and is hashed by <see cref="Verify"/>). Takes a copy of <see cref="Items"/> made on the UI thread
@@ -394,6 +430,7 @@ public sealed partial class PackManager : Observable
         }
         OldZips = local.Where(l => !relNames.Contains(l.Name) && relZones.Contains(ZoneOf(l.Name))).ToList();
         Raise(nameof(OldZips));
+        if (!Busy && !moving) PruneOld(items);
         var places = PlaceNames(items);
         foreach (var it in items.Where(i => i.Kind == PackKind.Zone))
             it.Place = places.TryGetValue(it.Zone, out var p) ? p : null;
@@ -908,6 +945,38 @@ public sealed partial class PackManager : Observable
         catch (Exception e) { Log.Write($"could not remove {path}: {e.Message}"); }
     }
 
+    /// <summary>Deletes the zips in the "old" folders that are copies of a zip in place: same name and size as a
+    /// release zip whose copy in place is checked (put aside by a move or an install, not an older build, which has
+    /// another name or size). 1.0.0 and 1.1 left about 50 GB of them in ticino_download\old (PC test 2026-11-01).</summary>
+    void PruneOld(List<PackItem> items)
+    {
+        var ok = items.Where(i => i.State == PackState.Installed && i.Asset.Sha256 != null && i.Kind != PackKind.Server)
+                      .ToDictionary(i => i.Name, i => i.Size, StringComparer.OrdinalIgnoreCase);
+        int n = 0;
+        long freed = 0;
+        var dirs = new[] { Path.Combine(Work, "old"), DataFolder is null ? null : Path.Combine(DataFolder, "old") };
+        foreach (var dir in dirs.OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (!Directory.Exists(dir)) continue;
+                foreach (var f in new DirectoryInfo(dir).EnumerateFiles("ticino_*.zip"))
+                {
+                    if (!ok.TryGetValue(f.Name, out long size) || f.Length != size) continue;
+                    try
+                    {
+                        f.Delete();
+                        n++;
+                        freed += size;
+                    }
+                    catch (Exception e) { Log.Write($"could not delete {f.FullName}: {e.Message}"); }
+                }
+            }
+            catch (Exception e) { Log.Write($"{dir} not read: {e.Message}"); }
+        }
+        if (n > 0) Log.Write($"{n} copies of zips in place deleted from the old folders ({Files.Size(freed)} freed)");
+    }
+
     /// <summary>The "old" folder on the zip's own disk (moving it there is a rename): the packs folder's for a zip in
     /// the packs folder, the installer's ticino_download\old (beside mods) for every other.</summary>
     string OldDir(string path)
@@ -969,6 +1038,8 @@ public sealed partial class PackManager : Observable
     async Task<List<string>> MoveInto(List<FileInfo> files, string to, Func<FileInfo, string> rel)
     {
         var inst = InstallerChecked();
+        var shas = Items.Where(i => i.Asset.Sha256 != null).GroupBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(g => g.Key, g => g.First().Asset.Sha256!, StringComparer.OrdinalIgnoreCase);
         var failed = new List<string>();
         long total = files.Sum(f => f.Length), done = 0;
         var sw = Stopwatch.StartNew();
@@ -994,8 +1065,18 @@ public sealed partial class PackManager : Observable
                     if (File.Exists(dst) && new FileInfo(dst).Length == length &&
                         !Path.GetFullPath(dst).Equals(f.FullName, StringComparison.OrdinalIgnoreCase))
                     {
-                        Retire(f.FullName, forget: false);
-                        Log.Write($"{f.Name}: already in {to} with the same size, the other copy put aside");
+                        if (shas.ContainsKey(f.Name))
+                        {
+                            // a zip of the release: the copy there stays (Check hashes it, and downloads it again
+                            // should it not be the release's); a second copy put aside was 50 GB on C: (2026-11-01)
+                            File.Delete(f.FullName);
+                            Log.Write($"{f.Name}: already in {to} with the same size, the other copy deleted");
+                        }
+                        else
+                        {
+                            Retire(f.FullName, forget: false);
+                            Log.Write($"{f.Name}: already in {to} with the same size, the other copy put aside");
+                        }
                     }
                     else
                     {

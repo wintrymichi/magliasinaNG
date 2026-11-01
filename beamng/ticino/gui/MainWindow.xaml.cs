@@ -87,6 +87,13 @@ public partial class MainWindow : Window
             // zips in place never checked (moved by hand, or by the app before 1.1): read, not downloaded; not while
             // the game runs (it reads the same disk)
             if (App.Packs.UncheckedCount > 0 && !BeamNG.Running()) await App.Packs.Verify();
+            // server mode without the server program (20 MB): Play cannot work without it, so it comes at once
+            if (!App.Packs.PacksMode && PackManager.ServerExe(App.Config) is null && App.Packs.Error is null &&
+                App.Packs.Items.Any(i => i.Kind == PackKind.Server && i.NeedsDownload))
+            {
+                Log.Write("server mode without the server program: downloading it");
+                await App.Packs.DownloadAll(i => i.Kind == PackKind.Server);
+            }
         }
     }
 

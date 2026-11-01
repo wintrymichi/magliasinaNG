@@ -36,7 +36,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.1.0+$($env:GITHUB_SHA.Substring(0,7))"
+          dotnet publish beamng/ticino/gui/TicinoServer.csproj -c Release -o out -p:InformationalVersion="1.1.1+$($env:GITHUB_SHA.Substring(0,7))"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           Get-ChildItem out | Format-Table Name, Length
       - name: Screenshots
@@ -140,9 +140,13 @@ jobs:
           $bad = @()
           if (-not ($log -match 'packs folder of the installer taken over')) { $bad += 'the packs folder of install.json was not taken over' }
           if (-not ($log -match 'automatic download turned off')) { $bad += 'AutoDownload of 1.0.0 not turned off' }
-          # that zip, and the server program when this release has one
-          $srv = [bool]($assets | Where-Object name -eq 'server_ticino.zip')
-          $want = 1 + [int]$srv
+          # that zip and the server program: from this release, or from the tools release when it has none (the
+          # PC test of 1.1 waited for good: ticino-all-cdae carries no server_ticino.zip)
+          if (-not ($assets | Where-Object name -eq 'server_ticino.zip') -and -not ($log -match 'the server program comes from ticino-')) {
+            $bad += 'no server program looked up in the tools releases'
+          }
+          $srv = $true
+          $want = 2
           $line = $log | Where-Object { $_ -match 'zones in place' } | Select-Object -Last 1
           if ($line -notmatch "(\d+) of (\d+) zones in place, $want to download or check" -or $line -match 'packs mode' -or
               [int]$Matches[1] -ne [int]$Matches[2] - 1) { $bad += "not server mode with one zone short: $line" }

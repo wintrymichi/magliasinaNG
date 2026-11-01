@@ -28,6 +28,8 @@ public sealed class AppConfig
     public bool StartServerWithGame { get; set; } = true;
     public bool StopServerWithGame { get; set; } = true;
     public bool UpdateServer { get; set; } = true;
+    // the release of the server program when the map's release has none (null: ticino-all, then ticino-v1)
+    public string? ServerTag { get; set; }
 
     public DateTime? LastCheck { get; set; }
 
