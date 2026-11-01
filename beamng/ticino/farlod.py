@@ -165,6 +165,16 @@ def fill_buildings(g, rgb=BUILDING_RGB, cap=GREY_CAP):
     return n, k
 
 
+def tone_grey(c, cap=GREY_CAP):
+    """One colour (r, g, b) toned down as fill_buildings tones the far ground's light greys, or None when it is no
+    light grey: the window's paved layers (stream.json baseFlat) the same as the far ground round them."""
+    c = np.asarray(c, np.float64)
+    lum = float(c.mean())
+    if lum <= cap or float(c.max() - c.min()) >= GREY_SAT:
+        return None
+    return cap * (0.5 * c / lum + 0.5 * np.array(GREY_TINT, np.float64) / np.mean(GREY_TINT))
+
+
 def normals_at(g, R, C, s):
     """Unit normals (..., 3) of the far ground at grid samples (R, C) (int arrays of one shape), from the heights s
     samples to either side: central differences, one-sided where a side has no far tile, up where neither has. The

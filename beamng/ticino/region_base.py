@@ -24,6 +24,8 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import blocks  # noqa: E402
@@ -173,6 +175,35 @@ def level_shapes(zone, cache):
 
 
 # ------------------------------------------------------------------ main
+def tone_window_greys(wm, wdir):
+    """The light greys of the terrain window (asphalt 166, the concrete under the houses 156) toned down as the far
+    ground's (farlod.tone_grey): until a town's objects are made (minutes in Lugano after a jump) its bare ground was
+    a pale patch like snow from the air, much lighter than the far ground beyond it (PC photos from San Salvatore,
+    547c25a). Each such window base texture (art/terrains/w/) is scaled to the toned colour, and its streamed map
+    leaves stream.json baseTextures (it is one colour anyway): the window's map and the helper take the flat colour
+    (baseFlat, the mean of the texture). Returns {texture key: (old mean, new mean)}."""
+    from PIL import Image
+    toned = {}
+    for m in wm.values():
+        if m.get("class") != "TerrainMaterial" or not m.get("baseColorBaseTex"):
+            continue
+        key = os.path.splitext(os.path.basename(m["baseColorBaseTex"]))[0]
+        p = os.path.join(wdir, key + ".png")
+        if key in toned or not os.path.isfile(p):
+            continue
+        img = np.asarray(Image.open(p).convert("RGB"), np.float64)
+        mean = img.reshape(-1, 3).mean(0)
+        new = farlod.tone_grey(mean)
+        if new is None:
+            continue
+        out = np.clip(np.round(img * (new / np.maximum(mean, 1.0))), 0, 255).astype(np.uint8)
+        with wopen(p, "wb") as f:
+            Image.fromarray(out).save(f, "PNG")
+        toned[key] = ([round(float(v)) for v in mean], [round(float(v)) for v in new])
+    log("window base colours toned down like the far ground's:", toned)
+    return toned
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", required=True)
@@ -268,6 +299,8 @@ def main():
 
     mats, frm = region.terrain_mats(srcs, layers)
     wm = region.window_materials(grid, mats, frm, set(base_keys), os.path.join(dst, "art", "terrains", "w"))
+    toned = tone_window_greys(wm, os.path.join(dst, "art", "terrains", "w"))
+    base_keys = [k for k in base_keys if k not in toned]
     with wopen(os.path.join(dst, "art", "terrains", "main.materials.json"), "w") as f:
         json.dump(wm, f, indent=1)
 

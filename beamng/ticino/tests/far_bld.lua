@@ -134,7 +134,7 @@ local function go(what, cx, cy, jump, perFrame)
   if jump then objects.dropAll(); before = {} end      -- (a jump removes the old place's houses at once, by design)
   objects.retarget(cx, cy)
   objects.updateFar(cx, cy, cx - 3, cy - 3, 8)
-  local frames, allDrawn, allReal = 0, nil, nil
+  local frames, allDrawn, allReal, lost = 0, nil, nil, 0
   while objects.pending() or objects.farPending() or objects.farBldHeld() do
     objects.step(clock, perFrame or 3)
     objects.stepDels(clock, 2)
@@ -154,15 +154,16 @@ local function go(what, cx, cy, jump, perFrame)
         end
       end
       if drawn and not allDrawn then allDrawn = frames end
+      if allDrawn and not drawn then lost = lost + 1 end   -- drawn once, then a hole again before its houses came
       if made then allReal = frames end
     end
     if frames > 20000 then print('BAD stuck', what) bad = bad + 1 break end
   end
   check(what .. ' settled', cx, cy, true)
   if jump then
-    print(string.format('%s: the houses round the car drawn after %s frames, all streamed after %s', what,
-      tostring(allDrawn), tostring(allReal)))
-    if not allDrawn or not allReal or allDrawn >= allReal then print('BAD no fill', what) bad = bad + 1 end
+    print(string.format('%s: the houses round the car drawn after %s frames, all streamed after %s, %d frames with a '
+      .. 'hole between', what, tostring(allDrawn), tostring(allReal), lost))
+    if not allDrawn or not allReal or allDrawn >= allReal or lost > 0 then print('BAD no fill', what) bad = bad + 1 end
   end
   return frames
 end
@@ -174,6 +175,11 @@ local s = objects.stats()
 for y = 31, 50 do go('drive2', 100, y) end
 go('back', 98, 48)
 go('jump2', 30, 70, true, 1)
+-- the hold of the game with a queue far slower than it (Lugano after a jump: minutes): the far houses of the town stay
+-- while houses are still to come (up to 547c25a they went when the hold ran out, a band of bare ground on the PC)
+objects.FAR_BLD_HOLD_MS = 600
+go('jump3 (short hold)', 60, 40, true, 1)
+objects.FAR_BLD_HOLD_MS = 1e9
 print(string.format('live %d, far houses %d fine %d coarse, %d held', s.live, s.farBld, s.farBld2, s.bldHeld))
 objects.FAR_BLD_RADIUS = 0
 objects.updateFar(30, 70, 27, 67, 8)

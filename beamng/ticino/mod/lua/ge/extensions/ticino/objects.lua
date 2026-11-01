@@ -1040,7 +1040,8 @@ M.FAR_BLD_RADIUS = 40       -- tiles of far houses round the car's tile (setting
 M.FAR_BLD_BLOCKS0 = 2       -- blocks round the car's block with the fine far houses (their own roofs)
 M.FAR_BLD_FINE_MAX = 12
 M.FAR_BLD_INNER = 6         -- the streamed houses' radius (the r of the buildings group in the tiles; GROUP_R caps it)
-M.FAR_BLD_HOLD_MS = 60000   -- (a long queue after a jump takes a while to bring every streamed house)
+M.FAR_BLD_HOLD_MS = 60000   -- a far tile over the car's town: counted from when the objects queue has nothing left to
+                            -- make (a long queue after a jump takes minutes); a held streamed house: from its hold
 M.FAR_BLD_GROUP = 'buildings'
 M.FAR_BLD_MIN_MS = 1       -- of every stepFar call, whatever the far ground took
 
@@ -1185,13 +1186,20 @@ local function fsDrop(F, clock)
   if F.checkAt and now - F.checkAt < 500 then return 0 end
   F.checkAt = now
   local H = fp(F, '_HOLD_MS')
+  -- a hold counts only from when nothing more is coming for it: the doomed shapes wait while the set's own queue
+  -- still has shapes to make (their cover), an inner tile while its real things are still queued (F.coming: the
+  -- houses, the objects queue has objects left to make). After a jump to Lugano the queues took minutes, and at 60 s
+  -- the far houses of the town went: a band of bare paved ground with no house between the made houses and the far
+  -- ones (PC photos from San Salvatore of 547c25a)
+  local busy = F.pos <= #F.queue
+  local coming = F.coming ~= nil and F.coming()
   for key, f in pairs(F.live) do
     local gone = false
     if f.inner then
-      f.innerAt = f.innerAt or now
+      if not f.innerAt or coming then f.innerAt = now end
       gone = (F.innerMade and F.innerMade(key) == true) or now - f.innerAt > H
     elseif f.doomed then
-      f.doomedAt = f.doomedAt or now
+      if not f.doomedAt or busy then f.doomedAt = now end
       gone = F.live2[f.doomed] ~= nil or now - f.doomedAt > H
     end
     if gone then
@@ -1202,7 +1210,7 @@ local function fsDrop(F, clock)
   end
   for bk, f in pairs(F.live2) do
     if f.doomed then
-      f.doomedAt = f.doomedAt or now
+      if not f.doomedAt or busy then f.doomedAt = now end
       if fsFineCovered(F, bk) or now - f.doomedAt > H then
         delete(f.id)
         F.live2[bk] = nil
@@ -1361,6 +1369,7 @@ farSets = function(cfg)
   S.fb = farSet('FAR_BLD', 'far houses', 'farBld', cfg.farBld, cfg.farBld2, cfg.farBld2Tiles)
   S.fb.innerMade = M.bldMade
   S.fb.fill = true
+  S.fb.coming = function() return M.addsQueued() > 0 end
   local F = S.fb
   F.onMade = function(key, lvl)
     if lvl ~= 2 then bldRelease(F, key); return end

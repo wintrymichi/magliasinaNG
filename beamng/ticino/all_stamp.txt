@@ -21,3 +21,4 @@
 2026-11-01T18:18:57Z far trees as a canopy surface, free camera only after the camera was at the car
 2026-11-01T18:31:05Z AI map: map.reset error logged, retried
 2026-11-01T18:37:23Z sign plates warmed a few a frame before their shape
+2026-11-01T18:40:56Z far houses stay over the town while its houses are still queued (no bare band after a jump), the window paved ground toned like the far ground

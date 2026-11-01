@@ -2015,6 +2015,22 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   start or the car's last teleport (CAR_JUMP_M in a frame); tests/sim_stream.lua CAMSTART="x,y,s" (the camera elsewhere
   for the first s seconds) shows the first jump going to the car. No call has ever said "free" on the PC: what each one
   answers is logged at every change ("camera calls: ..."), read those lines after a Shift+C test.
+- The "light grey patches" of the 547c25a photos from San Salvatore (behind Paradiso, 1-2 km out) were a BAND of tiles
+  with no house and no road at all, bare terrain and trees, between the made houses near the camera and the far houses
+  beyond the inner radius: compare the same crop over all the runs of a view before blaming a colour (the 15:43 runs had
+  the band in one shot and far houses in the next). After a jump the objects queue of Lugano takes minutes, and every
+  hold of the far sets ran out after FAR_BLD_HOLD_MS (60 s) whatever was still coming: the far tiles over the town
+  (F.fill) went while their houses were queued, and the coarse blocks round the camera went while the fine tiles that
+  replace them were still in the far queue (~1 far house tile a burst). tests/far_bld.lua set the hold to 1e9, so it
+  never saw it. A hold now counts only from when nothing more is coming: inner tiles while the objects queue has
+  objects to make (F.coming), doomed shapes while their own set's queue has shapes to make. far_bld.lua "jump3 (short
+  hold)": 249 frames with a hole before, 0 after. Test a timeout with the value the game uses against a slow queue.
+- Under such a band the window's paved ground was what showed: the streamed asphalt map is the orthophoto (yards and
+  streets as greys up to ~200, not one colour: a statistic over the first 6 blocks of a zone, all outside its towns,
+  said "uniform") and the concrete under every house a flat 156. region_base.tone_window_greys tones every light grey
+  window base texture (mean over GREY_CAP, low saturation) to farlod.tone_grey's colour (asphalt 133,131,126, concrete
+  134,131,125) and takes its map out of baseTextures (the window and the helper take baseFlat, test_helper: same map).
+  The paved ground of the window loses the photo's detail (it is under the road and yard meshes once they are made).
 
 ## White patches and lines on the lake from above (PC photos from San Salvatore, 2026-11-01)
 
