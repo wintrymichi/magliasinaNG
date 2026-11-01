@@ -10,3 +10,4 @@
 2026-11-01T13:03:08Z far trees own budget + logs
 2026-11-01T13:35:46Z far houses, lakes on one lattice, base colours of woods
 2026-11-01T13:37:44Z far houses: a failing tile is left out, NaN corners dropped
+2026-11-01 14:10 forest pool warm + GC hold by frames

@@ -1846,6 +1846,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   clock inside the loop). forest.lua parses the rows itself, PARSE_MS a frame (a 2,593-row tile: 5 ms in luajit, same
   rows as json.loads), prefetches the queued tiles first, and a block's next pass waits for the next frame after
   PASS_MAX_MS. CACHE_TILES 120 was under RADIUS 4 + the prefetched ring (121 tiles): 200.
+- PC round of 4a53bd1 (2026-11-01): the 1.2 s frame was gone, but the hold ended "not all collected in 75 ms of
+  steps": a time cap (3 s past the hold) let only 3 frames of steps happen (the paused frames are long), and LuaGC came
+  back as 210-370 ms in 3 frames of the drive. The hold now waits for the two cycles by FRAMES (GC_HOLD_MAX_FRAMES).
+  The 4 "near forest" frames of 186-196 ms (Lua) were still there with the own parser: about one per new 3x3 block
+  early in a flight, when the Forest pool is empty and the frame creates and registers a Forest. forest.POOL_WARM
+  makes 24 Forests at init, and the slow-frame line gives the step's parse / new Forest / slowest item ms to tell.
+  terrainShadows false moved the swap's RenderShadows 110-122 ms into Render: no gain, stays on. A "wait burst"
+  frame of 443-519 ms (Lua 382-435, streamer lua 0) ~10 s after the hold in every run is another extension's Lua.
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,

@@ -53,12 +53,28 @@ M.WAVE_PART = 0.4                     -- share of its trees a farther tile gets 
 -- shape in memory. 1 = off (as built); 4 = Earth's value, to be checked on the PC (frames, and no imposter squares).
 M.SHAPE_VARIANTS = 1
 
+-- Forests made while the level loads, for the pool: the near-forest frames of 186-196 ms (4 a flight, PC 2026-11-01,
+-- 4a53bd1) came about one per new 3x3 block early in a flight, when the pool was still empty and each new block
+-- created and registered a Forest in that frame. The step's timing (read, parse, new Forest, items) is in the
+-- slow-frame line to tell.
+M.POOL_WARM = 24
+
 local S = nil
+
+local function newForest()
+  S.nForest = S.nForest + 1
+  local f = createObject('Forest')
+  f.canSave = false
+  f:registerObject('ticino_forest_' .. S.nForest)
+  if scenetree.MissionGroup then scenetree.MissionGroup:addObject(f) end
+  return f
+end
 
 function M.init(cfg, level, markDirty)
   S = { cfg = cfg, level = level, has = cfg.forestTiles or {}, typeNames = cfg.forestTypes or {}, types = {},
         rows = {}, rowOrder = {}, tiles = {}, pool = {}, nForest = 0, blocks = {}, fn = {}, queue = {}, qpos = 1, markDirty = markDirty,
         stats = { made = 0, removed = 0, failed = 0, missingTypes = 0 } }
+  for _ = 1, M.POOL_WARM do S.pool[#S.pool + 1] = newForest():getID() end
 end
 
 -- A tile's rows ([[type, x, y, z, yaw, scale], ...]) are parsed here, a slice at a time, not by jsonDecode: one
@@ -190,11 +206,11 @@ local function forestOf(t, key)
   local f = t.forestId and scenetree.findObjectById(t.forestId)
   while not f and #S.pool > 0 do f = scenetree.findObjectById(table.remove(S.pool)) end
   if not f then
-    S.nForest = S.nForest + 1
-    f = createObject('Forest')
-    f.canSave = false
-    f:registerObject('ticino_forest_' .. S.nForest)
-    if scenetree.MissionGroup then scenetree.MissionGroup:addObject(f) end
+    local clk = S.clk or function() return os.clock() * 1000 end
+    local t0 = clk()
+    f = newForest()
+    S.stats.newForests = (S.stats.newForests or 0) + 1
+    if S.tm then S.tm.new = S.tm.new + clk() - t0 end
   end
   t.forestId = f:getID()
   if bk and not b then S.blocks[bk] = { id = t.forestId, tiles = 1 }; t.block = bk end
@@ -305,6 +321,7 @@ function M.step(clock, budgetMs, perFrame, burstMs)
   local left = perFrame or M.PER_FRAME
   local q = S.queue
   local forests, ids = 0, {}
+  S.tm, S.clk = { parse = 0, new = 0, slowest = 0 }, clock
   while S.qpos <= #q do
     local op = q[S.qpos]
     local t = S.tiles[op.key]
@@ -318,7 +335,9 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       -- they are not done, this frame does nothing more
       local cap = (passCap or (budgetMs and budgetMs < 1000)) and M.PARSE_MS or nil
       if cap and clock() - t0 > 1 then return false end   -- a pass already ran in this frame: parse in the next
+      local tp = clock()
       rows = parseRows(op.key, clock, cap)
+      S.tm.parse = S.tm.parse + clock() - tp
       if rows == nil and S.rows[op.key] == nil then return false end
     end
     rows = rows or {}
@@ -348,7 +367,10 @@ function M.step(clock, budgetMs, perFrame, burstMs)
           local m = MatrixF(true)
           m:setFromEuler(vec3(0, 0, -math.rad(r[5] or 0)))
           m:setPosition(vec3(r[2], r[3], r[4]))
+          local tc = clock()
           local ok, made = pcall(function() return fd:createNewItem(d, m, r[6] or 1) end)
+          tc = clock() - tc
+          if tc > S.tm.slowest then S.tm.slowest = tc end
           if ok and made then
             t.items[i], t.n = made, t.n + 1
             S.fn[t.forestId] = (S.fn[t.forestId] or 0) + 1
@@ -388,7 +410,10 @@ function M.step(clock, budgetMs, perFrame, burstMs)
       forests = forests + 1
       S.stats.touched = (S.stats.touched or 0) + 1
     end
-    if touched then S.stats.lastKey = string.format('%s, %d in its Forest', op.key, S.fn[fid] or 0) end
+    if touched then
+      S.stats.lastKey = string.format('%s, %d in its Forest; step %.0f ms: parse %.0f, new Forest %.0f, slowest item %.1f',
+        op.key, S.fn[fid] or 0, clock() - t0, S.tm.parse, S.tm.new, S.tm.slowest)
+    end
     -- the next pass in the queue on the same Forest (a block) goes in this frame too: it costs the frame little more
     local nx = q[S.qpos]
     local same = nx and fid and S.tiles[nx.key] and S.tiles[nx.key].forestId == fid

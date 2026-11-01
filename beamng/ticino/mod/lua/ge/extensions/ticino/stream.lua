@@ -123,8 +123,11 @@ M.GATE = true              -- frames that change the scene stay lone spikes betw
                            -- "frameGate": false turns it off)
 M.PACING = false           -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": true). Off:
                            -- PC flights 2026-11-01 showed no measurable difference (A/B twice at Manno)
-M.GC_STEP_MS = 25          -- Lua GC steps a frame during the hold (paused)
-M.GC_HOLD_MAX_MS = 3000    -- the hold may run this much longer for the collector to finish its cycle
+M.GC_STEP_MS = 40          -- Lua GC steps a frame during the hold (paused)
+M.GC_HOLD_MAX_FRAMES = 400 -- the hold lasts until the collector ends its cycles, or this many frames of steps: a time
+                           -- cap (3 s) let only 3 frames of 25 ms steps happen (PC 4a53bd1: "not all collected in 75
+                           -- ms of steps", then LuaGC 210-370 ms in three frames of the drive)
+M.GC_HOLD_MAX_MS = 30000   -- and at most this much longer than RESET_HOLD_MS
 M.GC_AFTER_HOLD = true     -- a full Lua garbage collection at the end of the paused hold after a jump's map.reset
 M.TERRAIN_SHADOWS = true   -- false: the TerrainBlock casts no sun shadows (BeamNG.Earth terrain.lua: every block move
                            -- redrew the cached sun shadow map for it, 250-340 ms of RenderShadows on a GTX 1060, and
@@ -166,7 +169,7 @@ local function pause(on)
   local s = sta()
   if not s or not s.pause then return end
   if on then
-    if st.holdUntil then st.holdUntil = nil   -- a jump during the hold after a map.reset: keep its wasPaused
+    if st.holdUntil then st.holdUntil, st.gcDone, st.gcMs, st.gcCycles, st.gcFrames = nil, nil, nil, nil, nil   -- a jump during the hold after a map.reset: keep its wasPaused
     else st.wasPaused = s.getPause and s.getPause() or false end
     s.pause(true)
   elseif not st.wasPaused and not st.carHold then
@@ -899,14 +902,17 @@ local function onUpdate(dtReal)
         end
       until clock() - t0 > M.GC_STEP_MS
       st.gcMs = (st.gcMs or 0) + clock() - t0
+      st.gcFrames = (st.gcFrames or 0) + 1
     end
     local over = clock() >= st.holdUntil
-    if over and M.GC_AFTER_HOLD and not st.gcDone and clock() < st.holdUntil + M.GC_HOLD_MAX_MS then over = false end
+    if over and M.GC_AFTER_HOLD and not st.gcDone and (st.gcFrames or 0) < M.GC_HOLD_MAX_FRAMES
+      and clock() < st.holdUntil + M.GC_HOLD_MAX_MS then over = false end
     if over then                     -- the hold after a map.reset is over: the game goes on in a frame of its own
       st.holdUntil = nil
-      log('I', 'ticino', string.format('hold after the AI map read over (garbage %s in %.0f ms of steps)',
-        st.gcDone and 'collected' or 'not all collected', st.gcMs or 0))
-      st.gcDone, st.gcMs, st.gcCycles = nil, nil, nil
+      log('I', 'ticino', string.format('hold after the AI map read over (garbage %s in %.0f ms of steps, %d frames, %d cycles, %.0f MB)',
+        st.gcDone and 'collected' or 'not all collected', st.gcMs or 0, st.gcFrames or 0, st.gcCycles or 0,
+        collectgarbage('count') / 1024))
+      st.gcDone, st.gcMs, st.gcCycles, st.gcFrames = nil, nil, nil, nil
       pause(false)
       return
     end
