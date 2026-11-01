@@ -124,6 +124,8 @@ jobs:
       ONLY: ${{ needs.setup.outputs.only }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Installer, helper, server and app
         run: |
           set -euo pipefail
@@ -146,9 +148,15 @@ jobs:
             unzip -p installer_ticino.zip release.txt
             files+=(helper_ticino.zip server_ticino.zip installer_ticino.zip)
           fi
-          # the app of this commit (ticino_gui.yml builds it from the same push): wait for it
+          # the app of this commit (ticino_gui.yml builds it from the same push), or of an earlier commit with the same
+          # app sources (a push that changes only this workflow or publish.txt starts no app build): wait for it
+          same() {   # VERSION.txt's commit builds the app of this commit
+            local c; c=$(unzip -p app_ticino.zip VERSION.txt | sed -n 's/^commit //p' | head -1)
+            [ -n "$c" ] && git cat-file -e "$c^{commit}" 2>/dev/null && git merge-base --is-ancestor "$c" "$GITHUB_SHA" &&
+              git diff --quiet "$c" "$GITHUB_SHA" -- beamng/ticino/gui .github/workflows/ticino_gui.yml
+          }
           for w in $(seq 1 40); do
-            if get "$a" app_ticino.zip && unzip -p app_ticino.zip VERSION.txt | grep -q "$GITHUB_SHA"; then break; fi
+            if get "$a" app_ticino.zip && same; then break; fi
             if [ $w = 40 ]; then echo "app_ticino.zip of $GITHUB_SHA not on $APP"; exit 1; fi
             echo "waiting for the app build of $GITHUB_SHA"; sleep 60
           done
