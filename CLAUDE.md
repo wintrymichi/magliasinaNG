@@ -2056,7 +2056,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   farbld.build_levels adds levels 3-5 (blocks of 8, 16, 32 tiles: 3, 6, 12 km; the houses of each 16, 32, 64 m cell one
   box of their plan area, height and colours) and objects.lua's far set a quadtree over its coarse levels (fsWant,
   fsCover/fsCovered: a block that splits or merges goes once the shapes over its square are made), out to the view
-  distance (stream.lua, unless "bldKm" is set). Lugano: +20 MB raw for the 111 MB of b_ + l2.
+  distance (stream.lua, unless "bldKm" is set). Lugano: +20 MB raw for the 111 MB of b_ + l2. All Ticino (base
+  b6348de): level 3 459 blocks (1.8 M triangles), 4 139 (1.0 M), 5 40 (0.4 M), base part 4 233 -> 271 MB zipped.
 - The far ground's coarse levels lie far from the 12 m ground under the houses (Lugano: level 5 vs 0 more than 10 m off
   under 29 % of the houses, p99 38 m; level 2 only 0.3 %): boxes at their true heights were 9.5-28 % under 1 m of their
   coarse ground (buried). A house quadtree on its own rings (2 blocks a level) would have stood a level on 3-4 ground
