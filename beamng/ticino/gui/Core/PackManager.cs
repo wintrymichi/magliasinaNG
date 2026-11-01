@@ -404,7 +404,8 @@ public sealed partial class PackManager : Observable
                 {
                     it.State = PackState.Installed;
                     st.Checked[it.Name] = key;
-                    if (it.Kind == PackKind.Base) Installer.SetBase(cfg, $"{it.Name}|{sha}");
+                    if (it.Kind == PackKind.Base && ReleaseBases().FirstOrDefault() is { } first &&
+                        first.Equals(it.Name, StringComparison.OrdinalIgnoreCase)) Installer.SetBase(cfg, $"{it.Name}|{sha}");
                     // the zip in place IS the release's: a download of it left over (1.0.0 downloaded zips in place
                     // again) would replace it with itself and, with the old Install, retire its other piece
                     DropLeftovers(it);
@@ -422,8 +423,8 @@ public sealed partial class PackManager : Observable
             else if (it.Kind == PackKind.Zone && local.Any(l => ZoneOf(l.Name).Equals(it.Zone, StringComparison.OrdinalIgnoreCase)
                                                                  && !relNames.Contains(l.Name)))
                 it.State = PackState.Update;
-            else if (it.Kind == PackKind.Base && Directory.Exists(BeamNG.Mods(cfg)) &&
-                     Directory.EnumerateFiles(BeamNG.Mods(cfg), "ticino_base_*.zip").Any())
+            // an older base the release no longer names (not another part of this one: _2.._4 come new with 75961a1)
+            else if (it.Kind == PackKind.Base && BaseZipsInMods().Any(b => !relNames.Contains(Path.GetFileName(b))))
                 it.State = PackState.Update;
             else it.State = PackState.Missing;
             // a download finished and checked: it goes into place (unless the zip there is the release's, above)
@@ -459,15 +460,27 @@ public sealed partial class PackManager : Observable
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            string mods = BeamNG.Mods(cfg);
-            string? zip = Directory.Exists(mods)
-                ? Directory.EnumerateFiles(mods, "ticino_base_*.zip").OrderByDescending(x => x).FirstOrDefault() : null;
-            var baseItem = items.FirstOrDefault(i => i.Kind == PackKind.Base);
-            if (zip is null && baseItem != null && ReadyPath(baseItem) is { } r && File.Exists(r)) zip = r;
-            if (zip is null) return map;
-            using var z = ZipFile.OpenRead(zip);
-            var e = z.GetEntry("levels/ticino/info.json");
-            if (e is null) return map;
+            // info.json is in the first part of the base (ticino_base_1.zip); the last-sorted one has none since the
+            // base comes in four parts
+            var zips = BaseZipsInMods();
+            var baseItem = items.Where(i => i.Kind == PackKind.Base).OrderBy(i => BasePart(i.Name)).FirstOrDefault();
+            if (baseItem != null && ReadyPath(baseItem) is { } r && File.Exists(r)) zips.Add(r);
+            ZipArchive? z = null;
+            ZipArchiveEntry? e = null;
+            foreach (var zip in zips)
+            {
+                try
+                {
+                    z = ZipFile.OpenRead(zip);
+                    e = z.GetEntry("levels/ticino/info.json");
+                    if (e != null) break;
+                }
+                catch (Exception ex) { Log.Write($"place names: {Path.GetFileName(zip)}: {ex.Message}"); }
+                z?.Dispose();
+                z = null;
+            }
+            if (z is null || e is null) return map;
+            using var _z = z;
             using var sr = new StreamReader(e.Open());
             var info = JsonNode.Parse(sr.ReadToEnd(), documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
             var route = new HashSet<string> { "magliaso", "mid", "pura" };
@@ -904,20 +917,32 @@ public sealed partial class PackManager : Observable
             {
                 string mods = BeamNG.Mods(cfg);
                 Directory.CreateDirectory(mods);
+                // from base 75961a1 the base comes in parts (ticino_base_1.zip: scene, Lua, info.json; _2.._4: far
+                // ground, far trees, far houses): the other parts of the release stay, only base zips it no longer
+                // has go (1.1.2 retired every other ticino_base_*.zip and would have deleted three parts of four)
+                var parts = ReleaseBases();
                 foreach (var old in Directory.EnumerateFiles(mods, "ticino_base_*.zip"))
-                    if (!Path.GetFileName(old).Equals(it.Name, StringComparison.OrdinalIgnoreCase)) Retire(old);
+                {
+                    string n = Path.GetFileName(old);
+                    if (!n.Equals(it.Name, StringComparison.OrdinalIgnoreCase) && parts.Count > 0 &&
+                        !parts.Contains(n, StringComparer.OrdinalIgnoreCase)) Retire(old);
+                }
                 string dest = Path.Combine(mods, it.Name);
                 File.Move(ready, dest, true);
                 if (sha != null) st.Checked[it.Name] = Key(sha, new FileInfo(dest));
-                string tag = $"{it.Name}|{sha}";
-                if (st.Base != tag)
+                // the first part names the base, as for the installer (install.json "base", the level cache)
+                if (parts.Count == 0 || parts[0].Equals(it.Name, StringComparison.OrdinalIgnoreCase))
                 {
-                    // a new base: the game's cache of the level would mix old and new (install_ticino.ps1)
-                    string cache = BeamNG.LevelCache(cfg);
-                    if (Directory.Exists(cache)) { Directory.Delete(cache, true); Log.Write("level cache cleared"); }
-                    st.Base = tag;
+                    string tag = $"{it.Name}|{sha}";
+                    if (st.Base != tag)
+                    {
+                        // a new base: the game's cache of the level would mix old and new (install_ticino.ps1)
+                        string cache = BeamNG.LevelCache(cfg);
+                        if (Directory.Exists(cache)) { Directory.Delete(cache, true); Log.Write("level cache cleared"); }
+                        st.Base = tag;
+                    }
+                    Installer.SetBase(cfg, tag);
                 }
-                Installer.SetBase(cfg, tag);
                 EnableMods();
                 break;
             }
@@ -1201,6 +1226,26 @@ public sealed partial class PackManager : Observable
             : Path.Combine(best.RootDirectory.FullName, "TicinoData");
     }
 
+    static bool IsBaseZip(string name) =>
+        name.StartsWith("ticino_base_", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The number of a base part (ticino_base_3.zip: 3), int.MaxValue for another name.</summary>
+    static int BasePart(string name) =>
+        int.TryParse(Path.GetFileNameWithoutExtension(name)["ticino_base_".Length..], out int n) ? n : int.MaxValue;
+
+    /// <summary>The base parts the release lists, first part first.</summary>
+    List<string> ReleaseBases() =>
+        Release?.Assets.Select(a => a.Name).Where(IsBaseZip).OrderBy(BasePart).ThenBy(n => n, StringComparer.OrdinalIgnoreCase).ToList()
+        ?? new List<string>();
+
+    /// <summary>The base zips in mods, first part first.</summary>
+    List<string> BaseZipsInMods()
+    {
+        string mods = BeamNG.Mods(cfg);
+        if (!Directory.Exists(mods)) return new List<string>();
+        return Directory.EnumerateFiles(mods, "ticino_base_*.zip").OrderBy(f => BasePart(Path.GetFileName(f))).ToList();
+    }
+
     /// <summary>Does the base pack in mods carry the server's Lua (ticino/files.lua)? null: no base installed.</summary>
     public bool? BaseHasServerLua()
     {
@@ -1208,10 +1253,15 @@ public sealed partial class PackManager : Observable
         {
             string mods = BeamNG.Mods(cfg);
             if (!Directory.Exists(mods)) return null;
-            string? b = Directory.EnumerateFiles(mods, "ticino_base_*.zip").OrderByDescending(x => x).FirstOrDefault();
-            if (b is null) return null;
-            using var z = ZipFile.OpenRead(b);
-            return z.GetEntry("lua/ge/extensions/ticino/files.lua") != null;
+            var zips = BaseZipsInMods();
+            if (zips.Count == 0) return null;
+            // the Lua is in the first part (ticino_base_1.zip): look in every part, the order of the names says nothing
+            foreach (var b in zips)
+            {
+                using var z = ZipFile.OpenRead(b);
+                if (z.GetEntry("lua/ge/extensions/ticino/files.lua") != null) return true;
+            }
+            return false;
         }
         catch { return null; }
     }
