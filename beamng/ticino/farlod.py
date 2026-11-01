@@ -264,9 +264,11 @@ def fine_tile(g, cx, cy):
     return _skirt(V, h, valid, ring, np.full(len(ring), FINE_SKIRT), cols8, N)
 
 
-def coarse_tile(g, k, i, j):
-    """positions (n, 3) from the tile's corner, triangles, colours (n, 4) uint8, normals of level k tile (i, j); None if
-    empty."""
+def coarse_heights(g, k, i, j):
+    """The vertex heights (K + 1, K + 1) of level k tile (i, j) as coarse_tile draws them (rows along +y; a border
+    vertex the highest far height along its stretch of the border), the lowest height of each border stretch (NaN
+    inside) and the far-grid rows and columns of the vertices; None if the tile has no far ground. farbld.py stands
+    its coarse houses on this surface."""
     s = 1 << k                                   # far-grid squares between two vertices (and far tiles per edge)
     r0 = (j * s - g.cy0) * K                     # the tile's corner on the far grid
     c0 = (i * s - g.cx0) * K
@@ -303,6 +305,42 @@ def coarse_tile(g, k, i, j):
             if np.isfinite(v).any():
                 h[a, b] = np.nanmax(v)
                 lo[a, b] = np.nanmin(v)
+    return h, lo, rows, cols
+
+
+def drawn_height(h, step, u, v):
+    """The height of the surface the far tiles draw over the vertex grid h (rows along +y, step m apart: the squares
+    split along the diagonal from (r, c) to (r + 1, c + 1), as _skirt makes them) at points u, v (m from the grid's
+    first vertex, arrays); NaN outside the grid or where a corner has no height."""
+    u, v = np.asarray(u, np.float64) / step, np.asarray(v, np.float64) / step
+    n_r, n_c = h.shape
+    c = np.floor(u).astype(np.int64)
+    r = np.floor(v).astype(np.int64)
+    c = np.where(c == n_c - 1, n_c - 2, c)        # (a point on the last column or row belongs to the square before)
+    r = np.where(r == n_r - 1, n_r - 2, r)
+    ok = (c >= 0) & (c < n_c - 1) & (r >= 0) & (r < n_r - 1)
+    out = np.full(u.shape, np.nan)
+    if not ok.any():
+        return out
+    c, r, fu, fv = c[ok], r[ok], u[ok] - c[ok], v[ok] - r[ok]
+    a, b = h[r, c].astype(np.float64), h[r, c + 1].astype(np.float64)
+    c2, d = h[r + 1, c].astype(np.float64), h[r + 1, c + 1].astype(np.float64)
+    lower = fu >= fv                                 # triangle (a, b, d), else (a, d, c2)
+    out[ok] = np.where(lower, a + fu * (b - a) + fv * (d - b), a + fv * (c2 - a) + fu * (d - c2))
+    return out
+
+
+def coarse_tile(g, k, i, j):
+    """positions (n, 3) from the tile's corner, triangles, colours (n, 4) uint8, normals of level k tile (i, j); None if
+    empty."""
+    t = coarse_heights(g, k, i, j)
+    if t is None:
+        return None
+    h, lo, rows, cols = t
+    s = 1 << k
+    Hn, Wn = g.H.shape
+    half = s // 2
+    R, C = np.meshgrid(rows, cols, indexing="ij")
     # colours: mean of the far colours in the square round each vertex
     col = np.zeros((K + 1, K + 1, 3), np.float32)
     for a in range(K + 1):

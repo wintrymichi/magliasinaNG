@@ -808,7 +808,8 @@ local function readSettings(cfg)
   end
   -- "bldKm": how far the far houses reach (objects.lua far buildings: the houses' own roofs near, boxes beyond; 0: none,
   -- only the streamed houses' ~2.3 km)
-  if type(s.bldKm) == 'number' and s.bldKm >= 0 then
+  M.bldKmSet = type(s.bldKm) == 'number' and s.bldKm >= 0
+  if M.bldKmSet then
     objects.FAR_BLD_RADIUS = math.floor(s.bldKm * 1000 / (cfg.cell * cfg.square) + 0.5)
   end
   applyFields(s, cfg, 'setting')
@@ -875,6 +876,16 @@ local function start()
   -- far houses from the streamed houses' radius (a preset may cap it with objects.GROUP_R)
   local capB = objects.GROUP_R and objects.GROUP_R[objects.FAR_BLD_GROUP]
   if capB and capB < objects.FAR_BLD_INNER then objects.FAR_BLD_INNER = capB end
+  -- the far houses to the view distance when the base has their coarser levels (michi 2026-11-01, "le case voglio che si
+  -- vedono sempre! se mai usa un LOD per le case più lontane"): blocks of 3, 6 and 12 km, few shapes; settings "bldKm"
+  -- still sets the reach
+  if objects.farBldLevels() and objects.hasFarLod() and not M.bldKmSet and M.VIEW_KM > 0 then
+    local r = math.ceil(M.VIEW_KM * 1000 / (cfg.cell * cfg.square))
+    if r > objects.FAR_BLD_RADIUS then
+      objects.FAR_BLD_RADIUS = r
+      log('I', 'ticino', string.format('far houses to the view distance: %d tiles', r))
+    end
+  end
   M.applyView()
   if not M.AI_MAP then M.noAIMap() end
   if M.TEX_WARM then texwarm.start(M.LEVEL) end

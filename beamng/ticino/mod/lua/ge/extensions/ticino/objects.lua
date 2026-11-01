@@ -1031,15 +1031,21 @@ end
 --          sets forest.RADIUS; the streamed houses' radius);
 --   coarse (<dir>/l2_<bx>_<by>.cdae, one per block): the blocks beyond, out to <P>_RADIUS tiles (settings "treeKm",
 --          "bldKm").
--- Whatever changes level stays until its cover is there (coarse until the block's fine tiles are made, fine until
--- the coarse block is made, a tile entering the inner radius until the real things are made there (F.innerMade:
--- forest.made, the tile's buildings in the queue), each at most <P>_HOLD_MS): no hole, at worst both for a moment. A
--- base without coarse tiles shows fine tiles out to min(radius, <P>_FINE_MAX).
+--   coarser (<dir>/l<k>_<i>_<j>.cdae, k = 3..5, blocks of 2^k tiles: 3, 6 and 12 km; stream.json farBldL, the far
+--          houses only, farbld.py LEVELS): a quadtree over the coarse blocks, as the far ground's: a level k block is
+--          split into its four level k - 1 blocks while it is within <P>'s split distance of the car's tile (fsSplitD:
+--          the far ground's LOD_D one level ahead, so a block stands only on the two far ground levels farbld.py fits
+--          its boxes to), out to <P>_RADIUS (with these levels the view distance, stream.lua).
+-- Whatever changes level stays until its cover is there (a coarser shape until the finer ones in it are made, a finer
+-- one until the coarser one over it is made, a tile entering the inner radius until the real things are made there
+-- (F.innerMade: forest.made, the tile's buildings in the queue), each at most <P>_HOLD_MS): no hole, at worst both for
+-- a moment. A base without coarse tiles shows fine tiles out to min(radius, <P>_FINE_MAX).
 -- The houses also the other way: a tile inside the inner radius whose streamed houses are not all made (after a jump,
 -- behind a long queue, under a fast free camera) gets its far houses until they are (F.fill), and a streamed house
 -- that leaves the radius goes only once the far houses of its tile (or block) are there (bldHold, the objects queue).
 M.FAR_TREES_FILE = '/levels/%s/fartrees/t_%d_%d.cdae'
 M.FAR_TREES2_FILE = '/levels/%s/fartrees/l2_%d_%d.cdae'
+M.FAR_TREESL_FILE = '/levels/%s/fartrees/l%d_%d_%d.cdae'   -- coarser levels (k >= 3; none yet)
 M.FAR_TREES_RADIUS = 40     -- tiles (Chebyshev) of far trees round the car's tile (settings "treeKm"); 0: none
 M.FAR_TREES_BLOCKS0 = 2     -- blocks (Chebyshev) round the car's block with fine far trees
 M.FAR_TREES_FINE_MAX = 12   -- tiles of fine far trees at most when the base has no coarse ones
@@ -1049,6 +1055,7 @@ M.FAR_TREES_MIN_MS = 1     -- of every stepFar call, whatever the far ground too
 M.forestMade = nil          -- function(key): true once the Forest shows tile key (stream.lua: forest.made)
 M.FAR_BLD_FILE = '/levels/%s/farbld/b_%d_%d.cdae'
 M.FAR_BLD2_FILE = '/levels/%s/farbld/l2_%d_%d.cdae'
+M.FAR_BLDL_FILE = '/levels/%s/farbld/l%d_%d_%d.cdae'      -- coarser levels k = 3..5 (stream.json farBldL)
 M.FAR_BLD_RADIUS = 40       -- tiles of far houses round the car's tile (settings "bldKm"); 0: none
 M.FAR_BLD_BLOCKS0 = 2       -- blocks round the car's block with the fine far houses (their own roofs)
 M.FAR_BLD_FINE_MAX = 12
@@ -1058,158 +1065,351 @@ M.FAR_BLD_HOLD_MS = 60000   -- a far tile over the car's town: counted from when
 M.FAR_BLD_GROUP = 'buildings'
 M.FAR_BLD_MIN_MS = 1       -- of every stepFar call, whatever the far ground took
 
-local function cheb(key, cx, cy)
-  local tx, ty = parse2(key)
-  return math.max(math.abs(tx - cx), math.abs(ty - cy)), tx, ty
-end
-
 local function fp(F, name) return M[F.P .. name] end
 
--- a far set of the base: the keys of its fine tiles and of its coarse blocks (B x B tiles)
-local function farSet(prefix, what, stat, keys, keys2, B)
-  local F = { P = prefix, what = what, stat = stat, has = {}, live = {}, has2 = {}, live2 = {}, B = B or 4,
-              queue = {}, pos = 1, wait = {} }
-  for _, k in ipairs(keys or {}) do F.has[k] = true end
-  for _, k in ipairs(keys2 or {}) do F.has2[k] = true end
-  F.two = next(F.has2) ~= nil
+-- The size in tiles of a level k shape of a far set: 1 for a fine tile (k 0), B x 2^(k - 2) for a block (k 2: B x B)
+local function fsSize(F, k) if k == 0 then return 1 end return F.B * 2 ^ (k - 2) end
+
+-- The indices at level k2 (> k) of the block over shape (k, i, j)
+local function fsAnc(F, k, i, j, k2)
+  local s = k == 0 and fsSize(F, k2) or 2 ^ (k2 - k)
+  return math.floor(i / s), math.floor(j / s)
+end
+
+-- a far set of the base: the keys of its fine tiles, of its coarse blocks (B x B tiles) and of its coarser levels
+-- (levels: { ["3"] = keys, ... }, blocks of B x 2^(k - 2) tiles, farbld.py LEVELS)
+local function farSet(prefix, what, stat, keys, keys2, B, levels)
+  local F = { P = prefix, what = what, stat = stat, B = B or 4, queue = {}, pos = 1, wait = {},
+              hasK = { [0] = {}, [2] = {} }, liveK = { [0] = {}, [2] = {} }, queued = { [0] = {}, [2] = {} },
+              ks = { 2 }, all = { 0, 2 }, top = 2 }
+  for _, k in ipairs(keys or {}) do F.hasK[0][k] = true end
+  for _, k in ipairs(keys2 or {}) do F.hasK[2][k] = true end
+  local counts = {}
+  for ks, lst in pairs(type(levels) == 'table' and levels or {}) do
+    local k = tonumber(ks)
+    if k and k >= 3 and k <= 12 and type(lst) == 'table' and #lst > 0 then
+      F.hasK[k], F.liveK[k], F.queued[k] = {}, {}, {}
+      for _, key in ipairs(lst) do F.hasK[k][key] = true end
+      F.ks[#F.ks + 1] = k
+      counts[#counts + 1] = string.format('level %d: %d', k, #lst)
+    end
+  end
+  table.sort(F.ks)
+  F.top = F.ks[#F.ks]
+  -- (a level with no shape between 3 and the top one stays a level of the quadtree, empty: fsWant goes through
+  -- every level down to 2)
+  for k = 3, F.top - 1 do
+    if not F.hasK[k] then
+      F.hasK[k], F.liveK[k], F.queued[k] = {}, {}, {}
+      F.ks[#F.ks + 1] = k
+    end
+  end
+  table.sort(F.ks)
+  F.all = { 0 }
+  for _, k in ipairs(F.ks) do F.all[#F.all + 1] = k end
+  F.has, F.live, F.has2, F.live2 = F.hasK[0], F.liveK[0], F.hasK[2], F.liveK[2]
+  F.levels = F.top > 2
+  F.two = next(F.has2) ~= nil or F.levels
   F.any = F.two or next(F.has) ~= nil
-  log('I', 'ticino', string.format('%s in stream.json: %d tiles, %d coarse blocks', what, #(keys or {}),
-    #(keys2 or {})))
+  log('I', 'ticino', string.format('%s in stream.json: %d tiles, %d coarse blocks%s', what, #(keys or {}),
+    #(keys2 or {}), #counts > 0 and (', ' .. table.concat(counts, ', ')) or ''))
   return F
 end
 
+-- live fine shapes, live coarse shapes (every level), and the coarse ones by level ({ [k] = n })
 local function fsCount(F)
-  local a, b = 0, 0
-  for _ in pairs(F and F.live or {}) do a = a + 1 end
-  for _ in pairs(F and F.live2 or {}) do b = b + 1 end
-  return a, b
+  local a, b, byK = 0, 0, {}
+  if not F then return 0, 0, byK end
+  for _ in pairs(F.liveK[0]) do a = a + 1 end
+  for _, k in ipairs(F.ks) do
+    local n = 0
+    for _ in pairs(F.liveK[k]) do n = n + 1 end
+    byK[k], b = n, b + n
+  end
+  return a, b, byK
 end
 
 local function fsBlock(F, tx, ty) return math.floor(tx / F.B), math.floor(ty / F.B) end
-
--- Does the car at tile (cx, cy) want the fine shape of tile (tx, ty)? (d: its Chebyshev distance)
-local function fsWantFine(F, tx, ty, d, cx, cy)
-  local R, I = fp(F, '_RADIUS'), fp(F, '_INNER')
-  if d <= I or R <= I then return false end
-  if not F.two then return d <= math.min(R, fp(F, '_FINE_MAX')) end
-  local bx, by = fsBlock(F, tx, ty)
-  local bcx, bcy = fsBlock(F, cx, cy)
-  return math.max(math.abs(bx - bcx), math.abs(by - bcy)) <= fp(F, '_BLOCKS0')
-end
 
 -- Is the inner tile key still without its real things (and so wants its fine shape, F.fill)?
 local function fsFillWanted(F, key)
   return F.fill and F.innerMade ~= nil and F.innerMade(key) == false
 end
 
-local function fsUpdate(F, cx, cy)
-  if not S or not F or not F.any then return 0 end
-  local R, I, B, n = fp(F, '_RADIUS'), fp(F, '_INNER'), F.B, 0
-  local bcx, bcy = fsBlock(F, cx, cy)
-  local B0, B2 = fp(F, '_BLOCKS0'), math.ceil(R / B)
-  F.cell = { cx, cy }
-  -- A doomed shape's wait counts from when it was first doomed for the same cover: reset at every update (a tile change
-  -- every 11.6 s at 33 m/s, under the 20 s hold of the trees) it never ran out, and the coarse blocks the fine trees
-  -- behind the car waited for came last in the queue: 428 fine far trees live, none removed, fps 91 -> 50 along the
-  -- flight (PC l_A / l_A2 of 1860ef2). The blocks such tiles wait for are made first (urgent).
-  local urgent = {}
-  for key, f in pairs(F.live) do
-    local d, tx, ty = cheb(key, cx, cy)
-    local bx, by = fsBlock(F, tx, ty)
-    local bk, bd = bx .. '_' .. by, math.max(math.abs(bx - bcx), math.abs(by - bcy))
-    local was = f.doomed
-    f.doomed = nil
-    if R <= I then
-      delete(f.id)
-      F.live[key] = nil
-      n = n + 1
-    elseif d <= I then
-      f.inner = true                     -- dropped by fsDrop once the real things are there
-    elseif fsWantFine(F, tx, ty, d, cx, cy) then
-      f.inner, f.innerAt = nil, nil
-    elseif F.two and F.has2[bk] and bd <= B2 then
-      f.inner, f.innerAt = nil, nil
-      f.doomed = bk                      -- dropped once the coarse block is there
-      if not F.live2[bk] then urgent[bk] = true end
-    else
-      delete(f.id)
-      F.live[key] = nil
-      n = n + 1
-    end
-    if f.doomed ~= was then f.doomedAt = nil end
+-- The split distances of the coarser levels (tiles from the car's to a block's square): a level k block (k >= 3) is
+-- split into its four level k - 1 blocks within D[k]. The far ground's own quadtree (LOD_D, lodSetup) one level ahead:
+-- a level k block is drawn only where the far ground draws level k - 1 or k, the two levels farbld.py stands its boxes
+-- on (GROUND_LEVELS); level 3 also at least as far as the fine tiles reach (the blocks within <P>_BLOCKS0).
+local function fsSplitD(F)
+  local L = S.lod
+  local G = L and L.D or nil
+  local d2 = M.LOD_D2 or math.max(7, (S.cfg.farRadius or 16) - 2)
+  local D = {}
+  for k = 3, F.top do
+    local g = G and G[k - 1] or math.floor(d2 * M.LOD_GROW ^ (k - 3) + 0.5)
+    if k == 3 then g = math.max(g, F.B * fp(F, '_BLOCKS0')) end
+    D[k] = math.max(g, D[k - 1] or 0)
   end
-  for bk, f in pairs(F.live2) do
-    local bd = cheb(bk, bcx, bcy)
-    local was = f.doomed
-    f.doomed = nil
-    if R <= I or bd > B2 + 1 then
-      delete(f.id)
-      F.live2[bk] = nil
-      n = n + 1
-    elseif bd <= B0 then
-      f.doomed = true                    -- dropped once its fine tiles are there
-    end
-    if f.doomed ~= was then f.doomedAt = nil end
-  end
-  F.removed = (F.removed or 0) + n
-  local q = {}
-  local tm = S.cfg.cell * S.cfg.square
-  -- the fine tiles still to make in each block: a coarse block that waits for its fine tiles waits while they are queued
-  F.pend2 = {}
-  local nUrgent = 0
-  if R > I then
-    local W = F.two and (B0 + 1) * B - 1 or math.min(R, fp(F, '_FINE_MAX'))
+  return D
+end
+
+-- The shapes the car at tile (cx, cy) wants: want[k][key] = tiles from the car's tile to the shape's square
+local function fsWant(F, cx, cy)
+  local R, I = fp(F, '_RADIUS'), fp(F, '_INNER')
+  local want = {}
+  for _, k in ipairs(F.all) do want[k] = {} end
+  if R <= I then return want end
+  local fine = want[0]
+  if not F.two then
+    local W = math.min(R, fp(F, '_FINE_MAX'))
     for ty = cy - W, cy + W do
       for tx = cx - W, cx + W do
         local key = tx .. '_' .. ty
-        if F.has[key] and not F.live[key] then
+        if F.has[key] then
           local d = math.max(math.abs(tx - cx), math.abs(ty - cy))
-          if fsWantFine(F, tx, ty, d, cx, cy) or (d <= I and fsFillWanted(F, key)) then
-            q[#q + 1] = { key, d * tm, tx, ty, 0 }
-            local bx, by = fsBlock(F, tx, ty)
-            local bk = bx .. '_' .. by
-            F.pend2[bk] = (F.pend2[bk] or 0) + 1
-          end
+          if d > I or fsFillWanted(F, key) then fine[key] = d end
         end
       end
     end
-    if F.two then
-      for by = bcy - B2, bcy + B2 do
-        for bx = bcx - B2, bcx + B2 do
-          local bk = bx .. '_' .. by
-          local bd = math.max(math.abs(bx - bcx), math.abs(by - bcy))
-          if bd > B0 and F.has2[bk] and not F.live2[bk] then
-            q[#q + 1] = { bk, urgent[bk] and -1 or bd * B * tm, bx, by, 2 }
-            if urgent[bk] then nUrgent = nUrgent + 1 end
+    return want
+  end
+  local D, B0 = fsSplitD(F), fp(F, '_BLOCKS0')
+  F.splitD = D
+  local bcx, bcy = fsBlock(F, cx, cy)
+  local function visit(k, i, j)
+    local s = fsSize(F, k)
+    local x0, y0 = i * s, j * s
+    local d = sqDist(cx, cy, x0, y0, x0 + s - 1, y0 + s - 1)
+    if d > R then return end
+    local key = i .. '_' .. j
+    if k == 2 then
+      if math.max(math.abs(i - bcx), math.abs(j - bcy)) <= B0 then
+        for ty = y0, y0 + s - 1 do
+          for tx = x0, x0 + s - 1 do
+            local tk = tx .. '_' .. ty
+            if F.has[tk] then
+              local dt = math.max(math.abs(tx - cx), math.abs(ty - cy))
+              if dt <= R and (dt > I or fsFillWanted(F, tk)) then fine[tk] = dt end
+            end
           end
         end
+      elseif F.has2[key] then
+        want[2][key] = d
       end
+    elseif d <= D[k] then
+      for jj = 2 * j, 2 * j + 1 do
+        for ii = 2 * i, 2 * i + 1 do visit(k - 1, ii, jj) end
+      end
+    elseif F.hasK[k][key] then
+      want[k][key] = d
     end
   end
-  table.sort(q, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
-  F.queue, F.pos = q, 1
-  local live, live2 = fsCount(F)
-  log('I', 'ticino', string.format('%s at tile %d,%d: %d to make (%d first: covers of shapes behind), live %d fine + '
-    .. '%d coarse, %d removed (radius %d tiles, fine within %d blocks, %s)', F.what, cx, cy, #q, nUrgent, live, live2,
-    n, R, B0, F.two and 'coarse blocks in the base' or 'no coarse blocks in the base'))
-  return n
+  local st = fsSize(F, F.top)
+  for j = math.floor((cy - R) / st), math.floor((cy + R) / st) do
+    for i = math.floor((cx - R) / st), math.floor((cx + R) / st) do visit(F.top, i, j) end
+  end
+  return want
 end
 
--- Is the fine level of block bk all there (every tile it has made; the inner tiles' real things made)?
-local function fsFineCovered(F, bk)
-  local bx, by = parse2(bk)
-  local B, c, I = F.B, F.cell, fp(F, '_INNER')
-  for ty = by * B, by * B + B - 1 do
-    for tx = bx * B, bx * B + B - 1 do
-      local key = tx .. '_' .. ty
-      if F.has[key] and not F.live[key] then
-        local d = c and math.max(math.abs(tx - c[1]), math.abs(ty - c[2])) or 99
-        if d > I then return false end
-        if F.innerMade and F.innerMade(key) == false then return false end
+-- Is shape (k, i, j) of the level the quadtree draws at its place (as if the radius reached it)? Only such a shape
+-- stays in the band beyond the radius: a jump left level 3 blocks 66 tiles from the car in it, where the far ground
+-- draws level 5 (tests/far_levels.lua). Call after fsWant (F.splitD).
+local function fsLeaf(F, k, i, j, cx, cy)
+  if not F.two then return true end
+  local B0 = fp(F, '_BLOCKS0')
+  local bcx, bcy = fsBlock(F, cx, cy)
+  if k == 0 then
+    local bx, by = fsBlock(F, i, j)
+    return math.max(math.abs(bx - bcx), math.abs(by - bcy)) <= B0
+  end
+  local D = F.splitD or fsSplitD(F)
+  if k == 2 then
+    if math.max(math.abs(i - bcx), math.abs(j - bcy)) <= B0 then return false end
+  else
+    local s = fsSize(F, k)
+    if sqDist(cx, cy, i * s, j * s, i * s + s - 1, j * s + s - 1) <= D[k] then return false end
+  end
+  if k >= F.top then return true end
+  local a, b = fsAnc(F, k, i, j, k + 1)              -- (the levels from 2 to the top are all there: farSet)
+  local s2 = fsSize(F, k + 1)
+  return sqDist(cx, cy, a * s2, b * s2, a * s2 + s2 - 1, b * s2 + s2 - 1) <= D[k + 1]
+end
+
+-- What covers shape (k, i, j) once it is no longer wanted: 'up' and the level and key of a wanted coarser shape over
+-- it, or 'down' (wanted finer shapes in it, or tiles inside the inner radius whose real things will draw them); nil
+-- when nothing is wanted over its square
+local function fsCover(F, want, k, i, j)
+  for _, k2 in ipairs(F.ks) do
+    if k2 > k then
+      local a, b = fsAnc(F, k, i, j, k2)
+      local key = a .. '_' .. b
+      if want[k2][key] then return 'up', k2, key end
+    end
+  end
+  if k == 0 then return nil end
+  local c, I = F.cell, fp(F, '_INNER')
+  local function any(kk, ii, jj)
+    if kk == 0 then
+      local key = ii .. '_' .. jj
+      if want[0][key] then return true end
+      return F.has[key] and c ~= nil and math.max(math.abs(ii - c[1]), math.abs(jj - c[2])) <= I
+    end
+    if kk < k and want[kk][ii .. '_' .. jj] then return true end
+    if kk > 2 then
+      for b = 2 * jj, 2 * jj + 1 do
+        for a = 2 * ii, 2 * ii + 1 do if any(kk - 1, a, b) then return true end end
+      end
+    else
+      local s = F.B
+      for ty = jj * s, jj * s + s - 1 do
+        for tx = ii * s, ii * s + s - 1 do if any(0, tx, ty) then return true end end
+      end
+    end
+    return false
+  end
+  if any(k, i, j) then return 'down' end
+  return nil
+end
+
+-- Is the cover of doomed shape (k, i, j) there? Returns covered, and whether a missing piece of it is still queued
+local function fsCovered(F, k, i, j)
+  local want, c, I = F.want or {}, F.cell, fp(F, '_INNER')
+  for _, k2 in ipairs(F.ks) do
+    if k2 > k then
+      local a, b = fsAnc(F, k, i, j, k2)
+      local key = a .. '_' .. b
+      if want[k2] and want[k2][key] then
+        if F.liveK[k2][key] then return true, false end
+        return false, F.queued[k2][key] ~= nil
       end
     end
   end
-  return true
+  if k == 0 then return true, false end
+  local ok, waiting = true, false
+  local function inner(kk, ii, jj)
+    local key = ii .. '_' .. jj
+    if kk == 0 then
+      if F.liveK[0][key] then return end
+      if c and math.max(math.abs(ii - c[1]), math.abs(jj - c[2])) <= I then
+        -- an inner tile: its real things draw it (its fine shape only fills in while they are missing)
+        if F.has[key] and F.innerMade and F.innerMade(key) == false then
+          ok = false
+          if F.queued[0][key] then waiting = true end
+        end
+      elseif want[0][key] then
+        ok = false
+        if F.queued[0][key] then waiting = true end
+      end
+      return
+    end
+    if kk < k and want[kk][key] then
+      if not F.liveK[kk][key] then
+        ok = false
+        if F.queued[kk][key] then waiting = true end
+      end
+      return
+    end
+    if kk > 2 then
+      for b = 2 * jj, 2 * jj + 1 do
+        for a = 2 * ii, 2 * ii + 1 do
+          inner(kk - 1, a, b)
+          if waiting then return end
+        end
+      end
+    else
+      local s = F.B
+      for ty = jj * s, jj * s + s - 1 do
+        for tx = ii * s, ii * s + s - 1 do
+          inner(0, tx, ty)
+          if waiting then return end
+        end
+      end
+    end
+  end
+  inner(k, i, j)
+  return ok, waiting
+end
+
+local function fsUpdate(F, cx, cy)
+  if not S or not F or not F.any then return 0 end
+  local R, I, n = fp(F, '_RADIUS'), fp(F, '_INNER'), 0
+  F.cell = { cx, cy }
+  local want = fsWant(F, cx, cy)
+  F.want = want
+  -- A shape no longer wanted stays until its cover is there (fsDrop). Its wait counts from when it was first doomed:
+  -- reset at every update (a tile change every 11.6 s at 33 m/s, under the 20 s hold of the trees) it never ran out,
+  -- and the coarse blocks the fine trees behind the car waited for came last in the queue: 428 fine far trees live,
+  -- none removed, fps 91 -> 50 along the flight (PC l_A / l_A2 of 1860ef2). The coarser shapes such shapes wait for
+  -- are made first (urgent).
+  local urgent = {}
+  for _, k in ipairs(F.all) do
+    local s = fsSize(F, k)
+    for key, f in pairs(F.liveK[k]) do
+      local i, j = parse2(key)
+      local d = sqDist(cx, cy, i * s, j * s, i * s + s - 1, j * s + s - 1)
+      local was = f.doomed
+      f.doomed, f.cover = nil, nil
+      local drop = false
+      if R <= I then
+        drop = true
+      elseif k == 0 and d <= I then
+        f.inner = true                     -- dropped by fsDrop once the real things are there
+      elseif want[k][key] then
+        f.inner, f.innerAt = nil, nil
+      else
+        f.inner, f.innerAt = nil, nil
+        local how, k2, key2 = fsCover(F, want, k, i, j)
+        if how then
+          f.doomed, f.cover = true, how
+          if how == 'up' and not F.liveK[k2][key2] then urgent[k2 .. ':' .. key2] = true end
+        elseif not (d > R and d <= R + s and fsLeaf(F, k, i, j, cx, cy)) then
+          drop = true                      -- (the band beyond the radius stays: the car going back and forth)
+        end
+      end
+      if drop then
+        delete(f.id)
+        F.liveK[k][key] = nil
+        n = n + 1
+      elseif f.doomed ~= was then
+        f.doomedAt = nil
+      end
+    end
+  end
+  F.removed = (F.removed or 0) + n
+  local q, nUrgent = {}, 0
+  local tm = S.cfg.cell * S.cfg.square
+  for _, k in ipairs(F.all) do
+    local qk = {}
+    F.queued[k] = qk
+    for key, d in pairs(want[k]) do
+      if not F.liveK[k][key] then
+        local i, j = parse2(key)
+        local u = urgent[k .. ':' .. key]
+        q[#q + 1] = { key, u and -1 or d * tm, i, j, k }
+        qk[key] = true
+        if u then nUrgent = nUrgent + 1 end
+      end
+    end
+  end
+  table.sort(q, function(a, b)
+    if a[2] ~= b[2] then return a[2] < b[2] end
+    if a[5] ~= b[5] then return a[5] < b[5] end
+    return a[1] < b[1]
+  end)
+  F.queue, F.pos = q, 1
+  local live, live2, byK = fsCount(F)
+  local lv = ''
+  if F.levels then
+    local parts = {}
+    for _, k in ipairs(F.ks) do parts[#parts + 1] = string.format('l%d %d', k, byK[k] or 0) end
+    local sd = {}
+    for k = 3, F.top do sd[#sd + 1] = tostring(F.splitD and F.splitD[k] or '-') end
+    lv = string.format(' [%s; split within %s tiles]', table.concat(parts, ', '), table.concat(sd, '/'))
+  end
+  log('I', 'ticino', string.format('%s at tile %d,%d: %d to make (%d first: covers of shapes behind), live %d fine + '
+    .. '%d coarse%s, %d removed (radius %d tiles, fine within %d blocks, %s)', F.what, cx, cy, #q, nUrgent, live, live2,
+    lv, n, R, fp(F, '_BLOCKS0'), F.two and 'coarse blocks in the base' or 'no coarse blocks in the base'))
+  return n
 end
 
 -- Drop the shapes whose cover is there (looked at every 500 ms at most); returns the number dropped.
@@ -1222,37 +1422,32 @@ local function fsDrop(F, clock)
   -- a hold counts only from when nothing more is coming for it: an inner tile while its real things are still queued
   -- (F.coming: the houses, the objects queue has objects left to make; after a jump to Lugano the queues took minutes,
   -- and at 60 s the far houses of the town went: a band of bare paved ground with no house between the made houses and
-  -- the far ones, PC photos from San Salvatore of 547c25a), a coarse block that waits for its fine tiles while they are
-  -- still queued (F.pend2). A fine tile behind the car waits from when it was doomed: its coarse block is made first
-  -- (fsUpdate), and a wait reset while the set's queue was busy never ran out on a flight (PC l_A of 1860ef2)
+  -- the far ones, PC photos from San Salvatore of 547c25a), a coarse shape that waits for the finer ones in it while
+  -- they are still queued. A shape that waits for a coarser one waits from when it was doomed: the coarser one is made
+  -- first (fsUpdate), and a wait reset while the set's queue was busy never ran out on a flight (PC l_A of 1860ef2)
   local coming = F.coming ~= nil and F.coming()
-  local pend2 = F.pend2 or {}
   local timedOut = 0
-  for key, f in pairs(F.live) do
-    local gone = false
-    if f.inner then
-      if not f.innerAt or coming then f.innerAt = now end
-      gone = (F.innerMade and F.innerMade(key) == true)
-      if not gone and now - f.innerAt > H then gone = true; timedOut = timedOut + 1 end
-    elseif f.doomed then
-      f.doomedAt = f.doomedAt or now
-      gone = F.live2[f.doomed] ~= nil
-      if not gone and now - f.doomedAt > H then gone = true; timedOut = timedOut + 1 end
-    end
-    if gone then
-      delete(f.id)
-      F.live[key] = nil
-      n = n + 1
-    end
-  end
-  for bk, f in pairs(F.live2) do
-    if f.doomed then
-      if not f.doomedAt or (pend2[bk] or 0) > 0 then f.doomedAt = now end
-      local gone = fsFineCovered(F, bk)
-      if not gone and now - f.doomedAt > H then gone = true; timedOut = timedOut + 1 end
+  for _, k in ipairs(F.all) do
+    local live = F.liveK[k]
+    for key, f in pairs(live) do
+      local gone = false
+      if f.inner then
+        if not f.innerAt or coming then f.innerAt = now end
+        gone = (F.innerMade and F.innerMade(key) == true)
+        if not gone and now - f.innerAt > H then gone = true; timedOut = timedOut + 1 end
+      elseif f.doomed then
+        local i, j = parse2(key)
+        local ok, waiting = fsCovered(F, k, i, j)
+        if ok then
+          gone = true
+        else
+          if not f.doomedAt or (f.cover == 'down' and waiting) then f.doomedAt = now end
+          if now - f.doomedAt > H then gone = true; timedOut = timedOut + 1 end
+        end
+      end
       if gone then
         delete(f.id)
-        F.live2[bk] = nil
+        live[key] = nil
         n = n + 1
       end
     end
@@ -1261,6 +1456,17 @@ local function fsDrop(F, clock)
   F.timedOut = (F.timedOut or 0) + timedOut
   if F.onCheck then F.onCheck(now) end
   return n
+end
+
+local function fsFile(F, k)
+  if k == 0 then return fp(F, '_FILE') end
+  if k == 2 then return fp(F, '2_FILE') end
+  return fp(F, 'L_FILE')
+end
+
+local function fsShape(F, k, tx, ty)
+  if k <= 2 then return string.format(fsFile(F, k), S.level, tx, ty) end
+  return string.format(fsFile(F, k), S.level, k, tx, ty)
 end
 
 -- Make queued shapes and drop the ones whose cover is there, for at most budgetMs; returns the number made.
@@ -1275,30 +1481,25 @@ local function fsStep(F, clock, budgetMs)
     local w = q[F.pos]
     F.pos = F.pos + 1
     local key, tx, ty, lvl = w[1], w[3], w[4], w[5]
-    local live = lvl == 2 and F.live2 or F.live
-    local inner = lvl ~= 2 and c ~= nil and math.max(math.abs(tx - c[1]), math.abs(ty - c[2])) <= I
-    if lvl ~= 2 and F.pend2 then
-      local bx, by = fsBlock(F, tx, ty)
-      local bk = bx .. '_' .. by
-      if F.pend2[bk] then F.pend2[bk] = F.pend2[bk] - 1 end
-    end
+    local live = F.liveK[lvl]
+    if F.queued[lvl] then F.queued[lvl][key] = nil end
+    local inner = lvl == 0 and c ~= nil and math.max(math.abs(tx - c[1]), math.abs(ty - c[2])) <= I
     -- an inner tile only while its real things are still missing (they may have come since it was queued)
-    if not live[key] and (not inner or fsFillWanted(F, key)) then
+    if live and not live[key] and (not inner or fsFillWanted(F, key)) then
       local ts = clock()
       local o = createObject('TSStatic')
+      local shape = fsShape(F, lvl, tx, ty)
       if not F.first then
         F.first = true
-        log('I', 'ticino', F.what .. ': first shape ' .. string.format(lvl == 2 and fp(F, '2_FILE') or fp(F, '_FILE'),
-          S.level, tx, ty))
+        log('I', 'ticino', F.what .. ': first shape ' .. shape)
       end
-      local file, size = fp(F, '_FILE'), tm
-      if lvl == 2 then file, size = fp(F, '2_FILE'), tm * F.B end
-      o:setField('shapeName', 0, string.format(file, S.level, tx, ty))
-      seen(string.format(file, S.level, tx, ty))
+      o:setField('shapeName', 0, shape)
+      seen(shape)
       o:setField('collisionType', 0, 'None')
       o:setField('decalType', 0, 'None')
       o:setField('dynamic', 0, wantDynamic() and 'true' or 'false')
       o.canSave = false
+      local size = fsSize(F, lvl) * tm
       o:setPosition(vec3(cfg.origin[1] + tx * size, cfg.origin[2] + ty * size, 0))
       o:registerObject('')
       S.group:addObject(o)
@@ -1309,7 +1510,8 @@ local function fsStep(F, clock, budgetMs)
       if F.onMade then F.onMade(key, lvl) end
       local dts = clock() - ts
       if dts > M.SLOW_SPAWN_MS then
-        log('W', 'ticino', string.format('slow %s %.0f ms: %s', F.what, dts, (lvl == 2 and 'l2_' or '') .. key))
+        log('W', 'ticino', string.format('slow %s %.0f ms: %s', F.what, dts, (lvl > 0 and ('l' .. lvl .. '_') or '')
+          .. key))
       end
     end
     if budgetMs and clock() - t0 > budgetMs then break end
@@ -1320,8 +1522,9 @@ end
 -- Are shapes of the set waiting for their cover (or, the houses, streamed houses for their far ones)?
 local function fsHeld(F)
   if not F then return false end
-  for _, f in pairs(F.live) do if f.inner or f.doomed then return true end end
-  for _, f in pairs(F.live2) do if f.doomed then return true end end
+  for _, k in ipairs(F.all) do
+    for _, f in pairs(F.liveK[k]) do if f.inner or f.doomed then return true end end
+  end
   return next(F.wait) ~= nil
 end
 
@@ -1336,7 +1539,15 @@ function M.farTreesPending() return S ~= nil and fsPending(S.ft) end
 -- ------------------------------------------------------------------ far buildings: the streamed houses' side
 -- Are the streamed houses of tile key all made, as the car's tile wants them now? nil: not known (tile not read yet)
 function M.bldMade(key)
-  local t = S and S.tiles[key]
+  if not S then return nil end
+  local t = S.tiles[key]
+  if t == nil then
+    -- read again: the cache keeps the CACHE_TILES last read, so a tile read long ago goes first even while its houses
+    -- stand round the car, and its far tile waited the whole hold over them (tests/far_levels.lua, a long drive)
+    local tx, ty = parse2(key)
+    tile(tx, ty)
+    t = S.tiles[key]
+  end
   if t == false then return true end
   if t == nil then return nil end
   local b = t.bld                       -- the indices of its houses (tile())
@@ -1352,33 +1563,33 @@ function M.bldMade(key)
   return true
 end
 
--- Are the far houses over tile (tx, ty) made (its fine tile, or its coarse block)?
+-- Are the far houses over tile (tx, ty) made (its fine tile, or a coarse block of any level over it)?
 local function bldCovered(F, tx, ty)
-  local key = tx .. '_' .. ty
-  if F.live[key] then return true end
-  local bx, by = fsBlock(F, tx, ty)
-  return F.live2[bx .. '_' .. by] ~= nil
+  if F.live[tx .. '_' .. ty] then return true end
+  for _, k in ipairs(F.ks) do
+    local a, b = fsAnc(F, 0, tx, ty, k)
+    if F.liveK[k][a .. '_' .. b] then return true end
+  end
+  return false
 end
 
 -- A streamed house's deletion (op of the objects queue) waits while far houses are coming for its tile: the town
 -- does not open a hole at the buildings' radius while the far tile is still queued. Returns true when held.
 bldHold = function(op)
   local F = S.fb
-  if not F or not F.any or op.free then return false end
+  if not F or not F.any or op.free or not F.want then return false end
   local tx, ty = op[3], op[4]
   local key = tx .. '_' .. ty
   if bldCovered(F, tx, ty) then return false end
   local c = F.cell
   if not c then return false end
-  local d = math.max(math.abs(tx - c[1]), math.abs(ty - c[2]))
-  local coming
-  if fsWantFine(F, tx, ty, d, c[1], c[2]) then
-    coming = F.has[key]
-  elseif F.two and d > fp(F, '_INNER') then
-    local bx, by = fsBlock(F, tx, ty)
-    local bcx, bcy = fsBlock(F, c[1], c[2])
-    local bd = math.max(math.abs(bx - bcx), math.abs(by - bcy))
-    coming = F.has2[bx .. '_' .. by] and bd > fp(F, '_BLOCKS0') and bd <= math.ceil(fp(F, '_RADIUS') / F.B)
+  if math.max(math.abs(tx - c[1]), math.abs(ty - c[2])) <= fp(F, '_INNER') then return false end
+  local coming = F.want[0][key] ~= nil
+  if not coming then
+    for _, k in ipairs(F.ks) do
+      local a, b = fsAnc(F, 0, tx, ty, k)
+      if F.want[k][a .. '_' .. b] then coming = true; break end
+    end
   end
   if not coming then return false end
   local w = F.wait[key]
@@ -1413,17 +1624,22 @@ function M.farBldPending() return S ~= nil and fsPending(S.fb) end
 farSets = function(cfg)
   S.ft = farSet('FAR_TREES', 'far trees', 'farTrees', cfg.farTrees, cfg.farTrees2, cfg.farTrees2Tiles)
   S.ft.innerMade = function(key) if M.forestMade then return M.forestMade(key) end return nil end
-  S.fb = farSet('FAR_BLD', 'far houses', 'farBld', cfg.farBld, cfg.farBld2, cfg.farBld2Tiles)
+  S.fb = farSet('FAR_BLD', 'far houses', 'farBld', cfg.farBld, cfg.farBld2, cfg.farBld2Tiles, cfg.farBldL)
   S.fb.innerMade = M.bldMade
   S.fb.fill = true
   S.fb.coming = function() return M.addsQueued() > 0 end
   local F = S.fb
   F.onMade = function(key, lvl)
-    if lvl ~= 2 then bldRelease(F, key); return end
+    if lvl == 0 then bldRelease(F, key); return end
     local bx, by = parse2(key)
-    for ty = by * F.B, by * F.B + F.B - 1 do
-      for tx = bx * F.B, bx * F.B + F.B - 1 do bldRelease(F, tx .. '_' .. ty) end
+    local n = fsSize(F, lvl)
+    local x0, y0 = bx * n, by * n
+    local rel = {}
+    for wk in pairs(F.wait) do
+      local tx, ty = parse2(wk)
+      if tx >= x0 and tx < x0 + n and ty >= y0 and ty < y0 + n then rel[#rel + 1] = wk end
     end
+    for _, wk in ipairs(rel) do bldRelease(F, wk) end
   end
   -- a far tile that never came (no file, a failed shape): the houses go after the hold
   F.onCheck = function(now)
@@ -1434,6 +1650,8 @@ farSets = function(cfg)
 end
 
 function M.hasFarLod() return S ~= nil and lodSetup() and true or false end
+-- Has the base the coarser levels of the far houses (farbld.py levels 3..5, stream.json farBldL)?
+function M.farBldLevels() return S ~= nil and S.fb ~= nil and S.fb.levels == true end
 
 -- old far entries still waiting for their cover
 function M.farDoomedLeft()
@@ -1485,9 +1703,11 @@ function M.clear()
   S.live, S.farLive, S.queue, S.qpos, S.delFrom, S.waitWarm = {}, {}, {}, 1, nil, nil
   S.farQueue, S.farPos, S.farDoomed, S.farWant = {}, 1, nil, nil
   for _, F in ipairs({ S.ft, S.fb }) do
-    for _, f in pairs(F.live) do delete(f.id) end
-    for _, f in pairs(F.live2) do delete(f.id) end
-    F.live, F.live2, F.queue, F.pos, F.wait = {}, {}, {}, 1, {}
+    for _, k in ipairs(F.all) do
+      for _, f in pairs(F.liveK[k]) do delete(f.id) end
+      F.liveK[k], F.queued[k] = {}, {}
+    end
+    F.live, F.live2, F.queue, F.pos, F.wait, F.want = F.liveK[0], F.liveK[2], {}, 1, {}, nil
   end
   S.failedKey = {}
 end
@@ -1545,14 +1765,21 @@ function M.countsLine()
   local s = M.stats()
   local function fsLine(F)
     if not F or not F.any then return 'none' end
-    local a, b = fsCount(F)
+    local a, b, byK = fsCount(F)
     local inner, doomed = 0, 0
-    for _, f in pairs(F.live) do
-      if f.inner then inner = inner + 1 elseif f.doomed then doomed = doomed + 1 end
+    for _, k in ipairs(F.all) do
+      for _, f in pairs(F.liveK[k]) do
+        if f.inner then inner = inner + 1 elseif f.doomed then doomed = doomed + 1 end
+      end
     end
-    for _, f in pairs(F.live2) do if f.doomed then doomed = doomed + 1 end end
-    return string.format('%d fine + %d coarse (%d to make, %d over real ones, %d waiting for a cover; dropped %d, '
-      .. 'timed out %d, removed %d)', a, b, math.max(0, #F.queue - F.pos + 1), inner, doomed, F.dropped or 0,
+    local lv = ''
+    if F.levels then
+      local parts = {}
+      for _, k in ipairs(F.ks) do parts[#parts + 1] = tostring(byK[k] or 0) end
+      lv = ' [' .. table.concat(parts, '/') .. ']'
+    end
+    return string.format('%d fine + %d coarse%s (%d to make, %d over real ones, %d waiting for a cover; dropped %d, '
+      .. 'timed out %d, removed %d)', a, b, lv, math.max(0, #F.queue - F.pos + 1), inner, doomed, F.dropped or 0,
       F.timedOut or 0, F.removed or 0)
   end
   return string.format('objects %d live (%d to make, %d to delete, %d houses held), far ground %d (%d coarse, %d hidden, '

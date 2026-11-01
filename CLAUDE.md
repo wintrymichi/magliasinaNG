@@ -2051,6 +2051,31 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   window base texture (mean over GREY_CAP, low saturation) to farlod.tone_grey's colour (asphalt 133,131,126, concrete
   134,131,125) and takes its map out of baseTextures (the window and the helper take baseFlat, test_helper: same map).
   The paved ground of the window loses the photo's detail (it is under the road and yard meshes once they are made).
+- michi 19:07Z: "e le case voglio che si vedono sempre! se mai usa un LOD per le case più lontane però voglio che si
+  vedono". The houses ended at FAR_BLD_RADIUS (40 tiles, 15 km) while the far ground went on to the 60 km of view.
+  farbld.build_levels adds levels 3-5 (blocks of 8, 16, 32 tiles: 3, 6, 12 km; the houses of each 16, 32, 64 m cell one
+  box of their plan area, height and colours) and objects.lua's far set a quadtree over its coarse levels (fsWant,
+  fsCover/fsCovered: a block that splits or merges goes once the shapes over its square are made), out to the view
+  distance (stream.lua, unless "bldKm" is set). Lugano: +20 MB raw for the 111 MB of b_ + l2.
+- The far ground's coarse levels lie far from the 12 m ground under the houses (Lugano: level 5 vs 0 more than 10 m off
+  under 29 % of the houses, p99 38 m; level 2 only 0.3 %): boxes at their true heights were 9.5-28 % under 1 m of their
+  coarse ground (buried). A house quadtree on its own rings (2 blocks a level) would have stood a level on 3-4 ground
+  levels across the presets; splitting a house level k block where the far ground splits level k - 1 (fsSplitD reads
+  S.lod.D) puts it on ground k - 1 or k only, in every preset (level 2 on 0 or 2), and farbld.stand keeps the house's
+  height over the higher of the two (mean of centre and corners) and its foot under the lower: 0.01-2 % under 1 m.
+  Measure what the game draws under a far object (farlod.coarse_heights + drawn_height) before standing it on the DTM.
+- First run of tests/far_levels.lua hung (far_bld.lua too, 20,000 frames a move): the cover of a coarse block counted a
+  wanted inner fill tile that fsStep then skipped (its streamed houses had come) as missing, so the block waited
+  forever. An inner tile's cover is its real things, never its fill shape (fsCovered). Run the old far set tests against
+  any rewrite of the far sets: far_bld.lua and far_trees.lua gave the same live counts as before (213/219 fine, 0.51x).
+- Then a drive of far_levels.lua stuck at 120,59 with two far tiles over the car's tiles for good (the 60 s hold in the
+  game): objects.bldMade answered nil for a tile no longer in the tile cache (S.tiles keeps the CACHE_TILES 400 last
+  read, first in first out), so its far tile never saw its houses made. Older than the levels (the old test's map was
+  too small to evict anything); bldMade reads such a tile again. A cache that can forget must never be the only record
+  of what is live.
+- And after a jump its level check found level 3 and 4 blocks 66 tiles from the car (R 60): the band beyond the radius
+  (kept for a car going back and forth) kept any shape of the old place that fell in it. A shape stays in the band only
+  if it is of the level the quadtree would draw there (fsLeaf).
 
 ## White patches and lines on the lake from above (PC photos from San Salvatore, 2026-11-01)
 

@@ -76,6 +76,23 @@ VERTS_MAX = 65000
 L2_TILES = 4                     # coarse blocks of 4 x 4 tiles (1,536 m), the far trees' blocks (objects.lua far sets)
 L2_MIN_AREA = 40.0               # m2 in plan: smaller houses (garages, sheds: 2-3 px at 4 km) are not in the blocks
 L2_MIN_HALF = 1.5                # m: the narrowest half side of a box
+# Coarser levels to the view distance (michi 2026-11-01, "le case voglio che si vedono sempre! se mai usa un LOD per le
+# case più lontane"): blocks of 2^k x 2^k tiles (3, 6, 12 km), the houses gathered in square cells of CELL[k] m, each
+# cell one box of the houses' summed plan area at their area-weighted centre, height and colours (a cell is ~2-4 px
+# where its level begins: objects.lua takes level k from ~8 x 2^(k-2) tiles on)
+LEVELS = (3, 4, 5)
+CELL = {3: 16.0, 4: 32.0, 5: 64.0}
+CELL_MIN_AREA = {3: 40.0, 4: 60.0, 5: 100.0}    # m2 of roof in a cell, else no box
+CELL_FILL = 0.81                 # a box covers at most this share of its cell
+# The far ground levels (farlod.py: 0 the 12 m far tiles, 2..5 the coarse ones) drawn where objects.lua draws a house
+# level: its quadtree splits a level k block where the far ground's splits level k - 1 (fsSplitD), so a level k block
+# (k >= 3) stands on far ground k - 1 or k and a level 2 block on 0 or 2, in every preset. Under Lugano's houses the
+# coarse levels lie far from the 12 m one (level 5: 29 % more than 10 m off, up to 38 m): a box keeps the house's height
+# over the higher of its two levels (the mean of its centre and corners) and goes SINK under the lower one, at most
+# LIFT_MAX higher than the house itself
+GROUND_LEVELS = {2: (0, 2), 3: (2, 3), 4: (3, 4), 5: (4, 5)}
+LIFT_MAX = 30.0
+MIN_SHOW = 2.0                   # m: the least height a box shows over its ground
 
 
 def log(*a):
@@ -420,28 +437,17 @@ def tile_bytes(g, x0, y0):
     return cdae.encode(P, T, normals=N, uvs=np.zeros((len(P), 2)), material=MAT, colors=C8, object_name="farbld")
 
 
-def block_mesh(rec, x0, y0):
-    """positions (n, 3) from the block's corner (x0, y0), triangles (counter-clockwise from outside), normals, colours
-    (n, 4) uint8 of the coarse boxes of the records rec (records() of the block's tiles; the houses of L2_MIN_AREA or
-    more): the top (4 corners, normal up) in the roof colour, the walls (8 corners shared: their normals point out of
-    the corners, plain enough at 4 km and more) in the wall colour. None if no house is left."""
-    f = {k: i for i, k in enumerate(REC_FIELDS)}
-    r = rec[rec[:, f["area"]] >= L2_MIN_AREA].astype(np.float64)
-    if len(r) * 12 > VERTS_MAX:                       # a dense block: its largest houses
-        r = r[np.argsort(-r[:, f["area"]])[:VERTS_MAX // 12]]
-    n = len(r)
-    if not n:
-        return None
-    c = r[:, [f["x"], f["y"]]] - [x0, y0]
-    u = r[:, [f["ux"], f["uy"]]]
+def box_mesh(c, u, a, b, top, foot, rc, wc):
+    """positions (n * 12, 3), triangles (counter-clockwise from outside), normals, colours (n * 12, 4) uint8 of n boxes:
+    centres c (n, 2) from the shape's corner, unit axes u (n, 2), half lengths a, b along u and across, top and foot
+    heights, roof and wall colours (n, 3) 0..1. The top (4 corners, normal up) in the roof colour, the walls (8 corners
+    shared: their normals point out of the corners, plain enough at 4 km and more) in the wall colour."""
+    n = len(c)
     v = np.stack([-u[:, 1], u[:, 0]], 1)
-    a = np.maximum(r[:, f["a"]], L2_MIN_HALF)[:, None]
-    b = np.maximum(r[:, f["b"]], L2_MIN_HALF)[:, None]
+    a, b = a[:, None], b[:, None]
     sa = np.array([1.0, 1.0, -1.0, -1.0])             # counter-clockwise seen from above
     sb = np.array([-1.0, 1.0, 1.0, -1.0])
     xy = c[:, None, :] + sa[None, :, None] * a[:, None, :] * u[:, None, :] + sb[None, :, None] * b[:, None, :] * v[:, None, :]
-    top = r[:, f["top"]]
-    foot = np.minimum(r[:, f["foot"]], top - 1.0)
     P = np.empty((n, 12, 3))
     P[:, 0:4, :2], P[:, 0:4, 2] = xy, top[:, None]
     P[:, 4:8, :2], P[:, 4:8, 2] = xy, top[:, None]
@@ -452,8 +458,6 @@ def block_mesh(rec, x0, y0):
     d /= np.linalg.norm(d, axis=2, keepdims=True)
     N[:, 4:8, :2] = d
     N[:, 8:12, :2] = d
-    rc = r[:, [f["rr"], f["rg"], f["rb"]]]
-    wc = r[:, [f["wr"], f["wg"], f["wb"]]]
     C = np.concatenate([np.repeat(rc[:, None], 4, 1), np.repeat(wc[:, None], 8, 1)], 1)
     base = 12 * np.arange(n)[:, None]
     tt = [[0, 1, 2], [0, 2, 3]]
@@ -463,6 +467,136 @@ def block_mesh(rec, x0, y0):
     T = (base[:, None, :] + np.array(tt)[None]).reshape(-1, 3)
     C8 = np.c_[np.clip(np.round(C.reshape(-1, 3) * 255), 0, 255), np.full(12 * n, 255)].astype(np.uint8)
     return P.reshape(-1, 3), T, N.reshape(-1, 3), C8
+
+
+class Drawn:
+    """The far ground as the game draws it at each far level (farlod.py: level 0 the 12 m far tiles, levels 2..5 the
+    coarse tiles over their own vertex grid): heights at world points, to stand far houses on any level that may be
+    drawn under them. g: farlod.Ground; origin: the level's [x0, y0] of tile 0_0."""
+
+    def __init__(self, g, origin):
+        self.g, self.o = g, origin
+        self.cache = {}
+
+    def at(self, k, x, y):
+        import farlod
+        g, o = self.g, self.o
+        x, y = np.asarray(x, np.float64), np.asarray(y, np.float64)
+        if k == 0:
+            step = g.tile_m / farlod.K
+            return farlod.drawn_height(g.H, step, x - (o[0] + g.cx0 * g.tile_m), y - (o[1] + g.cy0 * g.tile_m))
+        s, tm = 1 << k, g.tile_m
+        ti = np.floor((x - o[0]) / tm).astype(np.int64) >> k        # (an arithmetic shift: floor for negatives too)
+        tj = np.floor((y - o[1]) / tm).astype(np.int64) >> k
+        out = np.full(x.shape, np.nan)
+        for i, j in sorted(set(zip(ti.tolist(), tj.tolist()))):
+            key = (k, i, j)
+            if key not in self.cache:
+                t = farlod.coarse_heights(g, k, i, j)
+                self.cache[key] = None if t is None else t[0]
+            h = self.cache[key]
+            if h is None:
+                continue
+            sel = (ti == i) & (tj == j)
+            out[sel] = farlod.drawn_height(h, s * tm / farlod.K, x[sel] - (o[0] + i * s * tm),
+                                           y[sel] - (o[1] + j * s * tm))
+        return out
+
+
+
+def stand(c, u, a, b, top, foot, drawn, levels, x0, y0):
+    """Boxes' top and foot on the drawn far ground (Drawn) of the levels that may be under them: the foot SINK under
+    the lowest of them at the corners and the centre, the top the house's height (over the 12 m ground at the centre)
+    over the highest level's mean of those points, at most LIFT_MAX higher than it was. Unchanged where no level has a
+    height. c, u, a, b: centres from the block's corner (x0, y0), axes, half sides."""
+    v = np.stack([-u[:, 1], u[:, 0]], 1)
+    pts = [c]
+    for sa, sb in ((1, -1), (1, 1), (-1, 1), (-1, -1)):
+        pts.append(c + sa * a[:, None] * u + sb * b[:, None] * v)
+    P = np.stack(pts, 1) + [x0, y0]                     # (n, 5, 2) world
+    px, py = P[:, :, 0].ravel(), P[:, :, 1].ravel()
+    n = len(c)
+    low = np.full(n, np.inf)
+    high = np.full(n, -np.inf)
+    for k in levels:
+        h = drawn.at(k, px, py).reshape(n, 5)
+        ok = np.isfinite(h)
+        low = np.minimum(low, np.where(ok, h, np.inf).min(1))
+        cnt = ok.sum(1)
+        mean = np.where(cnt > 0, np.where(ok, h, 0.0).sum(1) / np.maximum(cnt, 1), -np.inf)
+        high = np.maximum(high, mean)
+    g0 = drawn.at(0, P[:, 0, 0], P[:, 0, 1])
+    show = np.maximum(np.where(np.isfinite(g0), top - g0, top - foot), MIN_SHOW)
+    foot2 = np.where(np.isfinite(low), np.minimum(foot, low - SINK), foot)
+    top2 = np.where(np.isfinite(high), np.maximum(top, np.minimum(high + show, top + LIFT_MAX)), top)
+    return top2, foot2
+
+
+def block_mesh(rec, x0, y0, drawn=None):
+    """positions (n, 3) from the block's corner (x0, y0), triangles (counter-clockwise from outside), normals, colours
+    (n, 4) uint8 of the coarse boxes of the records rec (records() of the block's tiles; the houses of L2_MIN_AREA or
+    more); drawn: Drawn, their feet and tops on the far ground the game may draw there (GROUND_LEVELS[2]). None if no
+    house is left."""
+    f = {k: i for i, k in enumerate(REC_FIELDS)}
+    r = rec[rec[:, f["area"]] >= L2_MIN_AREA].astype(np.float64)
+    if len(r) * 12 > VERTS_MAX:                       # a dense block: its largest houses
+        r = r[np.argsort(-r[:, f["area"]])[:VERTS_MAX // 12]]
+    n = len(r)
+    if not n:
+        return None
+    c = r[:, [f["x"], f["y"]]] - [x0, y0]
+    u = r[:, [f["ux"], f["uy"]]]
+    a = np.maximum(r[:, f["a"]], L2_MIN_HALF)
+    b = np.maximum(r[:, f["b"]], L2_MIN_HALF)
+    top = r[:, f["top"]]
+    foot = np.minimum(r[:, f["foot"]], top - 1.0)
+    if drawn is not None:
+        top, foot = stand(c, u, a, b, top, foot, drawn, GROUND_LEVELS[2], x0, y0)
+    return box_mesh(c, u, a, b, top, foot, r[:, [f["rr"], f["rg"], f["rb"]]], r[:, [f["wr"], f["wg"], f["wb"]]])
+
+
+def cluster_boxes(r, x0, y0, size, cell, min_area):
+    """The houses r (records, float64) of one block of a coarser level (corner x0, y0, size m a side) gathered in
+    square cells of cell m: (centre from the corner (n, 2), unit axis (n, 2), half side (n,), top, foot, roof colour
+    (n, 3), wall colour (n, 3)) of the cells with min_area m2 of roof or more. A box is a square of the cell's summed
+    plan area (at most CELL_FILL of the cell) at the houses' area-weighted centre, turned as the cell's largest house;
+    its top their area-weighted roof height, its foot the lowest foot."""
+    f = {k: i for i, k in enumerate(REC_FIELDS)}
+    w = r[:, f["area"]]
+    nc = int(round(size / cell))
+    ix = np.clip(np.floor((r[:, f["x"]] - x0) / cell).astype(np.int64), 0, nc - 1)
+    iy = np.clip(np.floor((r[:, f["y"]] - y0) / cell).astype(np.int64), 0, nc - 1)
+    cid = iy * nc + ix
+    ids, inv = np.unique(cid, return_inverse=True)
+    m = len(ids)
+    A = np.bincount(inv, w, m)
+    keep = A >= min_area
+    W = np.maximum(A, 1e-9)
+
+    def mean(col):
+        return np.bincount(inv, r[:, f[col]] * w, m) / W
+    cx, cy = mean("x"), mean("y")
+    top = mean("top")
+    foot = np.full(m, np.inf)
+    np.minimum.at(foot, inv, r[:, f["foot"]])
+    rc = np.stack([mean("rr"), mean("rg"), mean("rb")], 1)
+    wc = np.stack([mean("wr"), mean("wg"), mean("wb")], 1)
+    # the axis of each cell's largest house
+    order = np.lexsort((-w, inv))                       # by cell, the largest first
+    first = order[np.r_[0, np.flatnonzero(np.diff(inv[order])) + 1]]
+    u = r[first][:, [f["ux"], f["uy"]]]
+    u /= np.maximum(np.linalg.norm(u, axis=1, keepdims=True), 1e-9)
+    half = 0.5 * np.sqrt(np.minimum(A, CELL_FILL * cell * cell))
+    half = np.maximum(half, L2_MIN_HALF)
+    # the box stays in its cell (the reach of a square turned by any angle: half * sqrt(2))
+    gx0 = x0 + (ids % nc) * cell
+    gy0 = y0 + (ids // nc) * cell
+    reach = np.minimum(half * np.sqrt(2.0), 0.5 * cell)
+    cx = np.clip(cx, gx0 + reach, gx0 + cell - reach)
+    cy = np.clip(cy, gy0 + reach, gy0 + cell - reach)
+    foot = np.minimum(foot, top - 1.0)
+    k = keep
+    return (np.stack([cx[k] - x0, cy[k] - y0], 1), u[k], half[k], top[k], foot[k], rc[k], wc[k])
 
 
 def material():
@@ -532,10 +666,12 @@ def _one_tile(item):
     return key, len(rec), ntri, len(data), rec
 
 
-def build(tiles, origin, tile_m, out_dir, tex_mean=TEX_MEAN, workers=1, records_path=None):
+def build(tiles, origin, tile_m, out_dir, tex_mean=TEX_MEAN, workers=1, records_path=None, ground=None):
     """tiles: iterable of (key "cx_cy", [(shape bytes, position)]). Writes out_dir/b_<key>.cdae (fine),
-    out_dir/l2_<bx>_<by>.cdae (coarse) and out_dir/farbld.materials.json (records_path: the houses' records too, for
-    tests); returns (sorted fine keys, sorted coarse keys)."""
+    out_dir/l2_<bx>_<by>.cdae (coarse), out_dir/l<k>_<bx>_<by>.cdae (the coarser levels) and
+    out_dir/farbld.materials.json (records_path: the houses' records too, for tests); ground: farlod.Ground, the
+    coarse boxes stood on the far ground the game draws under them. Returns (sorted fine keys, sorted coarse keys,
+    {level: sorted keys})."""
     os.makedirs(out_dir, exist_ok=True)
     keys, recs = [], {}
     nh = ntri = nbytes = 0
@@ -567,28 +703,43 @@ def build(tiles, origin, tile_m, out_dir, tex_mean=TEX_MEAN, workers=1, records_
         save_records(records_path, recs)
     log("far buildings: %d tiles, %d houses, %.1f M triangles, %.0f MB in %.0f s" % (
         len(keys), nh, ntri / 1e6, nbytes / 1e6, time.time() - t0))
-    keys2 = build_blocks(recs, origin, tile_m, out_dir)
+    drawn = Drawn(ground, origin) if ground is not None else None
+    keys2 = build_blocks(recs, origin, tile_m, out_dir, drawn)
+    levels = build_levels(recs, origin, tile_m, out_dir, drawn)
     from blocks import bng
     p = os.path.join(out_dir, "farbld.materials.json")
     if os.path.lexists(p):
         os.remove(p)
     bng.write_materials(p, [material()])
-    return sorted(keys), keys2
+    return sorted(keys), keys2, levels
 
 
-def build_blocks(recs, origin, tile_m, out_dir):
-    """The coarse blocks (l2_<bx>_<by>.cdae) of the records {tile key: records}; returns their sorted keys."""
+def _tile_order(recs):
+    return sorted(recs, key=lambda k: tuple(int(v) for v in k.split("_")))
+
+
+def _write(out_dir, name, data):
+    p = os.path.join(out_dir, name)
+    if os.path.lexists(p):
+        os.remove(p)
+    with open(p, "wb") as f:
+        f.write(data)
+
+
+def build_blocks(recs, origin, tile_m, out_dir, drawn=None):
+    """The coarse blocks (l2_<bx>_<by>.cdae) of the records {tile key: records}; returns their sorted keys. drawn:
+    Drawn, the boxes stood on the far ground the game draws there."""
     by_block = collections.defaultdict(list)
     # in the order of the tiles, not the order the workers finished them: a block made again from the same houses is
     # the same bytes (the base's part 4 is downloaded again only when it changed)
-    for key in sorted(recs, key=lambda k: tuple(int(v) for v in k.split("_"))):
+    for key in _tile_order(recs):
         cx, cy = (int(v) for v in key.split("_"))
         by_block[(cx // L2_TILES, cy // L2_TILES)].append(recs[key])
     keys2, nh, ntri, nbytes, cut = [], 0, 0, 0, 0
     bm = tile_m * L2_TILES
     for (bx, by), lst in sorted(by_block.items()):
         rec = np.concatenate(lst)
-        m = block_mesh(rec, origin[0] + bx * bm, origin[1] + by * bm)
+        m = block_mesh(rec, origin[0] + bx * bm, origin[1] + by * bm, drawn)
         if m is None:
             continue
         P, T, N, C8 = m
@@ -597,11 +748,7 @@ def build_blocks(recs, origin, tile_m, out_dir):
         data = cdae.encode(P, T, normals=N, uvs=np.zeros((len(P), 2)), material=MAT, colors=C8,
                            object_name="farbld2")
         k = f"{bx}_{by}"
-        p = os.path.join(out_dir, f"l2_{k}.cdae")
-        if os.path.lexists(p):
-            os.remove(p)
-        with open(p, "wb") as f:
-            f.write(data)
+        _write(out_dir, f"l2_{k}.cdae", data)
         keys2.append(k)
         nh += kept
         ntri += len(T)
@@ -609,6 +756,57 @@ def build_blocks(recs, origin, tile_m, out_dir):
     log("far buildings, coarse: %d blocks, %d houses (%d of dense blocks left out), %.1f M triangles, %.0f MB" % (
         len(keys2), nh, cut, ntri / 1e6, nbytes / 1e6))
     return keys2
+
+
+def build_levels(recs, origin, tile_m, out_dir, drawn=None):
+    """The coarser levels (l<k>_<bx>_<by>.cdae, k in LEVELS: blocks of 2^k tiles, the houses gathered in cells of
+    CELL[k] m) of the records {tile key: records}; returns {k: sorted keys}. A house belongs to the block of its tile
+    (as in the level 2 blocks: a level k block is exactly its four level k - 1 blocks)."""
+    keys = _tile_order(recs)
+    keys = [k for k in keys if len(recs[k])]
+    out = {}
+    if not keys:
+        return out
+    allr = np.concatenate([recs[k] for k in keys]).astype(np.float64)
+    tix = np.repeat(np.array([[int(v) for v in k.split("_")] for k in keys], np.int64),
+                    [len(recs[k]) for k in keys], axis=0)
+    for k in LEVELS:
+        n = L2_TILES << (k - 2)
+        bm = tile_m * n
+        bi = np.floor_divide(tix, n)
+        order = np.lexsort((bi[:, 1], bi[:, 0]))       # by block, the tile order kept inside it
+        bs = bi[order]
+        cuts = np.r_[0, np.flatnonzero(np.any(np.diff(bs, axis=0) != 0, axis=1)) + 1, len(bs)]
+        lst, nb, ntri, nbytes, coarser = [], 0, 0, 0, 0
+        for s0, s1 in zip(cuts[:-1], cuts[1:]):
+            bx, by = (int(v) for v in bs[s0])
+            r = allr[order[s0:s1]]
+            x0, y0 = origin[0] + bx * bm, origin[1] + by * bm
+            cell = CELL[k]
+            while True:
+                boxes = cluster_boxes(r, x0, y0, bm, cell, CELL_MIN_AREA[k])
+                if len(boxes[0]) * 12 <= VERTS_MAX:
+                    break
+                cell *= 2                               # a dense block: coarser cells
+                coarser += 1
+            c, u, half, top, foot, rc, wc = boxes
+            if not len(c):
+                continue
+            if drawn is not None:
+                top, foot = stand(c, u, half, half, top, foot, drawn, GROUND_LEVELS[k], x0, y0)
+            P, T, N, C8 = box_mesh(c, u, half, half, top, foot, rc, wc)
+            data = cdae.encode(P, T, normals=N, uvs=np.zeros((len(P), 2)), material=MAT, colors=C8,
+                               object_name=f"farbld{k}")
+            key = f"{bx}_{by}"
+            _write(out_dir, f"l{k}_{key}.cdae", data)
+            lst.append(key)
+            nb += len(c)
+            ntri += len(T)
+            nbytes += len(data)
+        out[k] = lst
+        log("far buildings, level %d (%d m blocks, %d m cells): %d blocks, %d boxes (%d blocks in coarser cells), "
+            "%.2f M triangles, %.1f MB" % (k, int(bm), int(CELL[k]), len(lst), nb, coarser, ntri / 1e6, nbytes / 1e6))
+    return out
 
 
 def save_records(path, recs):
@@ -708,6 +906,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--only", help="regex of tile keys")
+    ap.add_argument("--ground", help="far ground (farlod.Ground.save npz) to stand the coarse boxes on")
     a = ap.parse_args()
     if a.stream:
         st = json.load(open(a.stream))
@@ -720,9 +919,13 @@ def main():
         k = re.search(r"o_(-?\d+_-?\d+)\.json$", p).group(1)
         if not a.only or re.fullmatch(a.only, k):
             tiles[k] = json.load(open(p))
-    keys, keys2 = build(read_folder(a.level, tiles), origin, tile_m, a.out, texture_means(a.level), a.workers,
-                        records_path=os.path.join(a.out, "records.npz"))
-    print(len(keys), "fine tiles,", len(keys2), "coarse blocks")
+    ground = None
+    if a.ground:
+        import farlod
+        ground = farlod.Ground.load(a.ground, [])
+    keys, keys2, levels = build(read_folder(a.level, tiles), origin, tile_m, a.out, texture_means(a.level), a.workers,
+                                records_path=os.path.join(a.out, "records.npz"), ground=ground)
+    print(len(keys), "fine tiles,", len(keys2), "coarse blocks,", {k: len(v) for k, v in levels.items()})
 
 
 if __name__ == "__main__":

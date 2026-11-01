@@ -401,9 +401,11 @@ def main():
                                            tile_m, os.path.join(dst, fartrees.DIR), level=LEVEL, workers=4,
                                            ground=ground)
     # the houses beyond the streamed buildings as static far-house tiles and blocks (farbld.py), made from the slices'
-    # own building shapes, so a far house is the house the car finds when it gets there
-    far_bld, far_bld2 = farbld.build(farbld.read_slices(sl, zones), [grid.x0, grid.y0], tile_m,
-                                     os.path.join(dst, farbld.DIR), farbld.texture_means(dst), workers=4)
+    # own building shapes, so a far house is the house the car finds when it gets there; coarser levels (3, 6 and 12 km
+    # blocks of cell boxes) to the view distance, every box stood on the far ground levels the game draws under it
+    far_bld, far_bld2, far_bld_l = farbld.build(farbld.read_slices(sl, zones), [grid.x0, grid.y0], tile_m,
+                                                os.path.join(dst, farbld.DIR), farbld.texture_means(dst), workers=4,
+                                                ground=ground)
 
     stream = {
         "version": 2, "zone": "ticino:%d zones" % len(zones), "level": LEVEL,
@@ -422,6 +424,7 @@ def main():
         "farTrees": far_trees,
         "farTrees2": far_trees2, "farTrees2Tiles": fartrees.L2_TILES,
         "farBld": far_bld, "farBld2": far_bld2, "farBld2Tiles": farbld.L2_TILES,
+        "farBldL": {str(k): v for k, v in sorted(far_bld_l.items())},
         "collisionRadius": int(grid.cfg.get("collision_radius", 1)),
         "colCell": blocks.collision_cell_m(), "colCells": sorted(cells),
         "colGroundTypes": plan["groundTypes"], "colPieceTris": blocks.collision_piece_tris(),
