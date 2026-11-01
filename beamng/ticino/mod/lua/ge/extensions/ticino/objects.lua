@@ -82,6 +82,8 @@ function M.init(cfg, level, group)
   S.ft2Has, S.ft2Live, S.ftB = {}, {}, cfg.farTrees2Tiles or 4
   S.ft2 = cfg.farTrees2 ~= nil and #cfg.farTrees2 > 0
   for _, k in ipairs(cfg.farTrees2 or {}) do S.ft2Has[k] = true end
+  log('I', 'ticino', string.format('far trees in stream.json: %d tiles, %d coarse blocks',
+    #(cfg.farTrees or {}), #(cfg.farTrees2 or {})))
   S.col = { size = cfg.colCell, R = (cfg.colRadius or 1) + M.COL_LAZY, has = {}, live = {}, cell = nil, queue = {},
             types = cfg.colGroundTypes or {} }
   S.noColShape = {}
@@ -934,9 +936,9 @@ function M.stepFar(clock, budgetMs)
     if budgetMs and clock() - t0 > budgetMs then break end
   end
   if made > 0 and S.lod then M.dropCovered(clock, S.farPos > #q) end
-  if not budgetMs or clock() - t0 <= budgetMs then
-    made = made + M.stepFarTrees(clock, budgetMs and math.max(0, budgetMs - (clock() - t0)) or nil)
-  end
+  -- the far trees get at least FAR_TREES_MIN_MS of every call: behind a far ground queue that kept its whole budget
+  -- they never came (PC 2026-11-01, treeKm 15 and 0 gave the same picture)
+  made = made + M.stepFarTrees(clock, budgetMs and math.max(M.FAR_TREES_MIN_MS, budgetMs - (clock() - t0)) or nil)
   return made
 end
 
@@ -960,6 +962,7 @@ M.FAR_TREES_BLOCKS0 = 2     -- blocks (Chebyshev) round the car's block with fin
 M.FAR_TREES_FINE_MAX = 12   -- tiles of fine far trees at most when the base has no coarse ones
 M.FAR_TREES_INNER = 4       -- tiles that have the real Forest (stream.lua: forest.RADIUS)
 M.FAR_TREES_HOLD_MS = 20000
+M.FAR_TREES_MIN_MS = 1     -- of every stepFar call, whatever the far ground took
 M.forestMade = nil          -- function(key): true once the Forest shows tile key (stream.lua: forest.made)
 
 local function cheb(key, cx, cy)
@@ -1047,6 +1050,12 @@ function M.updateFarTrees(cx, cy)
   end
   table.sort(q, function(a, b) if a[2] ~= b[2] then return a[2] < b[2] end return a[1] < b[1] end)
   S.ftQueue, S.ftPos = q, 1
+  local live, live2 = 0, 0
+  for _ in pairs(S.ftLive) do live = live + 1 end
+  for _ in pairs(S.ft2Live) do live2 = live2 + 1 end
+  log('I', 'ticino', string.format('far trees at tile %d,%d: %d to make, live %d fine + %d coarse, %d removed '
+    .. '(radius %d tiles, fine within %d blocks, %s)', cx, cy, #q, live, live2, n, R, M.FAR_TREES_BLOCKS0,
+    S.ft2 and 'coarse blocks in the base' or 'no coarse blocks in the base'))
   return n
 end
 
@@ -1065,6 +1074,11 @@ function M.stepFarTrees(clock, budgetMs)
     if not live[key] then
       local ts = clock()
       local o = createObject('TSStatic')
+      if not S.ftFirst then
+        S.ftFirst = true
+        log('I', 'ticino', 'far trees: first shape ' .. string.format(lvl == 2 and M.FAR_TREES2_FILE or M.FAR_TREES_FILE,
+          S.level, tx, ty))
+      end
       local file, size = M.FAR_TREES_FILE, tm
       if lvl == 2 then file, size = M.FAR_TREES2_FILE, tm * S.ftB end
       o:setField('shapeName', 0, string.format(file, S.level, tx, ty))

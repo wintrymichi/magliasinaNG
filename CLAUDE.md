@@ -1846,4 +1846,10 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   clock inside the loop). forest.lua parses the rows itself, PARSE_MS a frame (a 2,593-row tile: 5 ms in luajit, same
   rows as json.loads), prefetches the queued tiles first, and a block's next pass waits for the next frame after
   PASS_MAX_MS. CACHE_TILES 120 was under RADIUS 4 + the prefetched ring (121 tiles): 200.
+- PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
+  no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
+  farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,
+  and in the game a far ground queue that each shape takes ms of keeps the whole budget. Now the far trees get
+  FAR_TREES_MIN_MS of every call, and the log says "far trees in stream.json ..." at start, "far trees at tile ..."
+  at every update and "far trees: first shape ..." once: read those before guessing again.
 
