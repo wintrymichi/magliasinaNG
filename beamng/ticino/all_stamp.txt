@@ -16,3 +16,4 @@
 2026-11-01 16:05 burst deadline + flat forest rows
 2026-11-01 16:20 minimap roads in the hold
 2026-11-01T17:01:41Z number sets for colCells/far
+2026-11-01T17:40:36Z AI map off by default

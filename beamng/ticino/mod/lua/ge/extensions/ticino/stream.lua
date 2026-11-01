@@ -80,6 +80,9 @@ M.POS_MODE = 'setPosition' -- how the block moves: 'setPosition' (0.1-0.16 s on 
 M.RELOAD_DEFER_MS = 3000   -- a rebuild only for props or trees waits for the next one of the collision cells, at most this
 M.BASE_COMBINED = true     -- one base colour map for all the streamed materials (each pixel from the map of the material
                            -- under it): the game re-packs one texture at a move instead of 7 (~45 ms each)
+M.AI_MAP = false           -- no AI map at all (michi 2026-11-01, "disattivala completamente"): the 57k AI DecalRoads are
+                           -- deleted at the start and the map read empty, never again at a jump (the 1.1 GB AI map was
+                           -- the live Lua heap every garbage collection walked: the LuaGC frames). Settings "aiMap": true
 M.DROP_AI_ROADS = true     -- delete the 12,639 invisible AI DecalRoads once the first jump has read the AI map: each
                            -- re-clipped itself at every terrain move (0.1-0.35 s of the swap); later jumps keep that map
 M.CFG_FILE = '/ticino_stream_cfg.json'   -- optional: { "stream": {..}, "objects": {..}, "forest": {..} } fields to override
@@ -737,6 +740,7 @@ local function readSettings(cfg)
   if type(s.diagnostics) == 'boolean' then M.DIAG = s.diagnostics end
   if type(s.dynamicObjects) == 'boolean' then objects.DYNAMIC = s.dynamicObjects end
   if type(s.pacing) == 'boolean' then M.PACING = s.pacing end
+  if type(s.aiMap) == 'boolean' then M.AI_MAP = s.aiMap end
   if type(s.frameGate) == 'boolean' then M.GATE = s.frameGate end
   if type(s.terrainShadows) == 'boolean' then M.TERRAIN_SHADOWS = s.terrainShadows end
   if type(s.viewKm) == 'number' and s.viewKm >= 0 then M.VIEW_KM = s.viewKm end
@@ -821,6 +825,7 @@ local function start()
   local capB = objects.GROUP_R and objects.GROUP_R[objects.FAR_BLD_GROUP]
   if capB and capB < objects.FAR_BLD_INNER then objects.FAR_BLD_INNER = capB end
   M.applyView()
+  if not M.AI_MAP then M.noAIMap() end
   log('I', 'ticino', string.format('streaming on: zone %s, %d blocks a side, %d tiles of objects, %d far tiles',
     tostring(cfg.zone), cfg.blocksPerSide or 0, tableSize and tableSize(cfg.tiles) or 0, cfg.farCount or 0))
   log('I', 'ticino', string.format('stream 2026-10-28: window places %d..%d, base maps %s, collision lazy %d, '
@@ -1294,6 +1299,32 @@ function M.dropAIRoads()
     if r then r:delete(); n = n + 1 end
   end
   return n .. ' AI roads deleted (the AI map stays as it was built)'
+end
+
+-- No AI map (AI_MAP false): every AI DecalRoad deleted and the map read again, empty, so map.lua lets go of the graph
+-- it built at the level load; st.aiDropped keeps the jumps from reading it again.
+function M.noAIMap()
+  local g = scenetree.findObject('AIRoads')
+  local n = 0
+  if g then
+    local ids = {}
+    for i = 0, g:getCount() - 1 do
+      local r = g:getObject(i)
+      if r and r:getClassName() == 'DecalRoad' then ids[#ids + 1] = r:getID() end
+    end
+    for _, id in ipairs(ids) do
+      local r = scenetree.findObjectById(id)
+      if r then r:delete(); n = n + 1 end
+    end
+  end
+  local t0 = clock()
+  local ok = pcall(function() map.reset() end)
+  if st then st.aiDropped = true end
+  local kb = collectgarbage('count')
+  collectgarbage('collect')
+  log('I', 'ticino', string.format('AI map off: %d AI roads deleted, map read empty%s, Lua heap %.0f -> %.0f MB (%.0f ms)',
+    n, ok and '' or ' (map.reset failed)', kb / 1024, collectgarbage('count') / 1024, clock() - t0))
+  return n
 end
 
 -- the AI map read by map.reset is in place (map.lua hooks this when it has built the new graph)

@@ -1906,6 +1906,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   as string sets and as the decoded lists in cfg: a full collection of such a set alone took 47-51 ms in luajit (lupa),
   as number keys 2 ms. objects.lua keeps both as number sets (nk) and drops the lists. tiles / forestTiles (~50k
   strings) are still string sets. A set of many string keys costs every cycle: use number keys for big lookups.
+  michi 2026-11-01 17:38Z ("intanto disattivala completamente"): stream.AI_MAP false by default (settings "aiMap"):
+  stream.noAIMap deletes every AI DecalRoad at the start and reads the map empty (map.lua drops the graph it built at
+  the load), no map.reset, hold or minimap build at the jumps. No AI traffic or AI driver in Ticino meanwhile.
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,
