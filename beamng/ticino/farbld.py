@@ -123,6 +123,8 @@ def shape_parts(data, pos, tex_mean=TEX_MEAN):
             continue
         T = I[start:start + count].reshape(-1, 3).astype(np.int64)
         tm = np.asarray(tex_mean.get(name, (200, 200, 200)), np.float64) / 255.0
+        # some zones' meshes carry NaN corners (ti_0_m1, CLAUDE.md): never into a far house
+        T = T[np.isfinite(V[T]).all(axis=(1, 2))]
         if ROOF.match(name):
             p0, p1, p2 = V[T[:, 0]], V[T[:, 1]], V[T[:, 2]]
             n = np.cross(p2 - p0, p1 - p0)              # the engine's winding is clockwise seen from outside
@@ -488,7 +490,16 @@ def _init(origin, tile_m, out_dir, tex_mean):
 
 
 def _one(item):
-    """One tile: (key, [(shape bytes, position)]) -> (key, houses, triangles, bytes, records) or None."""
+    """One tile: (key, [(shape bytes, position)]) -> (key, houses, triangles, bytes, records) or None. A tile that
+    fails is left out with a log line (one bad tile must not stop the base)."""
+    try:
+        return _one_tile(item)
+    except Exception as ex:                         # noqa: BLE001
+        log("far buildings: tile %s left out (%s: %s)" % (item[0], type(ex).__name__, ex))
+        return None
+
+
+def _one_tile(item):
     key, shapes = item
     parts = []
     for data, pos in shapes:
