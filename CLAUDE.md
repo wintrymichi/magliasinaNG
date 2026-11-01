@@ -1795,6 +1795,12 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   from the Malcantone): 452 points, "magliaso" at Airolo. The village points carry an ASCII slug only. swissNAMES3D is
   blocked in the cloud: worldmap.fetch_settlements falls back to the slugs; check `spawn_names.json` of the base run.
 - Lua 5.5 (lupa, for a quick stub test of a mod file) has no math.atan2; LuaJIT in the game does.
+- The first names (base of 2026-11-01) took the NEAREST swissNAMES3D "Ort" of any size: alp hamlets (Pardé, Büèe,
+  Ligiazun) over the village 1 km away, labels 10 km off ("Cioss Prato (10 km SW)") and repeats numbered ("Stabio (2 km
+  SW) 2", "Bignasco 2"). A bigger place now counts as nearer (worldmap._weight: EINWOHNERKATEGORIE if the csv has it, and
+  the zones' village names), a place already given to one point is not given to another, beyond FAR_M the best place
+  overall. spawn_magliaso_paese is a VILLAGE point: strip "_paese" only after the GENERIC test (its slug is "magliaso").
+  The base log prints the csv's columns and population classes: read them to check the weights did something.
 
 ## Far trees of Ticino (fartrees.py, objects.lua far trees, 2026-11-01)
 

@@ -21,22 +21,22 @@
 
     <div class="top">
       <div class="title">Ticino</div>
-      <input class="search" v-model="query" placeholder="Cerca un luogo..." @mousedown.stop
+      <input class="search" v-model="query" placeholder="Search a place..." @mousedown.stop
              @focus="typing(true)" @blur="typing(false)" @keydown.enter.stop.prevent="goFirst" />
       <button class="btn" @click="zoomBy(2)" title="Zoom in">+</button>
       <button class="btn" @click="zoomBy(0.5)" title="Zoom out">&minus;</button>
-      <button class="btn wide" @click="centreCar" title="Centra sull'auto">Auto</button>
-      <button class="btn wide" @click="fitAll" title="Tutto il Ticino">Ticino</button>
-      <button class="btn" @click="close" title="Chiudi (M / Esc)">&times;</button>
+      <button class="btn wide" @click="centreCar" title="Centre on the car">Car</button>
+      <button class="btn wide" @click="fitAll" title="All of Ticino">Ticino</button>
+      <button class="btn" @click="close" title="Close (M / Esc)">&times;</button>
     </div>
     <div v-if="query" class="results">
       <div v-for="p in found" :key="'f' + p.name" class="result" @mousedown.stop @click="go(p)"
            @mouseenter="hover = p.name" @mouseleave="hover = null">{{ p.label }}</div>
-      <div v-if="!found.length" class="result none">Nessun luogo</div>
+      <div v-if="!found.length" class="result none">No place found</div>
     </div>
     <div v-if="msg" class="msg">{{ msg }}</div>
     <div class="bottom">
-      <span>Clic su un luogo: l'auto va li. Trascina per spostare, rotella per lo zoom, M o Esc per chiudere.</span>
+      <span>Click a place to take the car there. Drag to move, wheel to zoom, M or Esc to close.</span>
       <span class="credits">{{ info && info.credits }}</span>
     </div>
   </div>
@@ -187,9 +187,9 @@ function centreCar() {
 
 // ---- actions
 function go(p) {
-  msg.value = "Viaggio verso " + p.label + "..."
+  msg.value = "Travelling to " + p.label + "..."
   engineLua(`ticino_worldmap and ticino_worldmap.uiGo(${JSON.stringify(p.name)}) or nil`, r => {
-    if (!r || !r.ok) msg.value = (r && r.error) || "Non riuscito"
+    if (!r || !r.ok) msg.value = (r && r.error) || "Failed"
   })
 }
 function goFirst() { if (found.value.length) go(found.value[0]) }
@@ -232,7 +232,7 @@ onMounted(() => {
   }
   engineLua("if ticino_worldmap then ticino_worldmap.uiOpened() end")
   engineLua("ticino_worldmap and ticino_worldmap.uiInfo() or nil", r => {
-    if (!r || r.missing) { msg.value = "Mappa non trovata nel livello (levels/ticino/map)"; return }
+    if (!r || r.missing) { msg.value = "Map not found in the level (levels/ticino/map)"; return }
     info.value = r
     fitAll()
     poll()
