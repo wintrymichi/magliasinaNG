@@ -317,9 +317,9 @@ def spawn_names(spawns, settlements):
     for name in sorted(out, key=lambda n: (labels[n][5], n)):     # the village points keep the plain name
         lab = out[name]
         if lab in count:
-            _, px, py, x, y, _ = labels[name]
+            base, px, py, x, y, _ = labels[name]
             d, dirn = _away(x, y, px, py)
-            alt = "%s (%s %.1f km)" % (lab, dirn, d / 1000) if d >= 100 else lab
+            alt = "%s (%.1f km %s)" % (base, d / 1000, dirn) if d >= 100 else lab
             n = 2
             while alt in count:
                 alt = "%s %d" % (lab, n)
