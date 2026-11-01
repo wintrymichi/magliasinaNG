@@ -1909,6 +1909,9 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   michi 2026-11-01 17:38Z ("intanto disattivala completamente"): stream.AI_MAP false by default (settings "aiMap"):
   stream.noAIMap deletes every AI DecalRoad at the start and reads the map empty (map.lua drops the graph it built at
   the load), no map.reset, hold or minimap build at the jumps. No AI traffic or AI driver in Ticino meanwhile.
+  The first PC run (76c3d7e) logged "(map.reset failed)" with no reason (a bare pcall): the empty read at the start
+  raised and map.lua kept whatever it had. noAIMap now logs the error with a traceback and tries again AI_RETRY_MS
+  (3 s) later, up to 3 times ("AI map read empty again"). Never swallow an error with a bare pcall: log what it says.
 - "IMPORTING TEXTURE" on the house walls (PC 2026-11-01, server mode, cold cache, still there after 10 min): the log
   had t_bld_plaster_b / t_bld_ashlar_b cooked without error but no "reloadResource File changed" for them (there was one
   for plaster_nm and ashlar_ao): a material bound while its colour map is being cooked keeps the placeholder. No

@@ -908,6 +908,7 @@ local function onUpdate(dtReal)
     st.warmPaused = nil
     pause(false)
   end
+  M.retryEmptyMap()
   do
     local now, s = clock(), sta()
     st.gate:beginFrame(st.gateT and (now - st.gateT) or nil, s and s.getPause and s.getPause() or false)
@@ -1354,13 +1355,36 @@ function M.noAIMap()
     end
   end
   local t0 = clock()
-  local ok = pcall(function() map.reset() end)
-  if st then st.aiDropped = true end
+  local ok, err = M.emptyMap()
+  if st then
+    st.aiDropped = true
+    -- PC 2026-11-01: the read at the start failed (map.lua not ready yet?): once more a few seconds later
+    if not ok then st.aiRetryAt = clock() + M.AI_RETRY_MS end
+  end
   local kb = collectgarbage('count')
   collectgarbage('collect')
   log('I', 'ticino', string.format('AI map off: %d AI roads deleted, map read empty%s, Lua heap %.0f -> %.0f MB (%.0f ms)',
-    n, ok and '' or ' (map.reset failed)', kb / 1024, collectgarbage('count') / 1024, clock() - t0))
+    n, ok and '' or (' (map.reset failed: ' .. tostring(err):sub(1, 300) .. ', again later)'), kb / 1024,
+    collectgarbage('count') / 1024, clock() - t0))
   return n
+end
+
+M.AI_RETRY_MS = 3000
+
+-- map.reset with the AI roads gone: the navgraph read empty (ok, err)
+function M.emptyMap()
+  if not map or type(map.reset) ~= 'function' then return false, 'no map.reset' end
+  return xpcall(function() map.reset() end, function(e) return tostring(e) .. ' ' .. debug.traceback('', 2):sub(1, 400) end)
+end
+
+function M.retryEmptyMap()
+  if not st.aiRetryAt or clock() < st.aiRetryAt then return end
+  st.aiRetries = (st.aiRetries or 0) + 1
+  local t0 = clock()
+  local ok, err = M.emptyMap()
+  st.aiRetryAt = (not ok and st.aiRetries < 3) and clock() + M.AI_RETRY_MS or nil
+  log(ok and 'I' or 'W', 'ticino', string.format('AI map read empty again (try %d): %s (%.0f ms)', st.aiRetries,
+    ok and 'ok' or tostring(err):sub(1, 300), clock() - t0))
 end
 
 -- the AI map read by map.reset is in place (map.lua hooks this when it has built the new graph)
