@@ -10,7 +10,8 @@ ground tile (objects.lua stepFar), which costs a few ms.
 A tile's trees (tiles/t_<cx>_<cy>.trees.json of the slices, the rows forest.lua streams) are binned on a CELL m grid;
 every cell with trees becomes one card: two crossed vertical quads with a cut-out texture of a clump of trees
 (fartrees.png: conifers, broadleaves, narrow crowns, mixed; VARIANTS of each), as wide as the cell's crowns cover it
-and as tall as its tall trees, standing on its lowest tree foot. The clumps are drawn from the side views of the
+and as tall as its tall trees, standing on the plane of its tree feet (sheared along the slope, its sides still
+vertical). The clumps are drawn from the side views of the
 Malcantone level's own far trees (their imposters in dati/far_imposters, michi 2026-11-01: "metti gli alberi low poly
 quelli lontani del Malcantone"), so the shapes are the same woods; their colour is darkened to a wood seen from afar
 (CROWN_RGB). Each quad is two single-sided faces back to back, each with the normal of its side tilted up (TILT).
@@ -43,9 +44,15 @@ CELL2 = 64.0                # m: the same for the coarse far-tree tiles (L2_TILE
 L2_TILES = 4
 MIN_H = 5.0                 # m: shorter items are no far tree
 CROWN = 0.6                 # crown radius / bounding-box half width (the boxes are wider than the leaves)
-SINK = 1.5                  # m: a card's foot under the lowest tree foot of its cell (slopes)
+SINK = 1.5                  # m: a card's foot under the lowest tree foot of its cell (under the plane of the feet)
 WIDTH_MIN = 6.0
-TOP_PCT = 75                # the card's top: this percentile of the cell's tree tops
+TOP_PCT = 75                # the card's top: this percentile of the cell's tree heights over the plane of the feet
+# A card follows the plane of its cell's tree feet (each quad sheared along it). The first cards stood level on the
+# LOWEST foot with the top at the tallest tops: on a slope a 28 m cell spans 8-21 m of height (median, 90th pct near
+# Lugano), the cards were 1.5 times the trees' height or more (a quarter of them) and every hill was stairs of flat-
+# topped blocks (PC photos from San Salvatore, 2026-11-01).
+PLANE_REG = 4.0             # m2 a tree: the plane fit's ridge (no slope across one tree or a row of trees)
+SLOPE_MAX = 1.5             # the plane's steepest slope (56 degrees)
 ATLAS = (2048, 1024)        # 4 kinds (columns of 512 px) x VARIANTS (rows of 256 px)
 VARIANTS = 4
 KINDS = ("conifer", "broad", "narrow", "mixed")
@@ -132,9 +139,25 @@ def trees(rows, types, x0, y0):
     return R[:, 1] - x0, R[:, 2] - y0, R[:, 3], H, types.r[t] * R[:, 5], types.kind[t]
 
 
+def plane(x, y, z):
+    """The ground plane through tree feet: (mean x, mean y, height at the mean, slope x, slope y, lowest foot under
+    it). Ridge-regularised (PLANE_REG m2 a tree), so one tree or a row of trees gives no slope across."""
+    mx, my, mz = x.mean(), y.mean(), z.mean()
+    dx, dy, dz = x - mx, y - my, z - mz
+    lam = PLANE_REG * len(x)
+    A = np.array([[dx @ dx + lam, dx @ dy], [dx @ dy, dy @ dy + lam]])
+    sx, sy = np.linalg.solve(A, [dx @ dz, dy @ dz])
+    g = math.hypot(sx, sy)
+    if g > SLOPE_MAX:
+        sx, sy = sx * SLOPE_MAX / g, sy * SLOPE_MAX / g
+    res = dz - sx * dx - sy * dy
+    return mx, my, mz, sx, sy, min(0.0, float(res.min()))
+
+
 def binned(tr, cell, n):
     """Per cell of cell m (n x n over the tile) with trees: (cell index, count, mean x, mean y, foot, top, cover, max
-    crown radius, kind counts 0..2) as an (m, 11) array."""
+    crown radius, kind counts 0..2, slope x, slope y) as an (m, 13) array; foot and top at the mean x, y, on the
+    plane of the cell's tree feet (the card follows it)."""
     x, y, z, H, r, k = tr
     ci = np.clip((x / cell).astype(np.int64), 0, n - 1)
     cj = np.clip((y / cell).astype(np.int64), 0, n - 1)
@@ -143,18 +166,19 @@ def binned(tr, cell, n):
     c, x, y, z, H, r, k = c[order], x[order], y[order], z[order], H[order], r[order], k[order]
     starts = np.flatnonzero(np.r_[True, c[1:] != c[:-1]])
     ends = np.r_[starts[1:], len(c)]
-    out = np.zeros((len(starts), 11))
+    out = np.zeros((len(starts), 13))
     for i, (s, e) in enumerate(zip(starts, ends)):
         kc = np.bincount(k[s:e], minlength=3)
-        out[i] = (c[s], e - s, x[s:e].mean(), y[s:e].mean(), z[s:e].min() - SINK,
-                  np.percentile(z[s:e] + H[s:e], TOP_PCT), np.sum(np.pi * r[s:e] ** 2), r[s:e].max(), *kc[:3])
+        mx, my, mz, sx, sy, low = plane(x[s:e], y[s:e], z[s:e])
+        out[i] = (c[s], e - s, mx, my, mz + low - SINK, mz + np.percentile(H[s:e], TOP_PCT),
+                  np.sum(np.pi * r[s:e] ** 2), r[s:e].max(), *kc[:3], sx, sy)
     return out
 
 
 def cards(B, cell, key):
-    """Card tuples (x, y, foot, width, height, kind, yaw, variant, shade) of binned cells B."""
+    """Card tuples (x, y, foot, width, height, kind, yaw, variant, shade, slope x, slope y) of binned cells B."""
     out = []
-    for c, n, cx, cy, foot, top, cover, rmax, k0, k1, k2 in B:
+    for c, n, cx, cy, foot, top, cover, rmax, k0, k1, k2, sx, sy in B:
         w = float(np.clip(cell * math.sqrt(min(1.0, cover / cell ** 2)) * 1.15, WIDTH_MIN, 1.3 * cell))
         w = max(w, 2.2 * rmax)
         kc = np.array([k0, k1, k2])
@@ -163,13 +187,14 @@ def cards(B, cell, key):
             kind = 3
         hs = _hash(key[0], key[1], key[2] if len(key) > 2 else 0, int(c))
         out.append((cx, cy, foot, w, max(top - foot, 2.0), kind, (hs % 900) / 10.0, (hs >> 10) % VARIANTS,
-                    (hs >> 12) % 1000))
+                    (hs >> 12) % 1000, sx, sy))
     return out
 
 
 def mesh(cs):
     """Positions, triangles, normals, uvs (Collada: v up), colours of cards: two crossed quads each, every quad two
-    single-sided faces back to back (counter-clockwise from their side) with the normal of their side, TILT up."""
+    single-sided faces back to back (counter-clockwise from their side) with the normal of their side, TILT up. A
+    quad's ends stand on the plane of its cell's tree feet (sheared, still vertical)."""
     nc = len(cs)
     P = np.zeros((nc * 16, 3))
     N = np.zeros((nc * 16, 3))
@@ -178,7 +203,7 @@ def mesh(cs):
     T = np.zeros((nc * 8, 3), np.int64)
     cw, ch = 1.0 / 4, 1.0 / VARIANTS
     ct, stl = math.cos(math.radians(TILT)), math.sin(math.radians(TILT))
-    for i, (cx, cy, foot, w, h, kind, yaw, var, jit) in enumerate(cs):
+    for i, (cx, cy, foot, w, h, kind, yaw, var, jit, sx, sy) in enumerate(cs):
         u0 = kind * cw + 0.002
         u1 = (kind + 1) * cw - 0.002
         v0 = 1.0 - (var + 1) * ch + 0.002          # atlas row var (0: the image's top row)
@@ -189,8 +214,9 @@ def mesh(cs):
             a = math.radians(yaw + 90 * q)
             ex, ey = math.cos(a), math.sin(a)
             dx, dy = 0.5 * w * ex, 0.5 * w * ey
-            quad = [(cx - dx, cy - dy, foot), (cx + dx, cy + dy, foot),
-                    (cx + dx, cy + dy, foot + h), (cx - dx, cy - dy, foot + h)]
+            dz = sx * dx + sy * dy
+            quad = [(cx - dx, cy - dy, foot - dz), (cx + dx, cy + dy, foot + dz),
+                    (cx + dx, cy + dy, foot + dz + h), (cx - dx, cy - dy, foot - dz + h)]
             # the second quad mirrored in u: the two quads of a card do not show the same clump
             uv = ([(u0, v0), (u1, v0), (u1, v1), (u0, v1)] if q == 0 else
                   [(u1, v0), (u0, v0), (u0, v1), (u1, v1)])

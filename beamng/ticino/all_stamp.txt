@@ -16,3 +16,4 @@
 2026-11-01 16:05 burst deadline + flat forest rows
 2026-11-01 16:20 minimap roads in the hold
 2026-11-01T16:25Z far trees dark with side normals, far ground of the villages toned, free camera fallback
+2026-11-01T16:40Z far tree cards follow the plane of their tree feet (no stairs of blocks on slopes)

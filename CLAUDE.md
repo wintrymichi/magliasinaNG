@@ -1915,6 +1915,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   CROWN_RGB per kind (36,48,30 conifers .. 50,64,34 broadleaves) and the under-fill is UNDER (0.65) of them. The
   trunks are told from the crowns BEFORE the scaling (scaled, a grey trunk passed as green and stood as a light bar).
   The tiles are twice the bytes (16 vertices a card): base part 3 ~0.42 -> ~0.83 GB. Not seen in the game yet.
+- The "boxes" had a cause in the geometry too: a card stood level on the LOWEST tree foot of its cell with its top at the
+  tallest tops, and on a slope a 28 m cell spans 8 m (median) to 21 m (90th pct) of height near Lugano: a quarter of the
+  cards were 1.5 times the trees' height or more, flat-topped, and every wooded hill a staircase of blocks with a
+  stepped skyline. A card now follows the plane of its cell's tree feet (fartrees.plane, ridge-regularised so one tree
+  or a row gives no slope across; each quad sheared, its sides still vertical): cards over 1.5 times the trees 25 % ->
+  0.9 % (coarse 64 m cards 9.6 %). The three.js preview (scratch farview2.py: far ground, far houses and far-tree
+  tiles in headless Chromium) shows the stepped skyline gone, but NOT the game's light: the old pale cards came out
+  dark green in it (Lambert, no sky reflection). Judge colours and brightness only on PC photos.
 
 
 ## Far houses and the free camera (farbld.py, objects.lua far sets, stream.lua followFreeCamera, 2026-11-01)
