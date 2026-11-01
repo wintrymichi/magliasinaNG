@@ -3,7 +3,7 @@
 The terrain swap (terrainFile + postApply with a new file each time), the base colour fields, flushGroundCoverGrids after a
 block change, runtime TSStatic objects with setPosRot and the game pause during a jump in lua/ge/extensions/ticino/
 follow the code and the in-game measurements of BeamNG.Earth (https://github.com/TecnaGamer/BeamNG.Earth),
-under the MIT licence. lua/ge/extensions/ticino/pace.lua follows its governor.lua (scene-changing frames isolated between calm ones), framepacer.lua (even frame pacing) and core.lua's hitch record (the engine's metrics of a slow frame); helper/ticino_helper.py's write_atomic follows its server/staging.py (temporary files outside the user folder, one read of each new file on Windows before the game opens it):
+under the MIT licence. lua/ge/extensions/ticino/pace.lua follows its governor.lua (scene-changing frames isolated between calm ones), framepacer.lua (even frame pacing) and core.lua's hitch record (the engine's metrics of a slow frame); helper/ticino_helper.py's write_atomic follows its server/staging.py (temporary files outside the user folder, one read of each new file on Windows before the game opens it). The Ticino map on the M key (lua/ge/extensions/ticino/worldmap.lua, ui/ui-vue/mods/ticino/) follows its settings.lua redirectBigMap / toggleMap and its ui/ui-vue/mods/beamngEarth/index.js and EarthMap.vue (a full-screen UI route in place of the stock big map, tiles as level files):
 
 ```
 MIT License
