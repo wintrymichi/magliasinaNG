@@ -37,6 +37,7 @@ jobs:
       tools: ${{ steps.c.outputs.tools }}
       app: ${{ steps.c.outputs.app }}
       level: ${{ steps.c.outputs.level }}
+      only: ${{ steps.c.outputs.only }}
     steps:
       - uses: actions/checkout@v4
       - id: c
@@ -46,6 +47,9 @@ jobs:
           for k in tag title zips tools app; do v=$(get $k); [ -n "$v" ] || { echo "no $k in publish.txt"; exit 1; }; echo "$k=$v" >> "$GITHUB_OUTPUT"; echo "$k=$v"; done
           # level=keep: only the installer, helper, server and app (a level build not tested yet stays on its draft)
           l=$(get level); echo "level=${l:-copy}" >> "$GITHUB_OUTPUT"; echo "level=${l:-copy}"
+          # only=app: the app alone (the installer, helper and server of the tools draft may be built for a newer
+          # level than the release has: the helper of 2026-10-31 23:48 writes its files where an older base does not look)
+          o=$(get only); echo "only=${o:-all}" >> "$GITHUB_OUTPUT"; echo "only=${o:-all}"
       - name: The release (a draft until every zip is there)
         env:
           TAG: ${{ steps.c.outputs.tag }}
@@ -117,6 +121,7 @@ jobs:
       SRC: ${{ needs.setup.outputs.zips }}
       TOOLS: ${{ needs.setup.outputs.tools }}
       APP: ${{ needs.setup.outputs.app }}
+      ONLY: ${{ needs.setup.outputs.only }}
     steps:
       - uses: actions/checkout@v4
       - name: Installer, helper, server and app
@@ -131,12 +136,16 @@ jobs:
           }
           mkdir -p tools && cd tools
           t=$(rid "$TOOLS"); a=$(rid "$APP")
-          get "$t" helper_ticino.zip
-          get "$t" server_ticino.zip
-          get "$t" installer_ticino.zip
-          # the installer finds its release by release.txt beside it
-          mkdir inst && (cd inst && unzip -q ../installer_ticino.zip && printf '%s\n' "$TAG" > release.txt && rm ../installer_ticino.zip && zip -qr ../installer_ticino.zip .)
-          unzip -p installer_ticino.zip release.txt
+          files=(app_ticino.zip)
+          if [ "$ONLY" != app ]; then
+            get "$t" helper_ticino.zip
+            get "$t" server_ticino.zip
+            get "$t" installer_ticino.zip
+            # the installer finds its release by release.txt beside it
+            mkdir inst && (cd inst && unzip -q ../installer_ticino.zip && printf '%s\n' "$TAG" > release.txt && rm ../installer_ticino.zip && zip -qr ../installer_ticino.zip .)
+            unzip -p installer_ticino.zip release.txt
+            files+=(helper_ticino.zip server_ticino.zip installer_ticino.zip)
+          fi
           # the app of this commit (ticino_gui.yml builds it from the same push): wait for it
           for w in $(seq 1 40); do
             if get "$a" app_ticino.zip && unzip -p app_ticino.zip VERSION.txt | grep -q "$GITHUB_SHA"; then break; fi
@@ -144,7 +153,7 @@ jobs:
             echo "waiting for the app build of $GITHUB_SHA"; sleep 60
           done
           unzip -p app_ticino.zip VERSION.txt
-          gh release upload "$TAG" helper_ticino.zip server_ticino.zip installer_ticino.zip app_ticino.zip --clobber
+          gh release upload "$TAG" "${files[@]}" --clobber
       - name: Every zip there, with the source's size and sha256
         if: needs.setup.outputs.level != 'keep'
         run: |

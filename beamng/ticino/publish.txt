@@ -10,4 +10,6 @@ tools=ticino-all
 app=ticino-app
 # copy (default): the level's zips too; keep: the level on the release stays as it is (only tools and app)
 level=keep
-stamp=2026-11-01 app 1.1
+# all (default): installer, helper, server and app; app: the app alone (tools built for a newer level stay on their draft)
+only=app
+stamp=2026-11-01 app 1.1 b
