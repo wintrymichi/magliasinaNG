@@ -1800,7 +1800,8 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   SW) 2"). Second try (base 12:00Z): "never give a place twice" pushed points onto unknown hamlets (Manno (0.6 km S) ->
   Taiáda) and a strong town weight gave "Andermatt (13 km W)"; and swissNAMES3D lists every name of a place as its own
   row (UUID shared): "Bellinzone (3 km SW)", "Lucarn" (Locarno) slipped past the village names. Now: one entry per
-  UUID with its official name (the zone's village name if it is one of them), a mild weight by EINWOHNERKATEGORIE
+  UUID with its official name, never an exonym (a zone's village point "ligiaun" is Lugano: its Romansh exonym was
+  the village slug, and taking the village's spelling first renamed Lugano Ligiaun in the third base), a mild weight by EINWOHNERKATEGORIE
   (x1-2.5), a used place again with distance and direction, beyond FAR_M the plainly nearest place. Compare the whole
   spawn_names.json of a run with the one before (changed labels), not a few samples. spawn_magliaso_paese is a
   VILLAGE point: strip "_paese" only after the GENERIC test (its slug is "magliaso").
