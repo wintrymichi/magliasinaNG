@@ -30,6 +30,7 @@ import blocks  # noqa: E402
 import collision  # noqa: E402
 import dae2cdae  # noqa: E402
 import farlod  # noqa: E402
+import worldmap  # noqa: E402
 import region  # noqa: E402
 import zipremote  # noqa: E402
 from blocks import LEVEL, log, wopen  # noqa: E402
@@ -272,7 +273,13 @@ def main():
     info["size"] = [grid.W, grid.W]
     if sp:
         info["defaultSpawnPointName"] = sp["name"]
-    info["spawnPoints"] = [{"objectname": o["name"], "translationId": o["name"]} for o in spawns]
+    # the spawn points by their real places (swissNAMES3D), sorted by name: every zone called its route points
+    # spawn_magliaso / _mid / _pura (worldmap.spawn_names)
+    spawn_labels = worldmap.spawn_names(spawns, worldmap.fetch_settlements(os.path.join(a.cache, "names")))
+    places = worldmap.places_of(spawns, spawn_labels)
+    info["spawnPoints"] = [{"objectname": p["name"], "translationId": p["label"]} for p in places]
+    with wopen(os.path.join(a.out, "spawn_names.json"), "w") as f:
+        json.dump({p["name"]: p["label"] for p in places}, f, indent=1, ensure_ascii=False)
     info["previews"] = []
     pv = os.path.join(s0.dir, s0.level + "_preview.jpg")
     if os.path.isfile(pv):
@@ -296,7 +303,12 @@ def main():
 
     # the far ground's coarse levels to the horizon (farlod.py): ~110 MB of the base, read from the slices' far tiles
     tile_m = grid.C * grid.sq
-    far_lod = farlod.build(farlod.read_slices(sl, zones, sorted(far), tile_m), os.path.join(dst, farlod.DIR))
+    ground = farlod.read_slices(sl, zones, sorted(far), tile_m)
+    far_lod = farlod.build(ground, os.path.join(dst, farlod.DIR))
+    # the Ticino map of the M key (worldmap.py, ui/ui-vue/mods/ticino): the far ground's colours and the AI roads
+    worldmap.build(ground.H, ground.C, grid.x0 + ground.cx0 * tile_m, grid.y0 + ground.cy0 * tile_m, tile_m / farlod.K,
+                   worldmap.roads_of([o for objs in kept.values() for o in objs]), os.path.join(dst, worldmap.DIR),
+                   places)
 
     stream = {
         "version": 2, "zone": "ticino:%d zones" % len(zones), "level": LEVEL,

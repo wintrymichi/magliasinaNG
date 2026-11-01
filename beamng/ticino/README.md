@@ -55,6 +55,12 @@ Start with the desktop shortcut (BeamNG goes straight into the map, the server o
 stops with the game), or in the game: Freeroam > Ticino. In server mode the map needs the server: start it with the
 shortcut (or the Ticino app), not the game alone. There are spawn points in every zone (villages and towns).
 
+**Map (M).** In the level ticino the M key (and the pause menu's Map) opens a map of the whole of Ticino instead of
+the stock big map, which only showed the 3 km of terrain loaded round the car. Drag to move, wheel or +/- to zoom,
+"Auto" centres the car, "Ticino" shows everything; type a place in the search box or click a place on the map and
+the car goes there (the game pauses while the map is open; M or Esc closes it). The spawn points carry the names of
+the real villages and places near them (swissNAMES3D), sorted by name, in the map and in the game's spawn list.
+
 In packs mode the **first start** after an install mounts about 600,000 new files: the game can show "not responding" for one or
 two minutes before the main menu. Wait; it is not a crash. The first time a place is seen the game converts its
 shapes and textures (stutters in a new area); the second time they come from its cache. To convert them before
@@ -129,6 +135,12 @@ The streamer is the GE extension `ticino_stream` (`mod/lua/ge/extensions/ticino/
 - **Warm-up.** Optional, from the console inside the level: `extensions.load('ticino_warmup')` loads once every shape
   of the zones within 3 km and cooks the sign textures, so the game writes its cache now instead of stuttering the
   first time it sees them (about 15 min a region; drive elsewhere and run it again there).
+- **Map.** `worldmap.py` (in the base build) draws the map tiles from the far ground's vertex colours (every zone,
+  6 m a pixel at the finest of 7 levels, ~900 JPEG tiles, ~40 MB in `levels/ticino/map/`) and the AI roads by class;
+  `ticino_worldmap` (`worldmap.lua`) points the stock big map's `toggleBigMap` / `enterBigMap` at the page
+  `mod/ui/ui-vue/mods/ticino/TicinoMap.vue` while the level runs (the way BeamNG.Earth replaces it), and puts them
+  back when the level ends. Spawn names: `worldmap.spawn_names`, written to the release beside the base as
+  `spawn_names.json`.
 - **Helper.** `helper/ticino_helper.py` (or `ticino_helper.exe`) makes the terrain windows with numpy, byte for byte
   what the Lua makes (`tests/test_helper.py`), and keeps the 8 the next move can need ready. It talks to the mod only
   through files in `<user>/temp/ticino/helper/` (`ticino/helper.lua`). Without it the Lua makes them, as before.

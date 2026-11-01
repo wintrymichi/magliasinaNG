@@ -1782,3 +1782,17 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Not tested in the game yet (2026-11-01): FPS with ~500 more static tiles and 60 km view, and whether the borders
   between levels show (each coarse border vertex is the highest far height of its stretch, skirt down to the lowest).
 
+## Ticino map and spawn names (worldmap.py, 2026-11-01)
+
+- The stock big map (M, freeroam/bigMapMode.lua) is a 3D camera over the loaded level framed on
+  `core_terrain.getTerrain():getWorldBox()`: in the streamed Ticino that is the 3 km window round the car. A first plan
+  (a photo mesh shown only in big map mode, the terrain box faked) was dropped for BeamNG.Earth's way (michi: "prendi
+  spunto da beamng earth"): replace toggleBigMap / enterBigMap with a 2D UI route of our own drawing level-file tiles.
+- The far ground's vertex colours (12 m, every zone, `farlod.Ground`) already look like a map; no imagery service is
+  needed (swisstopo WMTS is blocked in the cloud anyway). `farlod.read_release('ticino-v1', ...)` reads them by range in
+  ~2 min for a local test.
+- Every zone's route spawn points are called spawn_magliaso / spawn_mid / spawn_pura (build_level.stage_spawns copied
+  from the Malcantone): 452 points, "magliaso" at Airolo. The village points carry an ASCII slug only. swissNAMES3D is
+  blocked in the cloud: worldmap.fetch_settlements falls back to the slugs; check `spawn_names.json` of the base run.
+- Lua 5.5 (lupa, for a quick stub test of a mod file) has no math.atan2; LuaJIT in the game does.
+
