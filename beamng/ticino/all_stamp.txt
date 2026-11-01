@@ -18,3 +18,4 @@
 2026-11-01T17:01:41Z number sets for colCells/far
 2026-11-01T17:40:36Z AI map off by default
 2026-11-01T17:47:39Z texture warm-up at start, landmark shapes in the base
+2026-11-01T18:18:57Z far trees as a canopy surface, free camera only after the camera was at the car

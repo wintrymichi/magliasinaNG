@@ -1945,6 +1945,20 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   0.9 % (coarse 64 m cards 9.6 %). The three.js preview (scratch farview2.py: far ground, far houses and far-tree
   tiles in headless Chromium) shows the stepped skyline gone, but NOT the game's light: the old pale cards came out
   dark green in it (Lambert, no sky reflection). Judge colours and brightness only on PC photos.
+- PC photos of 547c25a (2026-11-01, San Salvatore and over the lake towards Paradiso): the cards were STILL pale
+  grey-green whatever their atlas and normals (big light triangles on the Morcote/Campione hill, a pale dotted carpet on
+  the slopes) and their even spacing still drew a comb on every ridge at 2-5 km. Cards were dropped: fartrees.py now
+  makes a CANOPY, a height field on the far ground's own 12 m grid (farlod.Ground, region_base passes it; 24 m in the
+  coarse tiles) at the trees' height over the ground, with the far ground's material setup (vertex colours, no texture,
+  roughness 1, no shadows of its own) and normals of its own heights, so it is lit like the terrain, which reads dark
+  from afar in every photo. A vertex is in the wood by the crown cover of the 2 x 2 cells round it; out of the wood it
+  goes DROP under the ground (a steep wood edge, nothing on open ground), skirts close every tile border (the next tile
+  may be real Forest or the other level). Blocks of 4 x 4 tiles are made with their neighbours' trees: the 11,468 fine
+  and 1,496 coarse points two tiles share near Lugano are identical, two runs (2 and 4 workers) the same bytes. Lugano:
+  21 MB raw, 7.9 MB zipped (the cards v2 about twice). A height "mean + 0.3 (tallest - mean)" made one tall tree
+  (a few are scaled to 40-50 m) a pinnacle on the skyline: crown-weighted heights smoothed over the vertices round it.
+  A pinnacle that stays in a render may be the far ground's own (a rock outcrop): render without the canopy first.
+  Isolated garden trees are no canopy (cover under COVER_MIN): towns from afar have only their woods.
 
 
 ## Far houses and the free camera (farbld.py, objects.lua far sets, stream.lua followFreeCamera, 2026-11-01)
@@ -1984,6 +1998,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   core_camera.getActiveCamName with the player 0 and without, logs "free camera on/off, <m> from the car (<which call>)"
   at every change, and any camera more than FREE_FAR_M (1,500 m, or twice freeCameraAwayM) from the car takes the
   streaming whatever the game reports (tests/sim_stream.lua FREECAM: on, away, off, back in order).
+- PC run g6_A of 547c25a: the camera far from the car took the streaming (FREE_FAR_M), but at the level's START too: the
+  camera stood where the level put it, 6.2 km from the car at Manno, the first jump went there, paused the game and
+  jumped back to the car (a 7.7 s frame); "free camera off, 6161 m from the car" was the first state logged, not an
+  inverted word. The camera now takes the streaming only after it has been within FREE_BACK_M of the car since the
+  start or the car's last teleport (CAR_JUMP_M in a frame); tests/sim_stream.lua CAMSTART="x,y,s" (the camera elsewhere
+  for the first s seconds) shows the first jump going to the car. No call has ever said "free" on the PC: what each one
+  answers is logged at every change ("camera calls: ..."), read those lines after a Shift+C test.
 
 ## White patches and lines on the lake from above (PC photos from San Salvatore, 2026-11-01)
 

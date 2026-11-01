@@ -3,7 +3,7 @@
 --   luajit sim_stream.lua <out dir of blocks.py> [seconds]
 -- env: SPEED (km/h, 0 stands still), SPAWN_MS (engine cost of a shape to emulate; FAR_SPAWN_MS for the far shapes),
 -- EVERY (frames between status lines),
--- START="x,y", DIR="dx,dy", TELEPORT="x,y,s", FREECAM="x,y,t0,t1[,v]" (the free camera, below)
+-- START="x,y", DIR="dx,dy", TELEPORT="x,y,s", FREECAM="x,y,t0,t1[,v]" (the free camera, below), CAMSTART="x,y,s"
 local here = arg[0]:gsub('[^/]*$', '')
 package.path = here .. '../mod/lua/ge/extensions/?.lua;' .. package.path
 local root, seconds = arg[1], tonumber(arg[2] or '120')
@@ -134,12 +134,20 @@ if tele then for v in os.getenv('TELEPORT'):gmatch('[^,]+') do tele[#tele + 1] =
 -- (x, y) at v m/s (no v: there at once) and goes back to the car at t1
 local fc = os.getenv('FREECAM') and {}
 local cam = { free = false }
-if fc then
-  for v in os.getenv('FREECAM'):gmatch('[^,]+') do fc[#fc + 1] = tonumber(v) end
-  commands = { isFreeCamera = function() return cam.free end }
-  core_camera = { getPositionXYZ = function() if cam.free then return cam.x, cam.y, 800 end return car.x, car.y, 2 end }
-end
 local wt, lastAway, lastPaused = 0, nil, nil
+-- CAMSTART="x,y,s": the camera stands at (x, y) for the first s seconds, no free camera (the level's camera before it
+-- comes to the car: 6.2 km from the car at Manno on the PC, 2026-11-01): the streaming has to stay with the car
+local cs = os.getenv('CAMSTART') and {}
+if cs then for v in os.getenv('CAMSTART'):gmatch('[^,]+') do cs[#cs + 1] = tonumber(v) end end
+if fc then for v in os.getenv('FREECAM'):gmatch('[^,]+') do fc[#fc + 1] = tonumber(v) end end
+if fc or cs then
+  commands = { isFreeCamera = function() return cam.free end }
+  core_camera = { getPositionXYZ = function()
+    if cam.free then return cam.x, cam.y, 800 end
+    if cs and wt < cs[3] then return cs[1], cs[2], 500 end
+    return car.x, car.y, 2
+  end }
+end
 local frames = 0
 while t < seconds do
   local c0 = os.clock()

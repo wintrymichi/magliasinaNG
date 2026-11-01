@@ -362,9 +362,11 @@ def main():
     far_fine = farlod.build_fine(ground, os.path.join(dst, farlod.DIR), workers=4)
     if len(far_fine) != len(far):
         log("far level 0: %d of the %d far tiles (the rest have no square)" % (len(far_fine), len(far)))
-    # the woods beyond the streamed Forest as static far-tree tiles (fartrees.py), from the slices' tree tiles
+    # the woods beyond the streamed Forest as static far-tree tiles (fartrees.py), from the slices' tree tiles: a canopy
+    # surface standing on the far ground's own grid (the trees' heights over it)
     far_trees, far_trees2 = fartrees.build(fartrees.read_slices(sl, zones), plan["forestTypes"], [grid.x0, grid.y0],
-                                           tile_m, os.path.join(dst, fartrees.DIR), level=LEVEL, workers=4)
+                                           tile_m, os.path.join(dst, fartrees.DIR), level=LEVEL, workers=4,
+                                           ground=ground)
     # the houses beyond the streamed buildings as static far-house tiles and blocks (farbld.py), made from the slices'
     # own building shapes, so a far house is the house the car finds when it gets there
     far_bld, far_bld2 = farbld.build(farbld.read_slices(sl, zones), [grid.x0, grid.y0], tile_m,

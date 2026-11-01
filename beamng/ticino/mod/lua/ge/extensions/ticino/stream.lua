@@ -157,6 +157,10 @@ M.FREE_AWAY_M = 500
 M.FREE_BACK_M = 400
 M.FREE_BACK_FRAMES = 3     -- frames after the camera came back before the game goes on (the car's rings queued first)
 M.FREE_FAR_M = 1500        -- any camera this far from the car takes the streaming along, free camera reported or not
+-- ... but only once the camera has been at the car (within FREE_BACK_M) since the level's start or the car's last
+-- teleport (more than CAR_JUMP_M in a frame): at the start the camera stood where the level put it, 6.2 km from the car
+-- at Manno, and the streaming jumped there, paused the game and jumped back to the car (a 7.7 s frame; PC 2026-11-01)
+M.CAR_JUMP_M = 150
 
 local st = nil
 
@@ -208,7 +212,8 @@ local function holdCar()
       else userPaused = s.getPause and s.getPause() or false end
       st.carHold = { userPaused = userPaused }
       if not busy then s.pause(true) end
-      log('I', 'ticino', 'free camera away from the car: the streaming follows the camera, the game is paused')
+      log('I', 'ticino', string.format('camera %.0f m from the car (%s): the streaming follows the camera, the game '
+        .. 'is paused', st.awayM or 0, st.awayHow or '?'))
     elseif not busy and s.getPause and not s.getPause() then
       s.pause(true)
     end
@@ -225,29 +230,33 @@ local function holdCar()
 end
 
 -- Is the view the free camera? (as BeamNG.Earth core.lua freeCamera: commands.isFreeCamera, else the active camera's
--- name; each asked with the player 0 and without, any one saying so is enough). The PC's first try (2026-11-01) wrote
--- no "free camera away" line at all: which way answered is logged once, and the free camera turning on or off too.
-local freeHow = nil
+-- name; each asked with the player 0 and without, any one saying so is enough). On the PC (2026-11-01) none of them
+-- ever said so ("free camera on" never logged; the camera far from the car took the streaming by FREE_FAR_M alone):
+-- what each call answers is logged whenever it changes, so the next test shows which one could tell.
+local function says(f, a)
+  local ok, v
+  if a then ok, v = pcall(f, a) else ok, v = pcall(f) end
+  if not ok then return 'error' end
+  return v
+end
+
 local function freeCamera()
-  local c = rawget(_G, 'commands')
-  if c and c.isFreeCamera then
-    for _, a in ipairs({ 0, false }) do
-      local ok, v
-      if a then ok, v = pcall(c.isFreeCamera, a) else ok, v = pcall(c.isFreeCamera) end
-      if ok and v then freeHow = freeHow or ('commands.isFreeCamera(' .. (a and '0' or '') .. ')'); return true end
-    end
+  local c, cam = rawget(_G, 'commands'), rawget(_G, 'core_camera')
+  local a = c and c.isFreeCamera and says(c.isFreeCamera, 0)
+  local b = c and c.isFreeCamera and says(c.isFreeCamera)
+  local n0 = cam and cam.getActiveCamName and says(cam.getActiveCamName, 0)
+  local n1 = cam and cam.getActiveCamName and says(cam.getActiveCamName)
+  local r = st.camSays
+  if not r or r[1] ~= a or r[2] ~= b or r[3] ~= n0 or r[4] ~= n1 then
+    st.camSays = { a, b, n0, n1 }
+    log('I', 'ticino', string.format('camera calls: commands.isFreeCamera(0) %s, isFreeCamera() %s, '
+      .. 'core_camera.getActiveCamName(0) %s, getActiveCamName() %s', tostring(a), tostring(b), tostring(n0),
+      tostring(n1)))
   end
-  local cam = rawget(_G, 'core_camera')
-  if cam and cam.getActiveCamName then
-    for _, a in ipairs({ 0, false }) do
-      local ok, n
-      if a then ok, n = pcall(cam.getActiveCamName, a) else ok, n = pcall(cam.getActiveCamName) end
-      if ok and n == 'free' then
-        freeHow = freeHow or ('core_camera.getActiveCamName(' .. (a and '0' or '') .. ')')
-        return true
-      end
-    end
-  end
+  if a == true then return true, 'commands.isFreeCamera(0)' end
+  if b == true then return true, 'commands.isFreeCamera()' end
+  if n0 == 'free' then return true, 'core_camera.getActiveCamName(0)' end
+  if n1 == 'free' then return true, 'core_camera.getActiveCamName()' end
   return false
 end
 
@@ -265,18 +274,33 @@ local function focus()
   local veh = getPlayerVehicle and getPlayerVehicle(0)
   if veh then
     local p = veh:getPosition()
+    -- the car teleported: the camera has to come to it first (it may be left where the car was for a frame or two)
+    local c = st.carXY
+    if c and (p.x - c[1]) ^ 2 + (p.y - c[2]) ^ 2 > M.CAR_JUMP_M * M.CAR_JUMP_M and st.camAtCar then
+      st.camAtCar = nil
+      log('I', 'ticino', 'the car teleported: the camera takes the streaming only after it has been at the car again')
+    end
+    if not c then st.carXY = { p.x, p.y } else c[1], c[2] = p.x, p.y end
     if M.FOLLOW_FREE_CAMERA and cx then
       local d2 = (cx - p.x) ^ 2 + (cy - p.y) ^ 2
-      local free = freeCamera()
-      if free ~= st.freeOn then
-        st.freeOn = free
-        log('I', 'ticino', string.format('free camera %s, %.0f m from the car%s', free and 'on' or 'off', math.sqrt(d2),
-          free and freeHow and (' (' .. freeHow .. ')') or ''))
+      local free, how = freeCamera()
+      if not st.camAtCar then
+        if d2 <= M.FREE_BACK_M * M.FREE_BACK_M then
+          st.camAtCar = true
+          log('I', 'ticino', string.format('camera at the car (%.0f m): from now on a free camera farther than %d m, '
+            .. 'or any camera farther than %d m, takes the streaming', math.sqrt(d2), M.FREE_AWAY_M, M.FREE_FAR_M))
+        end
+      else
+        -- a camera this far from the car is no camera of the car whatever the game says (a test's setPosRot, a
+        -- free camera the calls above do not report): it takes the streaming too
+        local lim = st.away and M.FREE_BACK_M or M.FREE_AWAY_M
+        if (free and d2 > lim * lim) or d2 > M.FREE_FAR_M * M.FREE_FAR_M then
+          if not st.away then
+            st.awayM, st.awayHow = math.sqrt(d2), free and how or 'no free camera reported, farther than FREE_FAR_M'
+          end
+          return cx, cy, true
+        end
       end
-      -- a camera this far from the car is no camera of the car whatever the game says (a test's setPosRot, a
-      -- free camera the calls above do not report): it takes the streaming too
-      local lim = st.away and M.FREE_BACK_M or M.FREE_AWAY_M
-      if (free and d2 > lim * lim) or d2 > M.FREE_FAR_M * M.FREE_FAR_M then return cx, cy, true end
     end
     return p.x, p.y, false
   end
