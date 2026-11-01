@@ -1888,6 +1888,13 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   one shape past the burst's 20 ms. The burst now passes each part only the time left, and stepFar gives the minimum
   to one far set a call in turn. The forest row cache was a table a row (~600k live tables in 200 tiles), walked by
   the collector every cycle: the rows are one flat array a tile now.
+- The "wait burst" frame of ~480 ms (engine Lua 411-417, streamer lua 0, traffic off) ~2 s after the hold was the stock
+  minimap: ui/apps/minimap/roads.lua drawRoads builds a kd-tree of every navgraph link at its first draw ("if not
+  kdNodes"), the 57k roads after the jump's map.reset, and resets it only at mission start/end. The traffic signals
+  were ruled out first (their setup runs inside the map.reset frame). Found from BeamNG.Earth's notes
+  (long-distance-gps.md 1.4). stream.lua now resets and builds it in the paused hold, once onNavgraphReloaded says
+  the new map is there (map.reset lands a few frames after its call). The hold after the map read holds a live Lua
+  heap of 1.1 GB (the AI map): every GC cycle walks it, the root of the LuaGC frames; a smaller AI map is the lever.
 - PC test of the far trees v2 (base 69a1db7, 2026-11-01): treeKm 15 and 0 gave the SAME picture from San Salvatore,
   no far tree anywhere, while the sim made them. The base held the shapes, the material and stream.json farTrees /
   farTrees2 (checked by range read). Suspect: stepFarTrees only got what stepFar's budget left after the far ground,

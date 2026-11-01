@@ -14,3 +14,4 @@
 2026-11-01T14:14:32Z far ground and far trees get a share of every burst (FAR_BURST_MS)
 2026-11-01T14:53:02Z far ground with its own normals (no lines along the tile edges), base in 4 fixed parts
 2026-11-01 16:05 burst deadline + flat forest rows
+2026-11-01 16:20 minimap roads in the hold

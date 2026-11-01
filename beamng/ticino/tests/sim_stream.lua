@@ -107,7 +107,11 @@ local car = { x = 0, y = 0 }
 function getPlayerVehicle() return { getPosition = function() return vec3(car.x, car.y, 0) end } end
 local paused = false
 simTimeAuthority = { pause = function(p) paused = p end, getPause = function() return paused end }
-map = map or { reset = function() print("sim: map.reset") end, getMap = function() return { nodes = {} } end }
+-- map.reset: the game hooks onNavgraphReloaded when the new map is in place (here the next frame); the stock minimap's
+-- road tree (built by stream.lua in the hold) as a stub that counts its builds
+map = map or { reset = function() print("sim: map.reset"); NAV_HOOK = 2 end, getMap = function() return { nodes = {} } end }
+ui_apps_minimap_roads = ui_apps_minimap_roads or { reset = function() end,
+  drawRoads = function() MINIMAP_BUILDS = (MINIMAP_BUILDS or 0) + 1; print("sim: minimap roads built") end }
 
 -- ---- the run
 if os.getenv('PROF') then dofile(os.getenv('PROF')) end
@@ -139,6 +143,7 @@ local wt, lastAway, lastPaused = 0, nil, nil
 local frames = 0
 while t < seconds do
   local c0 = os.clock()
+  if NAV_HOOK then NAV_HOOK = NAV_HOOK - 1; if NAV_HOOK <= 0 then NAV_HOOK = nil; stream.onNavgraphReloaded() end end
   stream.onUpdate(dt, dt)
   local ms = (os.clock() - c0) * 1000
   if os.getenv('REALTIME') then while os.clock() - c0 < dt do end end   -- real time (helper tests: it runs beside)

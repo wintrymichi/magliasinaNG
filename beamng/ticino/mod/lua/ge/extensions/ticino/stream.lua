@@ -127,6 +127,8 @@ M.GATE = true              -- frames that change the scene stay lone spikes betw
                            -- "frameGate": false turns it off)
 M.PACING = false           -- even frame pacing (pace.lua, BeamNG.Earth's framepacer; settings "pacing": true). Off:
                            -- PC flights 2026-11-01 showed no measurable difference (A/B twice at Manno)
+M.MINIMAP_PREBUILD = true -- build the stock minimap's road tree in the hold after the map read (see the hold)
+M.MINIMAP_WAIT_MS = 10000 -- at most this long past RESET_HOLD_MS for the new map (onNavgraphReloaded)
 M.GC_STEP_MS = 40          -- Lua GC steps a frame during the hold (paused)
 M.GC_HOLD_MAX_FRAMES = 400 -- the hold lasts until the collector ends its cycles, or this many frames of steps: a time
                            -- cap (3 s) let only 3 frames of 25 ms steps happen (PC 4a53bd1: "not all collected in 75
@@ -877,6 +879,7 @@ local function onUpdate(dtReal)
         if st.watch then st.watch.rec.mapResetMs = clock() - t0 end
         log('I', 'ticino', string.format('AI map read again at the jump: %.1f ms%s', clock() - t0, ok and '' or ' (failed)'))
         if ok and (M.RESET_HOLD_MS or 0) > 0 then st.holdUntil = clock() + M.RESET_HOLD_MS end
+        if ok then st.minimapPending, st.navReady = M.MINIMAP_PREBUILD, nil end
       end
       if M.DROP_AI_ROADS and not st.aiDropped then
         local ok, res = pcall(M.dropAIRoads)
@@ -888,6 +891,30 @@ local function onUpdate(dtReal)
     if st.resumeIn <= 0 then
       st.resumeIn = nil
       if not st.holdUntil then pause(false) end
+    end
+    return
+  end
+  -- (only once the new map is there: map.reset lands a few frames after its call, laptop run 9; map.lua hooks
+  -- onNavgraphReloaded then, and the hold waits for it up to MINIMAP_WAIT_MS)
+  if st.holdUntil and st.minimapPending and not st.navReady and clock() > st.holdUntil + M.MINIMAP_WAIT_MS then
+    st.minimapPending = nil
+    log('W', 'ticino', 'minimap roads not built in the hold: no onNavgraphReloaded')
+  end
+  if st.holdUntil and st.minimapPending and st.navReady then
+    -- the stock minimap builds a kd-tree of every navgraph link at its first draw after the map read (roads.lua
+    -- drawRoads, "if not kdNodes"): ~410 ms of Lua 2 s into the drive with the 57k roads (PC flights of 00e48dc, the
+    -- "wait burst" frame with streamer lua 0). Built here in the pause, in a frame of its own; reset first, or a tree
+    -- built before the map read would stay (it is reset only at mission start and end)
+    st.minimapPending = nil
+    local mr = rawget(_G, 'ui_apps_minimap_roads')
+    if mr and mr.drawRoads then
+      local t0 = clock()
+      local ok, err = pcall(function()
+        if mr.reset then mr.reset() end
+        mr.drawRoads(vec3(0, 0, 0), 100, {}, {}, vec3(0, 0, 0), 1, 1)
+      end)
+      log('I', 'ticino', string.format('minimap roads built in the hold: %.0f ms%s', clock() - t0,
+        ok and '' or (' (failed: ' .. tostring(err) .. ')')))
     end
     return
   end
@@ -908,7 +935,7 @@ local function onUpdate(dtReal)
       st.gcMs = (st.gcMs or 0) + clock() - t0
       st.gcFrames = (st.gcFrames or 0) + 1
     end
-    local over = clock() >= st.holdUntil
+    local over = clock() >= st.holdUntil and not st.minimapPending
     if over and M.GC_AFTER_HOLD and not st.gcDone and (st.gcFrames or 0) < M.GC_HOLD_MAX_FRAMES
       and clock() < st.holdUntil + M.GC_HOLD_MAX_MS then over = false end
     if over then                     -- the hold after a map.reset is over: the game goes on in a frame of its own
@@ -1245,6 +1272,9 @@ function M.dropAIRoads()
   end
   return n .. ' AI roads deleted (the AI map stays as it was built)'
 end
+
+-- the AI map read by map.reset is in place (map.lua hooks this when it has built the new graph)
+M.onNavgraphReloaded = function() if st then st.navReady = clock() end end
 
 -- onUpdate with its own time kept for the slow-frame line of the next frame
 M.onUpdate = function(dtReal)
