@@ -910,6 +910,19 @@ def stage_spawns(scene, ctx):
         picks = [2, len(main) // 2, len(main) - 3]
     g = "MissionGroup/PlayerDropPoints"
     hfn = road_height_fn()
+    import unicodedata
+
+    def slug_of(text):
+        s = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+        return "".join(c if c.isalnum() else "_" for c in s).strip("_")
+
+    # an area of the Switzerland Builder: the three spawns on its main roads are named after the nearest settlement
+    # of swissNAMES3D (the Malcantone's names spawn_magliaso/mid/pura were in every such level, 2026-11-07)
+    builder = bool(ZONE and ZONE.get("builder"))
+    named = []
+    if builder:
+        import places
+        named = [s for s in places.settlements() if s[3] >= 20]
     for k, idx in enumerate(picks):
         p, q = main[idx], main[idx + 1]
         x, y = p["pos"][0], p["pos"][1]
@@ -917,6 +930,14 @@ def stage_spawns(scene, ctx):
         yaw = math.atan2(q["pos"][0] - x, q["pos"][1] - y)      # bearing of travel
         theta = math.atan2(q["pos"][1] - y, q["pos"][0] - x)    # travel direction, math angle
         name = ["spawn_magliaso", "spawn_mid", "spawn_pura"][k]
+        if builder:
+            near = min(named, key=lambda s: math.hypot(s[1] - x, s[2] - y), default=None)
+            base = ("spawn_" + slug_of(near[0])) if near and math.hypot(near[1] - x, near[2] - y) < 2500 \
+                else "spawn_road"
+            name, n = base, 1
+            while any(s[0] == name for s in ctx.get("spawns", [])):
+                n += 1
+                name = f"{base}_{n}"
         # vehicles face their local -Y: local +x must point 90 deg counter-clockwise of the travel direction
         scene.add(g, {"name": name, "class": "SpawnSphere", "persistentId": bng.pid(),
                       "position": [x, y, z], "dataBlock": "SpawnSphereMarker", "enabled": "1",
@@ -929,7 +950,6 @@ def stage_spawns(scene, ctx):
     if net is None:
         return
     import places
-    import unicodedata
     main_cls = {"10m Strasse", "8m Strasse", "6m Strasse", "4m Strasse"}
     ok = np.array([net.segs[k]["class"] in main_cls and not net.segs[k]["bridge"] for k in net.seg])
     idx = np.flatnonzero(ok)
@@ -947,10 +967,9 @@ def stage_spawns(scene, ctx):
         k = min(max(i, a + 1), a + n - 1)
         theta = math.atan2(net.y[k] - net.y[k - 1], net.x[k] - net.x[k - 1])
         x, y, z = float(net.x[i]), float(net.y[i]), float(net.z[i]) + 0.8
-        slug = unicodedata.normalize("NFKD", vname).encode("ascii", "ignore").decode().lower()
-        name = "spawn_" + "".join(c if c.isalnum() else "_" for c in slug).strip("_")
+        name = "spawn_" + slug_of(vname)
         if any(s[0] == name for s in ctx["spawns"]):     # e.g. the village of Pura, the route ends there too
-            name += "_paese"
+            name += "_village" if builder else "_paese"
         scene.add(g, {"name": name, "class": "SpawnSphere", "persistentId": bng.pid(),
                       "position": [x, y, z], "dataBlock": "SpawnSphereMarker", "enabled": "1",
                       "radius": 1, "rotationMatrix": bng.rot_local_x_to(theta + math.pi / 2),

@@ -923,9 +923,13 @@ _VILLAGES = {}
 def village_of(zi, lv, x, y):
     """Name of the village nearest (x, y): the spawn points of the level, one per village."""
     if lv not in _VILLAGES:
-        pts = [(o["name"][6:].replace("_", " ").title().replace(" D ", " d'").replace("Paese", "").strip(), o["position"][:2])
+        # a Switzerland Builder level names its spawns after the settlements too, numbered when two share one
+        # (spawn_sisikon_2) and spawn_road where none is near
+        pts = [(re.sub(r"_(\d+|village)$", "", o["name"][6:]).replace("_", " ").title().replace(" D ", " d'")
+                .replace("Paese", "").strip(), o["position"][:2])
                for o in read_items(zi, f"{lv}/main/MissionGroup/PlayerDropPoints/items.level.json")
-               if o.get("name", "").startswith("spawn_") and o["name"] not in ("spawn_mid", "spawn_pura", "spawn_magliaso")]
+               if o.get("name", "").startswith("spawn_") and o["name"] not in ("spawn_mid", "spawn_pura", "spawn_magliaso")
+               and not re.match(r"spawn_road(_\d+)?$", o["name"])]
         _VILLAGES[lv] = pts
     pts = _VILLAGES[lv]
     if not pts:
