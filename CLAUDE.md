@@ -2149,6 +2149,36 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   left the rail at the DTM's. guardrail_mesh.edge_drops cuts the stretches over 6 m with no face at the rail's height.
   Check rails against the road heights (scratch rails_side.py: ground beyond the rail and the nearest road's z), not
   only in plan.
+- Floating guard rails (michi 2026-11-07: "controlla anche che i guardrail non siano volanti"): on that build 28 % of the
+  3,037 modules had a post more than 0.3 m over whatever was under it, 11 % over 1 m, a few over 20 m. Measured per post
+  foot (two per module, one per end piece, from the models' local x, y) against the terrain's higher split and every up
+  face of the level (scratch rails_float.py). to_edge puts a rail 0.3 m beyond the road's edge, where the carve and the
+  1.5 m terrain grid let the ground fall away from 1-2 m inside the edge, and paved_edges kept the 2 m round every rail
+  out (KEEP_GROUPS), so the embankment that fills a road's edge everywhere else was never raised under the rails. In a
+  zone the rails are no longer in the keep-out (they are laid by rule, not measured), and the finishing step rail_walls
+  (after tunnels: the ground is final then) stands what still hangs on a concrete edge beam on a wall down into the
+  ground; over a fall deeper than BEAM_MAX (8 m) only the beam, listed as too_deep (a road over a gorge with no
+  swissTLM3D bridge). On the old level: 897 modules over 0.25 m -> 0, 2.45 km of wall, 62 s. Its first version left 275
+  hanging: deep stations got no beam at all, the end pieces' feet lay beyond the chain's ends (the wall now runs 2 m
+  past them) and a post was "held" when its gap after the wall was small, which its own beam's face fooled: held is
+  now every foot inside a beam's footprint. In concrete the wall stood 0.4-0.8 m in front of the survey's stone walls
+  the rails hung over and hid them: beside the top of a survey stone wall the beam and its wall are stone too
+  (stone_runs). The DAE material symbols are "<name>-mat": a test of tunnels.dae_triangles' material against
+  "mp_wall_stone" found nothing (stone_m 0) until the suffix was taken off.
+- Asphalt climbing the rock faces of the Axenstrasse (renders of the rails): 3,718 paved faces over 3 m tall and steep
+  (mp_road_asphalt 1,188, mp_hard_bank 916, mp_sidewalk 787, mp_hard_asphalt 737), found by listing the steep faces of
+  roads/surfaces and clustering them (scratch steep_paved.py), then the faces by shape, material and height band at each
+  cluster. Two causes. (1) Rock overhangs: under an overhang swissALTI3D is the rock above the road, and network_mesh's
+  floor (no cell more than SUNK under the lowest DTM within 1 m) lifted the carriageway's edge up the rock in a vertical
+  notch. In a zone the cells on a line (within its half width, not past its ends) take the lowest DTM within
+  OVERHANG_REACH (4 m), the valley side of the road, in tile_surface and in mesh_tile's vertex floor. (2) Galleries:
+  network.SKIP drops the swissTLM3D Galerie LINES, but the survey's road polygons under a gallery were still meshed on the
+  DTM, which there is the roof and the slope over it; tunnels.cut_meshes cuts roads only inside a tube's volume
+  (over_gallery, the cut in plan, is for the skin, walls and fences). network_mesh.gallery_footprints (half width +
+  GALLERY_CLEAR) are holes of the survey polygons now, like the bridge decks, and the slivers left beside them go.
+  Neither can be tried locally (no swissTLM3D in the cloud's DATA, gallery_footprints is empty there): only a build.
+- The reports of a build are in pipeline coordinates, the zip's level is moved by recenter.py (levels/<name>/recenter.json
+  dx, dy; Axenstrasse +21234, -106065): add them before looking a reported point up in the zip.
 - The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at
   the height of the nearest edge of the zone's DTM (1,383 m on the Axenstrasse): the panorama fences (fences.build: 46
   fences in 16 chunks and 27 guard rail modules), the edifici_veri sites (68 m of fence), the roadside walls of the
@@ -2211,6 +2241,10 @@ Tunnels and galleries (tunnels.py, finishing step; tested on ti_m1_8 San Bernard
   (Level.statics items are (group, shape, pos, frame) tuples: a script that unpacked them as (shape, pos) failed). The
   scratch harness filled the old mound with a Laplace fill that made spikes the build does not have: judge spikes on a
   real build. Playwright: pip install in the builder environment (with timeout); three.js from the npm tarball.
+- Views of cliff roads in render3d: the coarse far terrain (step > 1, lowered only 1 m) stood in front of the camera and
+  hid the road below it: monkeypatch Renderer._terrain to lower it 60 m (scratch rails_render.py). Cameras placed
+  "16 m out on the valley side" ended inside the cliff: take their height from tunnels.Terrain and never under the
+  rail - 2 m. render3d draws the guard rails (render3d_models) also with trees=False.
 
 Test builds (draft release builder-test, GitHub runners of 4 cores, from the launcher to the zip): Axenstrasse and
 Sisikon 32.8 km2 in 38 min, zip 0.86 GB (44 tunnels and galleries, 22.4 km); Sisikon 0.9 km2 on Windows in 18 min.

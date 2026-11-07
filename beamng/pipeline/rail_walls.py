@@ -45,6 +45,13 @@ TREE_CLEAR = 0.15       # m round the beam's footprint: no forest item there
 CH = 128.0              # m, the shapes are chunks of this size
 MAT, MAT_TOP = "mp_wall_concrete", "mp_wall_concrete_top"
 TILE = 4.0              # m per texture repeat (walls.WALL_TILE of both)
+# beside a survey wall of stone the beam's wall is of stone too: in concrete it stood 0.4-0.8 m in front of the stone
+# face the rail hung over and hid it (the renders of the Axenstrasse)
+STONE, STONE_TOP = "mp_wall_stone", "mp_wall_stone_top"
+STONE_TILE = 3.0        # m (walls.WALL_TILE: the stone faces 3, its top 4)
+STONE_ACROSS = (-1.0, 1.2)      # m: a stone wall top this far inside the beam's inner side .. beyond its outer side
+STONE_DZ = (-4.0, 0.5)  # m under .. over the foot of the rail
+STONE_RUN = 4.0         # m: a shorter run of either kind takes its neighbours' kind
 OWN = "/art/shapes/walls/rail_walls_"
 
 
@@ -69,7 +76,7 @@ class Ground:
         import tunnels
         self.ter = tunnels.Terrain(lv)
         kd = cKDTree(feet[:, :2])
-        tris, pref = [], f"/levels/{LEVEL_NAME}/"
+        tris, stone, pref = [], [], f"/levels/{LEVEL_NAME}/"
         for dp, _, fs in os.walk(os.path.join(lv, "main")):
             if "items.level.json" not in fs:
                 continue
@@ -88,7 +95,7 @@ class Ground:
                 rot = np.array(o.get("rotationMatrix", [1, 0, 0, 0, 1, 0, 0, 0, 1]), np.float64).reshape(3, 3)
                 sc = np.array(o.get("scale", [1, 1, 1]), np.float64)
                 for parts in lod0.values():
-                    for _, t in parts:
+                    for mat, t in parts:
                         t = (t * sc) @ rot + pos
                         n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
                         t = t[(n[:, 2] > 0.3 * np.linalg.norm(n, axis=1)) & np.isfinite(t).all((1, 2))]
@@ -100,7 +107,10 @@ class Ground:
                         t = t[d <= rad + FACE_REACH]
                         if len(t):
                             tris.append(t)
+                            if mat.replace("-mat", "") in (STONE, STONE_TOP):     # the DAE's symbol: <name>-mat
+                                stone.append(t)
         self.faces = road_mesh.TriSurface(np.concatenate(tris) if tris else np.zeros((0, 3, 3)))
+        self.stone = road_mesh.TriSurface(np.concatenate(stone) if stone else np.zeros((0, 3, 3)))
         self.n_faces = len(self.faces.t)
 
     def terrain(self, x, y):
@@ -215,7 +225,26 @@ def section(G, p, zf, Y):
     return inner, zt_in, g
 
 
-def prism(p, Y, s, inner, zt_in, zt_out, zb):
+def stone_runs(G, p, zf, Y, inner):
+    """[(first, last station, stone?)] along a piece: stone where the top of a survey stone wall lies beside the beam
+    (STONE_ACROSS, STONE_DZ), in runs of STONE_RUN m or more; neighbouring runs share their end station."""
+    m = len(p)
+    hit = np.zeros(m, bool)
+    if len(G.stone.t):
+        for f in np.linspace(0.0, 1.0, 12):
+            yy = inner + STONE_ACROSS[0] + f * (BEAM_OUT + STONE_ACROSS[1] - inner - STONE_ACROSS[0])
+            q = p + yy[:, None] * Y
+            h = G.stone.height(q[:, 0], q[:, 1], "near", zf)
+            hit |= (h >= zf + STONE_DZ[0]) & (h <= zf + STONE_DZ[1])
+    k = int(round(STONE_RUN / STEP))
+    if hit.any() and not hit.all():
+        hit = median_filter(hit.astype(np.uint8), 2 * k + 1, mode="nearest").astype(bool)
+    cuts = np.flatnonzero(hit[1:] != hit[:-1]) + 1
+    starts, ends = np.r_[0, cuts], np.r_[cuts, m - 1]
+    return [(int(a), int(b), bool(hit[a])) for a, b in zip(starts, ends) if b > a]
+
+
+def prism(p, Y, s, inner, zt_in, zt_out, zb, side_tile=TILE, top_tile=TILE):
     """The beam and its wall as a closed prism: (triangles of the sides (k, 3, 5: x, y, z, u, v), of the top,
     footprint (2m, 2))."""
     m = len(p)
@@ -229,8 +258,8 @@ def prism(p, Y, s, inner, zt_in, zt_out, zb):
     Y3 = np.column_stack([Y, np.zeros(m)])
     up = np.tile([0.0, 0.0, 1.0], (m - 1, 1))
     mid = lambda V: 0.5 * (V[:-1] + V[1:])
-    side_uv = lambda Q: np.stack([Q[:, :, 3], Q[:, :, 2]], 2) / TILE          # along, height
-    flat_uv = lambda Q: np.stack([Q[:, :, 3], Q[:, :, 4]], 2) / TILE          # along, across
+    side_uv = lambda Q: np.stack([Q[:, :, 3], Q[:, :, 2]], 2) / side_tile     # along, height
+    flat_uv = lambda Q: np.stack([Q[:, :, 3], Q[:, :, 4]], 2) / top_tile      # along, across
 
     def strip(U, V, want, uv):
         Q = np.stack([U[:-1], U[1:], V[1:], V[:-1]], 1).copy()
@@ -241,7 +270,7 @@ def prism(p, Y, s, inner, zt_in, zt_out, zb):
              strip(C, D, -up, flat_uv)]                 # the foot, under the ground
     for k, sgn in ((0, -1.0), (m - 1, 1.0)):            # the ends
         Q = np.array([[A[k], B[k], C[k], D[k]]])
-        Q[:, :, 3:] = np.stack([Q[:, :, 4], Q[:, :, 2]], 2) / TILE
+        Q[:, :, 3:] = np.stack([Q[:, :, 4], Q[:, :, 2]], 2) / side_tile
         sides.append(quads(Q, sgn * T3[[k]]))
     return np.concatenate(sides), strip(A, B, up, flat_uv), np.vstack([qi, qo[::-1]])
 
@@ -249,6 +278,7 @@ def prism(p, Y, s, inner, zt_in, zt_out, zb):
 def rail_walls_step(root, report=None):
     t0 = time.time()
     res = {"modules": 0, "end_pieces": 0, "rails": 0, "hanging_before": {}, "walls": 0, "wall_m": 0.0,
+           "stone_m": 0.0, "concrete_m": 0.0,
            "wall_height_p50_m": 0.0, "wall_height_max_m": 0.0, "triangles": 0, "hanging_after": {}, "too_deep": [],
            "forest_removed": 0, "shapes": 0, "seconds": 0}
     if not ZONE:
@@ -327,21 +357,27 @@ def rail_walls_step(root, report=None):
             # the wall down into the ground; over a fall deeper than BEAM_MAX only the beam, as on a bridge
             gw = minimum_filter1d(np.where(deep, np.inf, g), 5, mode="nearest") - BEAM_SINK
             zb = np.where(deep | ~np.isfinite(gw), zf[sl] - CORNICE, np.minimum(gw, zf[sl] - CORNICE))
-            sides, top, foot = prism(p[sl], Y[sl], s[sl], inner, zt_in, zf[sl], zb)
+            c = p[sl][len(piece) // 2]
+            mb = builders.setdefault((int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH))), bng.MeshBuilder())
+            outline = []
+            for a, b, st in stone_runs(G, p[sl], zf[sl], Y[sl], inner):
+                r = slice(a, b + 1)
+                sides, top, foot = prism(p[sl][r], Y[sl][r], s[sl][r], inner[r], zt_in[r], zf[sl][r], zb[r],
+                                         *((STONE_TILE, TILE) if st else (TILE, TILE)))
+                for mat, t in (((STONE, sides), (STONE_TOP, top)) if st else ((MAT, sides), (MAT_TOP, top))):
+                    V = t.reshape(-1, 5)
+                    mb.add(mat, V[:, :3], uvs=V[:, 3:], normals=bng.flat_normals_soup(V[:, :3]))
+                res["triangles"] += len(sides) + len(top)
+                res["stone_m" if st else "concrete_m"] += float(s[sl][b] - s[sl][a])
+                outline.append(foot)
             if deep.any():
                 c = p[sl][int(np.nanargmax(np.where(np.isfinite(hgt), hgt, 99.0)))]
                 res["too_deep"].append({"x": round(float(c[0]), 1), "y": round(float(c[1]), 1),
                                         "m": round(float(np.nanmax(np.where(np.isfinite(hgt), hgt, 99.0))), 1),
                                         "length_m": round(float(deep.sum() * STEP), 1)})
-            c = p[sl][len(piece) // 2]
-            mb = builders.setdefault((int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH))), bng.MeshBuilder())
-            for mat, t in ((MAT, sides), (MAT_TOP, top)):
-                V = t.reshape(-1, 5)
-                mb.add(mat, V[:, :3], uvs=V[:, 3:], normals=bng.flat_normals_soup(V[:, :3]))
             res["walls"] += 1
             res["wall_m"] += float(s[sl][-1] - s[sl][0])
-            res["triangles"] += len(sides) + len(top)
-            footprints.append(foot)
+            footprints.extend(outline)
             heights.append(hgt[~deep])
     # the shapes and the scene
     for (tx, ty), mb in sorted(builders.items()):
@@ -388,7 +424,8 @@ def rail_walls_step(root, report=None):
         H = np.concatenate(heights)
         res["wall_height_p50_m"] = round(float(np.nanmedian(H)), 2)     # the top over the lowest ground across it
         res["wall_height_max_m"] = round(float(np.nanmax(H)), 2)
-    res["wall_m"] = round(res["wall_m"])
+    for k in ("wall_m", "stone_m", "concrete_m"):
+        res[k] = round(res[k])
     res["seconds"] = round(time.time() - t0)
     print("rail walls:", {k: v for k, v in res.items() if k != "too_deep"}, flush=True)
     for t in res["too_deep"]:
