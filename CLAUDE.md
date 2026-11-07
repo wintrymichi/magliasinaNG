@@ -2112,3 +2112,80 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
   greys over GREY_CAP (130) down, half way to a warm grey (scaled alone, the faint casts of 200,195,197 made the towns
   mauve); the mountains' rock (133,133,121) stays. Over all Ticino: 183,119 samples filled, 1,100,428 toned. Checked in
   the ray-cast render of the far ground (scratch view/shade.py), not in the game yet.
+
+## Switzerland Builder (branch switzerland-builder, beamng/builder, 2026-11-07)
+
+michi: a localhost app that builds any part of Switzerland from open data, click and run, detail at least the
+Malcantone's, tunnels and galleries done well. The app (beamng/builder) writes a zone file with "builder": true and runs
+the pipeline's own zone build (downloads, stages, finishing steps), then recenter.py, the zip and the mods folder.
+
+- The branch was started from ticino WITHOUT the Ticino/Malcantone workflows: the first push of a branch starts every
+  workflow whose push paths its commits touch (zone_build.yml ran by mistake once). Only builder_*.yml live here.
+- The cloud cannot dispatch a workflow off the default branch: builder_test.yml runs on a push that changes
+  beamng/builder/test/stamp.txt. "[builder finish <run>]" = finishing steps only on that run's build artifact (kept 3
+  days) with the new code (cli resume --update-code); "[builder windows]" = the Windows job; "[builder area <name>]" =
+  test/<name>.json instead of area.json (logs test_<name>_part1/2). Concurrency: all finish runs share one group (a new
+  "[builder finish]" push CANCELS a running finish run), plain stamp pushes share another, every area run has its own
+  (its sha). Check actions/runs?branch=switzerland-builder after every push.
+- Malcantone values hard-coded in the pipeline, found by the first builder areas:
+  water.lake_level returned 270.5 (Lake Lugano) when no lake was surveyed, and every caller took ground at 270-272 m
+  for lake (network.dry_ends dropped the dead-end roads of a flat valley at that height, forest_fill its trees, the
+  backdrop drew water): now None. download_swisstopo had the Copernicus tiles N45-46 E008-009 written in: now the
+  1x1 degree tiles within 25 km of the block. download_gwr read ti.zip only: MAGLIASO_GWR_CANTONS. info.json had the
+  Malcantone's title: the zone's title and sources. The spawns were spawn_magliaso/mid/pura in every zone (Sisikon's
+  info.json, read by HTTP range from the zip): builder zones name them after the nearest swissNAMES3D place of 20+
+  people within 2.5 km (fuel_stations.village_of reads the new names).
+- Guard rails: every zone had rails only on the motorways (0.2 km on the Axenstrasse, a cliff road over the lake): the
+  Malcantone's came from its panoramas. guardrail_mesh.drop_marks / drop_runs (zones only) put them where the ground
+  falls 2 m (3 m beside a 3 m road) and 1:2 within 6 m of the edge, plus OSM barrier=guard_rail, not beside paved faces,
+  parapets, buildings or in villages. First version: closing gaps of 10 m bridged a station left out for a yard, and
+  to_edge then pushed the rail across the yard: never close a gap over a blocked station. Its synthetic test: bng.write_dae
+  subtracts the origin itself (the test subtracted it twice), and a test road of two huge triangles was dropped by
+  edge_fn's centroid filter (make synthetic roads of small faces).
+- Cantons without an open survey on geodienste.ch (probe 2026-11-07, builder_probe.yml): LU, OW, NW, VD, VS, NE, JU;
+  every open canton answers av_0/ita in the Italian vocabulary the pipeline reads. In a closed canton the land cover
+  raster was 'none' everywhere, which the pipeline reads as "not Switzerland": no measured trees, no lake, no rivers, no
+  OSM furniture. landcover.tlm_cover lays swissTLM3D TLM_BODENBEDECKUNG where the survey has nothing and ESA WorldCover
+  on the rest of the Swiss land (WorldCover's water, code 80, as meadow on purpose: swissTLM3D decides the water).
+- The 2026-02 swissTLM3D package splits big layers in two (TLM_BB\swissTLM3D_TLM_BODENBEDECKUNG_OST/_WEST.shp, also
+  EINZELBAUM and GEBAEUDE_FOOTPRINT): download_tlm looked for one file, logged "not in the package", and the Vitznau
+  and Montreux builds had no swissTLM3D land cover and no lake (water.lake_level measures the specchio_acqua cells). It
+  now reads <layer>, <layer>_OST and <layer>_WEST. Read the package's file list in the log before calling a layer missing.
+- Python environment (micromamba, conda-forge, environment.yml): exact pins of rasterio and pyogrio did not solve
+  together (one GDAL): pin numpy/scipy/shapely/scikit-image minors only. conda-forge's pyogrio has no pyogrio.libs, where
+  ogr_tin looked for GDAL: extract_buildings stopped on Windows; it now looks in the environment's prefix too. A
+  micromamba source can be blocked (the cloud proxy refused one): the launchers try GitHub's release, micro.mamba.pm,
+  then a pinned conda-forge build. conda packages break on spaces and accents in their path: the runtime moves to
+  %SystemDrive%\SwissBuilder\runtime or ~/.swissbuilder/runtime then.
+- Windows: no "fork" context (stage_roads: ValueError cannot find context for 'fork'): one process there; finish steps
+  run without the forked child. Steps started with CREATE_NO_WINDOW ran on alone after the app's console was closed:
+  they share the console now (own process group, so Ctrl+C reaches only the app). start.ps1 must not have a param()
+  block: an advanced script refuses "--no-browser" as an unknown parameter; it reads $args.
+- cli --until first cancelled the next step once it had started (a race): the Manager stops after the named step.
+- The app's time estimate (1.2 + 0.065 h per km2) comes from the dense Lugano zone: Sisikon (32.8 km2 of mountains and
+  lake) took 38 min against 3.3 h. The build time follows the buildings and roads, not the area.
+- wmts.geo.admin.ch and api3.geo.admin.ch are blocked from the cloud: the app's map tiles and search cannot be seen or
+  screenshotted here (the page renders with a grey map); they work on a user's PC.
+- far_trees prints "<kept> of <measured> ... left out by the thinning": the first number is what stays (not a bug).
+
+Tunnels and galleries (tunnels.py, finishing step; tested on ti_m1_8 San Bernardino and the Axenstrasse build):
+- Galleries (swissTLM3D KUNSTBAUTE Galerie, the avalanche galleries) were closed tubes, and the old mound then raised
+  the valley side over them (ti_m1_8: 13,782 vertices, up to 8 m, mean 1.88 m): buried. Now gallery(): hill wall, roof
+  slab, pillars on a parapet, foundation wall; valley_clear keeps the ground under the parapet. railway.py built rail
+  galleries itself too (double): Galerie is left to tunnels.py (railway SKIP).
+- A tube running out of the terrain block (San Bernardino) hung in the void: it is cut at the terrain's edge and closed.
+- Renders of the galleries showed: a sky-coloured band over the roofs (the terrain kept over the roof stopped ~1 m above
+  it: fill cap at max(ground, roof + 0.02)); rock ramps in the gallery openings (hole squares at a gallery end capped on
+  the DTM's smear of the roof, 2-5.5 m: end_clear); skin "curtains" and survey stone walls on the roofs (cut in plan over
+  the footprint, over_gallery); ground up to 0.25 m over a road deck not holed (DECK_CLEAR); a faceted vault (12 flat
+  segments: normals follow the curve); escape-sign text over the running man at 54 px (the font fits the room).
+  The cap drew 72 triangles per square: a square drawn whole is 2 now (-25 % cap triangles, same look).
+- Checking tunnels in render3d: it drew terrain holes as grey ground (Level.holes added); textured materials use flat
+  normals (computeVertexNormals), so a smooth vault shows only with textured=False, dae_normals=True; the grey cone is
+  render3d's proxy of a game model, not a mesh of ours; find which group owns a mesh by rendering without that group
+  (Level.statics items are (group, shape, pos, frame) tuples: a script that unpacked them as (shape, pos) failed). The
+  scratch harness filled the old mound with a Laplace fill that made spikes the build does not have: judge spikes on a
+  real build. Playwright: pip install in the builder environment (with timeout); three.js from the npm tarball.
+
+Test builds (draft release builder-test, GitHub runners of 4 cores, from the launcher to the zip): Axenstrasse and
+Sisikon 32.8 km2 in 38 min, zip 0.86 GB (44 tunnels and galleries, 22.4 km); Sisikon 0.9 km2 on Windows in 18 min.
