@@ -1,4 +1,4 @@
-/* Switzerland Builder: the page. Plain JavaScript and Leaflet; everything it does goes through the local API. */
+/* switzerlandNG (the Switzerland Builder) by wintrymichi: the page. Plain JavaScript and Leaflet; everything it does goes through the local API. */
 "use strict";
 
 const TOKEN = document.querySelector('meta[name="builder-token"]').content;
@@ -357,7 +357,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("logb
 
 $("quit").onclick = async (e) => {
   e.preventDefault();
-  if (!confirm("Quit the Switzerland Builder? A running build stops and can be resumed later.")) return;
+  if (!confirm("Quit switzerlandNG? A running build stops and can be resumed later.")) return;
   try { await api("/api/quit", { body: {} }); } catch (_) {}
-  document.body.innerHTML = "<p style='padding:2em;font:16px system-ui'>The Switzerland Builder has stopped. Start it again with its launcher.</p>";
+  document.body.innerHTML = "<p style='padding:2em;font:16px system-ui'>switzerlandNG has stopped. Start it again with its launcher.</p>";
 };

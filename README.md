@@ -14,7 +14,7 @@
 
 </div>
 
-The Switzerland Builder is a small app that runs on your own computer and opens in your browser. You draw a rectangle anywhere on the swisstopo map of Switzerland, give it a name and press **Build**. The app downloads the open data of that area, builds a drivable level with the same Python pipeline that makes the [Malcantone map](https://github.com/wintrymichi/magliasinaNG/tree/main) and the Ticino zones, and puts the finished mod in BeamNG.drive's mods folder.
+The Switzerland Builder (the app is called **switzerlandNG**, by wintrymichi) is a small app that runs on your own computer and opens in your browser. You draw a rectangle anywhere on the swisstopo map of Switzerland, give it a name and press **Build**. The app downloads the open data of that area, builds a drivable level with the same Python pipeline that makes the [Malcantone map](https://github.com/wintrymichi/magliasinaNG/tree/main) and the Ticino zones, and puts the finished mod in BeamNG.drive's mods folder.
 
 There is nothing to install or set up first: no Python, no GIS software, no accounts, no API keys. On its first start the app makes its own Python next to itself. Nothing in a level is modelled by hand and nothing comes from a commercial map: terrain, roads, buildings, woods, water, railways and tunnels are all made from the open data of the Swiss Confederation, the cantons and OpenStreetMap.
 

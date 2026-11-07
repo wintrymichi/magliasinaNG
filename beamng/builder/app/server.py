@@ -23,6 +23,8 @@ from . import BUILDER, HERE, VERSION
 from . import jobs, system, zone as zonemod
 
 WEB = os.path.join(BUILDER, "web")
+OWN_TYPES = {".html": "text/html", ".css": "text/css", ".js": "application/javascript", ".svg": "image/svg+xml",
+             ".png": "image/png", ".json": "application/json"}
 TOKEN = secrets.token_urlsafe(24)
 SEARCH = "https://api3.geo.admin.ch/rest/services/api/SearchServer"
 
@@ -113,7 +115,8 @@ class Handler(BaseHTTPRequestHandler):
         full = os.path.join(WEB, rel)
         if rel.startswith("..") or not os.path.isfile(full):
             return self._send(404, "not found", "text/plain")
-        ctype = mimetypes.guess_type(full)[0] or "application/octet-stream"
+        # the Windows registry can map an extension to another type (or to none): the page's own files by name first
+        ctype = OWN_TYPES.get(os.path.splitext(full)[1].lower()) or mimetypes.guess_type(full)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
             ctype += "; charset=utf-8"
         return self._send(200, open(full, "rb").read(), ctype, {"Cache-Control": "max-age=60"})
@@ -224,7 +227,7 @@ def main():
     port = free_port(a.port)
     srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}/"
-    print(f"\n  Switzerland Builder {VERSION} is running at {url}\n  Data folder: {settings['data_dir']}\n"
+    print(f"\n  switzerlandNG {VERSION} by wintrymichi is running at {url}\n  Data folder: {settings['data_dir']}\n"
           f"  Close this window (or press Ctrl+C) to stop it; a build that is running stops with it and resumes "
           f"from its last step when you start it again.\n", flush=True)
     if not a.no_browser:

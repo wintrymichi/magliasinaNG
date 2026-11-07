@@ -18,7 +18,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --ink: #e8eaed; --ink-2: #b7bdc6; --ink-3: #8d95a0; --line: #2f343b; --bg: #15181c; --card: #1d2126;
-    --ok: #5cc27f; --warn: #e3a440; --err: #ff8a80; --blue: #7fb0ff;
+    --ok: #5cc27f; --warn: #e3a440; --err: #ff8a80; --blue: #7fb0ff; --red-text: #ff6b5f;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4); color-scheme: dark;
   }
 }
@@ -37,13 +37,14 @@ body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica 
 }
 
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand h1 { font-size: 18px; margin: 0; letter-spacing: -.01em; }
+.brand h1 { font-size: 21px; line-height: 1.1; margin: 0; letter-spacing: -.02em; font-weight: 750; }
+.brand h1 .ng { color: var(--red-text, var(--red)); }
+.brand .by { margin: 1px 0 3px; color: var(--ink-2); font-size: 12.5px; font-weight: 600; }
+.brand .by a { color: inherit; text-decoration: none; }
+.brand .by a:hover { color: var(--red); text-decoration: underline; }
 .brand .sub { margin: 0; color: var(--ink-3); font-size: 12.5px; }
 .brand .ver { margin-left: auto; color: var(--ink-3); font-size: 12px; align-self: flex-start; }
-.logo { width: 34px; height: 34px; border-radius: 8px; background: var(--red); position: relative; flex: none; }
-.logo::before, .logo::after { content: ""; position: absolute; background: #fff; }
-.logo::before { left: 14px; top: 7px; width: 6px; height: 20px; }
-.logo::after { left: 7px; top: 14px; width: 20px; height: 6px; }
+.logo { width: 44px; height: 44px; flex: none; align-self: flex-start; filter: drop-shadow(0 1px 2px rgba(16, 24, 40, .25)); }
 
 .sysbar { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--card); border: 1px solid var(--line);

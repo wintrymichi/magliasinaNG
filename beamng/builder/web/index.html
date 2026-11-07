@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Switzerland Builder</title>
+<title>switzerlandNG</title>
+<meta name="author" content="wintrymichi">
 <meta name="builder-token" content="__TOKEN__">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d52b1e'/%3E%3Cpath d='M13 7h6v6h6v6h-6v6h-6v-6H7v-6h6z' fill='white'/%3E%3C/svg%3E">
+<link rel="icon" href="icon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -15,9 +17,10 @@
 
   <aside id="panel">
     <header class="brand">
-      <div class="logo" aria-hidden="true"></div>
+      <img class="logo" src="icon.svg" alt="" width="44" height="44">
       <div>
-        <h1>Switzerland Builder</h1>
+        <h1>switzerland<span class="ng">NG</span></h1>
+        <p class="by">by <a href="https://wintrymichi.ch" target="_blank" rel="noopener">wintrymichi</a></p>
         <p class="sub">BeamNG.drive levels of any part of Switzerland, from open data</p>
       </div>
       <span class="ver">v__VERSION__</span>
@@ -77,6 +80,7 @@
     </details>
 
     <footer class="foot">
+      <strong>switzerlandNG</strong> v__VERSION__ by <a href="https://wintrymichi.ch" target="_blank" rel="noopener">wintrymichi</a>.
       Map © <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">swisstopo</a>.
       Levels: © swisstopo, cantonal surveys, BFS, © OpenStreetMap contributors (ODbL), Copernicus, ESA WorldCover.
       <a href="#" id="quit">Quit the app</a>

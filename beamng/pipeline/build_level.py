@@ -1033,22 +1033,24 @@ def write_info(ctx):
         # an area of the Switzerland Builder (beamng/builder): its own name and a description of what was built
         info.update({
             "title": ZONE["title"],
-            "description": ("%s (Switzerland) at 1:1 scale: about %d km2 built from open data by the Switzerland Builder, "
-                            "with %d bridges, %d buildings, about %d 000 trees and AI traffic. Sources: (c) swisstopo; "
-                            "cantonal cadastral surveys (geodienste.ch); Federal Register of Buildings; (c) OpenStreetMap "
-                            "contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus; ESA WorldCover."
+            "description": ("%s (Switzerland) at 1:1 scale: about %d km2 built from open data with switzerlandNG by "
+                            "wintrymichi, with %d bridges, %d buildings, about %d 000 trees and AI traffic. Sources: "
+                            "(c) swisstopo; cantonal cadastral surveys (geodienste.ch); Federal Register of Buildings; "
+                            "(c) OpenStreetMap contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus; "
+                            "ESA WorldCover."
                             % (ZONE["title"], round(km2), n_bridges, n_buildings, n_trees)),
             "biome": ZONE.get("biome", "Switzerland"),
             "features": "Real 1:1 scale, LiDAR terrain, 12 x 12 km terrain block",
-            "authors": ZONE.get("authors", "Switzerland Builder (magliasinaNG pipeline)"),
+            "authors": ZONE.get("authors", "wintrymichi (switzerlandNG)"),
         })
     json.dump(info, open(level_path("info.json"), "w"), indent=2)
     # player-facing documentation (sources, attribution, what differs from the older survey)
     here = os.path.dirname(os.path.abspath(__file__))
     readme = open(os.path.join(here, "README_livello.md"), encoding="utf-8").read()
     if ZONE and ZONE.get("title"):
-        readme = ("# %s\n\nBuilt with the Switzerland Builder (branch switzerland-builder of "
-                  "github.com/wintrymichi/magliasinaNG) from Swiss open data, with the pipeline of the Malcantone level. "
+        readme = ("# %s\n\nBuilt with switzerlandNG by wintrymichi (the Switzerland Builder, branch "
+                  "switzerland-builder of github.com/wintrymichi/magliasinaNG) from Swiss open data, with the pipeline of "
+                  "the Malcantone level. "
                   "The notes below are the Malcantone level's own; the sources and licences are the same.\n\n"
                   % ZONE["title"]) + readme
     from config import NO_PHOTO
