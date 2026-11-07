@@ -7,7 +7,8 @@
 # "[builder finish <run id>]" in the commit message: only the second job, on the first job's build of that run (its
 # artifact is kept 3 days), with the pipeline code of this commit (cli resume --update-code): a fix of a finishing step
 # (tunnels...) needs no new downloads and stages. "[builder windows]" runs the Windows job too (with a finish run, or
-# alone otherwise: then no Linux job).
+# alone otherwise: then no Linux job). "[builder area <name>]" builds beamng/builder/test/<name>.json instead of
+# area.json (no Windows job unless asked); its logs are test_<name>_part*.
 name: builder test build
 
 on:
@@ -17,7 +18,8 @@ on:
     paths: [beamng/builder/test/stamp.txt]
 
 concurrency:
-  group: builder-test-${{ contains(github.event.head_commit.message, '[builder finish ') && 'finish' || 'all' }}
+  # a run of another test area has a group of its own (two areas can be built at once)
+  group: builder-test-${{ contains(github.event.head_commit.message, '[builder finish ') && 'finish' || (contains(github.event.head_commit.message, '[builder area ') && github.sha || 'all') }}
   cancel-in-progress: true
 
 permissions:
@@ -37,6 +39,7 @@ jobs:
     outputs:
       from_run: ${{ steps.s.outputs.from_run }}
       windows: ${{ steps.s.outputs.windows }}
+      area: ${{ steps.s.outputs.area }}
     steps:
       - id: s
         env:
@@ -45,6 +48,8 @@ jobs:
           F=$(printf '%s' "$MSG" | grep -oE '\[builder finish [0-9]+\]' | grep -oE '[0-9]+' | head -1 || true)
           echo "from_run=$F" >> "$GITHUB_OUTPUT"
           case "$MSG" in *"[builder windows]"*) echo "windows=true" >> "$GITHUB_OUTPUT"; echo "the Windows job too";; esac
+          A=$(printf '%s' "$MSG" | grep -oE '\[builder area [a-z0-9_]+\]' | head -1 | sed -E 's/\[builder area ([a-z0-9_]+)\]/\1/' || true)
+          echo "area=${A:-area}" >> "$GITHUB_OUTPUT"; echo "test area: ${A:-area}"
           echo "finishing steps only, on the build of run: ${F:-no}"
           gh release view builder-test >/dev/null 2>&1 || \
             gh release create builder-test --draft --target "$GITHUB_SHA" --title "Switzerland Builder test (draft, not a release)" \
@@ -69,8 +74,9 @@ jobs:
 
       - name: Build, first part (launcher, downloads, stages)
         run: |
-          NAME=$(python3 -c "import json; print(json.load(open('beamng/builder/test/area.json'))['name'])")
-          BBOX=$(python3 -c "import json; print(','.join(map(str, json.load(open('beamng/builder/test/area.json'))['bbox'])))")
+          A=beamng/builder/test/${{ needs.setup.outputs.area }}.json
+          NAME=$(python3 -c "import json, sys; print(json.load(open(sys.argv[1]))['name'])" "$A")
+          BBOX=$(python3 -c "import json, sys; print(','.join(map(str, json.load(open(sys.argv[1]))['bbox'])))" "$A")
           ( while sleep 120; do echo "[mem] $(free -m | awk '/Mem/{printf "ram %d MB ", $3} /Swap/{printf "swap %d MB", $3}') disk $(df -h /mnt | awk 'NR==2{print $4}') free"; done ) &
           MEM=$!; trap 'kill $MEM 2>/dev/null || true' EXIT
           ./start-switzerland-builder.sh cli build "$NAME" "$BBOX" --data "$DATA" --until stages
@@ -94,16 +100,18 @@ jobs:
         if: always()
         run: |
           free -g; df -h /mnt || true
+          T=test_build_part1
+          if [ "${{ needs.setup.outputs.area }}" != "area" ]; then T="test_${{ needs.setup.outputs.area }}_part1"; fi
           for d in "$DATA"/builds/*/; do
-            cp "$d/build.log" "$RUNNER_TEMP/test_build_part1.log" && cp "$d/build.json" "$RUNNER_TEMP/test_build_part1.json" || true
+            cp "$d/build.log" "$RUNNER_TEMP/$T.log" && cp "$d/build.json" "$RUNNER_TEMP/$T.json" || true
           done
-          gh release upload builder-test "$RUNNER_TEMP"/test_build_part1.* --clobber || true
+          gh release upload builder-test "$RUNNER_TEMP/$T".* --clobber || true
 
   windows:
     # the launcher as a double-click on Windows runs it (Windows PowerShell 5.1, micromamba win-64) and the whole
     # pipeline on Windows (no fork: every pool starts its workers by spawn) on a small area of Sisikon
     needs: setup
-    if: needs.setup.outputs.from_run == '' || needs.setup.outputs.windows == 'true'
+    if: needs.setup.outputs.windows == 'true' || (needs.setup.outputs.from_run == '' && needs.setup.outputs.area == 'area')
     runs-on: windows-2025
     timeout-minutes: 360
     env:
@@ -169,8 +177,10 @@ jobs:
         if: always()
         run: |
           free -g; df -h /mnt || true
+          T=test_build_part2
+          if [ "${{ needs.setup.outputs.area }}" != "area" ]; then T="test_${{ needs.setup.outputs.area }}_part2"; fi
           for d in "$DATA"/builds/*/; do
-            cp "$d/build.log" "$RUNNER_TEMP/test_build_part2.log" && cp "$d/build.json" "$RUNNER_TEMP/test_build_part2.json" || true
-            (cd "$d/root" && zip -qr "$RUNNER_TEMP/test_build_reports.zip" work/reports logs 2>/dev/null) || true
+            cp "$d/build.log" "$RUNNER_TEMP/$T.log" && cp "$d/build.json" "$RUNNER_TEMP/$T.json" || true
+            (cd "$d/root" && zip -qr "$RUNNER_TEMP/${T%_part2}_reports.zip" work/reports logs 2>/dev/null) || true
           done
-          gh release upload builder-test "$RUNNER_TEMP"/test_build_part2.* "$RUNNER_TEMP"/test_build_reports.zip --clobber || true
+          gh release upload builder-test "$RUNNER_TEMP/$T".* "$RUNNER_TEMP/${T%_part2}_reports.zip" --clobber || true

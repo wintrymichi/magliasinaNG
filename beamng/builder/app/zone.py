@@ -129,14 +129,15 @@ def check(bbox):
     wide = box.buffer(MARGIN_DEG)
     out["cantons"] = [c for c, _, g in R["cantons"] if g.intersects(wide)]
     out["canton_names"] = [nm for c, nm, g in R["cantons"] if g.intersects(wide)]
-    # cantons whose cadastral survey is not open on geodienste.ch (tools/probe_sources.py): there the roads come from
-    # swissTLM3D's lines alone, with no yards, pavements, traffic islands or survey walls
+    # cantons whose cadastral survey is not open on geodienste.ch (tools/probe_sources.py): there the land cover comes
+    # from swissTLM3D and ESA WorldCover (landcover.tlm_cover) and the roads from swissTLM3D's lines alone, with no
+    # yards, pavements, traffic islands or survey walls
     closed = [nm for c, nm, g in R["cantons"] if g.intersects(box) and survey_open(c) is False]
     out["survey_closed"] = closed
     if closed:
-        out["warnings"].append("No open cadastral survey in %s: there the roads are drawn from swissTLM3D's lines alone "
-                               "(no yards, pavements, traffic islands or survey walls), with less detail than in the "
-                               "Malcantone." % ", ".join(closed))
+        out["warnings"].append("No open cadastral survey in %s: there woods, lakes and rock come from swissTLM3D and ESA "
+                               "WorldCover, and the roads from swissTLM3D's lines alone (no yards, pavements, traffic "
+                               "islands or survey walls): less detail than in the Malcantone." % ", ".join(closed))
     out["osm_extracts"] = [SWISS_OSM] + [u for u, _, g in R["neighbours"] if g.intersects(wide)]
     km2 = sx * sy / 1e6
     # GitHub runner (4 cores): a dense 64 km2 Ticino zone took 1 h 46 min of stages and about 3 h of finishing steps

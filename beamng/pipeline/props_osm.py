@@ -371,6 +371,15 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     lcsf = shapely.STRtree([g for geoms in pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))["LCSF"].values()
                             for g, _ in geoms])
     swiss = lambda x, y: len(lcsf.query(shapely.Point(x, y), predicate="within")) > 0
+    from config import ZONE
+    if ZONE and ZONE.get("builder"):
+        # Switzerland Builder: a canton whose survey is not open has no survey land at all; there Switzerland is the
+        # union of its municipalities (landcover.swiss_land)
+        import landcover
+        ch = landcover.swiss_land()
+        if ch is not None:
+            shapely.prepare(ch)
+            swiss = lambda x, y, _s=swiss: _s(x, y) or bool(shapely.contains_xy(ch, x, y))
     counts = {"stop": 0, "give_way": 0, "bench": 0, "waste_basket": 0, "street_lamp": 0, "bus_stop": 0, "shelter": 0,
               "left_out": 0}
     import italy_mats as it

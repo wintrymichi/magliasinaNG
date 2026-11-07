@@ -8,13 +8,16 @@ while they stream (no local copy of the package):
   TLM_EISENBAHN          railways (the Lugano-Ponte Tresa line crosses the area)
   TLM_FLIESSGEWAESSER    streams (the gaps that bridges cross)
   TLM_UEBRIGE_BAHN       cable cars and lifts (v3.0.40: the Miglieglia - Monte Lema cable car, landmarks.py)
+  TLM_BODENBEDECKUNG     Switzerland Builder only: the land cover polygons (forest, lakes, rivers, rock, scree,
+                         glaciers, wetlands) that landcover.py lays where the cadastral survey has nothing (the cantons
+                         whose survey is not open on geodienste.ch); written without z
 Output: data/tlm/<layer>.json: {"fields": [...], "features": [{"props": {...}, "parts": [[[E, N, Z], ...]]}]}
 (LV95 / LN02).
 """
 import io, json, os, struct, sys, time, zipfile
 import numpy as np
 import requests
-from config import DATA, local_to_lv95
+from config import DATA, ZONE, local_to_lv95
 import area
 
 URL = ("https://data.geo.admin.ch/ch.swisstopo.swisstlm3d/swisstlm3d_2026-02/"
@@ -23,6 +26,8 @@ LAYERS = {"TLM_STRASSE": "TLM_STRASSEN\\swissTLM3D_TLM_STRASSE",
           "TLM_EISENBAHN": "TLM_OEV\\swissTLM3D_TLM_EISENBAHN",
           "TLM_FLIESSGEWAESSER": "TLM_GEWAESSER\\swissTLM3D_TLM_FLIESSGEWAESSER",
           "TLM_UEBRIGE_BAHN": "TLM_OEV\\swissTLM3D_TLM_UEBRIGE_BAHN"}
+LAYERS_BUILDER = {"TLM_BODENBEDECKUNG": "TLM_BB\\swissTLM3D_TLM_BODENBEDECKUNG"}
+FLAT = ("TLM_BODENBEDECKUNG",)      # polygons: east and north only
 MARGIN = 300.0
 
 
@@ -147,20 +152,28 @@ def main():
     bbox = (min(p[0] for p in ce), min(p[1] for p in ce), max(p[0] for p in ce), max(p[1] for p in ce))
     z = zipfile.ZipFile(io.BufferedReader(RangeFile(URL), buffer_size=1 << 22))
     names = {n.replace("/", "\\"): n for n in z.namelist()}
-    for layer, stem in LAYERS.items():
+    layers = dict(LAYERS)
+    if ZONE and ZONE.get("builder"):
+        layers.update(LAYERS_BUILDER)
+    for layer, stem in layers.items():
         dest = os.path.join(out_dir, layer + ".json")
         if os.path.exists(dest):
             print(layer, "exists", flush=True)
             continue
-        if stem + ".shp" not in names:
-            print(layer, "not in the package:", [n for n in names if "BAHN" in n.upper()], flush=True)
+        # the file by its name, in whatever folder of the package (the folders have been renamed between releases)
+        base = stem.split("\\")[-1].upper()
+        shp = [n for n in names if n.upper().split("\\")[-1] == base + ".SHP"]
+        dbf = [n for n in names if n.upper().split("\\")[-1] == base + ".DBF"]
+        if not shp or not dbf:
+            print(layer, "not in the package:", [n for n in names if n.upper().endswith(".SHP")], flush=True)
             continue
         t = time.time()
-        with z.open(names[stem + ".shp"]) as f:
+        with z.open(names[shp[0]]) as f:
             geoms = dict(shp_records(io.BufferedReader(f, 1 << 22), bbox))
-        with z.open(names[stem + ".dbf"]) as f:
+        with z.open(names[dbf[0]]) as f:
             fields, props = dbf_records(io.BufferedReader(f, 1 << 22), geoms.keys())
-        feats = [{"props": props.get(i, {}), "parts": [np.round(p, 3).tolist() for p in parts]}
+        dims = 2 if layer in FLAT else 3
+        feats = [{"props": props.get(i, {}), "parts": [np.round(p[:, :dims], 3).tolist() for p in parts]}
                  for i, parts in sorted(geoms.items())]
         json.dump({"fields": fields, "bbox_lv95": bbox, "features": feats}, open(dest + ".part", "w"))
         os.replace(dest + ".part", dest)
