@@ -6,7 +6,8 @@
 #
 # "[builder finish <run id>]" in the commit message: only the second job, on the first job's build of that run (its
 # artifact is kept 3 days), with the pipeline code of this commit (cli resume --update-code): a fix of a finishing step
-# (tunnels...) needs no new downloads and stages.
+# (tunnels...) needs no new downloads and stages. "[builder windows]" runs the Windows job too (with a finish run, or
+# alone otherwise: then no Linux job).
 name: builder test build
 
 on:
@@ -35,6 +36,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       from_run: ${{ steps.s.outputs.from_run }}
+      windows: ${{ steps.s.outputs.windows }}
     steps:
       - id: s
         env:
@@ -42,6 +44,7 @@ jobs:
         run: |
           F=$(printf '%s' "$MSG" | grep -oE '\[builder finish [0-9]+\]' | grep -oE '[0-9]+' | head -1 || true)
           echo "from_run=$F" >> "$GITHUB_OUTPUT"
+          case "$MSG" in *"[builder windows]"*) echo "windows=true" >> "$GITHUB_OUTPUT"; echo "the Windows job too";; esac
           echo "finishing steps only, on the build of run: ${F:-no}"
           gh release view builder-test >/dev/null 2>&1 || \
             gh release create builder-test --draft --target "$GITHUB_SHA" --title "Switzerland Builder test (draft, not a release)" \
@@ -49,7 +52,7 @@ jobs:
 
   stages:
     needs: setup
-    if: needs.setup.outputs.from_run == ''
+    if: needs.setup.outputs.from_run == '' && needs.setup.outputs.windows != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
@@ -100,7 +103,7 @@ jobs:
     # the launcher as a double-click on Windows runs it (Windows PowerShell 5.1, micromamba win-64) and the whole
     # pipeline on Windows (no fork: every pool starts its workers by spawn) on a small area of Sisikon
     needs: setup
-    if: needs.setup.outputs.from_run == ''
+    if: needs.setup.outputs.from_run == '' || needs.setup.outputs.windows == 'true'
     runs-on: windows-2025
     timeout-minutes: 360
     env:

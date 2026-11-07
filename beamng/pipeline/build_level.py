@@ -399,8 +399,12 @@ def stage_roads(scene, ctx):
     global _NET_JOB
     _NET_JOB = (net, dtm, xs, ys, surface_parts, tiles)
     nw = int(os.environ.get("NET_WORKERS", "1"))
+    import multiprocessing as mp
+    if nw > 1 and "fork" not in mp.get_all_start_methods():
+        # Windows (Switzerland Builder): no fork, and the job reads the network from this process's globals
+        print("  NET_WORKERS %d: no fork on this system, the network tiles in one process" % nw, flush=True)
+        nw = 1
     if nw > 1:
-        import multiprocessing as mp
         pool = mp.get_context("fork").Pool(nw)
         results = pool.imap(_mesh_tile_job, range(len(tiles)))
     else:

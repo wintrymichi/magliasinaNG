@@ -17,7 +17,7 @@ from pyproj import Transformer
 
 from . import HERE
 
-# config.py of the pipeline (checked by tests/test_builder.py): the local frame and the terrain grid
+# config.py of the pipeline (checked by beamng/builder/tests/test_builder.py): the local frame and the terrain grid
 E0, N0 = 2710830.0, 1094360.0
 K = 1.0001374973449562
 TER_X0, TER_Y0 = -7230.0, -4731.0
@@ -49,6 +49,22 @@ def regions():
             for _, _, g in _regions[k]:
                 shapely.prepare(g)
     return _regions
+
+
+_probe = None
+
+
+def survey_open(code):
+    """True / False: the canton's cadastral survey answered with features in the last probe (app/data/
+    sources_probe.json, tools/probe_sources.py); None: not probed."""
+    global _probe
+    if _probe is None:
+        p = os.path.join(HERE, "data", "sources_probe.json")
+        try:
+            _probe = json.load(open(p, encoding="utf-8")).get("cantons", {})
+        except (OSError, ValueError):
+            _probe = {}
+    return _probe.get(code, {}).get("survey_open")
 
 
 def to_local(lat, lon):
@@ -113,6 +129,14 @@ def check(bbox):
     wide = box.buffer(MARGIN_DEG)
     out["cantons"] = [c for c, _, g in R["cantons"] if g.intersects(wide)]
     out["canton_names"] = [nm for c, nm, g in R["cantons"] if g.intersects(wide)]
+    # cantons whose cadastral survey is not open on geodienste.ch (tools/probe_sources.py): there the roads come from
+    # swissTLM3D's lines alone, with no yards, pavements, traffic islands or survey walls
+    closed = [nm for c, nm, g in R["cantons"] if g.intersects(box) and survey_open(c) is False]
+    out["survey_closed"] = closed
+    if closed:
+        out["warnings"].append("No open cadastral survey in %s: there the roads are drawn from swissTLM3D's lines alone "
+                               "(no yards, pavements, traffic islands or survey walls), with less detail than in the "
+                               "Malcantone." % ", ".join(closed))
     out["osm_extracts"] = [SWISS_OSM] + [u for u, _, g in R["neighbours"] if g.intersects(wide)]
     km2 = sx * sy / 1e6
     # GitHub runner (4 cores): a dense 64 km2 Ticino zone took 1 h 46 min of stages and about 3 h of finishing steps

@@ -67,7 +67,7 @@ FLUSH = 0.008                 # m, heads of the rails over the road surface at a
 DECK_HW = {"Schmalspur": 2.2, "Normalspur": 2.7}
 TILE = 512.0
 CLIP = 30.0                   # m, the tracks run this far beyond the playable area
-SKIP = {"Tunnel", "in/auf Gebaeude", "Unterfuehrung"}
+SKIP = {"Tunnel", "Galerie", "in/auf Gebaeude", "Unterfuehrung"}    # tunnels and galleries: tunnels.py
 L = f"/levels/{LEVEL_NAME}"
 
 
