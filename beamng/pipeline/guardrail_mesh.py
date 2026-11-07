@@ -498,10 +498,11 @@ def module_points(src, step=0.25):
     return np.concatenate([p[None, :2] + u[:, None] * r[0, :2] for p, r in zip(P, R)])
 
 
-def edge_fn(level_dir, near=8.0):
+def edge_fn(level_dir, near=8.0, extra=None):
     """(x, y) -> height of the highest road face of the level (folder as being built: the road meshes written
     by the stage roads, corridor and network) there, NaN off the roads; only the faces within `near` m of a
-    rail of guardrails_final.json or of the panoramas are kept (the whole network would not fit the memory)."""
+    rail of guardrails_final.json or of the panoramas, or of the points of `extra` (a list of (n, 2) arrays), are
+    kept (the whole network would not fit the memory)."""
     import markings_net
     import osm_surface
     from road_mesh import TriSurface
@@ -511,12 +512,18 @@ def edge_fn(level_dir, near=8.0):
         pts += [np.array(r["pts"], float)[:, :2] for r in json.load(open(SV_RUNS)) if len(r["pts"])]
     import area
     pts = [p for p in pts if len(p) > 1 and area.in_zone(p[:, 0], p[:, 1]).all()]
+    pts = [resample(np.column_stack([p, np.zeros(len(p))]), 1.0)[0][:, :2] for p in pts]
+    pts += [np.asarray(p, float).reshape(-1, 2) for p in (extra or []) if len(p)]
     if not pts:                                      # a Ticino zone with no photo rails
         return None
-    pts = np.concatenate([resample(np.column_stack([p, np.zeros(len(p))]), 1.0)[0][:, :2] for p in pts])
+    pts = np.concatenate(pts)
     mats = osm_surface.ROAD_MATS + osm_surface.HARD_MATS + ("mp_road_asphalt_fresh", "mp_sidewalk", "mp_island")
     tops = markings_net.road_tops(level_dir, mats)
+    if not len(tops):                                # a zone with no road face (paths only)
+        return None
     d, _ = cKDTree(pts).query(tops.mean(1)[:, :2], distance_upper_bound=near)
+    if not np.isfinite(d).any():
+        return None
     S = TriSurface(tops[np.isfinite(d)])
     return lambda x, y: S.height(x, y, "high")
 
@@ -571,6 +578,265 @@ def motorway_runs():
     return out
 
 
+# Rails where nothing measured them (a Switzerland Builder area, a Ticino zone): the Malcantone's came from the
+# panoramas and its LiDAR, the zones had rails only on the motorways (0.2 km on the Axenstrasse test, 2026-11-07).
+# A rail goes where the ground falls away beside a road, as the Swiss norm asks for one where a car would fall
+# (VSS 40 561: a drop of about 2 m or more beside the road), and where OpenStreetMap maps one (barrier=guard_rail).
+RULE_DROP = {"10m Strasse": 2.0, "8m Strasse": 2.0, "6m Strasse": 2.0, "4m Strasse": 2.0, "Verbindung": 2.0,
+             "Ausfahrt": 2.0, "Einfahrt": 2.0, "3m Strasse": 3.0}       # class: least drop (m) under the road
+RULE_OUT = np.arange(0.5, 6.01, 0.5)   # m beyond the road's edge where the ground is read
+RULE_SLOPE = 0.5          # the drop must also be this share of its distance from the edge (1:2, a road embankment)
+RULE_GAP = 10.0           # m: a shorter gap between two dropping stretches is closed
+RULE_MIN = 16.0           # m: a shorter stretch gets no rail (OSM_MIN for one OpenStreetMap maps)
+OSM_MIN = 6.0
+RULE_LEAD = 4.0           # m the rail starts before the drop and goes on after it
+RULE_FREE = 1.5           # m beyond the edge: a paved face there (yard, pavement, lay-by, a road joining) and no rail
+RULE_PARAPET = 0.35       # m: a wall top this far over the road within RULE_WALL m of its edge holds the cars instead
+RULE_WALL = 1.5
+RULE_VILLAGE = (6, 45.0)  # inside a village (this many buildings of the Federal Register within this many m, the
+                          # innerorts rule of dati/swiss_markings.json) a drop has a wall or a railing, not a rail
+OSM_REACH = 4.0           # m beyond the edge an OpenStreetMap rail may lie to belong to a road (not on it: 1 m inside)
+RULE_TILE = 512.0         # m: the ground is read tile by tile (the 0.5 m DTM of a zone does not fit the memory at once)
+
+
+def _station_frames(segs, st):
+    """Left normals (n, 2) of every network station, along its own line."""
+    xy = np.column_stack([st["x"], st["y"]])
+    n = len(xy)
+    nxt = np.minimum(np.arange(n) + 1, n - 1)
+    prv = np.maximum(np.arange(n) - 1, 0)
+    nxt = np.where(st["seg"][nxt] == st["seg"], nxt, np.arange(n))
+    prv = np.where(st["seg"][prv] == st["seg"], prv, np.arange(n))
+    T = xy[nxt] - xy[prv]
+    T /= np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
+    return xy, np.column_stack([-T[:, 1], T[:, 0]])
+
+
+def _tops(level_dir, pattern, keep):
+    """Up faces (k, 3, 3) of the shapes art/shapes/<pattern> (tiles named <name>_<tx>_<ty>.dae, origin the middle of
+    their CHUNK m tile) whose material passes keep(material)."""
+    import glob
+    import re
+    import patch_release as pr
+    from walls import CHUNK
+    out = []
+    for f in glob.glob(os.path.join(level_dir, "art", "shapes", pattern)):
+        m = re.search(r"_([+-]\d+)_([+-]\d+)\.dae$", f)
+        if not m:
+            continue
+        origin = np.array([(int(m.group(1)) + 0.5) * CHUNK, (int(m.group(2)) + 0.5) * CHUNK, 0.0])
+        V, _, _, _, parts = pr.read_dae(f)
+        for mat, idx in parts:
+            if not keep(mat):
+                continue
+            t = (V + origin)[idx[:, 0].reshape(-1, 3)]
+            nz = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+            up = nz[:, 2] / np.maximum(np.linalg.norm(nz, axis=1), 1e-12) > 0.5
+            out.append(t[up])
+    return np.concatenate(out) if out else np.zeros((0, 3, 3))
+
+
+def _spans(mask):
+    """[(a, b)] index ranges (b exclusive) of the runs of True of a 1-D mask."""
+    e = np.flatnonzero(np.diff(np.r_[0, mask.astype(np.int8), 0]))
+    return list(zip(e[::2], e[1::2]))
+
+
+def drop_marks(level_dir):
+    """Where a rail goes along the network, before the road meshes are looked at: {(seg, side): (rule, osm)} two
+    boolean masks over the stations of the road line (side +1: the left of its direction, -1: the right), and the
+    road height at every station (the DTM across the middle of the carriageway). Bridges have parapets and the
+    tunnels are not in the network."""
+    import network
+    from geo import Grid
+    segs, st, _ = network.load()
+    xy, N = _station_frames(segs, st)
+    half = 0.5 * st["width"]
+    cls = np.array([segs[k]["class"] for k in st["seg"]])
+    least = np.array([RULE_DROP.get(c, np.nan) for c in cls])
+    bridge = np.array([segs[k]["bridge"] for k in st["seg"]])
+    ruled = np.isfinite(least) & ~bridge
+    dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
+    zc = np.full(len(xy), np.nan)
+    fire = np.zeros((2, len(xy)), bool)
+    tiles = np.floor(xy / RULE_TILE).astype(np.int64)
+    key = tiles[:, 0] * 100003 + tiles[:, 1]
+    road = np.array([segs[k]["kind"] == "road" and segs[k]["class"] not in MOTORWAY_CLASSES for k in st["seg"]]) \
+        & ~bridge & np.isfinite(st["width"])
+    idx_all = np.flatnonzero(road)
+    for kk in np.unique(key[idx_all]):
+        ii = idx_all[key[idx_all] == kk]
+        # the road's height: the middle of three points across the carriageway (a wall the DTM smears at one edge)
+        across = np.stack([dtm.sample(xy[ii, 0] + N[ii, 0] * f * half[ii], xy[ii, 1] + N[ii, 1] * f * half[ii])
+                           for f in (-0.4, 0.0, 0.4)])
+        zc[ii] = np.median(across, axis=0)
+        jj = ii[ruled[ii]]
+        if not len(jj):
+            continue
+        for si, side in enumerate((1, -1)):
+            E = xy[jj] + side * N[jj] * half[jj, None]
+            gx = E[:, None, 0] + side * N[jj, None, 0] * RULE_OUT[None]
+            gy = E[:, None, 1] + side * N[jj, None, 1] * RULE_OUT[None]
+            g = dtm.sample(gx.ravel(), gy.ravel()).reshape(gx.shape)
+            h = zc[jj, None] - g
+            need = np.maximum(least[jj, None], RULE_SLOPE * RULE_OUT[None])
+            fire[si, jj] = (h >= need).any(1)
+    # OpenStreetMap's rails: the stations of the road they run beside
+    osm_fire = np.zeros((2, len(xy)), bool)
+    import osm
+    if osm.available():
+        from scipy.spatial import cKDTree
+        ways, _ = osm.load()
+        ri = idx_all
+        if len(ri):
+            tree = cKDTree(xy[ri])
+            for w in ways:
+                if w["tags"].get("barrier") != "guard_rail":
+                    continue
+                P, _ = resample(np.asarray(w["xy"], float), 1.0)
+                d, j = tree.query(P, distance_upper_bound=float(np.nanmax(half[ri])) + OSM_REACH)
+                ok = np.isfinite(d)
+                i = ri[j[ok]]
+                L = ((P[ok] - xy[i]) * N[i]).sum(1)
+                beside = (np.abs(L) >= half[i] - 1.0) & (np.abs(L) <= half[i] + OSM_REACH)
+                osm_fire[0, i[beside & (L > 0)]] = True
+                osm_fire[1, i[beside & (L < 0)]] = True
+    out = {}
+    for sg in segs:
+        if sg["kind"] != "road" or sg["bridge"] or sg["class"] in MOTORWAY_CLASSES:
+            continue
+        a, n = sg["first"], sg["n"]
+        for si, side in enumerate((1, -1)):
+            r, o = fire[si, a:a + n], osm_fire[si, a:a + n]
+            if r.any() or o.any():
+                out[(sg["id"], side)] = (r.copy(), o.copy())
+    return out, zc, (xy, N, half)
+
+
+def drop_runs(level_dir, marks, zc, frames, road_fn=None, report=None):
+    """The rails of drop_marks as runs [{pts: (n, 4) x, y, z, top, side, seg, src}] on the edge of the carriageway
+    (to_edge moves them onto the road as built). A dropping station gets no rail where a paved face lies RULE_FREE m
+    beyond the edge (a yard, a pavement, a lay-by, a road joining), where a wall top stands RULE_PARAPET m over the
+    road within RULE_WALL m (a parapet), where a building of the survey stands within 2 m, or inside a village
+    (RULE_VILLAGE: a drop there has a wall or a railing); a station OpenStreetMap maps a rail at always does. Gaps
+    up to RULE_GAP m are closed, stretches under RULE_MIN m dropped, the rest lengthened by RULE_LEAD m."""
+    import network
+    segs, st, _ = network.load()
+    xy, N, half = frames
+    walls = None
+    try:
+        W = _tops(level_dir, os.path.join("walls", "*walls_*.dae"), lambda m: m.endswith("_top"))
+        if len(W):
+            from road_mesh import TriSurface
+            walls = TriSurface(W)
+    except Exception as e:                           # no wall shapes yet (a level without walls)
+        print("guard rails: wall tops not read:", e, flush=True)
+    lc = None
+    p = os.path.join(WORK, "landcover05.npz")
+    if os.path.exists(p):
+        d = np.load(p)
+        lc = (d["a"], float(d["x_min"]), float(d["y_max"]), float(d["res"]))
+
+    def built(x, y):
+        if lc is None:
+            return np.zeros(len(x), bool)
+        a, x0, y1, res = lc
+        c = np.floor((x - x0) / res).astype(np.int64)
+        r = np.floor((y1 - y) / res).astype(np.int64)
+        ok = (r >= 0) & (r < a.shape[0]) & (c >= 0) & (c < a.shape[1])
+        out = np.zeros(len(x), bool)
+        out[ok] = a[r[ok], c[ok]] == 1                 # edificio
+        return out
+
+    gtree = None
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "gwr_area.json.gz")
+    if os.path.exists(p):
+        import gzip
+        from scipy.spatial import cKDTree
+        gwr = json.load(gzip.open(p, "rt", encoding="utf-8"))["buildings"]
+        G = np.array([[b["x"], b["y"]] for b in gwr if b.get("gstat") == 1004 and (b.get("garea") or 30) >= 30
+                      and b.get("x") is not None]).reshape(-1, 2)
+        gtree = cKDTree(G) if len(G) else None
+    stats = {"stations_drop": 0, "stations_osm": 0, "left_out_paved": 0, "left_out_parapet": 0,
+             "left_out_building": 0, "left_out_village": 0}
+    runs = []
+    step = network.STEP
+    for (seg, side), (rule, osm_m) in marks.items():
+        sg = segs[seg]
+        a, n = sg["first"], sg["n"]
+        ii = np.arange(a, a + n)
+        stats["stations_drop"] += int(rule.sum())
+        stats["stations_osm"] += int(osm_m.sum())
+        keep = rule.copy()
+        blocked = np.zeros(n, bool)
+        cand = np.flatnonzero(keep)
+        if len(cand):
+            k = ii[cand]
+            E = xy[k] + side * N[k] * half[k, None]
+            free = np.zeros(len(k), bool)
+            if road_fn is not None:
+                for f in (RULE_FREE, RULE_FREE + 1.0):
+                    q = E + side * N[k] * f
+                    z = road_fn(q[:, 0], q[:, 1])
+                    free |= np.isfinite(z) & (np.abs(z - zc[k]) < 1.0)
+            par = np.zeros(len(k), bool)
+            if walls is not None:
+                for f in np.arange(0.2, RULE_WALL + 1e-6, 0.4):
+                    q = E + side * N[k] * f
+                    z = walls.height(q[:, 0], q[:, 1], "high")
+                    par |= np.isfinite(z) & (z >= zc[k] + RULE_PARAPET)
+            bld = np.zeros(len(k), bool)
+            for f in (0.5, 1.25, 2.0):
+                q = E + side * N[k] * f
+                bld |= built(q[:, 0], q[:, 1])
+            vil = np.zeros(len(k), bool)
+            if gtree is not None:
+                vil = gtree.query_ball_point(xy[k], RULE_VILLAGE[1], return_length=True) >= RULE_VILLAGE[0]
+            stats["left_out_paved"] += int(free.sum())
+            stats["left_out_parapet"] += int((par & ~free).sum())
+            stats["left_out_building"] += int((bld & ~free & ~par).sum())
+            stats["left_out_village"] += int((vil & ~free & ~par & ~bld).sum())
+            blocked[cand[free | par | bld | vil]] = True
+        keep &= ~blocked
+        keep |= osm_m
+        blocked &= ~osm_m
+        # close the short gaps (never across a station left out above: a yard, a parapet, a house, a village), drop
+        # the short stretches, lengthen the rest (up to such a station)
+        sp = _spans(keep)
+        merged = []
+        for s0, s1 in sp:
+            if merged and (s0 - merged[-1][1]) * step <= RULE_GAP and not blocked[merged[-1][1]:s0].any():
+                merged[-1] = (merged[-1][0], s1)
+            else:
+                merged.append((s0, s1))
+        lead = int(round(RULE_LEAD / step))
+        for s0, s1 in merged:
+            src = "osm" if osm_m[s0:s1].any() else "drop"
+            if (s1 - s0) * step < (OSM_MIN if src == "osm" else RULE_MIN):
+                continue
+            for _ in range(lead):
+                if s0 > 0 and not blocked[s0 - 1]:
+                    s0 -= 1
+                if s1 < n and not blocked[s1]:
+                    s1 += 1
+            k = ii[s0:s1]
+            if len(k) < 2:
+                continue
+            P = xy[k] + side * N[k] * (half[k, None] + EDGE_OUT)
+            z = zc[k]
+            if not np.isfinite(z).all():
+                z = np.where(np.isfinite(z), z, np.nanmedian(z) if np.isfinite(z).any() else 0.0)
+            runs.append({"pts": np.column_stack([P, z, np.full(len(k), MOTORWAY_TOP)]), "side": side, "seg": seg,
+                         "src": src})
+    stats["runs"] = len(runs)
+    stats["km"] = round(sum(length(r["pts"]) for r in runs) / 1000, 2)
+    stats["km_osm"] = round(sum(length(r["pts"]) for r in runs if r["src"] == "osm") / 1000, 2)
+    print("guard rails where the ground falls away or OpenStreetMap maps them:", stats, flush=True)
+    if report is not None:
+        report.update(stats)
+    return runs
+
+
 def build(level_dir, level_name, scene, road_fn=None):
     import area
     runs = [r for r in json.load(open(os.path.join(WORK, "guardrails_final.json")))
@@ -604,11 +870,27 @@ def build(level_dir, level_name, scene, road_fn=None):
         # the z of a motorway point is its carriageway's (swissTLM3D), also on a viaduct: to_edge looks for the
         # road's edge at that height (the foot of the measured rails is the ground, the valley under a viaduct)
         mw = motorway_runs()
+        # the rails where the ground falls away beside a road or OpenStreetMap maps one (nothing measured them here);
+        # the road faces near all of them (and the motorways') give the edge of the road as built
+        marks, zc, frames = drop_marks(level_dir)
+        if road_fn is None:
+            import network
+            segs_ = network.load()[0]
+            near = [r["pts"][:, :2] for r in mw]
+            for (seg, side), (rule, osm_m) in marks.items():
+                sg = segs_[seg]
+                k = np.arange(sg["first"], sg["first"] + sg["n"])[rule | osm_m]
+                near.append(frames[0][k] + side * frames[1][k] * frames[2][k, None])
+            road_fn = edge_fn(level_dir, extra=near)
+        drops = drop_runs(level_dir, marks, zc, frames, road_fn=road_fn)
         if road_fn is not None:
-            for r in mw:
+            for r in mw + drops:
                 r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
-        extra += mw
+        drops = open_crossings(drops)
+        extra += mw + drops
         print("motorway guard rails: %d runs, %.1f km" % (len(mw), sum(length(r["pts"]) for r in mw) / 1000))
+        print("guard rails where the ground falls away or OpenStreetMap maps them, after the crossings: %d runs, "
+              "%.1f km" % (len(drops), sum(length(r["pts"]) for r in drops) / 1000))
     # where a panorama run lies along a rail laid already (on the edge of the road as built, two runs can
     # come onto one line): only the first; the runs with more votes first
     extra.sort(key=lambda r: -np.ravel(r.get("votes", 0))[0])
@@ -617,8 +899,9 @@ def build(level_dir, level_name, scene, road_fn=None):
     for r in extra:
         items += modules(r["pts"], r["side"])
     if extra:
-        print("guard rails seen in the panoramas:", len(extra), "runs,",
-              round(sum(np.linalg.norm(np.diff(r["pts"][:, :2], axis=0), axis=1).sum() for r in extra) / 1000, 2), "km")
+        print("guard rails of the network (panoramas, motorways, drops, OpenStreetMap) after the doubles:", len(extra),
+              "runs,", round(sum(np.linalg.norm(np.diff(r["pts"][:, :2], axis=0), axis=1).sum() for r in extra) / 1000, 2),
+              "km")
     counts = write_forest(level_dir, items)
     print("guardrails", len(runs) + len(extra), "runs:", counts)
     return counts
