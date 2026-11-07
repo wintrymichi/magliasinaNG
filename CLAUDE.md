@@ -2214,3 +2214,14 @@ Tunnels and galleries (tunnels.py, finishing step; tested on ti_m1_8 San Bernard
 
 Test builds (draft release builder-test, GitHub runners of 4 cores, from the launcher to the zip): Axenstrasse and
 Sisikon 32.8 km2 in 38 min, zip 0.86 GB (44 tunnels and galleries, 22.4 km); Sisikon 0.9 km2 on Windows in 18 min.
+
+## main is the Malcantone only (2026-11-07)
+
+- PR #113 (switzerland-builder, which carries the whole `ticino` branch) was merged into main by mistake: 324 files,
+  the Ticino and builder code, and it DELETED every Malcantone workflow of main (nightly_build, v3_build_test,
+  release_*, pages...) and replaced the README. michi: "lasciare il malcantone nel main". Undone by a revert of the
+  merge (`git revert -m 1 2f8b257`, PR from claude/project-thread-nc6c38), no force-push: main's tree is again the one
+  of 33dc6d2 (v3.1.1). The Ticino work stays on `ticino` and `switzerland-builder` (untouched by the revert).
+- Ticino and builder PRs go against `ticino` / `switzerland-builder`, never main: check a PR's base before merging.
+- Git now counts those commits as merged into main. If they ever must go into main for real, revert the REVERT commit
+  first; a plain merge of switzerland-builder would bring in only its newer commits.
