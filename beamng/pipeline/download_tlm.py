@@ -160,21 +160,32 @@ def main():
         if os.path.exists(dest):
             print(layer, "exists", flush=True)
             continue
-        # the file by its name, in whatever folder of the package (the folders have been renamed between releases)
+        # the file by its name, in whatever folder of the package (the folders have been renamed between releases);
+        # a big layer comes in parts (TLM_BODENBEDECKUNG_OST and _WEST in the 2026-02 package: the builder's first
+        # Vitznau and Montreux builds found no land cover and no lake, 2026-11-07)
         base = stem.split("\\")[-1].upper()
-        shp = [n for n in names if n.upper().split("\\")[-1] == base + ".SHP"]
-        dbf = [n for n in names if n.upper().split("\\")[-1] == base + ".DBF"]
-        if not shp or not dbf:
+        stems = {}
+        for n in names:
+            b = n.upper().split("\\")[-1]
+            for ext in (".SHP", ".DBF"):
+                if b.endswith(ext) and (b[:-4] == base or b[:-4] in (base + "_OST", base + "_WEST")):
+                    stems.setdefault(b[:-4], {})[ext] = n
+        pairs = [(v[".SHP"], v[".DBF"]) for k, v in sorted(stems.items()) if ".SHP" in v and ".DBF" in v]
+        if not pairs:
             print(layer, "not in the package:", [n for n in names if n.upper().endswith(".SHP")], flush=True)
             continue
         t = time.time()
-        with z.open(names[shp[0]]) as f:
-            geoms = dict(shp_records(io.BufferedReader(f, 1 << 22), bbox))
-        with z.open(names[dbf[0]]) as f:
-            fields, props = dbf_records(io.BufferedReader(f, 1 << 22), geoms.keys())
         dims = 2 if layer in FLAT else 3
-        feats = [{"props": props.get(i, {}), "parts": [np.round(p[:, :dims], 3).tolist() for p in parts]}
-                 for i, parts in sorted(geoms.items())]
+        feats, fields = [], []
+        for shp, dbf in pairs:
+            with z.open(names[shp]) as f:
+                geoms = dict(shp_records(io.BufferedReader(f, 1 << 22), bbox))
+            with z.open(names[dbf]) as f:
+                fields, props = dbf_records(io.BufferedReader(f, 1 << 22), geoms.keys())
+            feats += [{"props": props.get(i, {}), "parts": [np.round(p[:, :dims], 3).tolist() for p in parts]}
+                      for i, parts in sorted(geoms.items())]
+            if len(pairs) > 1:
+                print(layer, shp.split("\\")[-1], len(geoms), "features", flush=True)
         json.dump({"fields": fields, "bbox_lv95": bbox, "features": feats}, open(dest + ".part", "w"))
         os.replace(dest + ".part", dest)
         print(layer, len(feats), "features in %.0f s" % (time.time() - t), flush=True)
