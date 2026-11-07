@@ -33,7 +33,7 @@ from scipy.sparse.linalg import spsolve
 from scipy.spatial import cKDTree
 from rasterio import features
 from rasterio.transform import Affine
-from config import WORK
+from config import DATA, WORK, ZONE, lv95_to_local
 from geo import Grid
 import area
 import network
@@ -93,8 +93,45 @@ FILL_OFF = 2.0         # m, largest offset of a square or car park from the smoo
 OFF_LINE = 1.5         # half widths from its line: beyond, a cell far from the ground keeps to the ground
 FILLED = -2            # line code of the cells of squares and car parks (harmonic fill)
 SUNK = 0.75            # m, deepest a survey surface may lie under the lowest bare ground within 1 m
+# Switzerland Builder (2026-11-07), zones only. Under a rock overhang (the Axenstrasse is cut into its cliff) swissALTI3D
+# is the rock over the road, and SUNK lifted the carriageway onto it: asphalt faces climbing up to 42 m up the cliff on
+# the first Axenstrasse build (3,718 steep paved faces over 3 m, a third of them away from any tunnel). A cell on its own
+# line's carriageway keeps the line's height (network_surface fits the line to the DTM along it, robustly: the
+# overhang is an outlier there) unless the ground stands over it everywhere within OVERHANG_REACH m (a line that
+# really runs too low); the vertices of its mesh the same (mesh_tile).
+OVERHANG_REACH = 4.0
+# The survey's carriageway under a gallery (swissTLM3D KUNSTBAUTE Galerie, a line network.SKIP leaves out) was meshed on
+# swissALTI3D, which is the gallery's roof and the slope over it there: asphalt on the roofs of the Oelberg and
+# Tellsplatte galleries with faces down their sides. tunnels.py builds a gallery's road, so the survey's polygons are cut
+# GALLERY_CLEAR m beyond the line's nominal half width, and the strips of other lines (a road over the roof) fill in.
+GALLERY_CLEAR = 1.5
+GALLERY_SLIVER = 0.75  # m: what is left of a cut polygon beside a gallery thinner than twice this goes too
 AV_CLASSES = {"strada_sentiero": "road", "marciapiede": "sidewalk", "spartitraffico": "island",
               "altro_rivestimento_duro": "hard"}
+
+
+def gallery_footprints():
+    """Footprints of the swissTLM3D road galleries (KUNSTBAUTE Galerie, network.SKIP): each line buffered by its
+    nominal half width + GALLERY_CLEAR, flat at its ends (the portals). Empty without the swissTLM3D roads."""
+    p = os.path.join(DATA, "tlm", "TLM_STRASSE.json")
+    if not os.path.exists(p):
+        return []
+    keep = area.polygon().buffer(network.CLIP)
+    out = []
+    for f in json.load(open(p))["features"]:
+        props = f["props"]
+        if props.get("KUNSTBAUTE") != "Galerie" or props.get("OBJEKTART") not in network.CLASSES:
+            continue
+        hw = 0.5 * network.CLASSES[props["OBJEKTART"]][0] + GALLERY_CLEAR
+        for part in f["parts"]:
+            P = np.asarray(part, np.float64)
+            if len(P) < 2:
+                continue
+            x, y = lv95_to_local(P[:, 0], P[:, 1])
+            L = shapely.LineString(np.column_stack([x, y]))
+            if L.length > 0 and L.intersects(keep):
+                out.append(L.buffer(hw, cap_style="flat"))
+    return out
 
 
 class Network:
@@ -149,7 +186,10 @@ class Network:
             decks.append(L.buffer(hw, cap_style="flat"))
             decks_av.append(L.buffer(hw + 1.0, cap_style="flat"))
         ex = [exclude] if exclude is not None else []
-        holes_av = shapely.union_all(decks_av + ex) if decks_av or ex else shapely.Polygon()
+        gal = gallery_footprints() if ZONE else []
+        gal_geom = shapely.union_all(gal).buffer(0.1) if gal else shapely.Polygon()
+        holes_av = shapely.union_all(decks_av + ex + gal) if decks_av or ex or gal else shapely.Polygon()
+        self.gallery_cut = 0
         ex_geom = shapely.union_all(ex) if ex else shapely.Polygon()
         shapely.prepare(ex_geom)
         # lines as strips (for the association and the parts without survey)
@@ -172,6 +212,9 @@ class Network:
                 g = dry(g)
                 for p in shapely.get_parts(g):
                     if p.geom_type == "Polygon" and p.area >= 0.5:
+                        if not gal_geom.is_empty and p.intersects(gal_geom) and p.buffer(-GALLERY_SLIVER).is_empty:
+                            self.gallery_cut += 1
+                            continue
                         road_like.append((p, kind))
         av_tree = shapely.STRtree([p for p, _ in road_like]) if road_like else None
         hw_line = [0.5 * float(np.median(self.w[s["first"]:s["first"] + s["n"]])) for s in segs]
@@ -231,6 +274,9 @@ class Network:
         print("path polygons with the carriageway of a road: %d (%d road lines)"
               % (sum(1 for p in self.polys if "carr_segs" in p), len(cr)), flush=True)
         print("surveyed polygons and strips cut at the lake shore: %d" % dry.cut, flush=True)
+        if gal:
+            print("survey polygons cut under %d road galleries (%d slivers beside them left out)" % (len(gal), self.gallery_cut),
+                  flush=True)
         area_by = {}
         for p in self.polys:
             area_by[p["cls"]] = area_by.get(p["cls"], 0) + p["geom"].area / 1e4
@@ -530,6 +576,10 @@ class Network:
         if np.isnan(Ds).any():
             Ds = np.where(np.isnan(Ds), np.nanmean(Ds), Ds)
         Dlo = ndi.minimum_filter(Ds, size=5) - SUNK             # lowest bare ground within 1 m
+        on_line = None
+        if ZONE:                                               # OVERHANG_REACH: the carriageway keeps its line
+            on_line = m & (G >= 0) & (U <= 1.0) & (E <= 1.0)
+            Dlo = np.where(on_line, ndi.minimum_filter(Ds, size=2 * int(round(OVERHANG_REACH / RES)) + 1) - SUNK, Dlo)
         Ds = ndi.gaussian_filter(Ds, 4.0)
         # a survey polygon reaching beyond the carriageway of its line onto ground far above or
         # below it (a terrace, a yard behind a wall), or past the end of its line where the line's
@@ -590,7 +640,9 @@ class Network:
         # them take up the difference (a main road does not bend to a side road)
         pin_r, pin_d = pin[:, :-1] != pin[:, 1:], pin[:-1, :] != pin[1:, :]
         Z = relax_seams(Z, G, owner, LR, LD, main_cell | pin, (fold_r | pin_r, fold_d | pin_d), pin)
-        return surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES), ids
+        S = surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES)
+        S.on_line = on_line                    # zones: the cells that keep their line's height (mesh_tile)
+        return S, ids
 
 
 def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None, pinned=None):
@@ -763,6 +815,21 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
                                 X0 - MARGIN, Y0 - MARGIN + 2.0, RES)
     sub, _, _ = dtm.window(X0 - MARGIN, Y0 - MARGIN, X1 + MARGIN, Y1 + MARGIN, pad=4)
     lo = Grid(ndi.minimum_filter(np.asarray(sub.a, np.float32), size=5) - SUNK, sub.x_min, sub.y_max, sub.res)
+    on_line = getattr(S, "on_line", None)
+    if on_line is not None and on_line.any():          # zones: OVERHANG_REACH on the carriageways of the lines
+        wide = Grid(ndi.minimum_filter(np.asarray(sub.a, np.float32), size=2 * int(round(OVERHANG_REACH / sub.res)) + 1)
+                    - SUNK, sub.x_min, sub.y_max, sub.res)
+
+        def floor(x, y):
+            x, y = np.asarray(x, np.float64), np.asarray(y, np.float64)
+            r = np.floor((S.y_max - y) / S.res).astype(np.int64)
+            c = np.floor((x - S.x_min) / S.res).astype(np.int64)
+            ok = (r >= 0) & (r < on_line.shape[0]) & (c >= 0) & (c < on_line.shape[1])
+            keep = np.zeros(np.shape(x), bool)
+            keep[ok] = on_line[r[ok], c[ok]]
+            return np.where(keep, wide.sample(x, y), lo.sample(x, y))
+    else:
+        floor = lo.sample
     sub.a = ndi.gaussian_filter(np.asarray(sub.a, np.float32), 0.6)
     ground = lambda x, y: sub.sample(x, y)
     n_tri = 0
@@ -797,7 +864,7 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
                 # the vertices too: no deeper than SUNK under the bare ground (an edge extrapolated
                 # from far cells of its surface)
                 zf = (lambda pid_: (lambda x, y, comp: np.maximum(S.height(x, y, pid=pid_, comp=int(comp)),
-                                                                  lo.sample(x, y))))(int(pid))
+                                                                  floor(x, y))))(int(pid))
                 kf_all = (lambda pid_: (lambda x, y: S.surfaces_at_polygon(x, y, pid_)))(int(pid))
                 for part, comp in road_mesh.split_by_surface(piece, S, int(pid), cut=cbox.exterior):
                     kf = kf_all if comp is None else (lambda x, y, c=comp: np.full(np.shape(x), c))
@@ -1363,7 +1430,8 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
 #   railway or a bridge parapet: there the step is the real one (an embankment behind a guard rail, a kerb
 #   against a wall, a plinth). The faces there raise no terrain, and the terrain vertices there stay as they were
 #   also where a face farther off would raise them (the first version left them to the fade of the faces up to
-#   4.5 m away: the ground rose against walls, fences and houses, up to 1 m).
+#   4.5 m away: the ground rose against walls, fences and houses, up to 1 m). In a zone the guard rails are not in
+#   it: they are laid by rule there (see keep_out_cells).
 # The terrain gets the date of the build step; everything else is copied as it is. The report measures the edges
 # before and after.
 #
@@ -1421,9 +1489,10 @@ def keep_out_cells(zi, lv, points=None):
         if points is not None:
             k = "buildings" if g == "buildings" else "other"
             points.setdefault(k, []).append(np.unique(np.round(P[:, :2] / HOLD_GRID).astype(np.int64), axis=0))
+    from config import ZONE
     for g in KEEP_GROUPS:
         f = f"{lv}/main/MissionGroup/{g}/items.level.json"
-        if f not in zi.NameToInfo:
+        if f not in zi.NameToInfo or (ZONE and g == "roads/guardrails"):
             continue
         for o in pl.read_items(zi, f):
             sn = o.get("shapeName", "").lstrip("/")
@@ -1436,7 +1505,13 @@ def keep_out_cells(zi, lv, points=None):
             ids.append(np.unique(pu.cell_ids(P[:, 0], P[:, 1])))
             keep_points(g, P)
     import guardrail_mesh
-    gr = guardrail_mesh.module_faces(zi)                # v2.8: the guard rails are forest items
+    # v2.8: the guard rails are forest items. Not in a zone (Switzerland Builder, 2026-11-07): there they are laid by
+    # rule where the DTM falls beside a road (guardrail_mesh.drop_runs), not measured on photos, and the step behind
+    # them is the DTM's smear, not a real one: kept out, the embankment under the road's edge was never filled and
+    # 26 % of the modules of the first Axenstrasse build had a post 0.3-24 m in the air (michi: "controlla anche che i
+    # guardrail non siano volanti"). Where this step leaves a post in the air, the finishing step rail_walls stands it
+    # on a beam and a wall.
+    gr = guardrail_mesh.module_faces(zi) if not ZONE else np.zeros((0, 3, 3))
     if len(gr):
         P = outline_samples(gr)
         ids.append(np.unique(pu.cell_ids(P[:, 0], P[:, 1])))

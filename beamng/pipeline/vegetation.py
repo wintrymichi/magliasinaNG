@@ -332,6 +332,8 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
         import area
         keep = area.in_zone(u["x"], u["y"])
         u = {k: np.asarray(v)[keep] for k, v in u.items()}
+        if not keep.all():
+            print("understory and street photo hedges and bushes in this area: %d of %d" % (keep.sum(), len(keep)))
         bush_models = [p for p in MODELS["bush"] if p in dims] + [T + "trees_aspen/tree_aspen_small_a.dae"]
         bush_models = [p for p in bush_models if p in dims or p in asset_bounds.cached([p])]
         dims.update({p: (np.array(asset_bounds.cached([p])[p][1])[2] - max(np.array(asset_bounds.cached([p])[p][0])[2], -0.5),

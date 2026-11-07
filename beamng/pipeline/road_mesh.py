@@ -386,6 +386,11 @@ class TriSurface:
             out[:] = -np.inf
             np.maximum.at(out, qi, z)
             out[np.isinf(out)] = np.nan
+        elif mode == "under":                   # the highest face at or under zhint (what a post stands on)
+            ok = z <= np.broadcast_to(np.atleast_1d(np.asarray(zhint, np.float64)), x.shape)[qi]
+            out[:] = -np.inf
+            np.maximum.at(out, qi[ok], z[ok])
+            out[np.isinf(out)] = np.nan
         else:
             h = np.atleast_1d(zhint)[qi]
             d = np.abs(z - h)
