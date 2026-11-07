@@ -1,0 +1,90 @@
+# Release v2.7 of the BeamNG map (Malcantone): the published v2.6 zip passed through the four v2.7 patch scripts,
+# in the order tested in the game on 5.10.2026 (beamng/verifica/screenshots/v2.7/test.json):
+# - patch_unpaved.py: dirt and gravel tracks flush with the ground (before the markings: the paint follows them);
+# - patch_markings.py: the road markings of the network redrawn as Swiss markings, none on gravel and dirt;
+# - patch_far_trees.py: every measured tree back on the slopes as far trees; the full-area tree list
+#   (work/trees.npz) is computed here by trees.py from the same open data as the earlier release workflows;
+# - patch_signs.py: the Swiss road signs of the whole network, the cantonal road's plates redrawn.
+# The release contains and downloads no Street View image. Started by hand: Actions > Release v2.7 > Run workflow.
+name: Release v2.7
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: v2.6 zip through the four v2.7 patches
+        working-directory: beamng/pipeline
+        run: |
+          D="$MAGLIASO_ROOT/dist"
+          mkdir -p "$D"
+          gh release download v2.6 --pattern 'magliaso_pura_v2.6.zip' --dir "$D"
+          python patch_unpaved.py "$D/magliaso_pura_v2.6.zip" "$D/v26u.zip"
+          rm "$D/magliaso_pura_v2.6.zip"
+          python patch_markings.py "$D/v26u.zip" "$D/v26m.zip"
+          rm "$D/v26u.zip"
+          python patch_far_trees.py "$D/v26m.zip" "$D/v26t.zip" "$MAGLIASO_ROOT/work/trees.npz"
+          rm "$D/v26m.zip"
+          python patch_signs.py "$D/v26t.zip" "$D/magliaso_pura_v2.7.zip" --report "$D/signs_v2.7.json"
+          rm "$D/v26t.zip"
+          ls -la "$D"
+          md5sum "$D/magliaso_pura_v2.7.zip"
+
+      - name: Publish
+        run: |
+          gh release create v2.7 "$MAGLIASO_ROOT/dist/magliaso_pura_v2.7.zip" --target "$GITHUB_SHA" \
+            --title "BeamNG.drive map Malcantone v2.7" --notes-file beamng/RELEASE_v2.7.md

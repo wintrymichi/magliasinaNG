@@ -371,15 +371,6 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     lcsf = shapely.STRtree([g for geoms in pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))["LCSF"].values()
                             for g, _ in geoms])
     swiss = lambda x, y: len(lcsf.query(shapely.Point(x, y), predicate="within")) > 0
-    from config import ZONE
-    if ZONE and ZONE.get("builder"):
-        # Switzerland Builder: a canton whose survey is not open has no survey land at all; there Switzerland is the
-        # union of its municipalities (landcover.swiss_land)
-        import landcover
-        ch = landcover.swiss_land()
-        if ch is not None:
-            shapely.prepare(ch)
-            swiss = lambda x, y, _s=swiss: _s(x, y) or bool(shapely.contains_xy(ch, x, y))
     counts = {"stop": 0, "give_way": 0, "bench": 0, "waste_basket": 0, "street_lamp": 0, "bus_stop": 0, "shelter": 0,
               "left_out": 0}
     import italy_mats as it
@@ -574,8 +565,7 @@ def build(level_dir, scene, ground, on_carriageway, blocked, corridor_line):
     from config import WORK
     json.dump(placed_list, open(os.path.join(WORK, "osm_props.json"), "w"))
     rel = "art/shapes/props/props_osm.dae"
-    if not mb.empty():      # a zone can have no OSM furniture at all (ti_2_m1): no shape then
-        mb.write_dae(os.path.join(level_dir, rel), name="props_osm", origin=(0, 0, 0), orient=True)
-        scene.add(g, bng.tsstatic(f"{L}/{rel}", (0, 0, 0), collision=True))
+    mb.write_dae(os.path.join(level_dir, rel), name="props_osm", origin=(0, 0, 0), orient=True)
+    scene.add(g, bng.tsstatic(f"{L}/{rel}", (0, 0, 0), collision=True))
     print("OSM signs and furniture:", counts)
     return counts

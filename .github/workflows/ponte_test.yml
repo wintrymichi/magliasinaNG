@@ -1,0 +1,136 @@
+# Test build of the survey decks of the Via Cantonale bridges over the Magliasina (v3.1, thread "Ponte di Magliaso dai
+# satelliti"): the complete level built from scratch as nightly_build.yml does, with the automatic checks, the zip and
+# the reports going to the DRAFT release "ponte-test" (drafts are not public: the cloud session downloads the zip for
+# the before/after renders, then deletes the draft). Runs when beamng/verifica/ponte_magliaso/test_stamp.txt changes.
+name: ponte magliaso test build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ponte-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  ponte-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAGLIASO_ROOT: ${{ github.workspace }}/../bm
+      MAGLIASO_DATASET: ${{ github.workspace }}
+      MAGLIASO_BEAMNG_USER: ${{ github.workspace }}/../bm/beamng_user
+      MAGLIASO_BEAMNG_GAME: /nonexistent
+      MAGLIASO_NO_PHOTO_TEXTURES: "1"
+      MAGLIASO_REFERENCE_ZIP: ${{ github.workspace }}/../bm/dist/magliaso_pura_v1.1.zip
+      MAGLIASO_OSM_PINNED: "1"
+      PYTHONHASHSEED: "0"
+      PATCH_WORKERS: "2"
+      PYTHONUNBUFFERED: "1"
+      ZIP_NAME: magliaso_pura_ponte_test
+    steps:
+      - name: Disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h .
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies
+        run: |
+          pip install numpy==2.4.6 scipy==1.17.1 shapely==2.1.2 rasterio==1.4.4 pyproj==3.7.2 \
+            scikit-image==0.26.0 opencv-python-headless==5.0.0.93 pillow==12.3.0 requests==2.33.1 \
+            matplotlib==3.11.2 pyogrio==0.13.0
+
+      - name: Downloads from earlier runs
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/magliasinaNG/bm/data     # MAGLIASO_ROOT/data, written out: the cache takes no '..'
+          key: v3-data-${{ hashFiles('beamng/pipeline/download_*.py') }}
+          restore-keys: v3-data-
+
+      - name: Release v1.1 (objects of the original route, neutral textures)
+        run: |
+          mkdir -p "$MAGLIASO_ROOT/dist"
+          gh release download v1.1 --pattern magliaso_pura_v1.1.zip --dir "$MAGLIASO_ROOT/dist"
+
+      - name: Download
+        working-directory: beamng/pipeline
+        run: |
+          python prepare_work.py
+          python download_swisstopo.py
+          python download_worldcover.py
+          python download_av.py
+          python download_tlm.py
+          python download_gwr.py
+          du -sh "$MAGLIASO_ROOT/data"/* || true
+
+      - name: Rasters, buildings, trees
+        working-directory: beamng/pipeline
+        run: |
+          python build_rasters.py
+          python landcover.py
+          python extract_buildings.py
+          python missing_buildings.py
+          python trees.py
+
+      - name: Road network
+        working-directory: beamng/pipeline
+        run: |
+          python network.py
+          python network_surface.py
+
+      - name: Level (build_level.py, every finishing step inside)
+        working-directory: beamng/pipeline
+        run: |
+          python build_level.py | tee "$MAGLIASO_ROOT/build_level.log"
+          df -h .
+
+      - name: Checks
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          mkdir -p "$O"
+          python check_level.py || true
+          cp ../verifica/check_level.json "$O/check_level.json"
+          python drive_test.py || true
+          cp ../verifica/drive_test.json "$O/drive_test.json"
+          git checkout -- ../verifica/check_level.json ../verifica/drive_test.json
+
+      - name: Package
+        working-directory: beamng/pipeline
+        run: |
+          O="$GITHUB_WORKSPACE/out"
+          python package.py "$ZIP_NAME" | tee "$O/package.log"
+          mkdir -p "$GITHUB_WORKSPACE/zip"
+          mv "$MAGLIASO_ROOT/dist/$ZIP_NAME.zip" "$GITHUB_WORKSPACE/zip/"
+          cp -r "$MAGLIASO_ROOT/work/reports" "$O/reports" || true
+          cp "$MAGLIASO_ROOT/build_level.log" "$O/"
+          # the reports also as an asset of the pre-release: Actions artifacts and logs cannot be read from the
+          # cloud sessions, release assets can
+          (cd "$O" && zip -qr "$GITHUB_WORKSPACE/zip/ponte_test_reports.zip" .)
+          ls -la "$O" "$GITHUB_WORKSPACE/zip"
+          md5sum "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ponte-test-reports
+          path: out/
+
+      - name: Draft release "ponte-test" (not public; the cloud session reads its assets, then deletes it)
+        run: |
+          gh release delete ponte-test --yes --cleanup-tag || true
+          gh release create ponte-test "$GITHUB_WORKSPACE/zip/$ZIP_NAME.zip" "$GITHUB_WORKSPACE/zip/ponte_test_reports.zip" \
+            --draft --target "$GITHUB_SHA" --title "Test build of the Magliasina bridges (draft, not a release)" \
+            --notes "Test build of branch $GITHUB_REF_NAME at ${GITHUB_SHA::7}, for the review of the survey decks. Not a release."
