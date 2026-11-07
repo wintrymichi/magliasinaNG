@@ -143,16 +143,8 @@ def main(route_extras=False, names_only=False):
             if name.endswith("_2056.csv.zip"):
                 jobs.append((a["href"], os.path.join(DATA, "names", name)))
     # Copernicus GLO-30 (covers the Italian side for the terrain margins and the backdrop)
-    # the 1 x 1 degree tiles over the backdrop (backdrop.RMAX round the block centre, and a km): for the Malcantone these
-    # are N45-46 E008-009, as they were listed by hand up to v3.1.1 (Switzerland Builder: any part of the country)
-    import math
-    tcx, tcy = 0.5 * (tx0 + tx1), 0.5 * (ty0 + ty1)
-    R = 25000.0
-    cll = [lv95_to_wgs(*local_to_lv95(tcx + dx, tcy + dy)) for dx in (-R, 0, R) for dy in (-R, 0, R)]
-    lats = range(math.floor(min(p[0] for p in cll)), math.floor(max(p[0] for p in cll)) + 1)
-    lons = range(math.floor(min(p[1] for p in cll)), math.floor(max(p[1] for p in cll)) + 1)
-    for lat in lats if not names_only else ():
-        for lon in lons:
+    for lat in (45, 46) if not names_only else ():
+        for lon in (8, 9):
             name = f"Copernicus_DSM_COG_10_N{lat:02d}_00_E{lon:03d}_00_DEM"
             jobs.append((f"https://copernicus-dem-30m.s3.amazonaws.com/{name}/{name}.tif",
                          os.path.join(DATA, "copdem30", name + ".tif")))

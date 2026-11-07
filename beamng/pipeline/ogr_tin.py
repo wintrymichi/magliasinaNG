@@ -1,8 +1,8 @@
 """Read TIN / MultiPatch layers (swissBUILDINGS3D FileGDB) without the GDAL Python bindings.
 
 extract_buildings.py uses osgeo.ogr when it is installed (the Windows build environment). Elsewhere
-the GDAL library bundled with pyogrio (or the conda environment's, see gdal_path) is called through
-ctypes: pyogrio itself refuses layers of type TIN Z. Features come back as (fields dict, triangles (n, 3, 3)).
+the GDAL library bundled with pyogrio is called through ctypes: pyogrio itself refuses layers of
+type TIN Z. Features come back as (fields dict, triangles (n, 3, 3)).
 """
 import ctypes, glob, os, struct
 import numpy as np
@@ -10,35 +10,13 @@ import numpy as np
 _lib = None
 
 
-def gdal_path():
-    """The GDAL library: the one a pip pyogrio wheel bundles (pyogrio.libs), else the one of a conda environment
-    (the Switzerland Builder's: conda-forge's pyogrio links the environment's libgdal and has no pyogrio.libs)."""
-    import sys
-    pats = []
-    try:
-        import pyogrio
-        d = os.path.join(os.path.dirname(os.path.dirname(pyogrio.__file__)), "pyogrio.libs")
-        pats += [os.path.join(d, n) for n in ("libgdal*.so*", "gdal*.dll", "libgdal*.dylib")]
-    except ImportError:
-        pass
-    for pre in dict.fromkeys(p for p in (sys.prefix, os.environ.get("CONDA_PREFIX")) if p):
-        pats += [os.path.join(pre, "lib", "libgdal.so*"), os.path.join(pre, "lib", "libgdal*.dylib"),
-                 os.path.join(pre, "Library", "bin", "gdal*.dll")]
-    for pat in pats:
-        hits = sorted(glob.glob(pat))
-        if hits:
-            return hits[0]
-    import ctypes.util
-    path = ctypes.util.find_library("gdal")
-    if not path:
-        raise RuntimeError("no GDAL library found (looked in " + "; ".join(pats) + ")")
-    return path
-
-
 def lib():
     global _lib
     if _lib is None:
-        L = ctypes.CDLL(gdal_path())
+        import pyogrio
+        d = os.path.join(os.path.dirname(os.path.dirname(pyogrio.__file__)), "pyogrio.libs")
+        path = sorted(glob.glob(os.path.join(d, "libgdal*.so*")) + glob.glob(os.path.join(d, "gdal*.dll")))[0]
+        L = ctypes.CDLL(path)
         L.GDALAllRegister()
         L.GDALOpenEx.restype = ctypes.c_void_p
         L.GDALOpenEx.argtypes = [ctypes.c_char_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]

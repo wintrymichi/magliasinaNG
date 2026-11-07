@@ -1,0 +1,57 @@
+# Release v2.8 from the zip tested in the game: the magliaso_pura_v2.8.zip of a "final build test" run (artifact
+# final-build-test), published as it is instead of building it again, so the release is exactly the zip that was
+# tested in the game. Started by hand with the run id of that final build test.
+name: Release v2.8 (tested zip)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Id of the final build test run whose zip was tested in the game"
+        required: true
+      zip_md5:
+        description: "md5 of the magliaso_pura_v2.8.zip tested in the game"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ready to release
+        run: |
+          if grep -q '<!-- draft' beamng/RELEASE_v2.8.md; then
+            echo "::error::beamng/RELEASE_v2.8.md is still the draft"
+            exit 1
+          fi
+          if gh release view v2.8 > /dev/null 2>&1; then
+            echo "::error::the release v2.8 exists already"
+            exit 1
+          fi
+
+      - name: The tested zip
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          ZIP_MD5: ${{ inputs.zip_md5 }}
+        run: |
+          gh run download "$RUN_ID" --name final-build-test --dir art
+          ls -la art
+          sum=$(md5sum art/magliaso_pura_v2.8.zip | cut -d' ' -f1)
+          echo "md5: $sum (tested: $ZIP_MD5)"
+          if [ "$sum" != "$ZIP_MD5" ]; then
+            echo "::error::this is not the zip tested in the game"
+            exit 1
+          fi
+
+      - name: Publish
+        run: |
+          gh release create v2.8 art/magliaso_pura_v2.8.zip --target "$GITHUB_SHA" \
+            --title "BeamNG.drive map Malcantone v2.8" --notes-file beamng/RELEASE_v2.8.md

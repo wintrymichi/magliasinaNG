@@ -876,10 +876,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
     The face is textured from the panoramas (texturing.texture_ribbon)."""
     import json
     import cv2
-    import area
-    # the runs are the Malcantone's (its panoramas): in a zone elsewhere they were built 100 km off the level, with no
-    # road height there (NaN vertices in six shapes of every builder level)
-    runs = [r for r in roadside_runs() if area.in_zone(r["pts"][:, 0], r["pts"][:, 1]).all()]
+    runs = roadside_runs()
     import roadheight
     S = roadheight.load()
     CH = 128.0
@@ -904,10 +901,7 @@ def build_roadside(level_dir, level_name, scene, material="mp_wall_stone", thick
         face = P[:, :2]
         back = face + away * thick
         zr = S.height(face[:, 0], face[:, 1])                  # idealised road next to the face
-        # fmin/fmax: a zone has no corridor surface (roadheight is empty, NaN everywhere): the measured foot and top
-        # then, not NaN (np.minimum gave NaN walls and, through adjust_terrain_roadside, NaN terrain: likely the 909
-        # NaN heights of zone ti_0_m1, which holds this part of the Malcantone)
-        zb, zt = np.fmin(P[:, 2], zr) - 0.3, np.fmax(P[:, 3], zr + 0.15)
+        zb, zt = np.minimum(P[:, 2], zr) - 0.3, np.maximum(P[:, 3], zr + 0.15)
         c = face[len(face) // 2]
         mb = builders.setdefault((int(np.floor(c[0] / CH)), int(np.floor(c[1] / CH))), bng.MeshBuilder())
         s = np.r_[0, np.cumsum(np.linalg.norm(np.diff(face, axis=0), axis=1))]

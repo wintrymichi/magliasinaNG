@@ -327,11 +327,6 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
         import understory
         from geo import Grid
         u = understory.photo_hedges(dict(np.load(us_f)), Grid.load(os.path.join(WORK, "dtm05.npz")))
-        # the Malcantone's hedges and bushes (its route, its street photos): in a zone elsewhere about 7,000 of them
-        # stood 100 km off the level, at the height of the nearest edge of its DTM
-        import area
-        keep = area.in_zone(u["x"], u["y"])
-        u = {k: np.asarray(v)[keep] for k, v in u.items()}
         bush_models = [p for p in MODELS["bush"] if p in dims] + [T + "trees_aspen/tree_aspen_small_a.dae"]
         bush_models = [p for p in bush_models if p in dims or p in asset_bounds.cached([p])]
         dims.update({p: (np.array(asset_bounds.cached([p])[p][1])[2] - max(np.array(asset_bounds.cached([p])[p][0])[2], -0.5),
@@ -355,9 +350,7 @@ def build(level_dir, level_name, scene, rng_seed=7, drivable=None, net_xy=None):
         # shrubs the photos show and the game lacked (missing_veg.py, full-dataset comparison)
         ps_f = os.path.join(WORK, "photo_shrubs.npz")
         if os.path.exists(ps_f):
-            ps = dict(np.load(ps_f))
-            keep = area.in_zone(ps["x"], ps["y"])
-            ps = {k: np.asarray(v)[keep] for k, v in ps.items()}
+            ps = np.load(ps_f)
             H0 = np.array([dims[p][0] for p in bush_models])
             for x_, y_, z_, h_ in zip(ps["x"], ps["y"], ps["z"], ps["h"]):
                 k = int(np.argmin(np.abs(np.log(np.maximum(h_, 0.5) / H0))))
