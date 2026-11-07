@@ -124,8 +124,8 @@ def check(bbox):
     elif inside < 0.5:
         out["errors"].append("Only %d %% of the area lies in Switzerland: at least half of it must." % round(100 * inside))
     elif inside < 0.97:
-        out["warnings"].append("%d %% of the area lies outside Switzerland: there it gets only Copernicus terrain, "
-                               "OpenStreetMap and land cover (no Swiss survey, no buildings in 3D)." % round(100 * (1 - inside)))
+        out["warnings"].append("%d %% of the area lies outside Switzerland: there the level has only terrain (Copernicus, "
+                               "30 m), land cover and woods of simple trees: the roads and buildings stop at the border." % round(100 * (1 - inside)))
     wide = box.buffer(MARGIN_DEG)
     out["cantons"] = [c for c, _, g in R["cantons"] if g.intersects(wide)]
     out["canton_names"] = [nm for c, nm, g in R["cantons"] if g.intersects(wide)]
