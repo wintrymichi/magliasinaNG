@@ -7,3 +7,6 @@ __pycache__/
 
 # v3.0.40 landmarks: contact sheets of CC BY-SA reference photos stay out of git (credits.json is kept)
 beamng/verifica/monumenti/pack/sheets/*.jpg
+
+# Switzerland Builder: the runtime (micromamba, Python environment, settings) made by the launchers
+beamng/builder/.runtime/

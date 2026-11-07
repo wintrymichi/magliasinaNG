@@ -67,7 +67,7 @@ def stage_terrain(scene, ctx):
         import walls
         posts.append(lambda H, xs, ys: walls.adjust_terrain_roadside(
             ctx.get("rwall_samples", np.zeros((0, 10))), xs, ys, walls.carve_terrain(ctx["wall_feet"], xs, ys, H)))
-    if "lake_grid" in ctx:
+    if "lake_grid" in ctx and ctx.get("lake_level") is not None:     # no lake in the area: no lake bed
         import water
         posts.append(lambda H, xs, ys: water.lake_bed(H, xs, ys, ctx["lake_level"], ctx["wet_grid"], ctx.get("water_cover")))
     if ctx.get("river_polys"):                           # v2.4: the beds of the rivers under their water
@@ -792,7 +792,9 @@ def stage_water(scene, ctx):
 
 def stage_backdrop(scene, ctx):
     import backdrop
-    backdrop.build(LEVEL_DIR, LEVEL_NAME, scene, ctx.get("lake_level", 270.5), ctx.get("lake_grid"), ctx.get("wet_grid"))
+    level = ctx.get("lake_level", 270.5)
+    # no lake in the area (water.lake_level None): empty lake masks and a level under any ground, nothing is water
+    backdrop.build(LEVEL_DIR, LEVEL_NAME, scene, -1.0e4 if level is None else level, ctx.get("lake_grid"), ctx.get("wet_grid"))
 
 
 def stage_buildings(scene, ctx):
@@ -996,10 +998,29 @@ def write_info(ctx):
         "defaultSpawnPointName": spawns[0][0] if spawns else None,
         "spawnPoints": [{"objectname": s[0], "translationId": s[0]} for s in spawns],
     }
+    from config import ZONE
+    if ZONE and ZONE.get("title"):
+        # an area of the Switzerland Builder (beamng/builder): its own name and a description of what was built
+        info.update({
+            "title": ZONE["title"],
+            "description": ("%s (Switzerland) at 1:1 scale: about %d km2 built from open data by the Switzerland Builder, "
+                            "with %d bridges, %d buildings, about %d 000 trees and AI traffic. Sources: (c) swisstopo; "
+                            "cantonal cadastral surveys (geodienste.ch); Federal Register of Buildings; (c) OpenStreetMap "
+                            "contributors (ODbL); Copernicus DEM GLO-30 (c) DLR e.V. / Airbus; ESA WorldCover."
+                            % (ZONE["title"], round(km2), n_bridges, n_buildings, n_trees)),
+            "biome": ZONE.get("biome", "Switzerland"),
+            "features": "Real 1:1 scale, LiDAR terrain, 12 x 12 km terrain block",
+            "authors": ZONE.get("authors", "Switzerland Builder (magliasinaNG pipeline)"),
+        })
     json.dump(info, open(level_path("info.json"), "w"), indent=2)
     # player-facing documentation (sources, attribution, what differs from the older survey)
     here = os.path.dirname(os.path.abspath(__file__))
     readme = open(os.path.join(here, "README_livello.md"), encoding="utf-8").read()
+    if ZONE and ZONE.get("title"):
+        readme = ("# %s\n\nBuilt with the Switzerland Builder (branch switzerland-builder of "
+                  "github.com/wintrymichi/magliasinaNG) from Swiss open data, with the pipeline of the Malcantone level. "
+                  "The notes below are the Malcantone level's own; the sources and licences are the same.\n\n"
+                  % ZONE["title"]) + readme
     from config import NO_PHOTO
     if NO_PHOTO:
         # public variant: no imagery from the Street View panoramas in the level
@@ -1160,11 +1181,24 @@ def finish(names=None, after=None):
             if status:
                 raise SystemExit(f"finish step {name} failed (wait status {status})")
         else:
-            getattr(importlib.import_module(mod), fn)(root, **kw)
+            # no fork (Windows; the Switzerland Builder runs each step in a process of its own there): a step with
+            # nothing to work on in the area is left out as in the forked child
+            try:
+                getattr(importlib.import_module(mod), fn)(root, **kw)
+            except Exception as e:
+                if ZONE and nothing_there(e):
+                    import traceback
+                    traceback.print_exc()
+                    print(f"== finish: {name} found nothing to work on in this zone, left out", flush=True)
+                    continue
+                raise
         print(f"[finish {name}: {time.time() - t0:.0f} s]", flush=True)
 
 
 def main():
+    if "--list" in sys.argv[1:]:                      # the Switzerland Builder shows the steps and runs them one by one
+        print(json.dumps({"stages": STAGES, "finish": [f[0] for f in FINISH]}))
+        return
     if "--finish" in sys.argv[1:]:
         finish([a for a in sys.argv[1:] if not a.startswith("--")])
         return

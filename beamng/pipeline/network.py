@@ -374,6 +374,9 @@ class LakeCut:
         self.cut = 0
         try:
             self.level, self.dtm = water.lake_level(), Grid.load(os.path.join(WORK, "dtm05.npz"))
+            if self.level is None:              # no lake in the area
+                self.dtm = None
+                return
             if av is None:
                 av = pickle.load(open(os.path.join(WORK, "av_local.pkl"), "rb"))
         except (FileNotFoundError, OSError):
@@ -418,6 +421,8 @@ def dry_ends(lines, ends, node_pos):
     try:
         level, dtm = water.lake_level(), Grid.load(os.path.join(WORK, "dtm05.npz"))
     except (FileNotFoundError, OSError):
+        return lines, ends
+    if level is None:                           # no lake in the area: no road runs into it
         return lines, ends
     deg = np.bincount(ends.ravel(), minlength=len(node_pos))
     out_l, out_e, cut, dropped = [], [], 0, 0

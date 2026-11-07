@@ -150,6 +150,10 @@ def main():
 
 PBF = "https://download.geofabrik.de/europe/switzerland-latest.osm.pbf"
 ZONE_PBFS = (PBF, "https://download.geofabrik.de/europe/italy/nord-ovest-latest.osm.pbf")
+# Switzerland Builder: MAGLIASO_OSM_PBFS names the Geofabrik extracts of the area (Switzerland and the neighbours its box
+# reaches into, space separated); without it Switzerland and the north-west of Italy, as for the Ticino zones
+if os.environ.get("MAGLIASO_OSM_PBFS"):
+    ZONE_PBFS = tuple(os.environ["MAGLIASO_OSM_PBFS"].split())
 # the filters of QUERY and QUERY_POIS: key -> None (any value) or a regex of values
 WAY_TAGS = {"highway": None, "railway": None, "barrier": None, "waterway": None,
             "man_made": "bridge|embankment|pier", "amenity": "parking|bench", "public_transport": None}
