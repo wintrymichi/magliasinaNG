@@ -980,3 +980,14 @@ Found in the v3.1 game test (2026-10-24, report beamng/verifica/v3.1/ingame_test
 - Untested builds for michi go to the GitHub pre-release "nightly" (`nightly_build.yml`, started by changing
   `beamng/nightly/stamp.txt`), never the latest release; michi tests them on the main PC.
 - Document every error and failed attempt in this file, under its topic (michi, 2026-10-20: "sempre").
+
+## main is the Malcantone only (2026-11-07)
+
+- PR #113 (switzerland-builder, which carries the whole `ticino` branch) was merged into main by mistake: 324 files,
+  the Ticino and builder code, and it DELETED every Malcantone workflow of main (nightly_build, v3_build_test,
+  release_*, pages...) and replaced the README. michi: "lasciare il malcantone nel main". Undone by a revert of the
+  merge (`git revert -m 1 2f8b257`, PR from claude/project-thread-nc6c38), no force-push: main's tree is again the one
+  of 33dc6d2 (v3.1.1). The Ticino work stays on `ticino` and `switzerland-builder` (untouched by the revert).
+- Ticino and builder PRs go against `ticino` / `switzerland-builder`, never main: check a PR's base before merging.
+- Git now counts those commits as merged into main. If they ever must go into main for real, revert the REVERT commit
+  first; a plain merge of switzerland-builder would bring in only its newer commits.
