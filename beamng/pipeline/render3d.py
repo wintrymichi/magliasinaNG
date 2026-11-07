@@ -40,6 +40,7 @@ RELOAD = 25                             # views per page load
 RESTART = 100                           # views per browser: the scene blobs pile up in the driver process
 GROUPS = ("roads/surfaces", "roads/markings", "roads/islands", "roads/sidewalks", "roads/roundabouts", "roads/guardrails", "roads/fences", "walls", "buildings", "props", "railway",
           "landmarks",                    # v3.0.40: the cable car of Monte Lema, the summit (landmarks.py)
+          "tunnels",                      # v3.2: tunnels and galleries (tunnels.py)
           # v2.4: the water of the rivers and the rows of the vineyards (meshes; the lake's water blocks apart)
           "level_objects/Water", "level_objects/vegetation/vineyards", "level_objects/terrain_skin")
 # the translucent overlays of a road from the bottom up (road_wear.LAYER): drawn in this order, each a little
@@ -521,6 +522,21 @@ class Level:
         q = np.asarray(self.q[r0:r1:step, c0:c1:step], np.float64)
         return self.tz0 + q / 65535.0 * self.maxh
 
+    def holes(self, r0, r1, c0, c1, step=1):
+        """Squares of the grid every `step` samples of the window that hold a hole of the terrain (layer 255: tunnels.py;
+        the game draws a hole square, the one of its lower-left sample, as nothing), None when there is none. Up to
+        v3.2 the renders drew a hole as grey ground: in a tunnel or gallery one saw the old ground through the vault."""
+        n = self.n
+        lay = np.memmap(self.ter_path, np.uint8, "r", offset=5 + 2 * n * n, shape=(n, n))
+        H = np.asarray(lay[r0:r1, c0:c1]) == 255
+        if not H.any():
+            return None
+        ny, nx = len(range(r0, r1, step)), len(range(c0, c1, step))
+        out = np.zeros((max(ny - 1, 1), max(nx - 1, 1)), bool)
+        rr, cc = np.nonzero(H)
+        out[np.minimum(rr // step, ny - 2), np.minimum(cc // step, nx - 2)] = True
+        return out
+
     def ortho(self):
         if self._ortho is None and not os.path.exists(os.path.join(WORK, "ortho.tif")):
             self._ortho = self._layer_colors()
@@ -561,6 +577,7 @@ class Level:
                     base[m["internalName"]] = np.median(a, 0)
         lut = np.array([base[m] if m in base else [round(255 * v) for v in LAYER_COLORS.get(m, (0.4, 0.45, 0.3))]
                         for m in names], np.uint8)
+        lut = np.concatenate([lut, np.full((256 - len(lut), 3), 90, np.uint8)])    # 255: a hole (tunnels)
 
         def fn(x, y):
             c = np.clip(np.round((np.asarray(x) - self.tx0) / self.sq).astype(np.int64), 0, n - 1)
@@ -705,7 +722,11 @@ class Renderer:
         uv = np.stack([u, v], -1).reshape(-1, 2).astype(np.float32)
         i = np.arange(ny * nx, dtype=np.uint32).reshape(ny, nx)
         a, b, c, d = i[:-1, :-1], i[:-1, 1:], i[1:, 1:], i[1:, :-1]
-        idx = np.stack([a, b, c, a, c, d], -1).reshape(-1).astype(np.uint32)
+        quads = np.stack([a, b, c, a, c, d], -1)
+        holes = L.holes(r0, r1, c0, c1, step)
+        if holes is not None:
+            quads = quads[~holes]
+        idx = quads.reshape(-1).astype(np.uint32)
         tw = int(min(4096, max(2, round((xs[-1] - xs[0]) / texres))))
         th = int(min(4096, max(2, round((ys[-1] - ys[0]) / texres))))
         tx = np.linspace(xs[0], xs[-1], tw)

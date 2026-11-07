@@ -1,0 +1,12 @@
+Ticino server (prova)
+
+ticino_server.exe tiene i pacchetti zona del Ticino fuori da mods e passa al gioco solo le tile intorno all'auto,
+con le forme gia' convertite (.cdae), in <cartella utente>\temp\ticino\srv. In mods resta solo ticino_base_*.zip.
+
+  ticino_server.exe adopt        sposta gli zip zona da mods in ticino_data accanto all'exe (stesso disco: istantaneo)
+  ticino_server.exe              avvia il server (prima del gioco o insieme); Ctrl+C lo ferma e pulisce
+  ticino_server.exe download     scarica i pacchetti della release (zone in ticino_data, base in mods)
+
+Impostazioni: ticino_server.json accanto all'exe (user, data, cacheGB, workers, dae) o da riga di comando (--help).
+Per la prova: copia la cartella lua di questo zip nella cartella utente di BeamNG (sostituisce il Lua del pacchetto
+base finche' il base non lo contiene). Per tornare a prima: rimetti gli zip zona in mods e togli la cartella lua.

@@ -27,7 +27,7 @@ import bng
 import osm
 import parking
 from config import LEVEL_NAME
-from markings_net import read_items, shape_tris, up_faces
+from markings_net import read_items, shape_tris, up_faces, tops_of
 from road_mesh import TriSurface
 
 MODEL = "/levels/italy/art/shapes/buildings/italy_city_busstop.dae"   # open side to local -y, x along
@@ -76,7 +76,7 @@ def bus_shelters_step(root, report=None):
     lanes = cKDTree(P)
     ground = parking.Ground(zi, lv)
     surf = shape_tris(zi, lv, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
-    carr = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m.startswith(ROAD_MAT)]))
+    carr = TriSurface(tops_of(surf, lambda m: m.startswith(ROAD_MAT)))
     xy = np.array([[n["x"], n["y"]] for n in stops]).reshape(-1, 2)
     otree, opts = parking.obstacles(zi, lv, xy if len(xy) else np.zeros((1, 2)), 20.0) if len(xy) else (None, None)
     spots = []                                           # the parked cars' spots: a shelter there would be hit at spawn

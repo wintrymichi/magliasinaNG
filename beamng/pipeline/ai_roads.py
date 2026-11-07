@@ -12,7 +12,7 @@ import json, os, pickle
 import numpy as np
 import shapely
 from scipy.ndimage import gaussian_filter1d, median_filter
-from config import DATA, WORK, wgs_to_local, TER_X0, TER_Y0, TER_X1, TER_Y1
+from config import DATA, WORK, ZONE, wgs_to_local, TER_X0, TER_Y0, TER_X1, TER_Y1
 import bng
 import osm
 from clearance import keep_to_surface
@@ -59,6 +59,13 @@ def recentre(P, road, maxw=8.0):
 TLM_DRIVE = {"10m Strasse": 1.0, "8m Strasse": 1.0, "6m Strasse": 1.0, "Autostrasse": 1.0, "Ausfahrt": 0.9,
              "Einfahrt": 0.9, "Verbindung": 0.9, "4m Strasse": 0.8, "Platz": 0.5, "Raststaette": 0.5,
              "3m Strasse": 0.5, "Zufahrt": 0.4, "Dienstzufahrt": 0.3}
+# The motorways (swissTLM3D Autobahn, one line per carriageway) had no AI road: none crossed the Malcantone, and in the
+# Ticino zones their carriageways stood without traffic, paint (markings_rules draws on the AI roads) or guard rails
+# (2026-10-28). Only in a zone, so the Malcantone's own build does not change.
+MOTORWAY = {"Autobahn": 120, "Autostrasse": 100}       # km/h, the Swiss limits
+if ZONE:
+    TLM_DRIVE["Autobahn"] = 1.0
+MOTORWAY_LANE_W, MOTORWAY_SHOULDER = 3.75, 2.5    # m: lanes of a carriageway beside its hard shoulder
 
 
 BANNED = 0.1           # drivability of the roads closed to general traffic (swissTLM3D)
@@ -204,6 +211,9 @@ def network_roads(out, net, main_zone):
                 o["position"] = o["nodes"][0][:3]
             o["oneWay"] = True
             o["lanesLeft"], o["lanesRight"] = 0, 1
+            if ZONE and s["class"] in MOTORWAY:          # a carriageway of two (or more) lanes
+                o["lanesRight"] = int(np.clip(round((np.median(width) - MOTORWAY_SHOULDER) / MOTORWAY_LANE_W), 1, 3))
+                o["autoLanes"] = False
         o["_class"], o["_natural"], o["_banned"] = s["class"], s["surface"] == "natural", bool(s.get("ban"))
         o["_ring"] = bool(s.get("roundabout"))
         out.append(o)
@@ -233,8 +243,16 @@ def build(scene, hfn, net=None):
             "nodes": nodes, "lanesLeft": 1, "lanesRight": 1, "_class": "6m Strasse"}]
     main_line = shapely.LineString(np.column_stack([cx, cy]))
     main_zone = main_line.buffer(4.0)
+    if ZONE and not ((cx >= TER_X0) & (cx <= TER_X1) & (cy >= TER_Y0) & (cy <= TER_Y1)).all():
+        # the Malcantone's Street View route is no road of a zone (it stood km out of every zone's terrain and
+        # poles.roadside_step crashed on it): the network's own lines take its place
+        out, main_zone = [], shapely.Polygon()
     if net is not None:                       # v2.0: the swissTLM3D network of the whole area
         print("AI roads", 1 + network_roads(out, net, main_zone))
+        if not out:                           # a zone with no road at all (ti_m3_1): an empty group for the readers
+            scene.group(g)
+            json.dump({}, open(os.path.join(WORK, "ai_network.json"), "w"))
+            return
         rep = traffic_ready(out)
         json.dump(rep, open(os.path.join(WORK, "ai_network.json"), "w"), indent=1)
         for o in out:
@@ -561,7 +579,9 @@ def _limits_along(o, cls, natural, banned, ring, ways, gtree):
     N = np.asarray(o["nodes"], float)
     P = N[:, :2]
     lim = np.full(len(P), float(LIMIT_OUT))
-    if gtree is not None:
+    if ZONE and cls in MOTORWAY:                   # no village on a motorway: its own limit, OSM may lower it
+        lim[:] = MOTORWAY[cls]
+    elif gtree is not None:
         village = gtree.query_ball_point(P, VILLAGE_R, return_length=True) >= VILLAGE_N
         lim[village] = LIMIT_VILLAGE
     cap = LIMIT_CLASS.get(cls)

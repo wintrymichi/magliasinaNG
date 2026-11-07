@@ -209,6 +209,8 @@ def sags(P, iscw, Tcw, lines):
     zc = S.height(X, Y, "near", zhint=Z)
     ok = np.isfinite(zc)
     X, Y, zc, Wd, D, L = X[ok], Y[ok], zc[ok], Wd[ok], D[ok], L[ok]
+    if not len(X):                      # no AI road over a carriageway (ti_2_7: paths only)
+        return out
     tree = cKDTree(np.column_stack([X, Y]))
     dist, ii = tree.query(P[:, :2], k=6, distance_upper_bound=6.0)
     for c in range(ii.shape[1]):
@@ -291,6 +293,9 @@ def road_seams_step(root, report=None, steps=True):
     sag = sags(Pall, np.repeat(cw, 3), Tall[cw], _ai_lines(zi, lv))
     res["sag_corners"] = int((sag > 0).sum())
     res["sag_cm_max"] = round(float(sag.max(initial=0)) * 100, 1)
+    if not cw.any():
+        print("road seams: no carriageway", flush=True)
+        return res
     # 2. no step between two pieces of carriageway (after the sags are lifted)
     T = (Pall + np.column_stack([np.zeros((len(Pall), 2)), sag])).reshape(-1, 3, 3)[cw]
     res["faces"] = len(T)

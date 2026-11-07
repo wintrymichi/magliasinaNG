@@ -24,6 +24,7 @@ steps and the terrain carve are the ones of v1.1 (road_mesh.py). Tiles of TILE m
 chunks) with MARGIN m of context.
 """
 import os, pickle
+import multiprocessing
 import numpy as np
 import shapely
 import scipy.sparse as sp
@@ -1068,8 +1069,9 @@ def block(args):
 
 def terrain_top(Zt, x, y):
     """Height of the terrain at points, the higher of the two ways a square may be split."""
-    c = (x - TER_X0) / TER_SQUARE
-    r = (y - TER_Y0) / TER_SQUARE
+    # points off the terrain take its edge (a zone's AI roads reach out of it: ti_1_3); inside nothing changes
+    c = np.clip((x - TER_X0) / TER_SQUARE, 0, Zt.shape[1] - 1.000001)
+    r = np.clip((y - TER_Y0) / TER_SQUARE, 0, Zt.shape[0] - 1.000001)
     ci, ri = np.floor(c).astype(np.int64), np.floor(r).astype(np.int64)
     u, v = c - ci, r - ri
     z00, z01, z10, z11 = (Zt[ri + i, ci + j].astype(np.float64) for i, j in ((0, 0), (0, 1), (1, 0), (1, 1)))
@@ -1232,7 +1234,10 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
         c = un.mean(1)
         un = un[~in_cells(keep_out, c[:, 0], c[:, 1])]
     print("top faces: %d of %s, %d in all" % (len(un), "the unpaved" if mats == UNPAVED else "these", len(al)))
-    UN, ALL = road_mesh.TriSurface(un), road_mesh.TriSurface(al)
+    # the workers build their own surfaces unless they are forks of this process (Python 3.14 starts them from a
+    # forkserver): two more copies here cost 3 GB on a Ticino zone and the server ran out of memory
+    fork = multiprocessing.get_start_method() == "fork"
+    UN, ALL = (road_mesh.TriSurface(un), road_mesh.TriSurface(al)) if fork else (None, None)
     blk = next(o for o in read_items(zi, f"{lv}/main/MissionGroup/level_objects/terrain/items.level.json")
                if o.get("class") == "TerrainBlock")
     Z0, MAXH = float(blk["position"][2]), float(blk["maxHeight"])
@@ -1250,6 +1255,7 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
     tmp = tempfile.mkdtemp(prefix="unpaved_")
 
     ex = pool(tmp, un, al)
+    del un, al
 
     def run(qa):
         jobs = []
@@ -1291,6 +1297,8 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
             print("terrain vertices in the keep-out with nothing between them and the road: %d" % free.sum())
             back[np.flatnonzero(back)[free]] = False
         if hold is not None and back.any():
+            if ALL is None:                     # pits() reads the faces here too
+                ALL = road_mesh.TriSurface(np.load(os.path.join(tmp, "al.npy")))
             free = pits(q0, road_z, rr[back], cc[back])
             print("terrain vertices in the keep-out in a trench between the road and higher ground: %d" % free.sum())
             back[np.flatnonzero(back)[free]] = False
@@ -1298,8 +1306,11 @@ def unpaved_step(root, mats=None, edge_drop=EDGE_DROP, keep_out=None, keep_out_l
         print("terrain vertices in the keep-out left as they were: %d" % back.sum())
     ch = q != q0
     lift = (q[ch].astype(np.float64) - q0[ch]) / 65535.0 * MAXH
-    print("terrain vertices raised: %d, by median %.2f m, 95th percentile %.2f m, at most %.2f m"
-          % (ch.sum(), np.median(lift), np.percentile(lift, 95), lift.max()))
+    if lift.size:                       # a zone can raise nothing at all (ti_0_m1)
+        print("terrain vertices raised: %d, by median %.2f m, 95th percentile %.2f m, at most %.2f m"
+              % (ch.sum(), np.median(lift), np.percentile(lift, 95), lift.max()))
+    else:
+        print("terrain vertices raised: 0")
     QT = q
     qpath = os.path.join(tmp, "qt.npy")
     np.save(qpath, q)

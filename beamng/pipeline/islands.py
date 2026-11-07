@@ -107,11 +107,13 @@ def bollard_png():
     """The sleeve's texture: BANDS bands up a 1 x 8 strip, black at the bottom and the top."""
     from PIL import Image
     import io
-    h = 64 * BANDS
+    # 16 x 512: the game's TextureCooker refuses a side that is not a power of two (16 x 448 with 7 bands of 64,
+    # "Size must be a power of two", laptop run 2 of the Ticino test, 2026-10-26)
+    h = 512
     img = Image.new("RGB", (16, h))
     for k in range(BANDS):
         col = (18, 18, 18) if k % 2 == 0 else (238, 190, 22)
-        img.paste(col, (0, h - (k + 1) * 64, 16, h - k * 64))
+        img.paste(col, (0, h - round((k + 1) * h / BANDS), 16, h - round(k * h / BANDS)))
     b = io.BytesIO()
     img.save(b, "PNG")
     return b.getvalue()
@@ -446,7 +448,7 @@ def island_lanes(roads, islands, carr, rep):
 
 def islands_step(root, report=None):
     from road_mesh import TriSurface
-    from markings_net import shape_tris, up_faces, CARRIAGE_MATS
+    from markings_net import shape_tris, up_faces, tops_of, CARRIAGE_MATS
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -482,7 +484,7 @@ def islands_step(root, report=None):
     builders = {}
     polys = []
     surf = shape_tris(zi, lv, items)
-    carr = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in CARRIAGE_MATS]))
+    carr = TriSurface(tops_of(surf, lambda m: m in CARRIAGE_MATS))
     del surf
     if tops:
         T = np.concatenate(tops)

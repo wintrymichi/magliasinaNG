@@ -51,6 +51,14 @@ def paved_polygons():
 def build():
     dtm = Grid.load(os.path.join(WORK, "dtm05.npz"))
     polys = paved_polygons()
+    if not polys:                                    # no Street View corridor here (a Ticino zone): no surface
+        n = 4
+        S = surface_fit.Surface(np.full((n, n), -1), np.zeros((n, n)), np.zeros((n, n), bool), np.zeros((n, n), bool),
+                                dtm.x_min, dtm.y_max, dtm.res)
+        S.save(os.path.join(WORK, "road_surface.npz"))
+        json.dump({"cells": 0}, open(os.path.join(WORK, "road_surface.json"), "w"))
+        _cache.pop("S", None)
+        return S
     x0, y0, x1, y1 = shapely.union_all([g for g, _, _ in polys]).bounds
     res = dtm.res
     c0 = max(int(np.floor((x0 - 10 - dtm.x_min) / res)), 0)

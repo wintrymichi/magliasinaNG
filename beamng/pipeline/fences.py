@@ -179,6 +179,13 @@ def build(level_dir, level_name, scene, feet=None, ground=None):
     if not os.path.exists(f):
         return
     items = json.load(open(f))
+    # the fences are the Malcantone's, measured on its panoramas: in a zone elsewhere they stood 100 km off the
+    # level, at the height of the nearest edge of its DTM (every builder level and Ticino zone had 46 of them, in
+    # 16 chunks, and 27 guard rail modules)
+    import area
+    items = [it for it in items if len(it["pts"]) and area.in_zone(*np.array(it["pts"], float)[:, :2].T).all()]
+    if not items:
+        return
     if ground is not None:
         items = rebase(items, feet, ground)
     bng.write_materials(os.path.join(level_dir, "art", "shapes", "fences", "main.materials.json"), [

@@ -13,9 +13,9 @@ import numpy as np
 import bng
 import patch_release as pr
 import road_mesh
-from config import LEVEL_NAME, REFERENCE_ZIP
+from config import ZONE, REFERENCE_ZIP
 
-LEVEL = f"levels/{LEVEL_NAME}"
+LEVEL = "levels/magliaso_pura"          # the reference zip's level
 FILES = ("art/road/", "art/shapes/roads/markings.dae", "art/shapes/props/", "art/shapes/signs/")
 GROUPS = ("main/MissionGroup/roads/markings/", "main/MissionGroup/props/")
 NEEDED = ("theTerrain.ter", "main/MissionGroup/level_objects/terrain/", "main/MissionGroup/roads/surfaces/",
@@ -74,7 +74,10 @@ def copy_files(ref, level_dir, prefix):
 
 
 def markings(level_dir, scene, new_road, new_ground, ref=None):
-    """Road paint of the released level on the new road meshes."""
+    """Road paint of the released level on the new road meshes (not in a Ticino zone: the paint of the Malcantone
+    route, with its paths)."""
+    if ZONE:
+        return
     own = ref is None
     ref = ref or Reference()
     try:
@@ -98,8 +101,23 @@ def markings(level_dir, scene, new_road, new_ground, ref=None):
             ref.close()
 
 
+VANILLA_SHAPES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "dati", "vanilla_shape_materials.json")
+
+
+def zone_materials(level_dir):
+    """A zone takes no props over, but its finishing steps place the game's street lamps, benches and delineators all
+    the same: without the definitions props.py writes for the Malcantone they were red "missing texture" models
+    (Ticino region, 2026-10-28). Write them as art/shapes/props/vanilla.materials.json."""
+    mats = [v for k, v in json.load(open(VANILLA_SHAPES)).items() if not k.startswith("_")]
+    bng.write_materials(os.path.join(level_dir, "art", "shapes", "props", "vanilla.materials.json"), mats)
+    print("zone: definitions of the game's street models written:", len(mats))
+
+
 def props(level_dir, scene, new_ground, ref=None):
-    """Street lights, poles, signs and furniture of the released level on the new ground."""
+    """Street lights, poles, signs and furniture of the released level on the new ground (not in a zone)."""
+    if ZONE:
+        zone_materials(level_dir)
+        return
     own = ref is None
     ref = ref or Reference()
     try:

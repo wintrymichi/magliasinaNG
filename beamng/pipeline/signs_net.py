@@ -28,7 +28,7 @@ import numpy as np
 import shapely
 import osm
 import signs_ch
-from config import wgs_to_local
+from config import LEVEL_NAME, wgs_to_local
 import hashlib, io, json, math, os, re, struct, sys, tempfile, time, zipfile
 from collections import Counter
 from PIL import Image
@@ -505,7 +505,7 @@ if __name__ == "__main__":
 # A finishing step of build_level.py (FINISH), on the built level; alone: python build_level.py --finish signs
 # --------------------------------------------------------------------------------------------------
 
-LEVEL = "levels/magliaso_pura"
+LEVEL = f"levels/{LEVEL_NAME}"
 L = "/" + LEVEL
 SIGN_DIR = f"{LEVEL}/art/shapes/signs/ch"
 SHAPE = f"{LEVEL}/art/shapes/props/props_signs.dae"
@@ -1119,10 +1119,11 @@ def signs_step(root, report=None):
     print(f"{len(signs)} signs planned: {Counter(s.src for s in signs)}")
     zi = bng.LevelFiles(root)
     mb, files, mats, rep, drop = build(zi, signs)
-    with tempfile.TemporaryDirectory() as d:
-        f = os.path.join(d, "props_signs.dae")
-        mb.write_dae(f, name="props_signs")
-        files[SHAPE] = open(f, "rb").read()
+    if not mb.empty():      # a zone with no sign at all (ti_m3_3): no shape and no object for it
+        with tempfile.TemporaryDirectory() as d:
+            f = os.path.join(d, "props_signs.dae")
+            mb.write_dae(f, name="props_signs")
+            files[SHAPE] = open(f, "rb").read()
     rep["flipped_triangles"] = 0
     backs = rep.pop("drop_backs")
     bare = rep.pop("bare_poles")
@@ -1148,7 +1149,7 @@ def signs_step(root, report=None):
             data = zi.read(i)
             if n == group_file:
                 lines = [l for l in data.decode("utf-8").splitlines() if l.strip() and "props_signs.dae" not in l]
-                data = ("\n".join(lines + [json.dumps(obj, separators=(",", ":"))]) + "\n").encode("utf-8")
+                data = ("\n".join(lines + ([] if mb.empty() else [json.dumps(obj, separators=(",", ":"))])) + "\n").encode("utf-8")
             elif re.fullmatch(r"levels/[^/]+/README\.md", n) and os.path.exists(LEVEL_README):
                 data = open(LEVEL_README, "rb").read()
             elif PANO_TEX.fullmatch(n):

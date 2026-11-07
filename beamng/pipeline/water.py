@@ -47,6 +47,7 @@ THICK = 1.0
 GRID_ELEMENT = 25.0
 LOW = 0.5            # m, dry land this far below the lake must not be covered
 SHORE = 0.5          # m, ground this far above the lake in a lake cell is shore (stays dry)
+MIN_LAKE_CELLS = 4000  # 0.5 m cells (1,000 m2) of surveyed lake (MU specchio_acqua) for the area to have a lake
 
 
 def lake_level():
@@ -62,7 +63,12 @@ def lake_level():
         if m.any():
             vals.append(np.asarray(dtm.a[r0:r0 + 2048])[m])
     v = np.concatenate(vals) if vals else np.array([])
-    return float(np.median(v)) if len(v) else 270.5
+    if len(v) < MIN_LAKE_CELLS:
+        # no surveyed lake (most of Switzerland, the Switzerland Builder): None. Up to v3.1.1 this was 270.5, Lake
+        # Lugano's level, and every caller took the ground at 270-272 m for the lake: a flat valley there (Basel, the
+        # Rhine) lost its dead-end roads (network.dry_ends) and its trees (forest_fill), the backdrop under 272 m was water
+        return None
+    return float(np.median(v))
 
 
 def tresa_dam():
@@ -180,6 +186,12 @@ def build(scene, cx, cy, params, block):
     """Water blocks over the lake near the terrain block (x0, y0, x1, y1); returns (level, lake
     mask grid, covered mask grid, water block mask grid) for the lake beds and the backdrop."""
     level = lake_level()
+    if level is None:                    # no lake in the area: no water blocks, empty masks
+        x0, y1 = cx - RADIUS, cy + RADIUS
+        n = int(round(2 * RADIUS / GRID))
+        empty = Grid(np.zeros((n, n), np.uint8), x0, y1, GRID)
+        print("lake: none surveyed in the area, no water blocks", flush=True)
+        return None, empty, empty, empty
     lake, h, x0, y1 = lake_mask(level, cx, cy)
     low = ~lake & (np.nan_to_num(h, nan=level + 10) < level - LOW)
     lab, n = ndi.label(low)
@@ -205,6 +217,23 @@ def build(scene, cx, cy, params, block):
           (len(rects), covered.sum() * GRID ** 2 / 1e6, (lake & near).sum() * GRID ** 2 / 1e6, flooded), flush=True)
     return level, Grid(lake.astype(np.uint8), x0, y1, GRID), Grid((lake & covered).astype(np.uint8), x0, y1, GRID), \
            Grid(covered.astype(np.uint8), x0, y1, GRID)
+
+
+def lake_shapes(lake_grid, grow=0.0):
+    """The lake's own cells (the GRID m mask build returns: cells at the lake level, joined to the lake) as shapely
+    polygons, grown by `grow` m. Where the lake's water is: the water blocks are rectangles that may also reach far
+    over land higher than the lake (their water stays under the ground there)."""
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from shapely.geometry import shape
+    m = np.asarray(lake_grid.a) > 0
+    if not m.any():
+        return []
+    tr = from_origin(lake_grid.x_min, lake_grid.y_max, lake_grid.res, lake_grid.res)
+    u = shapely.union_all([shape(g) for g, v in features.shapes(m.astype(np.uint8), mask=m, transform=tr) if v])
+    if grow:
+        u = u.buffer(grow, quad_segs=4)
+    return [p for p in shapely.get_parts(u) if not p.is_empty]
 
 
 def lake_bed(H, xs, ys, level, lake_grid, cover=None):
@@ -277,7 +306,7 @@ def water_level(zi, lv):
             for o in pl.read_items(zi, f):
                 if o.get("class") == "WaterBlock" and str(o.get("name", "")).startswith("LagoDiLugano"):
                     return float(o["position"][2])
-    raise SystemExit("no WaterBlock LagoDiLugano in the level")
+    return None                         # no lake in the level (a zone away from it: ti_1_1)
 
 
 def terrain(zi, lv):
@@ -542,6 +571,9 @@ def lake_step(root, report=None):
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
     wl = water_level(zi, lv)
+    if wl is None:
+        print("lake: no WaterBlock LagoDiLugano in the level", flush=True)
+        return 0
     ground = terrain(zi, lv)
     comm = sn.communes()
     swiss = shapely.union_all([g for _, g in comm])

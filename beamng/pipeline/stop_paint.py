@@ -35,7 +35,7 @@ import numpy as np
 import shapely
 import bng
 from config import LEVEL_NAME, lv95_to_local, local_to_lv95
-from markings_net import read_items, shape_tris, up_faces
+from markings_net import read_items, shape_tris, up_faces, tops_of
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATI = os.path.join(HERE, "..", "dati", "stop_paint.json.gz")
@@ -317,7 +317,7 @@ def stop_paint_step(root, report=None):
     lv = f"levels/{LEVEL_NAME}"
     L = f"/levels/{LEVEL_NAME}"
     S = shape_tris(zi, lv, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
-    T = np.concatenate([up_faces(t) for m, t in S.items() if m in ROAD_MATS])
+    T = tops_of(S, lambda m: m in ROAD_MATS)
     surf = TriSurface(T)
     mk_items = f"{lv}/main/MissionGroup/roads/markings/items.level.json"
     mk = [o for o in read_items(zi, mk_items) if not o.get("shapeName", "").endswith(SHAPE)]

@@ -1,0 +1,1243 @@
+{
+ "probed": "2026-11-07 17:52 UTC",
+ "cantons": {
+  "zh": {
+   "town": "Zürich",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 332,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "corso_acqua",
+       "edificio",
+       "ferrovia",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 160,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "banchina",
+       "ciminiera",
+       "debarcadero",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 121977171
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "be": {
+   "town": "Bern",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 439,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bosco_fitto",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 860,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "edificio_sotterraneo",
+       "fontana",
+       "monumento",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 123848571
+   },
+   "stac": {
+    "swissalti3d": 2,
+    "swisssurface3d-raster": 1,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 3
+   },
+   "survey_open": true
+  },
+  "lu": {
+   "town": "Luzern",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 41867971
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 6
+   },
+   "survey_open": false
+  },
+  "ur": {
+   "town": "Altdorf",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 417,
+      "kinds": [
+       "altro_bosco",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "bosco_fitto",
+       "campo_prato_pascolo",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 231,
+      "kinds": [
+       "altro",
+       "edificio_sotterraneo",
+       "fontana",
+       "monumento",
+       "muro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 6307625
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 12
+   },
+   "survey_open": true
+  },
+  "sz": {
+   "town": "Schwyz",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 478,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 260,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 18103301
+   },
+   "stac": {
+    "swissalti3d": 2,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 3
+   },
+   "survey_open": true
+  },
+  "ow": {
+   "town": "Sarnen",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 6646614
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 10,
+    "swissimage-dop10": 6
+   },
+   "survey_open": false
+  },
+  "nw": {
+   "town": "Stans",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 5665387
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 6
+   },
+   "survey_open": false
+  },
+  "gl": {
+   "town": "Glarus",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 662,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 116,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "riparo",
+       "scala_importante"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 7865139
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 8,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 12
+   },
+   "survey_open": true
+  },
+  "zg": {
+   "town": "Zug",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 577,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "ferrovia",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "specchio_acqua",
+       "strada_sentiero",
+       "vigna"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 322,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "banchina",
+       "debarcadero",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 10434900
+   },
+   "stac": {
+    "swissalti3d": 3,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 3
+   },
+   "survey_open": true
+  },
+  "fr": {
+   "town": "Fribourg",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 642,
+      "kinds": [
+       "altra_coltura_intensiva",
+       "altro_bosco",
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bosco_fitto",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "roccia",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 572,
+      "kinds": [
+       "ciminiera",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 42713515
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 8,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 8
+   },
+   "survey_open": true
+  },
+  "so": {
+   "town": "Solothurn",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 413,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "campo_prato_pascolo",
+       "edificio",
+       "ferrovia",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 158,
+      "kinds": [
+       "altra_parte_di_edificio",
+       "banchina",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "pilastro",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 31285960
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "bs": {
+   "town": "Basel",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 314,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 604,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "altro",
+       "debarcadero",
+       "edificio_sotterraneo",
+       "fontana",
+       "monumento",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 12540923
+   },
+   "stac": {
+    "swissalti3d": 2,
+    "swisssurface3d-raster": 1,
+    "swissbuildings3d_3_0": 10,
+    "swissimage-dop10": 3
+   },
+   "survey_open": true
+  },
+  "bl": {
+   "town": "Liestal",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 624,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "ferrovia",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 353,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altro",
+       "edificio_sotterraneo",
+       "fontana",
+       "monumento",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "silo_torre_gasometro",
+       "tunnel_sottopassaggio_galleria",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 33962849
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "sh": {
+   "town": "Schaffhausen",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 657,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "specchio_acqua",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 132,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "banchina",
+       "edificio_sotterraneo",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 10276702
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 10,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "ar": {
+   "town": "Herisau",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 592,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "campo_prato_pascolo",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 92,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "riparo",
+       "scala_importante",
+       "serbatoio",
+       "silo_torre_gasometro"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 8318141
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 8,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 12
+   },
+   "survey_open": true
+  },
+  "ai": {
+   "town": "Appenzell",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 558,
+      "kinds": [
+       "altro_rivestimento_duro",
+       "campo_prato_pascolo",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 123,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altro",
+       "arginatura",
+       "edificio_sotterraneo",
+       "fascia_boscata",
+       "fontana",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 3417307
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 8,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 12
+   },
+   "survey_open": true
+  },
+  "sg": {
+   "town": "St. Gallen",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 553,
+      "kinds": [
+       "altro_rivestimento_duro",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 141,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 62161216
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "gr": {
+   "town": "Chur",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 524,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 665,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altro",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "silo_torre_gasometro",
+       "tunnel_sottopassaggio_galleria",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 40293325
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 8,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "ag": {
+   "town": "Aarau",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 768,
+      "kinds": [
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "roccia",
+       "specchio_acqua",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 390,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "zoccolo_massiccio"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 76448730
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 7,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "tg": {
+   "town": "Frauenfeld",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 336,
+      "kinds": [
+       "altro_bosco",
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "bosco_fitto",
+       "corso_acqua",
+       "edificio",
+       "ferrovia",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 154,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "edificio_sotterraneo",
+       "fontana",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante",
+       "tunnel_sottopassaggio_galleria"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 34998175
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 8,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 12
+   },
+   "survey_open": true
+  },
+  "ti": {
+   "town": "Bellinzona",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 366,
+      "kinds": [
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "bacino_idrico",
+       "bosco_fitto",
+       "campo_prato_pascolo",
+       "edificio",
+       "ferrovia",
+       "giardino",
+       "marciapiede",
+       "roccia",
+       "spartitraffico",
+       "strada_sentiero",
+       "vigna"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 86,
+      "kinds": [
+       "altra_parte_di_edificio",
+       "edificio_sotterraneo",
+       "fontana",
+       "monumento",
+       "muro",
+       "ponte_passerella",
+       "riparo",
+       "rovina_oggetto_archeologico",
+       "scala_importante"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 51195361
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 6
+   },
+   "survey_open": true
+  },
+  "vd": {
+   "town": "Lausanne",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 84288669
+   },
+   "stac": {
+    "swissalti3d": 4,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 4
+   },
+   "survey_open": false
+  },
+  "vs": {
+   "town": "Sion",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 58899204
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 8,
+    "swissimage-dop10": 12
+   },
+   "survey_open": false
+  },
+  "ne": {
+   "town": "Neuchâtel",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 17987599
+   },
+   "stac": {
+    "swissalti3d": 2,
+    "swisssurface3d-raster": 2,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 2
+   },
+   "survey_open": false
+  },
+  "ge": {
+   "town": "Genève",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 330,
+      "kinds": [
+       "altra_senza_vegetazione",
+       "altro_bosco",
+       "altro_humus",
+       "altro_rivestimento_duro",
+       "corso_acqua",
+       "edificio",
+       "giardino",
+       "marciapiede",
+       "spartitraffico",
+       "strada_sentiero"
+      ]
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 530,
+      "kinds": [
+       "acqua_sotterranea_canalizzata",
+       "altra_parte_di_edificio",
+       "arginatura",
+       "debarcadero",
+       "edificio_sotterraneo",
+       "fontana",
+       "monumento",
+       "muro",
+       "pilastro",
+       "ponte_passerella",
+       "riparo",
+       "scala_importante"
+      ]
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 30525712
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 8,
+    "swissbuildings3d_3_0": 5,
+    "swissimage-dop10": 8
+   },
+   "survey_open": true
+  },
+  "ju": {
+   "town": "Delémont",
+   "survey": {
+    "ita": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     },
+     "SOSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "deu": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    },
+    "fra": {
+     "LCSF": {
+      "status": 200,
+      "n": 0,
+      "kinds": []
+     }
+    }
+   },
+   "gwr": {
+    "status": 200,
+    "bytes": 13731546
+   },
+   "stac": {
+    "swissalti3d": 8,
+    "swisssurface3d-raster": 4,
+    "swissbuildings3d_3_0": 6,
+    "swissimage-dop10": 8
+   },
+   "survey_open": false
+  }
+ }
+}

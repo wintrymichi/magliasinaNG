@@ -900,7 +900,8 @@ def new_canopy(ground, roads, p):
     """A canopy built new on the paved ground beside the road nearest the station's point, or None."""
     d, k = roads.tree.query(p)
     a = roads.T[k]
-    side = np.sign(float(np.cross(a, p - roads.P[k]))) or 1.0
+    v = p - roads.P[k]
+    side = np.sign(float(a[0] * v[1] - a[1] * v[0])) or 1.0          # numpy 2: no 2D np.cross
     nrm = np.array([-a[1], a[0]]) * side                            # from the road towards the station
     for along, across in NEW_CANOPY:
         for push in np.arange(roads.W[k] / 2 + 2.0, roads.W[k] / 2 + 14.0, 1.0):
@@ -922,9 +923,13 @@ _VILLAGES = {}
 def village_of(zi, lv, x, y):
     """Name of the village nearest (x, y): the spawn points of the level, one per village."""
     if lv not in _VILLAGES:
-        pts = [(o["name"][6:].replace("_", " ").title().replace(" D ", " d'").replace("Paese", "").strip(), o["position"][:2])
+        # a Switzerland Builder level names its spawns after the settlements too, numbered when two share one
+        # (spawn_sisikon_2) and spawn_road where none is near
+        pts = [(re.sub(r"_(\d+|village)$", "", o["name"][6:]).replace("_", " ").title().replace(" D ", " d'")
+                .replace("Paese", "").strip(), o["position"][:2])
                for o in read_items(zi, f"{lv}/main/MissionGroup/PlayerDropPoints/items.level.json")
-               if o.get("name", "").startswith("spawn_") and o["name"] not in ("spawn_mid", "spawn_pura", "spawn_magliaso")]
+               if o.get("name", "").startswith("spawn_") and o["name"] not in ("spawn_mid", "spawn_pura", "spawn_magliaso")
+               and not re.match(r"spawn_road(_\d+)?$", o["name"])]
         _VILLAGES[lv] = pts
     pts = _VILLAGES[lv]
     if not pts:
@@ -1056,7 +1061,8 @@ def fuel_stations_step(root, report=None):
             for sg in (1, -1):
                 kk = roads.tree.query(roads.P[k] + roads.T[k] * shift * sg)[1]
                 a = roads.T[kk]
-                side = np.sign(float(np.cross(a, c - roads.P[kk]))) or 1.0
+                v = c - roads.P[kk]
+                side = np.sign(float(a[0] * v[1] - a[1] * v[0])) or 1.0
                 nrm = np.array([-a[1], a[0]]) * side
                 q = roads.P[kk] + nrm * (roads.W[kk] / 2 + TOTEM_GAP + TOTEM[1] / 2 + 0.3)
                 poly = shapely.Polygon([q + a * s1 * TOTEM[0] / 2 + nrm * s2 * TOTEM[1] / 2

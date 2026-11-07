@@ -34,6 +34,7 @@ import shapely
 import osm
 import signs_net as sn
 from signs_net import Sign
+from config import ZONE
 import argparse, json, math, os, sys, tempfile, time, zipfile
 from collections import Counter
 import bng
@@ -61,7 +62,7 @@ HAZARDS = {"falling_rocks": "1.13", "animal_crossing": "1.24", "school_zone": "1
 def _buildings():
     from scipy.spatial import cKDTree
     g = json.load(gzip.open(os.path.join(DATI, "gwr_area.json.gz"), "rt", encoding="utf-8"))["buildings"]
-    B = np.array([[b["x"], b["y"]] for b in g if b.get("gstat") == 1004 and (b.get("garea") or 0) >= 30])
+    B = np.array([[b["x"], b["y"]] for b in g if b.get("gstat") == 1004 and (b.get("garea") or 0) >= 30]).reshape(-1, 2)
     return cKDTree(B)
 
 
@@ -72,10 +73,13 @@ class Ctx:
         self.ways = ways
         comm = sn.communes()
         self.swiss = shapely.union_all([g for _, g in comm]) if comm else None
-        shapely.prepare(self.swiss)
+        if self.swiss is not None:
+            shapely.prepare(self.swiss)
         self.bt = _buildings()
 
     def in_ch(self, p):
+        if self.swiss is None and ZONE:             # a Ticino zone has no commune outlines yet: all Swiss
+            return True
         return self.swiss is not None and self.swiss.contains(shapely.Point(float(p[0]), float(p[1])))
 
     def village(self, p, lim):
@@ -445,6 +449,8 @@ def signs_more_step(root, report=None):
     up = ps.level_plates(z)
     signs = plan(up)
     print(f"{len(signs)} signs planned: {Counter(s.kind for s in signs)}", flush=True)
+    if not signs:
+        return 0
     old_mats = json.loads(z.read(ps.MATERIALS)) if ps.MATERIALS in z.namelist() else {}
     world = ps.World(z, np.array([[s.x, s.y] for s in signs]))
     from scipy.spatial import cKDTree
@@ -520,6 +526,9 @@ def signs_more_step(root, report=None):
         rep["signs"].append({"x": round(float(c[0]), 2), "y": round(float(c[1]), 2), "z": round(z0, 2),
                              "facing": [round(float(nrm[0]), 3), round(float(nrm[1]), 3)],
                              "plates": [[a, b] for a, b in s.plates], "kind": s.kind, "osm": s.osm_id})
+    if mb.empty():      # planned but none placed (zone ti_0_m2: all outside the map or left out)
+        print(f"no sign placed: left out {dict(rep['left_out'])}, outside {dict(rep['outside'])}", flush=True)
+        return 0
     with tempfile.TemporaryDirectory() as d:
         f = os.path.join(d, "props_signs_v28.dae")
         mb.write_dae(f, name="props_signs_v28")

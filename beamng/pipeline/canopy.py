@@ -486,6 +486,7 @@ class TileRasters:
         a = self.z[rr, cc] - zb
         rad = crown_radius(kind, h, r, a, a + CLEAR[k])
         over = rad - d - EDGE_TOL
+        over[~np.isfinite(over)] = -9.0                 # a cell with no height (NaN: zone ti_0_m1) reaches nothing
         j = int(np.argmax(over))
         if over[j] <= 0:
             return float(over[j]), int(k[j]), 0.0, 0.0
@@ -625,15 +626,19 @@ def run(lv, verbose=True, record=None):
     stats["floating_before"] = int((before > FLOAT_TOL).sum())
     stats["buried_before"] = int((before < -BURY_TOL).sum())
     F.z = zb - sink
+    bad = ~(np.isfinite(F.x) & np.isfinite(F.y) & np.isfinite(F.z))
+    if bad.any():                                       # no ground under it (NaN): left out, never written
+        F.alive[bad] = False
+        stats["no_ground_removed"] = int(bad.sum())
     H, R = F.sizes_all()
     changes = []
-    tree_ids = np.flatnonzero(is_tree)
+    tree_ids = np.flatnonzero(is_tree & ~bad)
     tree_kd = cKDTree(np.column_stack([F.x[tree_ids], F.y[tree_ids]]))
     tx_all, ty_all = np.floor(F.x / TILE).astype(int), np.floor(F.y / TILE).astype(int)
     tiles = sorted(set(zip(tx_all.tolist(), ty_all.tolist())))
     for n_tile, (tx, ty) in enumerate(tiles):
         moved_to = []                                     # trunks placed in this tile
-        items = np.flatnonzero((tx_all == tx) & (ty_all == ty))
+        items = np.flatnonzero((tx_all == tx) & (ty_all == ty) & ~bad)
         if not len(roads.near(tx, ty)) and not len(solids.near(tx, ty)):
             continue
         T = TileRasters(tx, ty, roads, solids, props, water)
@@ -719,6 +724,8 @@ def _fix(F, T, ground, trees, moved_to, i, kind, ux, uy, limit, fam, sink, stats
         options += [(tn, sn_ * f, "scale") for f in SCALES if sn_ * f >= SCALE_FLOOR]
     steps = np.r_[0.0, np.arange(0.25, limit + 1e-6, 0.25)]
     tree = fam is not None
+    if not (np.isfinite(ux) and np.isfinite(uy)):
+        ux, uy = 1.0, 0.0
     for t, s, how in options:
         h, r = F.size(i, t, s)
         for d in steps:

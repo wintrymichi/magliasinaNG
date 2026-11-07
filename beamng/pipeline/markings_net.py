@@ -274,6 +274,12 @@ def shape_tris(zi, lv, objs, keep=None):
     return {m: np.concatenate(v) for m, v in out.items()}
 
 
+def tops_of(surf, keep):
+    """The up faces of the materials keep(m) says yes to, (0, 3, 3) when there are none (a zone with paths only)."""
+    t = [up_faces(t) for m, t in surf.items() if keep(m)]
+    return np.concatenate(t) if t else np.zeros((0, 3, 3))
+
+
 def up_faces(t):
     n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
     return t[n[:, 2] / np.maximum(np.linalg.norm(n, axis=1), 1e-12) > 0.5]

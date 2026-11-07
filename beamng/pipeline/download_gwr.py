@@ -20,10 +20,13 @@ import csv, gzip, io, json, os, sys, time, zipfile
 import numpy as np
 import requests
 import shapely
-from config import DATA, WORK, lv95_to_local
+from config import DATA, WORK, ZONE, lv95_to_local
 import area
 
-URL = "https://public.madd.bfs.admin.ch/ti.zip"
+URL = "https://public.madd.bfs.admin.ch/{}.zip"
+# Switzerland Builder: MAGLIASO_GWR_CANTONS="ur,sz" reads the extracts of those cantons (the builder takes every canton
+# the area touches); without it the canton of Ticino, as the Malcantone and the Ticino zones always had
+CANTONS = [c.strip().lower() for c in os.environ.get("MAGLIASO_GWR_CANTONS", "ti").replace(";", ",").split(",") if c.strip()]
 PINNED = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dati", "gwr_area.json.gz")
 OUT = os.path.join(WORK, "gwr.json")
 MARGIN = 150.0
@@ -31,12 +34,14 @@ FIELDS = {"EGID": int, "GKAT": int, "GKLAS": int, "GBAUJ": int, "GBAUP": int, "G
           "GAREA": int, "GSTAT": int, "GBEZ": str, "GGDENAME": str}
 
 
-def fetch():
-    dst = os.path.join(DATA, "gwr", "ti.zip")
+def fetch(canton="ti"):
+    dst = os.path.join(DATA, "gwr", f"{canton}.zip")
     os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.exists(dst) and os.environ.get("MAGLIASO_GWR_REUSE") == "1":    # the builder's cache of today's extract
+        return dst
     for attempt in range(5):
         try:
-            with requests.get(URL, stream=True, timeout=120) as r:
+            with requests.get(URL.format(canton), stream=True, timeout=120) as r:
                 r.raise_for_status()
                 with open(dst + ".part", "wb") as f:
                     for chunk in r.iter_content(1 << 20):
@@ -74,8 +79,14 @@ def read(zpath):
 
 
 def main(pin=False, add=False):
+    pin = pin or ZONE is not None                    # a Ticino zone: the pinned extract is the Malcantone's (scratch checkout)
     if pin or add or not os.path.exists(PINNED):
-        rows = read(fetch())
+        rows, seen = [], set()
+        for ct in CANTONS:
+            for r in read(fetch(ct)):
+                if r.get("egid") is None or r["egid"] not in seen:     # a building on a canton border is in one only
+                    seen.add(r.get("egid"))
+                    rows.append(r)
         date = time.strftime("%Y-%m-%d")
         if add and os.path.exists(PINNED):
             old = json.load(gzip.open(PINNED, "rt", encoding="utf-8"))

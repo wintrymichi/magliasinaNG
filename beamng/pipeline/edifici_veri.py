@@ -585,6 +585,16 @@ def edifici_veri_step(root, report=None, spec_path=SPEC):
     z_of = lambda x, y: float(ground(x, y)[0])
     rep = {"sites": 0, "facades": 0, "openings": 0, "openings_off": 0, "toned": 0, "details_off": 0, "pv": 0,
            "flower_boxes_off": 0, "walls_m": 0.0, "fences_m": 0.0, "hedges_m": 0.0, "signs": 0, "unmatched": []}
+    # the sites are houses of the Malcantone: in a zone elsewhere their walls, fences and hedges were built 100 km
+    # off the level, on the nearest edge of its ground (68 m of fence in every builder level)
+    import area
+    spec = [s for s in spec if area.in_zone(*np.array(s["outline"], float)[:, :2].T).all()]
+    if not spec:
+        print("edifici_veri: no site in this area", flush=True)
+        if report:
+            os.makedirs(os.path.dirname(os.path.abspath(report)), exist_ok=True)
+            json.dump(rep, open(report, "w"), indent=1)
+        return rep
     outlines = [shapely.Polygon(s["outline"]) for s in spec]
     every = shapely.union_all([o.buffer(4) for o in outlines])
     roads = roads_zone(zi, lv, every)

@@ -63,6 +63,9 @@ def main():
                     a = s.read(1, window=win)
                     wt = s.window_transform(win)
                     c0 = int(round((wt.c - lo0) / res)); r0 = int(round((la1 - wt.f) / res))
+                    # the rounded window can start a cell before the box (a negative slice start is an empty slice)
+                    a = a[max(0, -r0):, max(0, -c0):]
+                    c0, r0 = max(c0, 0), max(r0, 0)
                     hh, ww = min(a.shape[0], h - r0), min(a.shape[1], w - c0)
                     dst = out[r0:r0 + hh, c0:c0 + ww]
                     m = a[:hh, :ww] > 0

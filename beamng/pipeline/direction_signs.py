@@ -23,7 +23,7 @@ import bng
 import osm
 import signs_ch
 from config import LEVEL_NAME
-from markings_net import read_items, shape_tris, up_faces, CARRIAGE_MATS
+from markings_net import read_items, shape_tris, up_faces, tops_of, CARRIAGE_MATS
 from road_mesh import TriSurface
 
 REACH = 7000.0           # m of road walked from an exit
@@ -300,7 +300,7 @@ def direction_signs_step(root, report=None):
     n_ring = len(signs)
     signs += plan_junctions(ways, villages, roundabouts(ways))
     surf = shape_tris(zi, lv, read_items(zi, f"{lv}/main/MissionGroup/roads/surfaces/items.level.json"))
-    carr = TriSurface(np.concatenate([up_faces(t) for m, t in surf.items() if m in CARRIAGE_MATS]))
+    carr = TriSurface(tops_of(surf, lambda m: m in CARRIAGE_MATS))
     tops = [up_faces(t) for t in surf.values()]
     hard = [t for m, t in surf.items() if m.startswith("mp_hard_")]
     yards = TriSurface(np.concatenate([up_faces(t) for t in hard])) if hard else None
