@@ -246,7 +246,7 @@ def open_crossings(runs, gap=GAP_CROSS):
     return out
 
 
-def to_edge(P, side, road_fn, ground):
+def to_edge(P, side, road_fn, ground, found=False):
     """A rail moved onto the edge of the road as built: the line of the rail smoothed (savgol over SMOOTH_LINE m),
     then every point on the line across the road through it goes to EDGE_OUT m outside the last road face
     (searching from EDGE_IN m inside to EDGE_SEARCH m outside), that distance smoothed along the rail (a median
@@ -254,7 +254,8 @@ def to_edge(P, side, road_fn, ground):
     the height of the road's edge, smoothed over SMOOTH_Z m; and the ground under it for the posts. Where no road
     face is found along a stretch the distance of the points around it holds. P: (n, 4) x, y, z, top -> (n, 5)
     x, y, z, top, ground. v3.0: up to v2.8 road_fn held only the corridor of the cantonal road, and the rails of
-    the rest of the network stood where the panoramas put them, off the asphalt as built and not along it."""
+    the rest of the network stood where the panoramas put them, off the asphalt as built and not along it.
+    found=True: also the (n,) mask of the points that found a road face within 1.5 m of their height."""
     from scipy.ndimage import median_filter
     from scipy.signal import savgol_filter
     P, _ = resample(np.array(P, float), 0.5)
@@ -294,7 +295,29 @@ def to_edge(P, side, road_fn, ground):
     Q[:, :2] = P[:, :2] + out * (e + EDGE_OUT)[:, None]
     Q[:, 2] = ze - 0.03
     g = ground(Q[:, 0], Q[:, 1])
+    if found:
+        return np.column_stack([Q, g]), has
     return np.column_stack([Q, g])
+
+
+def edge_drops(runs, road_fn, ground, gap=6.0):
+    """The rails of drop_runs on the edge of the road as built (to_edge), without the stretches longer than `gap` m
+    where no road face lies within 1.5 m of the rail's height: there the DTM under the road (the height drop_marks
+    gives a rail) is metres off the road as built, and the rail stood buried beside it (Axenstrasse, 2026-11-07: 45
+    modules 10 m under a road that climbs a ramp the DTM does not show; to_edge left them at the DTM's height). A
+    shorter stretch (a drive, a gap of the road faces) is bridged, and what is left must be RULE_MIN m long."""
+    from scipy.ndimage import binary_closing
+    out, cut = [], 0.0
+    for r in runs:
+        Q, has = to_edge(r["pts"], r["side"], road_fn, ground, found=True)
+        k = int(round(gap / 0.5))                    # the points of to_edge are 0.5 m apart
+        pad = np.zeros(k, bool)
+        has = binary_closing(np.r_[pad, has, pad], structure=np.ones(k))[k:-k] | has
+        kept = [p for p in pieces(has) if len(p) >= 2 and length(Q[p]) >= RULE_MIN]
+        out += [{**r, "pts": Q[p]} for p in kept]
+        cut += length(Q) - sum(length(Q[p]) for p in kept)
+    print("guard rails with no road face at their height, left out: %.0f m" % cut, flush=True)
+    return out
 
 
 def join_runs(runs, gap=JOIN_GAP):
@@ -884,8 +907,9 @@ def build(level_dir, level_name, scene, road_fn=None):
             road_fn = edge_fn(level_dir, extra=near)
         drops = drop_runs(level_dir, marks, zc, frames, road_fn=road_fn)
         if road_fn is not None:
-            for r in mw + drops:
+            for r in mw:
                 r["pts"] = to_edge(r["pts"], r["side"], road_fn, dtm.sample)
+            drops = edge_drops(drops, road_fn, dtm.sample)
         drops = open_crossings(drops)
         extra += mw + drops
         print("motorway guard rails: %d runs, %.1f km" % (len(mw), sum(length(r["pts"]) for r in mw) / 1000))

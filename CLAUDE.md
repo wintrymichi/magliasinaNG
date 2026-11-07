@@ -2142,6 +2142,24 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   to_edge then pushed the rail across the yard: never close a gap over a blocked station. Its synthetic test: bng.write_dae
   subtracts the origin itself (the test subtracted it twice), and a test road of two huge triangles was dropped by
   edge_fn's centroid filter (make synthetic roads of small faces).
+  The first Axenstrasse build with them: 97 % of the 3,037 modules stood within 1.5 m of a road's height, on the side
+  where the ground falls. 45 stood 10 m under a road climbing a ramp (Sisikon, road as built 462-468 m, the DTM under
+  it 455 m): drop_marks takes a rail's height from the DTM across the carriageway, network_surface builds the road on
+  a smoothed line that rejects such DTM data, and to_edge, finding no road face within 1.5 m of the rail's height,
+  left the rail at the DTM's. guardrail_mesh.edge_drops cuts the stretches over 6 m with no face at the rail's height.
+  Check rails against the road heights (scratch rails_side.py: ground beyond the rail and the nearest road's z), not
+  only in plan.
+- The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at
+  the height of the nearest edge of the zone's DTM (1,383 m on the Axenstrasse): the panorama fences (fences.build: 46
+  fences in 16 chunks and 27 guard rail modules), the edifici_veri sites (68 m of fence), the roadside walls of the
+  cantonale (walls.build_roadside: 6 shapes whose vertices were all NaN, because roadheight is empty in a zone) and the
+  understory hedges, street-photo hedges and photo shrubs (vegetation.py: about 7,000 forest items). The Ticino region
+  hid it (its slices clip everything to the zone cores). Found by listing every object, forest item and shape vertex box
+  of a built zip outside its terrain block (scratch scene_bounds.py, dae_bounds.py; the shapes' position arrays are
+  "g-pa", "g1-pa"...); all now dropped by area.in_zone. The NaN roadside walls are also the likely source of the 909
+  NaN terrain heights of ti_0_m1 ("terrain post 0"): adjust_terrain_roadside lowered and raised vertices to NaN feet
+  and tops. build_roadside takes np.fmin/fmax with the empty road height now (the measured foot and top).
+  After a build of a new area, list what lies outside its terrain block before anything else.
 - Cantons without an open survey on geodienste.ch (probe 2026-11-07, builder_probe.yml): LU, OW, NW, VD, VS, NE, JU;
   every open canton answers av_0/ita in the Italian vocabulary the pipeline reads. In a closed canton the land cover
   raster was 'none' everywhere, which the pipeline reads as "not Switzerland": no measured trees, no lake, no rivers, no
