@@ -2165,6 +2165,9 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   the rails hung over and hid them: beside the top of a survey stone wall the beam and its wall are stone too
   (stone_runs). The DAE material symbols are "<name>-mat": a test of tunnels.dae_triangles' material against
   "mp_wall_stone" found nothing (stone_m 0) until the suffix was taken off.
+  Full build with paved_edges and rail_walls (run 42419181586, concrete only): 3,220 rail items, none over 0.25 m, 853
+  held on 2.25 km of wall, 7 too_deep; paved_edges raised 301,246 vertices (edges over 0.15 m 79 % -> 11 %), but
+  25.6 % of the modules still hung before rail_walls: the rails stand where paved_edges cannot raise the ground.
 - Asphalt climbing the rock faces of the Axenstrasse (renders of the rails): 3,718 paved faces over 3 m tall and steep
   (mp_road_asphalt 1,188, mp_hard_bank 916, mp_sidewalk 787, mp_hard_asphalt 737), found by listing the steep faces of
   roads/surfaces and clustering them (scratch steep_paved.py), then the faces by shape, material and height band at each
@@ -2177,6 +2180,15 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   (over_gallery, the cut in plan, is for the skin, walls and fences). network_mesh.gallery_footprints (half width +
   GALLERY_CLEAR) are holes of the survey polygons now, like the bridge decks, and the slivers left beside them go.
   Neither can be tried locally (no swissTLM3D in the cloud's DATA, gallery_footprints is empty there): only a build.
+  The build with both (run 42419181586): 2,721 steep paved faces left, over 20 m 85 -> 18, carriageway 1,188 -> 502.
+  1,774 of them stood within 30 m of a tunnel or gallery mesh (counted against the vertices of the level's tunnels
+  shapes): thin asphalt spikes 10-20 m up the rock beside the portals, single vertices and small groups at the
+  carriageway's edge (top vertices at 0.93-0.99 of the AI road's half width). A render with roads/surfaces emptied (a
+  cp -al copy with an empty items.level.json) tells them from the terrain: the big smooth grey sheets of the "after"
+  views were the bare cliff (terrain), not asphalt. Third try (network_mesh OVERHANG_DZ): a cell of a line that runs
+  more than 2 m under the DTM within 15 m along it is never lifted onto the ground, and a vertex takes the floor of the
+  nearest paved cell (a polygon's edge vertex lies in a cell outside it, which kept the old 1 m floor: the rock).
+  Away from the tunnels 947 faces are left, 39 over 8 m: steep yards (mp_hard_bank) and sidewalks on the DTM.
 - The reports of a build are in pipeline coordinates, the zip's level is moved by recenter.py (levels/<name>/recenter.json
   dx, dy; Axenstrasse +21234, -106065): add them before looking a reported point up in the zip.
 - The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at

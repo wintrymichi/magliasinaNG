@@ -100,6 +100,18 @@ SUNK = 0.75            # m, deepest a survey surface may lie under the lowest ba
 # overhang is an outlier there) unless the ground stands over it everywhere within OVERHANG_REACH m (a line that
 # really runs too low); the vertices of its mesh the same (mesh_tile).
 OVERHANG_REACH = 4.0
+# Second Axenstrasse build: the tall blades were gone (faces over 20 m: 85 -> 18), but 1,774 of the 2,721 steep paved
+# faces left stood within 30 m of a tunnel or gallery: thin spikes of asphalt 10-20 m up the rock beside the portals,
+# single vertices and small groups at the carriageway's edge. A vertex on a polygon's edge falls in a cell outside the
+# polygon, which took the old 1 m floor (the rock), and the cells at a portal or beside the cliff found no lower ground
+# within OVERHANG_REACH either. Now (zones) a cell whose line runs more than OVERHANG_DZ m under the bare ground at a
+# station within OVERHANG_ALONG m along it (the highest DTM on its axis and a third of its width either side: a rock
+# overhang, a portal, a gallery's end) is never lifted more than OVERHANG_DZ onto the ground, up to OFF_LINE half widths
+# beside its line and NEAR_PAST m past its end (nor left to the ground there), and every vertex takes the floor of the
+# paved cell nearest to it (mesh_tile). A line that runs on the ground (a hairpin's lower leg) keeps the floor as it was.
+OVERHANG_DZ = 2.0
+OVERHANG_ALONG = 15.0
+NEAR_PAST = 8.0
 # The survey's carriageway under a gallery (swissTLM3D KUNSTBAUTE Galerie, a line network.SKIP leaves out) was meshed on
 # swissALTI3D, which is the gallery's roof and the slope over it there: asphalt on the roofs of the Oelberg and
 # Tellsplatte galleries with faces down their sides. tunnels.py builds a gallery's road, so the survey's polygons are cut
@@ -577,9 +589,14 @@ class Network:
             Ds = np.where(np.isnan(Ds), np.nanmean(Ds), Ds)
         Dlo = ndi.minimum_filter(Ds, size=5) - SUNK             # lowest bare ground within 1 m
         on_line = None
+        under = np.zeros((H, W), bool)
         if ZONE:                                               # OVERHANG_REACH: the carriageway keeps its line
             on_line = m & (G >= 0) & (U <= 1.0) & (E <= 1.0)
             Dlo = np.where(on_line, ndi.minimum_filter(Ds, size=2 * int(round(OVERHANG_REACH / RES)) + 1) - SUNK, Dlo)
+            own = m & (G >= 0) & (U <= OFF_LINE) & (E <= NEAR_PAST) & (Dlo - Z > OVERHANG_DZ)
+            if own.any():                                      # OVERHANG_DZ: under the rock, no lift at all
+                under = own & self._under_rock(np.where(own, G, -1), A, dtm)
+                Dlo = np.where(under, -np.inf, Dlo)
         Ds = ndi.gaussian_filter(Ds, 4.0)
         # a survey polygon reaching beyond the carriageway of its line onto ground far above or
         # below it (a terrace, a yard behind a wall), or past the end of its line where the line's
@@ -588,10 +605,10 @@ class Network:
         if self.bridge_ends is not None:
             dq, _ = self.bridge_ends.query(np.column_stack([np.tile(Xc, H), np.repeat(Yc, W)]), distance_upper_bound=BRIDGE_HEAD)
             at_bridge = (G >= 0) & np.isfinite(dq).reshape(H, W)
-        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge
+        off = m & ((U > OFF_LINE) | (E > 1.0)) & (np.abs(Z - Ds) > FILL_OFF) & ~at_bridge & ~under
         if getattr(self, "explain", False):           # fix_probe.py: why a cell left its line
             self.tile_explained = dict(Z=Z.copy(), G=G.copy(), U=U.copy(), E=E.copy(), A=A.copy(), Ds=Ds.copy(),
-                                       Dlo=Dlo.copy(), off=off.copy(), at_bridge=at_bridge.copy())
+                                       Dlo=Dlo.copy(), off=off.copy(), at_bridge=at_bridge.copy(), under=under.copy())
         Z[off] = np.nan
         G[off] = -1
         # squares and car parks: smoothed DTM, corrected to meet the roads around
@@ -642,7 +659,31 @@ class Network:
         Z = relax_seams(Z, G, owner, LR, LD, main_cell | pin, (fold_r | pin_r, fold_d | pin_d), pin)
         S = surface_fit.Surface(owner, np.nan_to_num(Z), LR, LD, x0, y1, RES)
         S.on_line = on_line                    # zones: the cells that keep their line's height (mesh_tile)
+        S.floor, S.mask = (Dlo, m) if ZONE else (None, None)   # zones: the floor of every cell (mesh_tile)
         return S, ids
+
+    def _under_rock(self, G, A, dtm):
+        """bool like G (zones): the cells whose height comes from a line (G, at A m along it) that runs more than
+        OVERHANG_DZ m under the bare ground at a station within OVERHANG_ALONG m along it. The ground of a station is
+        the highest DTM on its axis and a third of its width either side (network_surface fits the line to the median
+        across, which keeps the line on the road under an overhang)."""
+        out = np.zeros(G.shape, bool)
+        for g in np.unique(G[G >= 0]):
+            s = self.segs[int(g)]
+            sl = slice(s["first"], s["first"] + s["n"])
+            x, y, w = self.x[sl], self.y[sl], self.w[sl]
+            top = np.full(len(x), -np.inf)
+            for f in (-1 / 3, 0.0, 1 / 3):
+                top = np.fmax(top, dtm.sample(x + f * w * self.nx[sl], y + f * w * self.ny[sl]))
+            fl = self.arc[sl][top - self.z[sl] > OVERHANG_DZ]
+            if not len(fl):
+                continue
+            sel = G == g
+            aa = A[sel]
+            i = np.searchsorted(fl, aa)
+            d = np.minimum(np.abs(aa - fl[np.clip(i - 1, 0, len(fl) - 1)]), np.abs(fl[np.clip(i, 0, len(fl) - 1)] - aa))
+            out[sel] = np.nan_to_num(d, nan=np.inf) <= OVERHANG_ALONG
+        return out
 
 
 def relax_seams(Z, G, owner, LR, LD, fixed_cells=None, folds=None, pinned=None):
@@ -815,19 +856,21 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
                                 X0 - MARGIN, Y0 - MARGIN + 2.0, RES)
     sub, _, _ = dtm.window(X0 - MARGIN, Y0 - MARGIN, X1 + MARGIN, Y1 + MARGIN, pad=4)
     lo = Grid(ndi.minimum_filter(np.asarray(sub.a, np.float32), size=5) - SUNK, sub.x_min, sub.y_max, sub.res)
-    on_line = getattr(S, "on_line", None)
-    if on_line is not None and on_line.any():          # zones: OVERHANG_REACH on the carriageways of the lines
-        wide = Grid(ndi.minimum_filter(np.asarray(sub.a, np.float32), size=2 * int(round(OVERHANG_REACH / sub.res)) + 1)
-                    - SUNK, sub.x_min, sub.y_max, sub.res)
+    cell_floor, mask = getattr(S, "floor", None), getattr(S, "mask", None)
+    if cell_floor is not None and mask is not None and mask.any():
+        # zones: a vertex takes the floor of the paved cell nearest to it (OVERHANG_REACH and OVERHANG_DZ hold for the
+        # vertices too: a vertex on a polygon's edge lies in a cell outside it, whose own floor was the rock)
+        _, (ri, ci) = ndi.distance_transform_edt(~mask, return_indices=True)
+        nearest = cell_floor[ri, ci]
 
         def floor(x, y):
-            x, y = np.asarray(x, np.float64), np.asarray(y, np.float64)
+            x, y = np.atleast_1d(np.asarray(x, np.float64)), np.atleast_1d(np.asarray(y, np.float64))
             r = np.floor((S.y_max - y) / S.res).astype(np.int64)
             c = np.floor((x - S.x_min) / S.res).astype(np.int64)
-            ok = (r >= 0) & (r < on_line.shape[0]) & (c >= 0) & (c < on_line.shape[1])
-            keep = np.zeros(np.shape(x), bool)
-            keep[ok] = on_line[r[ok], c[ok]]
-            return np.where(keep, wide.sample(x, y), lo.sample(x, y))
+            ok = (r >= 0) & (r < nearest.shape[0]) & (c >= 0) & (c < nearest.shape[1])
+            out = lo.sample(x, y)
+            out[ok] = nearest[r[ok], c[ok]]
+            return out
     else:
         floor = lo.sample
     sub.a = ndi.gaussian_filter(np.asarray(sub.a, np.float32), 0.6)
