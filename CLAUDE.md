@@ -2162,8 +2162,10 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   they share the console now (own process group, so Ctrl+C reaches only the app). start.ps1 must not have a param()
   block: an advanced script refuses "--no-browser" as an unknown parameter; it reads $args.
 - cli --until first cancelled the next step once it had started (a race): the Manager stops after the named step.
-- The app's time estimate (1.2 + 0.065 h per km2) comes from the dense Lugano zone: Sisikon (32.8 km2 of mountains and
-  lake) took 38 min against 3.3 h. The build time follows the buildings and roads, not the area.
+- The app's first time estimate (1.2 + 0.065 h per km2) came from the dense Lugano zone: Sisikon (32.8 km2 of mountains
+  and lake) took 38 min against 3.3 h. The build time follows the buildings and roads, not the area, and the app cannot
+  know them before the downloads: it now shows a range, 0.25 + 0.012 h/km2 (Sisikon, Vitznau) to 0.4 + 0.07 h/km2 (the
+  Lugano zone); Montreux, a town of 8.7 km2 without survey, took 36 min.
 - wmts.geo.admin.ch and api3.geo.admin.ch are blocked from the cloud: the app's map tiles and search cannot be seen or
   screenshotted here (the page renders with a grey map); they work on a user's PC.
 - far_trees prints "<kept> of <measured> ... left out by the thinning": the first number is what stays (not a bug).

@@ -150,7 +150,12 @@ function showInfo(c) {
   if (c.side_x_m) html += `<dt>Size</dt><dd>${(c.side_x_m / 1000).toFixed(2)} × ${(c.side_y_m / 1000).toFixed(2)} km · ${h(c.km2)} km²</dd>`;
   if (c.canton_names) html += `<dt>Cantons</dt><dd>${esc(c.canton_names.join(", ") || "–")}</dd>`;
   if (c.osm_extracts) html += `<dt>Map data</dt><dd>${c.osm_extracts.length} OpenStreetMap extract${c.osm_extracts.length > 1 ? "s" : ""}</dd>`;
-  if (c.estimate_hours !== undefined) html += `<dt>Build time</dt><dd>about ${c.estimate_hours} h <small>(on a 4-core PC)</small></dd>`;
+  if (c.estimate_hours !== undefined) {
+    const fmtH = (h) => (h < 1 ? `${Math.max(10, Math.round(h * 6) * 10)} min` : `${h} h`);
+    const lo = c.estimate_hours_low;
+    const span = lo !== undefined && lo < c.estimate_hours ? `${fmtH(lo)} to ${fmtH(c.estimate_hours)}` : `about ${fmtH(c.estimate_hours)}`;
+    html += `<dt>Build time</dt><dd>${span} <small>(mountains to a dense town, on a 4-core PC)</small></dd>`;
+  }
   if (c.estimate_disk_gb !== undefined) html += `<dt>Disk</dt><dd>about ${c.estimate_disk_gb} GB</dd>`;
   html += "</dl>";
   for (const e of c.errors || []) html += `<p class="msg err">${esc(e)}</p>`;

@@ -47,7 +47,7 @@ As soon as an area is drawn the app checks it and shows:
 
 - its size (from 0.5 to 8.4 km a side) and the cantons it touches;
 - the OpenStreetMap extracts it needs (Switzerland, and a neighbour country's when the area reaches the border);
-- an estimate of the build time and of the disk space;
+- an estimate of the build time (a range: from mountains and lakes to a dense town of the same size) and of the disk space;
 - a warning when part of the area lies outside Switzerland (at least half must be inside) or in a canton whose cadastral survey is not open (see [Cantons and their data](#cantons-and-their-data)), and what that means for the level.
 
 **2. Build it.** Give the level a name (it is the name you will see in the game) and press *Build this area*. The build runs step by step in the background, one build at a time (more go in a queue). Each build shows its current step, how many steps are left and the remaining time, which the app corrects as it sees how fast your computer is. *Log* shows what the pipeline is doing. *Stop* stops a build; *Resume* goes on from the step it stopped in, also after a restart of the PC or of the app. When the build is done, *Install in BeamNG* copies the zip into the game's mods folder (the app does it by itself when the setting is on), *Show zip* opens its folder and *Delete* removes the build (the downloads stay in the shared cache for the next area).
@@ -75,7 +75,7 @@ Everything below is made for any area by the pipeline of the Malcantone map, fro
 
 - **Terrain:** a 12.3 × 12.3 km block (8,192 × 8,192 samples, 1.5 m apart) from swissALTI3D, the area in its middle, and the mountains to the horizon around it (swissALTI3D 2 m and Copernicus GLO-30 out to 25 km). The ground layers come from the land cover (meadow, wood, rock, scree, gravel, water, paved ground) with colours measured on the aerial photos; grass grows on the meadows, the woods have an undergrowth and a forest floor of their own, steep cuts and banks get a skin of rock and earth.
 - **Roads and paths:** every swissTLM3D road and path, from motorways to 1 m trails, at the widths the cadastral survey measures, with banks, kerbs, pavements, yards and squares, traffic islands and roundabouts, bridges with their deck and parapets, road paint by the Swiss rules (centre and edge lines, give way and stop lines, crossings, motorway lanes), wear and patches on the asphalt, road signs and direction signs, street lamps that light the road at night, delineator posts, traffic lights where OpenStreetMap maps them, car parks with painted spots.
-- **Guard rails:** on the motorways, wherever the ground falls away beside a road (at least 2 m within 4 m of the edge, 3 m on narrow roads, not in villages or where a yard, a parapet or a building is there), and wherever OpenStreetMap maps one.
+- **Guard rails:** on the motorways, wherever the ground falls away beside a road (2 m or more, steeper than 1:2, within 6 m of the edge; 3 m beside the narrowest roads; not in villages, nor where a yard, a wall or a building is beside the road), and wherever OpenStreetMap maps one.
 - **Tunnels and galleries:** every swissTLM3D road and railway tunnel that joins the level's roads or tracks, with its portals and name, lining, kerbed walkways, lights, lit escape signs, SOS niches, emergency exits and jet fans in the long tubes, and the AI roads through it. The avalanche and rock-fall galleries of the mountain roads are open to the valley, with their pillars, roof slab and parapet.
 - **Buildings:** every swissBUILDINGS3D building with its real roof (tiles, slate, metal, ridge caps), façades with windows, doors and shutters by the period of construction (Register of Buildings), gutters, aerials, solar panels, balconies with flower boxes, shop fronts, canopies on posts, and the buildings the 3D model lacks taken from the survey.
 - **Trees and woods:** single trees measured on the surface model (swissSURFACE3D), with their height and kind (broadleaf or conifer), woods to the horizon, vineyards.
@@ -126,7 +126,7 @@ Measured on GitHub's runners (4 cores, 16 GB of memory), every step from the fir
 | Sisikon, small test area, on Windows | 0.9 km² | 18 min | 0.28 GB |
 | Lugano (Ticino zone ti_1_0), dense town | 64 km² | about 5 h | 1.9 GB |
 
-A dense town takes far longer than mountains and lake of the same size: the build time grows with the buildings and roads, not with the area. The app's estimate is made for dense towns and is on the safe side; the remaining time shown during a build follows the real speed of the steps.
+A dense town takes far longer than mountains and lake of the same size: the build time grows with the buildings and roads, not with the area. So the app gives the build time as a range, from mountains to a dense town, and the remaining time shown during a build follows the real speed of the steps. On a slow internet connection add the downloads: a few GB per area.
 
 ## Command line
 
@@ -178,7 +178,7 @@ Every level is called `ch_<name>` in the game's files, so levels of different ar
 - **Cantons without an open survey** (Jura, Lucerne, Neuchâtel, Nidwalden, Obwalden, Vaud, Valais) have no yards, pavements, traffic islands or survey walls; their road widths come from the road class.
 - **The data measured from photos** for the Malcantone is not there for other areas (see [Detail compared with the Malcantone](#detail-compared-with-the-malcantone)); there are no time trials yet.
 - **Tested on GitHub's Linux and Windows runners**, from the launcher to the zip. macOS is not tested yet, and the levels of the builder have not been driven in the game yet (the Malcantone and the Ticino zones made by the same pipeline have).
-- **The build time estimate** is made for dense towns: mountain and lake areas take a fraction of it.
+- **The build time** is given as a range before a build, because it depends on how many buildings and roads the area has, which is only known once the data is downloaded.
 
 ## For developers
 

@@ -785,6 +785,13 @@ def stage_water(scene, ctx):
         boxes = [shapely.box(o["position"][0] - o["scale"][0] / 2, o["position"][1] - o["scale"][1] / 2,
                              o["position"][0] + o["scale"][0] / 2, o["position"][1] + o["scale"][1] / 2)
                  for o in scene.groups.get("MissionGroup/level_objects/Water", []) if o.get("class") == "WaterBlock"]
+        from config import ZONE
+        if ZONE:
+            # the lake's blocks may reach kilometres over the land higher than the lake (the Axenstrasse: 6 blocks over
+            # 202 km2 for 34 km2 of lake near the terrain, Montreux one block of 155 km2), and cut with them none of the
+            # Axenstrasse's 37 surveyed rivers kept any water. In a zone the rivers stop at the lake's own cells (GRID m
+            # at the lake level) and one cell more (the shore lies within it); the Malcantone keeps its cut.
+            boxes = water.lake_shapes(ctx["lake_grid"], grow=water.GRID)
         at_grade = [p["geom"] for p in net.polys]
         crossings = [f for _, f in getattr(net, "deck_feet", [])] + [g for g, _, _ in roadheight.paved_polygons()]
         fn = ctx.get("road_mesh_fn")

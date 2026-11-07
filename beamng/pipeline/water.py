@@ -219,6 +219,23 @@ def build(scene, cx, cy, params, block):
            Grid(covered.astype(np.uint8), x0, y1, GRID)
 
 
+def lake_shapes(lake_grid, grow=0.0):
+    """The lake's own cells (the GRID m mask build returns: cells at the lake level, joined to the lake) as shapely
+    polygons, grown by `grow` m. Where the lake's water is: the water blocks are rectangles that may also reach far
+    over land higher than the lake (their water stays under the ground there)."""
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from shapely.geometry import shape
+    m = np.asarray(lake_grid.a) > 0
+    if not m.any():
+        return []
+    tr = from_origin(lake_grid.x_min, lake_grid.y_max, lake_grid.res, lake_grid.res)
+    u = shapely.union_all([shape(g) for g, v in features.shapes(m.astype(np.uint8), mask=m, transform=tr) if v])
+    if grow:
+        u = u.buffer(grow, quad_segs=4)
+    return [p for p in shapely.get_parts(u) if not p.is_empty]
+
+
 def lake_bed(H, xs, ys, level, lake_grid, cover=None):
     """Terrain under the lake: under the water, deeper away from the shore (a shallow beach of 0.25 m
     sloping 1:4 down to 1 m + 10 %, at most 6 m). Where the ground is at the water already (lower than
