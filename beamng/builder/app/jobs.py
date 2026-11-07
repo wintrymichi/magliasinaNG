@@ -363,7 +363,9 @@ class Manager:
         b.log(f"$ {' '.join(args)}")
         kw = {}
         if sys.platform == "win32":
-            kw["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | 0x08000000      # no console window
+            # its own process group (Ctrl+C reaches the app, which stops the step itself), but the app's console: when
+            # that window is closed, Windows ends the step with it (with CREATE_NO_WINDOW it would run on alone)
+            kw["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         with open(os.path.join(b.folder, "build.log"), "a", encoding="utf-8", errors="replace") as logf:
             p = subprocess.Popen(args, cwd=cwd, env=env or self.env(b), stdout=logf, stderr=subprocess.STDOUT,
                                  stdin=subprocess.DEVNULL, **kw)
@@ -379,6 +381,8 @@ class Manager:
     def _step(self, b, st):
         k = st["kind"]
         pipe = os.path.join(b.code, "pipeline")
+        if k in ("stages", "finish_placeholder", "finish", "package"):
+            self.step_reference(b)               # a build moved to another PC or data folder: the cache may lack it
         if k == "copy":
             return self.step_copy(b)
         if k == "script":
@@ -430,6 +434,18 @@ class Manager:
         shutil.copytree(os.path.join(BEAMNG, "ticino", "dati"), os.path.join(dst, "ticino", "dati"), ignore=ign)
         os.makedirs(os.path.join(b.root, "logs"), exist_ok=True)
         b.log(f"pipeline copied to {dst}")
+        return True
+
+    def update_code(self, b):
+        """The app's pipeline code into a stopped build (after an update of the app): only beamng/pipeline; the data
+        files (dati) stay as the build's downloads left them."""
+        dst = os.path.join(b.code, "pipeline")
+        if not os.path.isdir(dst):
+            return False
+        shutil.rmtree(dst)
+        shutil.copytree(os.path.join(BEAMNG, "pipeline"), dst,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".zones_root"))
+        b.log(f"[{now()}] pipeline code updated from {os.path.join(BEAMNG, 'pipeline')}")
         return True
 
     def step_reference(self, b):

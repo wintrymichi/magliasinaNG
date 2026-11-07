@@ -2,10 +2,11 @@
 
     python -m app.cli check  S,W,N,E
     python -m app.cli build  "Name" S,W,N,E [--data DIR] [--until STEP]
-    python -m app.cli resume <build id>     [--data DIR] [--until STEP]
+    python -m app.cli resume <build id>     [--data DIR] [--until STEP] [--update-code]
 
 The same manager and steps as the app; the log goes to the console as well. --until stops after that step (a key as
 the build lists them: stages, finish:tunnels, package, ...), so a long build can be split (GitHub's 6 h per job).
+--update-code copies the app's pipeline code into the build before it goes on (its downloaded data stay).
 """
 import json
 import os
@@ -44,6 +45,8 @@ def main(argv):
         i = argv.index("--data")
         data = argv[i + 1]
         argv = argv[:i] + argv[i + 2:]
+    update = "--update-code" in argv
+    argv = [a for a in argv if a != "--update-code"]
     if "--until" in argv:
         i = argv.index("--until")
         until = argv[i + 1]
@@ -61,6 +64,8 @@ def main(argv):
         b = m.create(argv[1], [float(v) for v in argv[2].split(",")], start=False)
     else:
         b = m.builds[argv[1]]
+        if update:
+            m.update_code(b)
     b.state["until"] = until
     b.save()
     m.start(b.id)
