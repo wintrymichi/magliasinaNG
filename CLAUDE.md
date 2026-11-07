@@ -2151,6 +2151,11 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   EINZELBAUM and GEBAEUDE_FOOTPRINT): download_tlm looked for one file, logged "not in the package", and the Vitznau
   and Montreux builds had no swissTLM3D land cover and no lake (water.lake_level measures the specchio_acqua cells). It
   now reads <layer>, <layer>_OST and <layer>_WEST. Read the package's file list in the log before calling a layer missing.
+- No river had water on the Axenstrasse (rivers: surveyed 37, 6.5 ha -> polygons 0), Vitznau kept 1 of 12: rivers.surfaces
+  cuts the rivers with the lake's WaterBlocks, and the blocks are rectangles that may reach kilometres over land higher
+  than the lake (6 blocks over 202 km2 for 34 km2 of lake; Montreux one block of 155 km2). In the Malcantone the low
+  Tresa valley kept them small. In a zone the rivers stop at the lake's own cells + one cell (water.lake_shapes).
+  Read the "rivers: {...}" line of a build log: "polygons" is what got water.
 - Python environment (micromamba, conda-forge, environment.yml): exact pins of rasterio and pyogrio did not solve
   together (one GDAL): pin numpy/scipy/shapely/scikit-image minors only. conda-forge's pyogrio has no pyogrio.libs, where
   ogr_tin looked for GDAL: extract_buildings stopped on Windows; it now looks in the environment's prefix too. A
@@ -2165,7 +2170,7 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
 - The app's first time estimate (1.2 + 0.065 h per km2) came from the dense Lugano zone: Sisikon (32.8 km2 of mountains
   and lake) took 38 min against 3.3 h. The build time follows the buildings and roads, not the area, and the app cannot
   know them before the downloads: it now shows a range, 0.25 + 0.012 h/km2 (Sisikon, Vitznau) to 0.4 + 0.07 h/km2 (the
-  Lugano zone); Montreux, a town of 8.7 km2 without survey, took 36 min.
+  Lugano zone); Montreux, a town of 8.7 km2, took 31 min with the swissTLM3D land cover (36 min before it, with none).
 - wmts.geo.admin.ch and api3.geo.admin.ch are blocked from the cloud: the app's map tiles and search cannot be seen or
   screenshotted here (the page renders with a grey map); they work on a user's PC.
 - far_trees prints "<kept> of <measured> ... left out by the thinning": the first number is what stays (not a bug).

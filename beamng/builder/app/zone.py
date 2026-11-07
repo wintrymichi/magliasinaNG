@@ -141,8 +141,8 @@ def check(bbox):
     out["osm_extracts"] = [SWISS_OSM] + [u for u, _, g in R["neighbours"] if g.intersects(wide)]
     km2 = sx * sy / 1e6
     # build time on a 4-core PC, measured on GitHub's runners from the launcher to the zip: it follows the buildings and
-    # roads, not the area. Mountains and lake (Sisikon, 32.8 km2: 38 min; Vitznau, 17 km2: 33 min) to a dense town
-    # (Montreux, 8.7 km2: 36 min; the Lugano zone, 64 km2: about 5 h). The remaining time of a running build follows
+    # roads, not the area. Mountains and lake (Sisikon, 32.8 km2: 38 min; Vitznau, 17 km2: 39 min) to a dense town
+    # (Montreux, 8.7 km2: 31 min; the Lugano zone, 64 km2: about 5 h). The remaining time of a running build follows
     # the real speed of its steps (jobs.Build.public).
     out["estimate_hours_low"] = round(0.25 + 0.012 * km2, 1)
     out["estimate_hours"] = round(0.4 + 0.07 * km2, 1)

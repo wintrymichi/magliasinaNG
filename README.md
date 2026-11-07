@@ -64,7 +64,7 @@ As soon as an area is drawn the app checks it and shows:
 ## What you need
 
 - A 64-bit PC with Windows 10 or 11, Linux, or macOS (Intel or Apple silicon).
-- 16 GB of memory; 32 GB is comfortable. With less than 20 GB the app runs fewer processes at once.
+- 16 GB of memory; 32 GB is comfortable. The test areas below needed at most 5 GB, a dense town of 64 km² about 13 GB at its peak. With less than 20 GB the app runs fewer processes at once.
 - 15 to 50 GB of free disk per build, plus the shared download cache (the terrain tiles and extracts one area downloaded are reused by the next one nearby). The app warns before a build when it sees less room than its estimate.
 - An internet connection: an area downloads a few GB (swisstopo tiles, the cadastral survey, swissTLM3D, OpenStreetMap, the Register of Buildings).
 - BeamNG.drive 0.40 to play the levels. They use the game's own Italy textures for asphalt, stone, plaster and the like, as the Malcantone map does.
@@ -123,6 +123,8 @@ Measured on GitHub's runners (4 cores, 16 GB of memory), every step from the fir
 | Area | Size | Time | Level zip |
 |---|---|---|---|
 | Axenstrasse and Sisikon (Uri, Schwyz): mountains, the Urnersee, 44 road and rail tunnels and galleries | 32.8 km² | 38 min | 0.86 GB (3.8 GB unpacked) |
+| Vitznau and Gersau (Lucerne without open survey, Schwyz): Lake Lucerne, the Rigi's slopes | 17 km² | 39 min | 0.56 GB (2.2 GB unpacked) |
+| Montreux and Chillon (Vaud, no open survey): a lakeside town, Lake Geneva, the A9's tunnels | 8.7 km² | 31 min | 0.36 GB (1.1 GB unpacked) |
 | Sisikon, small test area, on Windows | 0.9 km² | 18 min | 0.28 GB |
 | Lugano (Ticino zone ti_1_0), dense town | 64 km² | about 5 h | 1.9 GB |
 
