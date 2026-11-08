@@ -2214,6 +2214,18 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   rock reached only OFF_LINE half widths (1.5 m) from a path's axis. A probe of the steep faces against the AI roads
   must read the tunnels group too (tunnels.py writes the tunnel_* DecalRoads there, not in AIRoads): without it every
   face at a portal looked "far from any road".
+  Sixth build (run 42440861766: galleries cut at least GALLERY_HW_MIN 3.5 m + GALLERY_CLEAR from their line, a narrow
+  line's cells held PATH_HOLD 3.5 m from its axis): 2,357 steep paved faces (yards 451 -> 328: the yards over the old
+  road's galleries went), carriageway 308 -> 316, faces over 12 m 70 -> 72; 13 vertices at the old road's portals came
+  down 2-15 m, none went up over 2 m; rails unchanged. Two cells got taller faces, both at portals of narrow lines
+  (1875,175: 2 -> 12 faces, up to 7.8 m; at -1872,-3002 a 15.4 m needle whose neighbours came down): a vertex match does
+  not see them (the wider cut makes new vertices), only the faces per cell and the renders do. The terrain moves with
+  the paved faces (6,269 vertices over 0.5 m between builds 5 and 6, up to 26 m where a yard over a gallery went and
+  its carve with it): compare the .ter of two builds too. Left at the old road's portals: survey cells past the end of
+  the path's line (E > 1) or beyond PATH_HOLD are filled from the DTM, which there is the rock over the tunnel. Next
+  step, not tried: tubes as wide as the survey's road at their portals and an approach cut over the crown. The scratch
+  vertex match keyed (x, y in cm) * 1e5 + material in int64, which overflows beyond |x| ~ 920 m: the material read as
+  "other" there (the match itself held).
 - The reports of a build are in pipeline coordinates, the zip's level is moved by recenter.py (levels/<name>/recenter.json
   dx, dy; Axenstrasse +21234, -106065): add them before looking a reported point up in the zip.
 - The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at
