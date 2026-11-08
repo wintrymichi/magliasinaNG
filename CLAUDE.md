@@ -2198,6 +2198,13 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   is held, and a station is no overhang where another line (not a path) stands over it with its edge within ABOVE_GAP
   (4 m) of the station's edge. Compare a fix per material AND per 50 m cell against the build before it: the total
   (2,721 -> 2,742) hid a gain on the carriageway and a loss on the yards.
+  Fourth build (run 42431521109): 2,686 steep paved faces (carriageway 352, yards 478 + banks 908, faces over 12 m
+  138 -> 72 against the second build), the Sisikon wall gone, the portal fix kept. A match of every paved vertex of the
+  second and fourth builds by xy and material (scratch vdiff_all.py: 697k vertices) found 81 moved down over 2 m (the
+  spikes) but 20 moved UP over 2 m, up to 7.4 m: a pavement's edge vertex beside a portal took the floor of the cell it
+  lies in, and on a cliff that cell is often another polygon's on the terrace above. The nearest cell's floor may now
+  only lower a vertex's own floor (np.fmin). Count vertices that moved both ways between two builds, not only faces:
+  a few new spikes hide in a total that went down.
 - The reports of a build are in pipeline coordinates, the zip's level is moved by recenter.py (levels/<name>/recenter.json
   dx, dy; Axenstrasse +21234, -106065): add them before looking a reported point up in the zip.
 - The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at

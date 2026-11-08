@@ -887,7 +887,9 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
     cell_floor, mask = getattr(S, "floor", None), getattr(S, "mask", None)
     if cell_floor is not None and mask is not None and mask.any():
         # zones: a vertex takes the floor of the paved cell nearest to it (OVERHANG_REACH and OVERHANG_DZ hold for the
-        # vertices too: a vertex on a polygon's edge lies in a cell outside it, whose own floor was the rock)
+        # vertices too: a vertex on a polygon's edge lies in a cell outside it, whose own floor was the rock), but never
+        # a higher floor than its own ground's: on a cliff the cell a vertex lies in may be another polygon's on the
+        # terrace above, and its floor lifted a pavement's edge vertex 7 m (fourth Axenstrasse build, 20 vertices)
         _, (ri, ci) = ndi.distance_transform_edt(~mask, return_indices=True)
         nearest = cell_floor[ri, ci]
 
@@ -897,7 +899,7 @@ def mesh_tile(net, dtm, X0, Y0, xs, ys, on_mesh, on_tops):
             c = np.floor((x - S.x_min) / S.res).astype(np.int64)
             ok = (r >= 0) & (r < nearest.shape[0]) & (c >= 0) & (c < nearest.shape[1])
             out = lo.sample(x, y)
-            out[ok] = nearest[r[ok], c[ok]]
+            out[ok] = np.fmin(out[ok], nearest[r[ok], c[ok]])
             return out
     else:
         floor = lo.sample
