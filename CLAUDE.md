@@ -2205,6 +2205,15 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   lies in, and on a cliff that cell is often another polygon's on the terrace above. The nearest cell's floor may now
   only lower a vertex's own floor (np.fmin). Count vertices that moved both ways between two builds, not only faces:
   a few new spikes hide in a total that went down.
+  Fifth build (run 42436145298): 2,531 steep paved faces (carriageway 308, faces over 12 m 70), against the second
+  build 81 vertices down over 2 m and 12 up over 2 m, all 12 at one portal where they were already 10 m spikes. Rails:
+  0 posts over 0.3 m, 853 held on 2.25 km of wall (1.34 km stone), 7 too_deep. The portal and Sisikon renders clean.
+  Most of what is left is the OLD Axenstrasse: a road cut into the cliff with tunnels and galleries of its own, now a
+  footpath, which swissTLM3D gives as "2m Weg" / "3m Strasse" (tubes and galleries built that narrow) while the survey's
+  carriageway is the old 6-7 m road: strips of it beside a gallery climbed its roof (up to 20 m), and the hold under the
+  rock reached only OFF_LINE half widths (1.5 m) from a path's axis. A probe of the steep faces against the AI roads
+  must read the tunnels group too (tunnels.py writes the tunnel_* DecalRoads there, not in AIRoads): without it every
+  face at a portal looked "far from any road".
 - The reports of a build are in pipeline coordinates, the zip's level is moved by recenter.py (levels/<name>/recenter.json
   dx, dy; Axenstrasse +21234, -106065): add them before looking a reported point up in the zip.
 - The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at

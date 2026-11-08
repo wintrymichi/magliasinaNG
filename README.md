@@ -179,6 +179,7 @@ Every level is called `ch_<name>` in the game's files, so levels of different ar
 - **One lake per level:** the largest lake of the area gets its water; a second lake at another level (a reservoir above a valley lake, a mountain lake) stays a dry hollow. Rivers and streams get their water everywhere.
 - **Cantons without an open survey** (Jura, Lucerne, Neuchâtel, Nidwalden, Obwalden, Vaud, Valais) have no yards, pavements, traffic islands or survey walls; their road widths come from the road class.
 - **Roads under rock overhangs** (the Axenstrasse has many) run in a notch cut into the rock face: the terrain is a height map and cannot hang over a road.
+- **Old roads that are footpaths today** (old stretches of the Axenstrasse) get tunnels and galleries as narrow as the path swissTLM3D gives them, narrower than the real ones.
 - **A road over a gorge that swissTLM3D does not draw as a bridge** keeps its guard rail on an edge beam without a wall under it where the fall is deeper than 8 m (7 short stretches on the Axenstrasse, listed in the build's report `rail_walls.json`).
 - **The data measured from photos** for the Malcantone is not there for other areas (see [Detail compared with the Malcantone](#detail-compared-with-the-malcantone)); there are no time trials yet.
 - **Tested on GitHub's Linux and Windows runners**, from the launcher to the zip. macOS is not tested yet, and the levels of the builder have not been driven in the game yet (the Malcantone and the Ticino zones made by the same pipeline have).
