@@ -120,6 +120,16 @@ OVERHANG_DZ = 2.0
 OVERHANG_ALONG = 15.0
 NEAR_PAST = 8.0
 ABOVE_GAP = 4.0
+# Fifth build: 2,531 steep paved faces (the carriageway's 502 -> 308 since the second build), the portals of the main
+# road clean. Most of what is left is the old Axenstrasse, a road cut into the cliff with tunnels and galleries of its
+# own, now a footpath: swissTLM3D gives its lines as "2m Weg" or "3m Strasse" (tubes and galleries built that narrow)
+# while the survey's carriageway is still the old road, 6-7 m wide. The gallery cut (nominal half width +
+# GALLERY_CLEAR) left strips of it beside such galleries, meshed on the roof and the slope over it (a zigzag of asphalt
+# up to 20 m over a gallery), and the hold under the rock took only the cells within OFF_LINE half widths of a narrow
+# line (1.5 m from a path's axis). A gallery is now cut at least GALLERY_HW_MIN + GALLERY_CLEAR m from its line, and the
+# cells of a line within PATH_HOLD m of its axis are held as those within OFF_LINE half widths.
+GALLERY_HW_MIN = 3.5
+PATH_HOLD = 3.5
 # The survey's carriageway under a gallery (swissTLM3D KUNSTBAUTE Galerie, a line network.SKIP leaves out) was meshed on
 # swissALTI3D, which is the gallery's roof and the slope over it there: asphalt on the roofs of the Oelberg and
 # Tellsplatte galleries with faces down their sides. tunnels.py builds a gallery's road, so the survey's polygons are cut
@@ -132,7 +142,8 @@ AV_CLASSES = {"strada_sentiero": "road", "marciapiede": "sidewalk", "spartitraff
 
 def gallery_footprints():
     """Footprints of the swissTLM3D road galleries (KUNSTBAUTE Galerie, network.SKIP): each line buffered by its
-    nominal half width + GALLERY_CLEAR, flat at its ends (the portals). Empty without the swissTLM3D roads."""
+    nominal half width (at least GALLERY_HW_MIN) + GALLERY_CLEAR, flat at its ends (the portals). Empty without the
+    swissTLM3D roads."""
     p = os.path.join(DATA, "tlm", "TLM_STRASSE.json")
     if not os.path.exists(p):
         return []
@@ -142,7 +153,7 @@ def gallery_footprints():
         props = f["props"]
         if props.get("KUNSTBAUTE") != "Galerie" or props.get("OBJEKTART") not in network.CLASSES:
             continue
-        hw = 0.5 * network.CLASSES[props["OBJEKTART"]][0] + GALLERY_CLEAR
+        hw = max(0.5 * network.CLASSES[props["OBJEKTART"]][0], GALLERY_HW_MIN) + GALLERY_CLEAR
         for part in f["parts"]:
             P = np.asarray(part, np.float64)
             if len(P) < 2:
@@ -604,8 +615,12 @@ class Network:
             Dlo = np.where(on_line, ndi.minimum_filter(Ds, size=2 * int(round(OVERHANG_REACH / RES)) + 1) - SUNK, Dlo)
             is_road = np.zeros(len(self.polys), bool)          # the survey's carriageway: no yard, sidewalk, island
             is_road[ids] = [self.polys[i]["cls"] == "road" for i in ids]
-            own = m & is_road[np.maximum(owner, 0)] & (G >= 0) & (U <= OFF_LINE) & (E <= NEAR_PAST) \
-                & (Dlo - Z > OVERHANG_DZ)
+            hws = getattr(self, "_hw_seg", None)               # median half width of every line (PATH_HOLD)
+            if hws is None:
+                hws = self._hw_seg = np.array([0.5 * float(np.median(self.w[s["first"]:s["first"] + s["n"]]))
+                                               for s in self.segs])
+            near = (U <= OFF_LINE) | (U * np.maximum(hws[np.maximum(G, 0)], 0.3) <= PATH_HOLD)
+            own = m & is_road[np.maximum(owner, 0)] & (G >= 0) & near & (E <= NEAR_PAST) & (Dlo - Z > OVERHANG_DZ)
             if own.any():                                      # OVERHANG_DZ: under the rock, no lift at all
                 under = own & self._under_rock(np.where(own, G, -1), A, dtm)
                 Dlo = np.where(under, -np.inf, Dlo)
