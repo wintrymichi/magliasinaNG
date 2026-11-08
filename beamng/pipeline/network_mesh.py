@@ -109,9 +109,17 @@ OVERHANG_REACH = 4.0
 # overhang, a portal, a gallery's end) is never lifted more than OVERHANG_DZ onto the ground, up to OFF_LINE half widths
 # beside its line and NEAR_PAST m past its end (nor left to the ground there), and every vertex takes the floor of the
 # paved cell nearest to it (mesh_tile). A line that runs on the ground (a hairpin's lower leg) keeps the floor as it was.
+# Third build: steep carriageway faces 502 -> 372 (a portal of the Axenstrasse 188 -> 62), but steep yard faces 451 -> 569:
+# a yard on the terrace between a road and another road 5-9 m above it (Sisikon, edges 0-2 m apart) became a 10 m grey
+# wall. The DTM over the lower road there is the upper road's embankment, not rock: the cells of the yard beside the
+# lower road kept its height and the yard's harmonic fill ran from them up to the terrace. Now only the survey's
+# carriageway (polygons "road") is held under the rock, and a station is no overhang where another line (not a path)
+# stands more than OVERHANG_DZ over it with its edge within ABOVE_GAP m of the station's edge (the portal of that
+# build: the road above it 7-14 m away, 20-26 m higher).
 OVERHANG_DZ = 2.0
 OVERHANG_ALONG = 15.0
 NEAR_PAST = 8.0
+ABOVE_GAP = 4.0
 # The survey's carriageway under a gallery (swissTLM3D KUNSTBAUTE Galerie, a line network.SKIP leaves out) was meshed on
 # swissALTI3D, which is the gallery's roof and the slope over it there: asphalt on the roofs of the Oelberg and
 # Tellsplatte galleries with faces down their sides. tunnels.py builds a gallery's road, so the survey's polygons are cut
@@ -162,6 +170,7 @@ class Network:
         self.n0 = np.array([sg["nodes"][0] for sg in self.segs], np.int64)     # end nodes of every line
         self.n1 = np.array([sg["nodes"][-1] for sg in self.segs], np.int64)
         self.tree = cKDTree(np.column_stack([self.x, self.y]))
+        self._w_max = float(np.nanmax(self.w)) if len(self.w) else 0.0
         self.bridge = np.array([s["bridge"] for s in self.segs])
         self.main = np.array([s["kind"] == "road" and s["class"] in MAIN_CLASSES for s in self.segs])
         self.path = np.array([s["kind"] == "path" for s in self.segs])
@@ -593,7 +602,10 @@ class Network:
         if ZONE:                                               # OVERHANG_REACH: the carriageway keeps its line
             on_line = m & (G >= 0) & (U <= 1.0) & (E <= 1.0)
             Dlo = np.where(on_line, ndi.minimum_filter(Ds, size=2 * int(round(OVERHANG_REACH / RES)) + 1) - SUNK, Dlo)
-            own = m & (G >= 0) & (U <= OFF_LINE) & (E <= NEAR_PAST) & (Dlo - Z > OVERHANG_DZ)
+            is_road = np.zeros(len(self.polys), bool)          # the survey's carriageway: no yard, sidewalk, island
+            is_road[ids] = [self.polys[i]["cls"] == "road" for i in ids]
+            own = m & is_road[np.maximum(owner, 0)] & (G >= 0) & (U <= OFF_LINE) & (E <= NEAR_PAST) \
+                & (Dlo - Z > OVERHANG_DZ)
             if own.any():                                      # OVERHANG_DZ: under the rock, no lift at all
                 under = own & self._under_rock(np.where(own, G, -1), A, dtm)
                 Dlo = np.where(under, -np.inf, Dlo)
@@ -666,16 +678,32 @@ class Network:
         """bool like G (zones): the cells whose height comes from a line (G, at A m along it) that runs more than
         OVERHANG_DZ m under the bare ground at a station within OVERHANG_ALONG m along it. The ground of a station is
         the highest DTM on its axis and a third of its width either side (network_surface fits the line to the median
-        across, which keeps the line on the road under an overhang)."""
+        across, which keeps the line on the road under an overhang). A station beside another line (not a path) that
+        stands more than OVERHANG_DZ over it, edges within ABOVE_GAP m, is no overhang: that ground is the other road's
+        embankment or wall."""
         out = np.zeros(G.shape, bool)
         for g in np.unique(G[G >= 0]):
             s = self.segs[int(g)]
             sl = slice(s["first"], s["first"] + s["n"])
             x, y, w = self.x[sl], self.y[sl], self.w[sl]
+            z = self.z[sl]
             top = np.full(len(x), -np.inf)
             for f in (-1 / 3, 0.0, 1 / 3):
                 top = np.fmax(top, dtm.sample(x + f * w * self.nx[sl], y + f * w * self.ny[sl]))
-            fl = self.arc[sl][top - self.z[sl] > OVERHANG_DZ]
+            bad = top - z > OVERHANG_DZ
+            k = np.nonzero(bad)[0]
+            if len(k):
+                if getattr(self, "_w_max", None) is None:          # a Network pickled before ABOVE_GAP
+                    self._w_max = float(np.nanmax(self.w))
+                reach = 0.5 * w[k] + 0.5 * self._w_max + ABOVE_GAP
+                for kk, nb in zip(k, self.tree.query_ball_point(np.column_stack([x[k], y[k]]), reach)):
+                    nb = np.asarray(nb, np.int64)
+                    nb = nb[(self.seg[nb] != g) & ~self.path[self.seg[nb]]] if len(nb) else nb
+                    if len(nb):
+                        gap = np.hypot(self.x[nb] - x[kk], self.y[nb] - y[kk]) - 0.5 * (w[kk] + self.w[nb])
+                        if ((gap <= ABOVE_GAP) & (self.z[nb] > z[kk] + OVERHANG_DZ)).any():
+                            bad[kk] = False
+            fl = self.arc[sl][bad]
             if not len(fl):
                 continue
             sel = G == g

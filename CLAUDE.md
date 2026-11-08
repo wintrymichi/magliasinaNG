@@ -2189,6 +2189,15 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   more than 2 m under the DTM within 15 m along it is never lifted onto the ground, and a vertex takes the floor of the
   nearest paved cell (a polygon's edge vertex lies in a cell outside it, which kept the old 1 m floor: the rock).
   Away from the tunnels 947 faces are left, 39 over 8 m: steep yards (mp_hard_bank) and sidewalks on the DTM.
+  Third build (run 42426108736): steep carriageway faces 502 -> 372 (the worst portal 188 -> 62), but steep yard faces
+  451 -> 569 and a new 10 m grey wall at Sisikon (-375,2725 in the zip): a yard between a road and another road 5-9 m
+  above it (edges 0-2 m apart). The DTM over the lower road is the upper road's embankment, so the lower road was taken
+  for a road under rock, the yard cells beside it kept its height and the yard's harmonic fill ran from them up to the
+  terrace. A rule that holds cells "under the ground" must tell rock from another road's embankment, and must not hold
+  a polygon that only borders the line (yards, sidewalks: their own lift was right). Now only the survey's carriageway
+  is held, and a station is no overhang where another line (not a path) stands over it with its edge within ABOVE_GAP
+  (4 m) of the station's edge. Compare a fix per material AND per 50 m cell against the build before it: the total
+  (2,721 -> 2,742) hid a gain on the carriageway and a loss on the yards.
 - The reports of a build are in pipeline coordinates, the zip's level is moved by recenter.py (levels/<name>/recenter.json
   dx, dy; Axenstrasse +21234, -106065): add them before looking a reported point up in the zip.
 - The Malcantone's own data were built in EVERY zone at the Malcantone's coordinates, 100 km off a builder level, at
