@@ -18,7 +18,7 @@ the Overpass servers; --pin copies the downloaded files there.
 (c) OpenStreetMap contributors, ODbL 1.0: the extracts in dati/ are under the ODbL.
 """
 import gzip, json, os, shutil, sys, time
-import requests
+import netio
 from config import DATA, ZONE, local_to_lv95, lv95_to_wgs
 import area
 
@@ -82,10 +82,9 @@ def overpass(q, attempts=6):
         try:
             ua = {"User-Agent": "magliasinaNG BeamNG map pipeline (github.com/wintrymichi/magliasinaNG)"}
             if attempt % 2:                      # some instances answer GET only
-                r = requests.get(url, params={"data": q}, timeout=900, headers=ua)
+                r = netio.get(url, params={"data": q}, timeout=900, headers=ua, attempts=1, what="Overpass")
             else:
-                r = requests.post(url, data={"data": q}, timeout=900, headers=ua)
-            r.raise_for_status()
+                r = netio.get(url, data={"data": q}, timeout=900, headers=ua, attempts=1, what="Overpass")
             return r.json()
         except Exception as e:
             print("retry", url, e, flush=True)
@@ -133,57 +132,11 @@ PARTS = 4                      # connections of a big download (fetch_big)
 
 
 def fetch_big(url, dest, parts=PARTS, min_mb=64):
-    """download_swisstopo.fetch, in `parts` byte ranges at once when the server takes ranges and the file is big: one
-    connection to Geofabrik took most of the 9 min of the Axenstrasse's OpenStreetMap step (switzerlandNG faster
-    builds). (path, "skip" / "ok" / "FAILED")."""
-    import download_swisstopo as ds
-    if os.path.exists(dest):
-        return dest, "skip"
-    try:
-        h = requests.head(url, allow_redirects=True, timeout=60)
-        size = int(h.headers.get("Content-Length", 0))
-        ranges = h.headers.get("Accept-Ranges", "") == "bytes"      # (the GETs go to url again: a redirect's
-        # signed address may hold for HEAD only)
-    except Exception as e:
-        print("fetch_big: no size of", url, e, flush=True)
-        size, ranges = 0, False
-    if not ranges or size < min_mb * 2 ** 20 or parts < 2:
-        return ds.fetch(url, dest)
-    from concurrent.futures import ThreadPoolExecutor
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-    part = dest + ".part"
-    with open(part, "wb") as f:
-        f.truncate(size)
-    cuts = [size * k // parts for k in range(parts + 1)]
-
-    def get(k):
-        a, b = cuts[k], cuts[k + 1] - 1
-        for attempt in range(5):
-            pos = a
-            try:
-                with requests.get(url, headers={"Range": "bytes=%d-%d" % (a, b)}, stream=True, timeout=120) as r:
-                    if r.status_code != 206:
-                        raise RuntimeError("answer %d to a range" % r.status_code)
-                    with open(part, "r+b") as f:
-                        f.seek(a)
-                        for chunk in r.iter_content(1 << 20):
-                            f.write(chunk)
-                            pos += len(chunk)
-                if pos == b + 1:
-                    return True
-                raise RuntimeError("range %d cut at %d of %d" % (k, pos - a, b + 1 - a))
-            except Exception as e:
-                print("retry range", k, url, e, flush=True)
-                time.sleep(5 * (attempt + 1))
-        return False
-
-    with ThreadPoolExecutor(parts) as pool:
-        ok = all(pool.map(get, range(parts)))
-    if not ok or os.path.getsize(part) != size:
-        os.remove(part)
-        return ds.fetch(url, dest)
-    os.replace(part, dest)
-    return dest, "ok (%d ranges, %.0f MB)" % (parts, size / 2 ** 20)
+    """A Geofabrik extract in `parts` byte ranges at once when the server takes ranges and the file is big (one
+    connection took most of the 9 min of the Axenstrasse's OpenStreetMap step, switzerlandNG faster builds), with
+    its percentage in the log (netio). (path, "skip" / "ok ..."); a file that cannot be had stops the step
+    (2026-11-09: a "FAILED" went on to osmium, which failed on a missing file)."""
+    return netio.fetch_parallel(url, dest, parts=parts, min_mb=min_mb)
 
 
 def main():

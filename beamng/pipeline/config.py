@@ -9,6 +9,15 @@ import json
 import os
 from pyproj import Transformer
 
+# switzerlandNG (2026-11-09): the app's watchdog sends SIGUSR1 to a step that hangs before it stops it, and the stacks
+# of all its threads go to the log, to tell where it hung
+try:
+    import faulthandler as _fh, signal as _sig
+    if hasattr(_sig, "SIGUSR1"):
+        _fh.register(_sig.SIGUSR1, all_threads=True, chain=False)
+except Exception:
+    pass
+
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # every path can be moved with an environment variable (e.g. a build on another machine)
 DATASET = os.environ.get("MAGLIASO_DATASET") or r"C:\Users\michi\Documents\magliasinaNG"   # Street View images + poses

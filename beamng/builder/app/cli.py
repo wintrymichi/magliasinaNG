@@ -70,7 +70,13 @@ def main(argv):
     b.save()
     m.start(b.id)
     print(f"build {b.id} in {b.folder}", flush=True)
-    return follow(m, b, until)
+    jobs.stop_on_signals()
+    try:
+        return follow(m, b, until)
+    except KeyboardInterrupt:
+        print("\nstopped: the running step is stopped too (resume continues from it)", flush=True)
+        m.shutdown()
+        return 130
 
 
 if __name__ == "__main__":

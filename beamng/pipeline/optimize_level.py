@@ -27,7 +27,6 @@ Shapes not written by the pipeline (vanilla, other authoring tools) are copied a
 Usage: python optimize_level.py <in.zip|level folder> <out.zip|level folder>
 """
 import json, os, re, sys, time, zipfile
-from multiprocessing import Pool
 import numpy as np
 import bng
 import mesh_strips
@@ -320,11 +319,17 @@ def _run(entries, put, workers=None):
     tot = np.zeros(3)
     by_cat = {}
     # v3.0 review: at most OPT_WORKERS processes (default 4): 14 on a 16-thread PC with 14 GB took all the memory
-    with Pool(workers or int(os.environ.get("OPT_WORKERS", max(1, min(4, os.cpu_count() - 2))))) as pool:
+    # tilepool.pmap (forked workers that notice a dead one), not multiprocessing.Pool: the OOM killer took a worker and
+    # the Pool waited for ever (CLAUDE.md 2026-10-17, reproduced 2026-11-09); the batch's shapes left run again with
+    # fewer workers (spawned processes on Windows, as the Pool's were).
+    import tilepool
+    nproc = workers or int(os.environ.get("OPT_WORKERS", max(1, min(4, (os.cpu_count() or 2) - 2))))
+    if True:
         k = 0
         for b in range(0, len(jobs), 64):             # in batches: the input is gigabytes of text
             batch = [(n, [(entries[m](), off) for m, off in members]) for n, members in jobs[b:b + 64]]
-            for n, out, st in pool.imap_unordered(_job, batch, chunksize=1):
+            for n, out, st in tilepool.pmap(_job, batch, nproc, ordered=False, label="optimize workers",
+                                             pickled=True):
                 put(n, out)
                 k += 1
                 if st is None:

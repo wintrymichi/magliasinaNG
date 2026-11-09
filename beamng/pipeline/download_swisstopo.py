@@ -15,7 +15,7 @@ Re-runnable: finished files are skipped.
 import os, sys, time, zipfile
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
-import requests
+import netio
 from config import DATA, local_to_lv95, lv95_to_wgs
 import area
 
@@ -30,17 +30,17 @@ def stac_items(coll, e_min, n_min, e_max, n_max):
     la1, la2 = min(p[0] for p in ll), max(p[0] for p in ll)
     lo1, lo2 = min(p[1] for p in ll), max(p[1] for p in ll)
     url, params, out = STAC.format(coll), {"bbox": f"{lo1},{la1},{lo2},{la2}", "limit": 100}, []
+    seen = set()
     while url:
-        for attempt in range(5):
-            try:
-                j = requests.get(url, params=params, timeout=60).json()
-                break
-            except Exception as e:
-                print("retry", url, e, flush=True)
-                time.sleep(5 * (attempt + 1))
+        # netio.get raises after its attempts (2026-11-09: a page failing 5 times kept the page before, whose "next"
+        # link was the failed page again: an endless loop with the features added over and over)
+        j = netio.get_json(url, params=params, what="STAC %s" % coll)
         out += j["features"]
         params = None
         url = next((l["href"] for l in j.get("links", []) if l["rel"] == "next"), None)
+        if url in seen or len(seen) > 2000:
+            raise RuntimeError("STAC %s: the pages loop (%s)" % (coll, url))
+        seen.add(url)
     return out
 
 
@@ -53,23 +53,13 @@ def latest_per_tile(items):
     return {t: f for t, (y, f) in best.items()}
 
 
-def fetch(url, dest):
-    if os.path.exists(dest):
-        return dest, "skip"
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-    for attempt in range(5):
-        try:
-            with requests.get(url, stream=True, timeout=120) as r:
-                r.raise_for_status()
-                with open(dest + ".part", "wb") as f:
-                    for chunk in r.iter_content(1 << 20):
-                        f.write(chunk)
-            os.replace(dest + ".part", dest)
-            return dest, "ok"
-        except Exception as e:
-            print("retry", url, e, flush=True)
-            time.sleep(5 * (attempt + 1))
-    return dest, "FAILED"
+def fetch(url, dest, progress=None):
+    """One file (netio.fetch: progress lines, resumed, no hang). (dest, "skip" / "ok" / "FAILED")."""
+    try:
+        return netio.fetch(url, dest, progress)
+    except netio.DownloadError as e:
+        print("FAILED", e, flush=True)
+        return dest, "FAILED"
 
 
 def unzip_gdb(path):
@@ -158,15 +148,21 @@ def main(route_extras=False, names_only=False):
                          os.path.join(DATA, "copdem30", name + ".tif")))
     print(len(jobs), "files queued", flush=True)
     failed = 0
+    prog = netio.Progress("swisstopo", files=len(jobs))
     with ThreadPoolExecutor(4) as ex:
-        for dest, status in ex.map(lambda j: fetch(*j), jobs):
+        for dest, status in ex.map(lambda j: fetch(*j, progress=prog), jobs):
             if status != "skip":
                 print(status, os.path.relpath(dest, DATA), flush=True)
             failed += status == "FAILED"
+    prog.done()
     for g in gdbs:
         if os.path.exists(g):
             unzip_gdb(g)
     print("DONE", "failed %d" % failed, flush=True)
+    if failed:
+        # 2026-11-09: it exited 0 with files missing and a later step broke on them with an obscure error; the app
+        # runs the step again (the finished files are kept)
+        sys.exit("%d swisstopo files could not be downloaded" % failed)
 
 
 if __name__ == "__main__":

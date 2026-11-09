@@ -16,7 +16,7 @@ Output: data/tlm/<layer>.json: {"fields": [...], "features": [{"props": {...}, "
 """
 import io, json, os, struct, sys, time, zipfile
 import numpy as np
-import requests
+import netio
 from config import DATA, ZONE, local_to_lv95
 import area
 
@@ -43,8 +43,9 @@ class RangeFile(io.RawIOBase):
         import threading
         from concurrent.futures import ThreadPoolExecutor
         self.url, self.pos = url, 0
-        self.size = int(requests.head(url, timeout=60).headers["content-length"])
-        self._local = threading.local()
+        self.size, _ = netio.head(url)
+        if not self.size:
+            raise netio.DownloadError("swissTLM3D: no size of %s (the server did not answer)" % url)
         self._pool = ThreadPoolExecutor(self.AHEAD)
         self._chunks = {}
         self._last = None
@@ -68,20 +69,9 @@ class RangeFile(io.RawIOBase):
 
     def _get(self, k):
         a, b = k * self.CHUNK, min((k + 1) * self.CHUNK, self.size) - 1
-        s = getattr(self._local, "s", None)
-        if s is None:
-            s = self._local.s = requests.Session()
-        for attempt in range(6):
-            try:
-                r = s.get(self.url, headers={"Range": f"bytes={a}-{b}"}, timeout=120)
-                r.raise_for_status()
-                if len(r.content) != b - a + 1:
-                    raise IOError("short range %d of %d" % (len(r.content), b - a + 1))
-                return r.content
-            except Exception as e:
-                print("retry range", a, e, flush=True)
-                time.sleep(3 * (attempt + 1))
-        raise IOError("range %d-%d of %s failed" % (a, b, self.url))
+        # netio: kept-alive session per thread, (connect, read) timeouts, the stall watchdog, resumed after a cut;
+        # the bytes count into the step's percentage (PROG)
+        return netio.get_range(self.url, a, b, PROG, what="swissTLM3D bytes %d-%d" % (a, b))
 
     def readinto(self, b):
         if self.pos >= self.size:
@@ -96,7 +86,7 @@ class RangeFile(io.RawIOBase):
                 self._chunks[kk] = self._pool.submit(self._get, kk)
         for kk in [kk for kk in self._chunks if kk < k or kk > k + self.AHEAD]:
             self._chunks.pop(kk).cancel()
-        data = self._chunks[k].result()
+        data = self._chunks[k].result()          # get_range ends (a DownloadError at worst): no wait without end
         self._last = k
         off = self.pos - k * self.CHUNK
         n = min(len(b), len(data) - off)
@@ -184,6 +174,8 @@ def dbf_records(f, keep):
 # Switzerland Builder's cache shares data/tlm_pkg between its builds (app/cache.py SHARED)
 PKG = os.path.join(DATA, "tlm_pkg")
 PKG_STEM = os.path.basename(URL).split(".")[0]
+# the bytes read from the package by every layer (side by side): one percentage line for the step
+PROG = netio.Progress("swissTLM3D")
 
 
 def member(z, names, name):
@@ -192,13 +184,22 @@ def member(z, names, name):
     if os.path.exists(dst) and os.path.getsize(dst) == z.getinfo(names[name]).file_size:
         return dst, False
     os.makedirs(PKG, exist_ok=True)
+    info = z.getinfo(names[name])
+    with PROG.lock:
+        PROG.total += info.compress_size             # what this member costs over the network
+    short = name.replace("\\", "/").split("/")[-1]
+    netio.say("[download]   swissTLM3D %s: %s (%s unpacked)" % (short, netio.human(info.compress_size),
+                                                              netio.human(info.file_size)))
+    line = netio._FileLine("swissTLM3D " + short, info.file_size)
     with z.open(names[name]) as f, open(dst + ".part", "wb") as o:
         while True:
             c = f.read(1 << 22)
             if not c:
                 break
             o.write(c)
-    os.replace(dst + ".part", dst)
+            line.add(len(c))
+    line.add(0, force=True)
+    netio.replace(dst + ".part", dst)
     return dst, True
 
 
@@ -266,6 +267,8 @@ def main():
         jobs.append((layer, stem, dest, bbox))
     with ThreadPoolExecutor(max(1, len(jobs))) as pool:
         list(pool.map(layer_job, jobs))
+    if PROG.total:
+        PROG.done()
 
 
 if __name__ == "__main__":

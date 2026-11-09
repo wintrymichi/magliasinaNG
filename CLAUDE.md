@@ -2346,6 +2346,42 @@ Faster builds (switzerlandNG, thread "Velocizzare la creazione delle mappe", 202
   terrain and skin identical: newer daily data (GWR, OSM), not the pools. Left the biggest: stages (buildings_mesh),
   tunnels, forest_mosaic (whole-block rasters), landcover.
 
+### Builds that never hang, downloads with a percentage (thread "Rendere la costruzione mappe a prova di blocco", 2026-11-09)
+
+- multiprocessing.Pool waits FOR EVER when one worker dies (OOM killer, SIGKILL): the task is lost and the Pool only
+  starts a new worker (reproduced by the reviewer thread; the 2026-10-17 "optimize deadlock" above). tilepool.py,
+  build_level's NET_WORKERS and optimize_level used it. Now all go through tilepool.pmap (ProcessPoolExecutor, fork;
+  spawn with pickled=True on Windows): a dead worker is BrokenProcessPool, and the items left run again with half
+  the workers, down to the step's own process. Note: ex.submit() itself raises BrokenProcessPool once a worker died
+  (first test crashed there, not in result()). Workers alive but idle (a lock inherited across fork) count as broken
+  after MAGLIASO_POOL_STALL s (900) with no result and < 2 s CPU (psutil, else /proc).
+- jobs.py had no limit on any wait. Watch: a step is hung when for SWISSBUILDER_STALL_MIN (20) min its log has not
+  grown and its process tree used no CPU (> 0.5 s per 30 s) and no disk (> 1 MB): SIGUSR1 to its group first
+  (config.py registers faulthandler: the stacks of every thread go to the log), then killed, then run again
+  (SWISSBUILDER_STEP_RETRIES 2). The downloads run again after ANY failure (they keep their finished files). A hang
+  re-runs a finishing step from its start: the same as the user's "resume", but a step that is not idempotent (see
+  sidewalks, skin_grass) may see its own half-written output.
+- Steps now start in a process group of their own (start_new_session / CREATE_NEW_PROCESS_GROUP) and kill_tree also
+  kills the group (os.killpg): when build_level.py was OOM-killed its forked workers ran on, held their memory and the
+  stdout pipe, and run_finish_chain's `for line in p.stdout` waited until they ended. The chain now writes to
+  logs/finish_chain.log, which is tailed. A group does not get Ctrl+C or SIGHUP from the terminal: the app and the cli
+  stop the steps themselves (Manager.shutdown, stop_on_signals) and build.json keeps the pids, so a start after a
+  hard kill stops the old ones (kill_stale). server.py's old `manager.current[1].pid` raised AttributeError while the
+  downloads ran side by side (a list) and left them running.
+- download_swisstopo.stac_items looped for ever when a later STAC page failed 5 times (the stale page's "next" was the
+  failed page again, its features added each time); download_av paged for ever if a server ignores STARTINDEX;
+  swisstopo exited 0 with files FAILED and osmium then failed on a missing pbf. All fixed (raise / stop / exit 1).
+- requests' timeout is per socket read: a server that sends a byte a minute never trips it. netio.py (every download
+  of the build) has a watchdog thread that shuts the socket of a transfer under 4 KB/s over 120 s (shutdown() wakes
+  the blocked recv; resp.close() from another thread does not), then resumes it with a Range request. GDAL /vsicurl/
+  has no timeout by default: GDAL_HTTP_* in jobs.env and download_worldcover. Launchers: curl --speed-limit 1024
+  --speed-time 60, wget --timeout, Invoke-WebRequest -TimeoutSec, PIP_DEFAULT_TIMEOUT, micromamba without -q.
+- Progress lines: "[download] <step>: 45 % (12 of 30 files, 0.84 of 1.9 GB, 6.2 MB/s)" every 10 s (netio.EVERY), and
+  one per file of 16 MB or more. Percent of a step whose sizes are not all known yet is marked "~" (the mean size of
+  the known ones stands in). The swissTLM3D total is the compressed size of the members it reads.
+- A test server that sends past the end of a byte range made get_range write the range 3x too long: ranges are cut at
+  their end now (real servers honour it, but a proxy may not).
+
 ## main is the Malcantone only (2026-11-07)
 
 - PR #113 (switzerland-builder, which carries the whole `ticino` branch) was merged into main by mistake: 324 files,

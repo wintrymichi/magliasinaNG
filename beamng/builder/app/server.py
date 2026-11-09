@@ -232,13 +232,15 @@ def main():
           f"from its last step when you start it again.\n", flush=True)
     if not a.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+    jobs.stop_on_signals()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
-        if manager.current and manager.current[1] is not None:
-            jobs.kill_tree(manager.current[1].pid)
+        # the steps run in process groups of their own: stop them with the app (current[1] is a list while the
+        # downloads run side by side: the old .pid here raised AttributeError and left them running)
+        manager.shutdown()
 
 
 if __name__ == "__main__":

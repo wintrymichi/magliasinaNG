@@ -404,11 +404,10 @@ def stage_roads(scene, ctx):
         # Windows (Switzerland Builder): no fork, and the job reads the network from this process's globals
         print("  NET_WORKERS %d: no fork on this system, the network tiles in one process" % nw, flush=True)
         nw = 1
-    if nw > 1:
-        pool = mp.get_context("fork").Pool(nw)
-        results = pool.imap(_mesh_tile_job, range(len(tiles)))
-    else:
-        pool, results = None, map(_mesh_tile_job, range(len(tiles)))
+    # tilepool.pmap, not multiprocessing.Pool: a worker killed for memory hung the Pool for ever (2026-11-09); pmap
+    # runs the tiles left with fewer workers
+    import tilepool
+    pool, results = None, tilepool.pmap(_mesh_tile_job, range(len(tiles)), nw, label="network tile workers")
     for k, (n, ops, tt) in enumerate(results):
         ntri += n
         for tx, ty, parts in ops:

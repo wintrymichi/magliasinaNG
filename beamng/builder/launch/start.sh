@@ -16,7 +16,7 @@ case "$RUNTIME" in
 esac
 export SWISSBUILDER_RUNTIME="$RUNTIME"
 export MAMBA_ROOT_PREFIX="$RUNTIME/mamba"
-export PIP_ROOT_USER_ACTION=ignore PIP_DISABLE_PIP_VERSION_CHECK=1
+export PIP_ROOT_USER_ACTION=ignore PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_DEFAULT_TIMEOUT=60 PIP_PROGRESS_BAR=off
 MM="$RUNTIME/bin/micromamba"
 ENVP="$RUNTIME/env"
 YML="$BUILDER/environment.yml"
@@ -27,10 +27,12 @@ say() { printf '\n  %s\n' "$*"; }
 fail() { printf '\n  ERROR: %s\n\n' "$*" >&2; exit 1; }
 
 fetch() {   # url destination
+  # with a progress bar, and never hanging: a connection slower than 1 KB/s for 60 s is cut and tried again
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL --retry 4 --retry-delay 3 --connect-timeout 20 -o "$2" "$1"
+    curl -fSL --progress-bar --retry 4 --retry-delay 3 --connect-timeout 20 --speed-limit 1024 --speed-time 60 \
+      -o "$2" "$1"
   elif command -v wget >/dev/null 2>&1; then
-    wget -q -t 4 -O "$2" "$1"
+    wget --progress=dot:mega -t 4 --timeout=60 -O "$2" "$1"
   else
     fail "neither curl nor wget is installed: install one of them and start again."
   fi
@@ -72,7 +74,8 @@ HASH="$( (sha256sum "$YML" 2>/dev/null || shasum -a 256 "$YML") | cut -d' ' -f1)
 if [ ! -f "$ENVP/.swissbuilder-env" ] || [ "$(cat "$ENVP/.swissbuilder-env")" != "$HASH" ]; then
   say "Setting up Python and the map libraries (first start only: 5-10 minutes, about 2 GB)..."
   rm -rf "$ENVP"
-  "$MM" create -y -q -p "$ENVP" -f "$YML" || fail "the Python environment could not be made (see the messages above). Start again: it goes on where it stopped."
+  # without -q: every package it downloads is listed with its size (michi 2026-11-09: every download in the log)
+  "$MM" create -y -p "$ENVP" -f "$YML" || fail "the Python environment could not be made (see the messages above). Start again: it goes on where it stopped."
   echo "$HASH" > "$ENVP/.swissbuilder-env"
   "$MM" clean -y -q --tarballs >/dev/null 2>&1 || true
 fi

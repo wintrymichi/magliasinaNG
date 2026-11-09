@@ -13,6 +13,11 @@ data/worldcover/worldcover.tif (EPSG:4326, uint8 classes: 10 tree cover, 20 shru
     python download_worldcover.py
 """
 import math, os, time
+# GDAL's /vsicurl/ has no timeout by default: a server that stops answering held the step for ever (2026-11-09)
+for k_, v_ in {"GDAL_HTTP_TIMEOUT": "120", "GDAL_HTTP_CONNECTTIMEOUT": "30", "GDAL_HTTP_LOW_SPEED_TIME": "60",
+               "GDAL_HTTP_LOW_SPEED_LIMIT": "1024", "GDAL_HTTP_MAX_RETRY": "5", "GDAL_HTTP_RETRY_DELAY": "5",
+               "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR", "CPL_VSIL_CURL_ALLOWED_EXTENSIONS": ".tif"}.items():
+    os.environ.setdefault(k_, v_)
 import numpy as np
 import rasterio
 from rasterio.windows import from_bounds
@@ -51,7 +56,8 @@ def main():
     out = np.zeros((h, w), np.uint8)
     tr = rasterio.transform.from_origin(lo0, la1, res, res)
     tiles = {tile_name(la, lo) for la in (la0, la1) for lo in (lo0, lo1)}
-    for t in sorted(tiles):
+    tiles = sorted(tiles)
+    for ti, t in enumerate(tiles):
         for attempt in range(6):
             try:
                 with rasterio.open("/vsicurl/" + URL.format(t)) as s:
@@ -60,7 +66,17 @@ def main():
                     if x1 <= x0 or y1 <= y0:
                         break
                     win = from_bounds(x0, y0, x1, y1, s.transform).round_offsets().round_lengths()
-                    a = s.read(1, window=win)
+                    # in bands of rows, a percentage line after each (michi 2026-11-09: every download in the log)
+                    from rasterio.windows import Window
+                    bands, nb = [], 10
+                    r_0, h_ = int(win.row_off), int(win.height)
+                    for kb in range(nb):
+                        ra, rb = r_0 + h_ * kb // nb, r_0 + h_ * (kb + 1) // nb
+                        if rb > ra:
+                            bands.append(s.read(1, window=Window(win.col_off, ra, win.width, rb - ra)))
+                        print("[download] worldcover tile %s (%d of %d): %d %%" % (t, ti + 1, len(tiles),
+                                                                               100 * (kb + 1) // nb), flush=True)
+                    a = np.concatenate(bands, axis=0)
                     wt = s.window_transform(win)
                     c0 = int(round((wt.c - lo0) / res)); r0 = int(round((la1 - wt.f) / res))
                     # the rounded window can start a cell before the box (a negative slice start is an empty slice)

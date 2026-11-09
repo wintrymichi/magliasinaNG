@@ -28,6 +28,8 @@ if (-not $RuntimeDir) {
 $env:SWISSBUILDER_RUNTIME = $RuntimeDir
 $env:MAMBA_ROOT_PREFIX = Join-Path $RuntimeDir 'mamba'
 $env:PIP_DISABLE_PIP_VERSION_CHECK = '1'
+$env:PIP_DEFAULT_TIMEOUT = '60'                     # pip (the opencv wheel) never waits for ever on a stalled server
+$env:PIP_PROGRESS_BAR = 'off'
 $MmExe = Join-Path $RuntimeDir 'bin\micromamba.exe'
 $EnvDir = Join-Path $RuntimeDir 'env'
 $YmlFile = Join-Path $BuilderDir 'environment.yml'
@@ -41,10 +43,11 @@ function Get-Download([string]$Url, [string]$Dest) {
             if (Test-Path $Dest) { Remove-Item -Force $Dest }
             $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
             if ($curl) {
-                & $curl.Source -fsSL --connect-timeout 20 -o $Dest $Url
+                # a progress bar, and a connection slower than 1 KB/s for 60 s is cut (no hang)
+                & $curl.Source -fSL --progress-bar --connect-timeout 20 --speed-limit 1024 --speed-time 60 -o $Dest $Url
                 if ($LASTEXITCODE -eq 0 -and (Test-Path $Dest)) { return $true }
             } else {
-                Invoke-WebRequest -Uri $Url -OutFile $Dest -UseBasicParsing
+                Invoke-WebRequest -Uri $Url -OutFile $Dest -UseBasicParsing -TimeoutSec 600
                 if (Test-Path $Dest) { return $true }
             }
         } catch { }
@@ -84,7 +87,7 @@ try {
     if ($Have -ne $Hash) {
         Say 'Setting up Python and the map libraries (first start only: 5-10 minutes, about 2 GB)...'
         if (Test-Path $EnvDir) { Remove-Item -Recurse -Force $EnvDir }
-        & $MmExe create -y -q -p $EnvDir -f $YmlFile
+        & $MmExe create -y -p $EnvDir -f $YmlFile         # without -q: the packages it downloads are listed
         if ($LASTEXITCODE -ne 0) {
             throw 'The Python environment could not be made (see the messages above). Start again: it goes on where it stopped.'
         }

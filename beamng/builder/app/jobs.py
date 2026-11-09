@@ -13,7 +13,6 @@ import sys
 import threading
 import time
 import traceback
-import urllib.request
 
 from . import BEAMNG, BUILDER, VERSION
 from . import cache, system, zone as zonemod
@@ -54,10 +53,90 @@ FINISH_CHAIN = hasattr(os, "fork")
 TAIL = [("recenter", "Move the level to its own origin", 3), ("package", "Pack the level as a mod (zip)", 8),
         ("install", "Put it in BeamNG's mods folder", 1)]
 STEP_FORK_WIN = sys.platform == "win32"
+# A step HANGS (michi 2026-11-09: "la costruzione del livello non si deve bloccare in alcun modo") when for STALL_MIN
+# minutes its log has not grown and its processes have used neither CPU nor the disk: then the stacks of its threads
+# go to the log (SIGUSR1, config.py), it is stopped and run again (STEP_RETRIES times), else it fails with a message
+# that says so. The downloads are run again after any failure as well (they keep what they have).
+STALL_MIN = float(os.environ.get("SWISSBUILDER_STALL_MIN", "20"))
+STEP_RETRIES = int(os.environ.get("SWISSBUILDER_STEP_RETRIES", "2"))
+RETRY_WAIT = float(os.environ.get("SWISSBUILDER_RETRY_WAIT", "60"))
+DOWNLOADS = {"swisstopo", "worldcover", "survey", "tlm", "gwr", "osm"}
 
 
 def now():
     return time.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def popen(args, **kw):
+    """A step's process: in a process group of its own (POSIX: a session; Windows: CREATE_NEW_PROCESS_GROUP), so that
+    kill_tree reaches its forked workers too, also those a dead parent left behind (2026-11-09: build_level.py killed
+    for memory left its pool workers running, holding their memory and the output pipe)."""
+    if sys.platform == "win32":
+        kw.setdefault("creationflags", subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+        kw.setdefault("start_new_session", True)
+    kw.setdefault("stdin", subprocess.DEVNULL)
+    return subprocess.Popen(args, **kw)
+
+
+def _tree(pid):
+    try:
+        import psutil
+        p = psutil.Process(pid)
+        return [p] + p.children(recursive=True)
+    except Exception:
+        return []
+
+
+class Watch:
+    """Is a step's process hung? Its log files' sizes, and the CPU time and disk bytes of its process tree, looked at
+    every CHECK s: when none of them moved for STALL_MIN min it is hung (a download waits on the network with no CPU,
+    but its progress lines grow the log every few seconds; a long computation uses CPU)."""
+    CHECK = 30.0
+
+    def __init__(self, p, paths):
+        self.p, self.paths = p, [x for x in paths if x]
+        self.t_moved = self.t_check = time.time()
+        self.last = None
+
+    def _sample(self):
+        sizes = []
+        for x in self.paths:
+            try:
+                sizes.append(os.path.getsize(x))
+            except OSError:
+                sizes.append(-1)
+        cpu, io = 0.0, 0
+        for q in _tree(self.p.pid):
+            try:
+                c = q.cpu_times()
+                cpu += c.user + c.system
+                try:
+                    i = q.io_counters()
+                    io += i.read_bytes + i.write_bytes
+                except (AttributeError, NotImplementedError, OSError):
+                    pass
+            except Exception:
+                pass
+        return sizes, cpu, io
+
+    def hung(self):
+        now_ = time.time()
+        if now_ - self.t_check < self.CHECK:
+            return False
+        self.t_check = now_
+        sizes, cpu, io = self._sample()
+        if self.last is not None:
+            s0, c0, i0 = self.last
+            if sizes != s0 or cpu - c0 > 0.5 or io - i0 > (1 << 20):
+                self.t_moved = now_
+        else:
+            self.t_moved = now_
+        self.last = (sizes, cpu, io)
+        return now_ - self.t_moved > STALL_MIN * 60
+
+    def idle_min(self):
+        return (time.time() - self.t_moved) / 60
 
 
 class Build:
@@ -125,6 +204,9 @@ class Manager:
         self.queue = []
         self.current = None            # (build, Popen or None)
         self.cancel_flag = False
+        self._step_now = None          # the step run_process runs (the watchdog marks it hung)
+        self._chain_hung = False
+        self._tracked = set()
         self.lock = threading.Lock()
         self.wake = threading.Event()
         self.reload()
@@ -155,6 +237,10 @@ class Manager:
                 except (OSError, ValueError):
                     continue
                 if b.state.get("status") in ("running", "queued"):
+                    # the app was closed while it ran (or killed): its step processes may still be running in
+                    # their own group; stop them before the build can be resumed
+                    for g in b.state.pop("pids", []) or []:
+                        kill_stale(g)
                     b.state["status"] = "stopped"          # the app was closed while it ran: resumable
                     for st in b.state["steps"]:
                         if st["status"] == "running":
@@ -231,6 +317,29 @@ class Manager:
                 for q in (p if isinstance(p, list) else [p] if p is not None else []):
                     kill_tree(q.pid)
 
+    def shutdown(self):
+        """The app closes (Ctrl+C, the window, SIGTERM): stop the running step's processes with it (they run in
+        groups of their own, which a Ctrl+C in the terminal no longer reaches)."""
+        with self.lock:
+            cur = self.current
+            self.cancel_flag = True
+        if cur:
+            p = cur[1]
+            for q in (p if isinstance(p, list) else [p] if p is not None else []):
+                kill_tree(q.pid)
+
+    def _track(self, b, procs):
+        """The running processes into build.json (a later start of the app stops them if this one was killed)."""
+        out = []
+        for q in procs:
+            try:
+                import psutil
+                out.append([q.pid, psutil.Process(q.pid).create_time()])
+            except Exception:
+                out.append([q.pid, None])
+        b.state["pids"] = out
+        b.save()
+
     def delete(self, bid):
         self.cancel(bid)
         for _ in range(50):
@@ -303,6 +412,11 @@ class Manager:
                 if len(chain) > 1:
                     r = self.run_finish_chain(b, chain)
                     if r == "failed":
+                        bad = next((s_ for s_ in chain if s_["status"] == "failed"), None)
+                        if bad is not None and self._retry(b, bad):
+                            b.state["status"], b.state["error"], b.state["failed_step"] = "running", None, None
+                            b.save()
+                            continue
                         return
                     if r == "cancelled":
                         break
@@ -336,10 +450,12 @@ class Manager:
                 st["status"] = "skipped"
             elif ok:
                 st["status"] = "done"
+            elif self._retry(b, st):
+                continue
             else:
                 st["status"] = "failed"
                 b.state["status"] = "failed"
-                b.state["error"] = f"Step '{st['label']}' failed: see the log (the build can be resumed from this step)."
+                b.state["error"] = self._error(st)
                 b.state["failed_step"] = st["key"]
                 b.save()
                 return
@@ -360,12 +476,55 @@ class Manager:
             b.log(f"\n[{now()}] BUILD DONE: {b.zip_path}")
         b.save()
 
+    def _retry(self, b, st):
+        """After a failure: a download, or a step stopped as hung, runs again (STEP_RETRIES times, RETRY_WAIT s
+        later). True when it is to run again (status pending)."""
+        hung = st.pop("hung", False)
+        if not (hung or st["key"] in DOWNLOADS):
+            return False
+        n = st.get("tries", 0)
+        if n >= STEP_RETRIES:
+            if hung:
+                st["error_note"] = "hung"
+            return False
+        st["tries"] = n + 1
+        st["status"] = "pending"
+        b.save()
+        b.log(f"[{now()}] {st['label']} ({st['key']}) {'hung' if hung else 'failed'}: run again in {RETRY_WAIT:.0f} s "
+              f"(attempt {n + 2} of {STEP_RETRIES + 1}; what it finished is kept)")
+        t = time.time()
+        while time.time() - t < RETRY_WAIT and not self.cancel_flag:
+            time.sleep(0.5)
+        return not self.cancel_flag
+
     def _fail(self, b, st):
         st["status"] = "failed"
         b.state["status"] = "failed"
-        b.state["error"] = f"Step '{st['label']}' failed: see the log (the build can be resumed from this step)."
+        b.state["error"] = self._error(st)
         b.state["failed_step"] = st["key"]
         b.save()
+
+    def _error(self, st):
+        if st.pop("error_note", None) == "hung":
+            return (f"Step '{st['label']}' stopped responding (no output, no CPU, no disk for {STALL_MIN:.0f} min) "
+                    f"{STEP_RETRIES + 1} times: see the log, which has the stacks of its threads (the build can be "
+                    f"resumed from this step).")
+        return f"Step '{st['label']}' failed: see the log (the build can be resumed from this step)."
+
+    def _hang(self, b, procs, label, w):
+        """A hung step: its threads' stacks into the log, then its processes stopped."""
+        b.log(f"\n[{now()}] WATCHDOG: {label}: no output, no CPU and no disk for {w.idle_min():.0f} min: the step "
+              f"hangs. The stacks of its threads follow, then it is stopped.")
+        for q in procs:
+            if sys.platform != "win32":
+                import signal
+                try:
+                    os.killpg(q.pid, signal.SIGUSR1)
+                except OSError:
+                    pass
+        time.sleep(5)
+        for q in procs:
+            kill_tree(q.pid)
 
     def run_early(self, b, group):
         """The EARLY steps of the group at once, each as soon as the steps it waits for are done; each writes its own
@@ -380,6 +539,8 @@ class Manager:
         while todo or running:
             if not self.cancel_flag and failed is None:
                 for st in list(todo):
+                    if st.get("retry_at", 0) > time.time():
+                        continue
                     wait = [k for k in EARLY[st["key"]] if k in keys and
                             next(s_ for s_ in group if s_["key"] == k)["status"] != "done"]
                     if wait:
@@ -390,10 +551,9 @@ class Manager:
                     lf = open(lp, "w", encoding="utf-8", errors="replace")
                     lf.write(f"$ {sys.executable} {st['script']}\n")
                     lf.flush()
-                    kw = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if sys.platform == "win32" else {}
-                    p = subprocess.Popen([sys.executable, st["script"]], cwd=pipe, env=self.env(b), stdout=lf,
-                                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, **kw)
-                    running[st["key"]] = (st, p, lf, lp)
+                    p = popen([sys.executable, st["script"]], cwd=pipe, env=self.env(b), stdout=lf,
+                                         stderr=subprocess.STDOUT)
+                    running[st["key"]] = (st, p, lf, lp, Watch(p, [lp]))
                     b.log(f"[{now()}] started: {st['label']} ({st['key']})")
                     b.save()
             elif todo:
@@ -402,12 +562,19 @@ class Manager:
                 todo = []
             with self.lock:
                 self.current = (b, [r[1] for r in running.values()])
-            for k, (st, p, lf, lp) in list(running.items()):
+            if running and set(running) != set(getattr(self, "_tracked", ())):
+                self._tracked = set(running)
+                self._track(b, [r[1] for r in running.values()])
+            for k, (st, p, lf, lp, w) in list(running.items()):
                 code = p.poll()
                 if code is None:
+                    if w.hung():
+                        self._hang(b, [p], st["label"], w)
+                        st["hung"] = True
                     continue
                 lf.close()
                 del running[k]
+                sweep_group(p.pid)                    # what it left behind in its group
                 st["seconds"] = round(time.time() - st["started_ts"])
                 with open(lp, encoding="utf-8", errors="replace") as f:
                     out = f.read()
@@ -417,14 +584,28 @@ class Manager:
                     st["status"] = "pending"
                 elif code:
                     b.log(f"[{now()}] exit code {code}")
-                    st["status"] = "failed"
-                    failed = failed or st
+                    hung = st.pop("hung", False)
+                    n = st.get("tries", 0)
+                    if (hung or k in DOWNLOADS) and n < STEP_RETRIES and failed is None:
+                        st["tries"] = n + 1
+                        st["status"] = "pending"
+                        st["retry_at"] = time.time() + RETRY_WAIT
+                        todo.append(st)
+                        b.log(f"[{now()}] {st['label']} ({k}) {'hung' if hung else 'failed'}: run again in "
+                              f"{RETRY_WAIT:.0f} s (attempt {n + 2} of {STEP_RETRIES + 1}; what it finished is kept)")
+                    else:
+                        if hung:
+                            st["error_note"] = "hung"
+                        st["status"] = "failed"
+                        failed = failed or st
                 else:
                     st["status"] = "done"
                     st["ended"] = now()
                 b.save()
-            if running:
+            if running or todo:
                 time.sleep(0.5)
+        self._tracked = set()
+        b.state.pop("pids", None)
         with self.lock:
             self.current = (b, None)
         if all(st["status"] == "done" for st in group):
@@ -445,10 +626,17 @@ class Manager:
         args = [sys.executable, "build_level.py", "--finish"] + [st["step"] for st in chain]
         b.log(f"\n[{now()}] ===== {len(chain)} finishing steps in one process")
         b.log(f"$ {' '.join(args)}")
-        p = subprocess.Popen(args, cwd=pipe, env=self.env(b), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             stdin=subprocess.DEVNULL, bufsize=1, text=True, encoding="utf-8", errors="replace")
+        # its output goes to a file read here as it grows (2026-11-09: reading a pipe to its end waited for every forked
+        # worker that held it, also after build_level.py itself had been killed)
+        os.makedirs(os.path.join(b.folder, "logs"), exist_ok=True)
+        lp = os.path.join(b.folder, "logs", "finish_chain.log")
+        lf = open(lp, "wb")
+        p = popen(args, cwd=pipe, env=self.env(b), stdout=lf, stderr=subprocess.STDOUT)
+        lf.close()
         with self.lock:
             self.current = (b, p)
+        self._track(b, [p])
+        w = Watch(p, [lp])
         cur = None
         start = re.compile(r"^== finish: (\w+)")
         end = re.compile(r"^\[finish (\w+): (\d+) s\]")
@@ -458,8 +646,33 @@ class Manager:
             st["seconds"] = round(time.time() - st["started_ts"])
             st["ended"] = now()
 
+        def lines():
+            """The lines the chain printed, as they come, until it ends (and whatever it printed last)."""
+            off, rest, hung = 0, b"", False
+            with open(lp, "rb") as f:
+                while True:
+                    code_ = p.poll()
+                    f.seek(off)
+                    data = f.read()
+                    off += len(data)
+                    rest += data
+                    *full, rest = rest.split(b"\n")
+                    for ln in full:
+                        yield ln.decode("utf-8", "replace") + "\n"
+                    if code_ is not None:
+                        if rest:
+                            yield rest.decode("utf-8", "replace") + "\n"
+                        return
+                    if not data:
+                        if not hung and w.hung():
+                            hung = True
+                            self._hang(b, [p], "the finishing steps", w)
+                            self._chain_hung = True
+                        time.sleep(0.5)
+
+        self._chain_hung = False
         with open(os.path.join(b.folder, "build.log"), "a", encoding="utf-8", errors="replace") as logf:
-            for line in p.stdout:
+            for line in lines():
                 m1, m2 = start.match(line), end.match(line)
                 if m1 and m1.group(1) in by:
                     if cur is not None and cur["status"] == "running":
@@ -474,6 +687,8 @@ class Manager:
                     close(by[m2.group(1)])
                     b.save()
             code = p.wait()
+        sweep_group(p.pid)                            # what it left behind in its group
+        b.state.pop("pids", None)
         with self.lock:
             self.current = (b, None)
         if self.cancel_flag:
@@ -489,7 +704,15 @@ class Manager:
                 (st for st in chain if st["status"] == "pending"), chain[0])
             if bad.get("started_ts"):
                 bad["seconds"] = round(time.time() - bad["started_ts"])
-            self._fail(b, bad)
+            if self._chain_hung:
+                bad["hung"] = True
+            # failed here; _run decides whether it runs again (a hang) or the build stops (_fail)
+            bad["status"] = "failed"
+            if not (bad.get("hung") and bad.get("tries", 0) < STEP_RETRIES):
+                if bad.get("hung"):
+                    bad["error_note"] = "hung"
+                self._fail(b, bad)
+            b.save()
             return "failed"
         for st in chain:
             if st["status"] in ("running", "pending"):
@@ -531,30 +754,49 @@ class Manager:
             "PYTHONHASHSEED": "0",
             "PYTHONUNBUFFERED": "1",
             "PYTHONIOENCODING": "utf-8",
+            # GDAL's /vsicurl/ waits for ever by default (download_worldcover, 2026-11-09)
+            "GDAL_HTTP_TIMEOUT": "120", "GDAL_HTTP_CONNECTTIMEOUT": "30", "GDAL_HTTP_LOW_SPEED_TIME": "60",
+            "GDAL_HTTP_LOW_SPEED_LIMIT": "1024", "GDAL_HTTP_MAX_RETRY": "5", "GDAL_HTTP_RETRY_DELAY": "5",
         })
         e.update(system.workers(self.settings.get("workers", "auto")))
         return e
 
     def run_process(self, b, args, cwd, env=None):
         b.log(f"$ {' '.join(args)}")
-        kw = {}
-        if sys.platform == "win32":
-            # its own process group (Ctrl+C reaches the app, which stops the step itself), but the app's console: when
-            # that window is closed, Windows ends the step with it (with CREATE_NO_WINDOW it would run on alone)
-            kw["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-        with open(os.path.join(b.folder, "build.log"), "a", encoding="utf-8", errors="replace") as logf:
-            p = subprocess.Popen(args, cwd=cwd, env=env or self.env(b), stdout=logf, stderr=subprocess.STDOUT,
-                                 stdin=subprocess.DEVNULL, **kw)
-            with self.lock:
-                self.current = (b, p)
-            code = p.wait()
-            with self.lock:
-                self.current = (b, None)
+        # popen: its own process group (Ctrl+C reaches the app, which stops the step itself); on Windows the app's
+        # console still: when that window is closed, Windows ends the step with it (with CREATE_NO_WINDOW it would run on)
+        lp = os.path.join(b.folder, "build.log")
+        with open(lp, "a", encoding="utf-8", errors="replace") as logf:
+            p = popen(args, cwd=cwd, env=env or self.env(b), stdout=logf, stderr=subprocess.STDOUT)
+        with self.lock:
+            self.current = (b, p)
+        self._track(b, [p])
+        w = Watch(p, [lp])
+        while p.poll() is None:
+            if w.hung():
+                self._hang(b, [p], self._step_now["label"] if self._step_now else " ".join(args)[:120], w)
+                if self._step_now is not None:
+                    self._step_now["hung"] = True
+                p.wait()
+                break
+            time.sleep(1.0)
+        code = p.wait()
+        sweep_group(p.pid)                            # what it left behind in its group
+        b.state.pop("pids", None)
+        with self.lock:
+            self.current = (b, None)
         if code:
             b.log(f"[{now()}] exit code {code}")
         return code == 0
 
     def _step(self, b, st):
+        self._step_now = st
+        try:
+            return self._step_kind(b, st)
+        finally:
+            self._step_now = None
+
+    def _step_kind(self, b, st):
         k = st["kind"]
         pipe = os.path.join(b.code, "pipeline")
         if k in ("stages", "finish_placeholder", "finish", "package"):
@@ -630,24 +872,28 @@ class Manager:
         if os.path.exists(dst) and os.path.getsize(dst) == REFERENCE_SIZE:
             return
         os.makedirs(os.path.dirname(dst), exist_ok=True)
+        if os.path.exists(dst):
+            os.remove(dst)                    # a wrong size: again
         b.log(f"downloading {REFERENCE_URL} ({REFERENCE_SIZE / 2 ** 20:.0f} MB)")
-        for attempt in range(5):
-            try:
-                with urllib.request.urlopen(REFERENCE_URL, timeout=120) as r, open(dst + ".part", "wb") as f:
-                    shutil.copyfileobj(r, f, 1 << 20)
-                if os.path.getsize(dst + ".part") == REFERENCE_SIZE:
-                    os.replace(dst + ".part", dst)
-                    return
-            except OSError as e:
-                b.log(f"retry: {e}")
-                time.sleep(5 * (attempt + 1))
-        raise RuntimeError("the reference level v1.1 could not be downloaded")
+        netio = pipeline_netio()
+        netio.SAY = b.log                     # its progress lines into the build's log
+        try:
+            prog = netio.Progress("reference level v1.1", files=1)
+            netio.fetch(REFERENCE_URL, dst, prog, expect_size=REFERENCE_SIZE)
+            prog.done()
+        except netio.DownloadError as e:
+            raise RuntimeError(f"the reference level v1.1 could not be downloaded: {e}")
+        finally:
+            netio.SAY = None
+        if os.path.getsize(dst) != REFERENCE_SIZE:
+            os.remove(dst)
+            raise RuntimeError("the reference level v1.1 came with a wrong size")
 
     def expand_finish(self, b, st):
         """The finishing steps of the pipeline (build_level.py --list) in place of the placeholder."""
         pipe = os.path.join(b.code, "pipeline")
         r = subprocess.run([sys.executable, "build_level.py", "--list"], cwd=pipe, env=self.env(b), capture_output=True,
-                           text=True)
+                           text=True, timeout=900)
         if r.returncode:
             b.log(r.stdout + r.stderr)
             return False
@@ -662,9 +908,70 @@ class Manager:
         return "expanded"
 
 
-def kill_tree(pid):
+def stop_on_signals():
+    """SIGTERM and SIGHUP (the terminal closed) end the app as Ctrl+C does, so that it stops its steps (they run in
+    groups of their own and do not get the terminal's signals)."""
+    import signal
+
+    def stop(sig, frame):
+        raise KeyboardInterrupt
+    for name in ("SIGTERM", "SIGHUP", "SIGBREAK"):
+        if hasattr(signal, name):
+            try:
+                signal.signal(getattr(signal, name), stop)
+            except (ValueError, OSError):
+                pass
+
+
+def pipeline_netio():
+    """The pipeline's download module (beamng/pipeline/netio.py, no other pipeline imports)."""
+    import importlib.util
+    if "sb_netio" in sys.modules:
+        return sys.modules["sb_netio"]
+    spec = importlib.util.spec_from_file_location("sb_netio", os.path.join(BEAMNG, "pipeline", "netio.py"))
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["sb_netio"] = m
+    spec.loader.exec_module(m)
+    return m
+
+
+def kill_stale(entry):
+    """A step process an earlier run of the app left (pid, create time): stopped with its group, if it is still that
+    process."""
+    pid, ct = (entry + [None])[:2] if isinstance(entry, list) else (entry, None)
     try:
         import psutil
+        q = psutil.Process(pid)
+        if ct is not None and abs(q.create_time() - ct) > 1:
+            return                                   # the pid was taken by another process since
+    except Exception:
+        return
+    kill_tree(pid)
+
+
+def sweep_group(pid):
+    """After a step ended: what it left in its process group (POSIX; forked workers of a parent that died). Nothing
+    on Windows, where a pid of an ended process may already be another program's."""
+    if sys.platform != "win32":
+        import signal
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+
+def kill_tree(pid):
+    """A running step: its group (POSIX) and its process tree."""
+    sweep_group(pid)                                 # the step's group (popen): its workers, also orphaned ones
+    try:
+        import psutil
+    except ImportError:
+        try:
+            os.kill(pid, 9)
+        except OSError:
+            pass
+        return
+    try:
         p = psutil.Process(pid)
         for c in p.children(recursive=True):
             try:
@@ -672,11 +979,8 @@ def kill_tree(pid):
             except psutil.Error:
                 pass
         p.kill()
-    except Exception:
-        try:
-            os.kill(pid, 9)
-        except OSError:
-            pass
+    except psutil.Error:
+        pass
 
 
 def install_zip(b, settings):

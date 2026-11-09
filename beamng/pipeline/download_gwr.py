@@ -18,7 +18,7 @@ cited).
 """
 import csv, gzip, io, json, os, sys, time, zipfile
 import numpy as np
-import requests
+import netio
 import shapely
 from config import DATA, WORK, ZONE, lv95_to_local
 import area
@@ -39,19 +39,12 @@ def fetch(canton="ti"):
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     if os.path.exists(dst) and os.environ.get("MAGLIASO_GWR_REUSE") == "1":    # the builder's cache of today's extract
         return dst
-    for attempt in range(5):
-        try:
-            with requests.get(URL.format(canton), stream=True, timeout=120) as r:
-                r.raise_for_status()
-                with open(dst + ".part", "wb") as f:
-                    for chunk in r.iter_content(1 << 20):
-                        f.write(chunk)
-            os.replace(dst + ".part", dst)
-            return dst
-        except Exception as e:
-            print("retry", e, flush=True)
-            time.sleep(5 * (attempt + 1))
-    raise RuntimeError("GWR download failed")
+    if os.path.exists(dst):
+        os.remove(dst)                       # today's register (netio.fetch keeps a file that is there)
+    prog = netio.Progress("register of buildings %s" % canton.upper(), files=1)
+    netio.fetch(URL.format(canton), dst, prog)          # progress lines, resumed after a cut, DownloadError at the end
+    prog.done()
+    return dst
 
 
 def read(zpath):
