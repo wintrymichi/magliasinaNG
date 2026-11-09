@@ -2265,7 +2265,9 @@ the pipeline's own zone build (downloads, stages, finishing steps), then recente
   block: an advanced script refuses "--no-browser" as an unknown parameter; it reads $args.
 - cli --until first cancelled the next step once it had started (a race): the Manager stops after the named step.
 - The app's first time estimate (1.2 + 0.065 h per km2) came from the dense Lugano zone: Sisikon (32.8 km2 of mountains
-  and lake) took 38 min against 3.3 h. The build time follows the buildings and roads, not the area, and the app cannot
+  and lake) took 38 min against 3.3 h (its first build, 2026-11-07; by the sixth, 2026-11-08, the same area took 60.6
+  min of steps, 70 min on GitHub with the hand-over between the two jobs: paved_edges and rail_walls in zones, the
+  gallery cuts. A build time is worth only as much as the run it names). The build time follows the buildings and roads, not the area, and the app cannot
   know them before the downloads: it now shows a range, 0.25 + 0.012 h/km2 (Sisikon, Vitznau) to 0.4 + 0.07 h/km2 (the
   Lugano zone); Montreux, a town of 8.7 km2, took 31 min with the swissTLM3D land cover (36 min before it, with none).
 - wmts.geo.admin.ch and api3.geo.admin.ch are blocked from the cloud: the app's map tiles and search cannot be seen or
@@ -2296,7 +2298,9 @@ Tunnels and galleries (tunnels.py, finishing step; tested on ti_m1_8 San Bernard
   rail - 2 m. render3d draws the guard rails (render3d_models) also with trees=False.
 
 Test builds (draft release builder-test, GitHub runners of 4 cores, from the launcher to the zip): Axenstrasse and
-Sisikon 32.8 km2 in 38 min, zip 0.86 GB (44 tunnels and galleries, 22.4 km); Sisikon 0.9 km2 on Windows in 18 min.
+Sisikon 32.8 km2 in 38 min on 2026-11-07 and 60.6 min of steps on 2026-11-08 (run 42440861766, 70 min of wall time;
+the earlier "38 min" in these notes was the first build, before paved_edges, rail_walls and the gallery cuts), zip
+0.86 GB (44 tunnels and galleries, 22.4 km); Sisikon 0.9 km2 on Windows in 18 min.
 
 ## main is the Malcantone only (2026-11-07)
 

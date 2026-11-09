@@ -1,8 +1,8 @@
 """swissTLM3D (swisstopo topographic landscape model, 3D) for the playable area.
 
 The national package is a 4-5 GB zip; only a few of its shapefiles are needed and only the
-features in the area, so the zip is read over HTTP range requests and the members are parsed
-while they stream (no local copy of the package):
+features in the area, so the zip is read over HTTP range requests (no local copy of the package); the members it
+needs are kept decompressed in data/tlm_pkg for the next builds (switzerlandNG faster builds, 2026-11-09):
   TLM_STRASSE            roads and paths: class (OBJEKTART), surface (BELAGSART), bridge or
                          tunnel (KUNSTBAUTE), level (STUFE), 3D line (the z of a bridge is its deck)
   TLM_EISENBAHN          railways (the Lugano-Ponte Tresa line crosses the area)
@@ -32,11 +32,26 @@ MARGIN = 300.0
 
 
 class RangeFile(io.RawIOBase):
-    """A remote file read with HTTP range requests (seekable, for zipfile)."""
+    """A remote file read with HTTP range requests (seekable, for zipfile). switzerlandNG faster builds (2026-11-09):
+    CHUNK-sized ranges on kept-alive connections, and AHEAD of them fetched at once while the file is read straight
+    on: one 4 MB request after the other took 583 s for the small Sisikon area while the other downloads ran beside
+    it (84 s alone before)."""
+    CHUNK = 8 << 20
+    AHEAD = 4
 
     def __init__(self, url):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
         self.url, self.pos = url, 0
         self.size = int(requests.head(url, timeout=60).headers["content-length"])
+        self._local = threading.local()
+        self._pool = ThreadPoolExecutor(self.AHEAD)
+        self._chunks = {}
+        self._last = None
+
+    def close(self):
+        self._pool.shutdown(wait=False, cancel_futures=True)
+        super().close()
 
     def seekable(self):
         return True
@@ -51,22 +66,43 @@ class RangeFile(io.RawIOBase):
         self.pos = off if whence == 0 else (self.pos + off if whence == 1 else self.size + off)
         return self.pos
 
+    def _get(self, k):
+        a, b = k * self.CHUNK, min((k + 1) * self.CHUNK, self.size) - 1
+        s = getattr(self._local, "s", None)
+        if s is None:
+            s = self._local.s = requests.Session()
+        for attempt in range(6):
+            try:
+                r = s.get(self.url, headers={"Range": f"bytes={a}-{b}"}, timeout=120)
+                r.raise_for_status()
+                if len(r.content) != b - a + 1:
+                    raise IOError("short range %d of %d" % (len(r.content), b - a + 1))
+                return r.content
+            except Exception as e:
+                print("retry range", a, e, flush=True)
+                time.sleep(3 * (attempt + 1))
+        raise IOError("range %d-%d of %s failed" % (a, b, self.url))
+
     def readinto(self, b):
         if self.pos >= self.size:
             return 0
-        end = min(self.pos + len(b), self.size) - 1
-        for attempt in range(6):
-            try:
-                r = requests.get(self.url, headers={"Range": f"bytes={self.pos}-{end}"}, timeout=120)
-                r.raise_for_status()
-                data = r.content
-                break
-            except Exception as e:
-                print("retry range", self.pos, e, flush=True)
-                time.sleep(3 * (attempt + 1))
-        b[:len(data)] = data
-        self.pos += len(data)
-        return len(data)
+        k = self.pos // self.CHUNK
+        # read straight on (the chunk read last or the next): fetch AHEAD chunks beyond; a jump (zipfile looking
+        # for its directory) fetches the one chunk only
+        straight = self._last is not None and k in (self._last, self._last + 1)
+        last_k = (self.size - 1) // self.CHUNK
+        for kk in range(k, min(k + (self.AHEAD if straight else 1), last_k + 1)):
+            if kk not in self._chunks:
+                self._chunks[kk] = self._pool.submit(self._get, kk)
+        for kk in [kk for kk in self._chunks if kk < k or kk > k + self.AHEAD]:
+            self._chunks.pop(kk).cancel()
+        data = self._chunks[k].result()
+        self._last = k
+        off = self.pos - k * self.CHUNK
+        n = min(len(b), len(data) - off)
+        b[:n] = data[off:off + n]
+        self.pos += n
+        return n
 
 
 def read_exact(f, n):
@@ -144,22 +180,37 @@ def dbf_records(f, keep):
     return [n for n, _, _ in fields], out
 
 
-def main():
-    out_dir = os.path.join(DATA, "tlm")
-    os.makedirs(out_dir, exist_ok=True)
-    x0, y0, x1, y1 = area.bounds(MARGIN)
-    ce = [local_to_lv95(x, y) for x in (x0, x1) for y in (y0, y1)]
-    bbox = (min(p[0] for p in ce), min(p[1] for p in ce), max(p[0] for p in ce), max(p[1] for p in ce))
-    z = zipfile.ZipFile(io.BufferedReader(RangeFile(URL), buffer_size=1 << 22))
-    names = {n.replace("/", "\\"): n for n in z.namelist()}
-    layers = dict(LAYERS)
-    if ZONE and ZONE.get("builder"):
-        layers.update(LAYERS_BUILDER)
-    for layer, stem in layers.items():
-        dest = os.path.join(out_dir, layer + ".json")
-        if os.path.exists(dest):
-            print(layer, "exists", flush=True)
-            continue
+# the members read from the national package, kept for the next builds (decompressed, named after the package): the
+# Switzerland Builder's cache shares data/tlm_pkg between its builds (app/cache.py SHARED)
+PKG = os.path.join(DATA, "tlm_pkg")
+PKG_STEM = os.path.basename(URL).split(".")[0]
+
+
+def member(z, names, name):
+    """The local copy of a package member (made from the package on the first build that needs it)."""
+    dst = os.path.join(PKG, PKG_STEM + "__" + name.replace("\\", "/").split("/")[-1])
+    if os.path.exists(dst) and os.path.getsize(dst) == z.getinfo(names[name]).file_size:
+        return dst, False
+    os.makedirs(PKG, exist_ok=True)
+    with z.open(names[name]) as f, open(dst + ".part", "wb") as o:
+        while True:
+            c = f.read(1 << 22)
+            if not c:
+                break
+            o.write(c)
+    os.replace(dst + ".part", dst)
+    return dst, True
+
+
+def layer_job(job):
+    """One layer: its features over bbox into dest (data/tlm/<layer>.json). Every layer reads the package through a
+    RangeFile of its own: the layers run side by side."""
+    layer, stem, dest, bbox = job
+    t = time.time()
+    rf = RangeFile(URL)
+    try:
+        z = zipfile.ZipFile(io.BufferedReader(rf, buffer_size=1 << 22))
+        names = {n.replace("/", "\\"): n for n in z.namelist()}
         # the file by its name, in whatever folder of the package (the folders have been renamed between releases);
         # a big layer comes in parts (TLM_BODENBEDECKUNG_OST and _WEST in the 2026-02 package: the builder's first
         # Vitznau and Montreux builds found no land cover and no lake, 2026-11-07)
@@ -173,22 +224,48 @@ def main():
         pairs = [(v[".SHP"], v[".DBF"]) for k, v in sorted(stems.items()) if ".SHP" in v and ".DBF" in v]
         if not pairs:
             print(layer, "not in the package:", [n for n in names if n.upper().endswith(".SHP")], flush=True)
-            continue
-        t = time.time()
+            return
         dims = 2 if layer in FLAT else 3
-        feats, fields = [], []
+        feats, fields, got = [], [], 0
         for shp, dbf in pairs:
-            with z.open(names[shp]) as f:
+            ps, new_s = member(z, names, shp)
+            pd, new_d = member(z, names, dbf)
+            got += new_s + new_d
+            with open(ps, "rb") as f:
                 geoms = dict(shp_records(io.BufferedReader(f, 1 << 22), bbox))
-            with z.open(names[dbf]) as f:
+            with open(pd, "rb") as f:
                 fields, props = dbf_records(io.BufferedReader(f, 1 << 22), geoms.keys())
             feats += [{"props": props.get(i, {}), "parts": [np.round(p[:, :dims], 3).tolist() for p in parts]}
                       for i, parts in sorted(geoms.items())]
             if len(pairs) > 1:
                 print(layer, shp.split("\\")[-1], len(geoms), "features", flush=True)
-        json.dump({"fields": fields, "bbox_lv95": bbox, "features": feats}, open(dest + ".part", "w"))
-        os.replace(dest + ".part", dest)
-        print(layer, len(feats), "features in %.0f s" % (time.time() - t), flush=True)
+    finally:
+        rf.close()
+    json.dump({"fields": fields, "bbox_lv95": bbox, "features": feats}, open(dest + ".part", "w"))
+    os.replace(dest + ".part", dest)
+    print(layer, len(feats), "features in %.0f s (%s)" % (time.time() - t, "from the package" if got else
+                                                         "package files kept from an earlier build"), flush=True)
+
+
+def main():
+    from concurrent.futures import ThreadPoolExecutor
+    out_dir = os.path.join(DATA, "tlm")
+    os.makedirs(out_dir, exist_ok=True)
+    x0, y0, x1, y1 = area.bounds(MARGIN)
+    ce = [local_to_lv95(x, y) for x in (x0, x1) for y in (y0, y1)]
+    bbox = (min(p[0] for p in ce), min(p[1] for p in ce), max(p[0] for p in ce), max(p[1] for p in ce))
+    layers = dict(LAYERS)
+    if ZONE and ZONE.get("builder"):
+        layers.update(LAYERS_BUILDER)
+    jobs = []
+    for layer, stem in layers.items():
+        dest = os.path.join(out_dir, layer + ".json")
+        if os.path.exists(dest):
+            print(layer, "exists", flush=True)
+            continue
+        jobs.append((layer, stem, dest, bbox))
+    with ThreadPoolExecutor(max(1, len(jobs))) as pool:
+        list(pool.map(layer_job, jobs))
 
 
 if __name__ == "__main__":

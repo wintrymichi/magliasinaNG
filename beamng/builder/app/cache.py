@@ -10,7 +10,9 @@ import time
 
 # data/<sub> folders whose files are the same for every area that needs them (tiles of a national grid, national
 # packages, extracts); the rest of data/ (the area's survey, OSM cut, worldcover window) belongs to one build
-SHARED = ("swissalti3d_05", "dsm_05", "swissimage_2", "swissalti3d_2", "buildings3d", "names", "copdem30", "osm", "gwr")
+# (tlm_pkg: the swissTLM3D package's members, named after the package release: switzerlandNG faster builds)
+SHARED = ("swissalti3d_05", "dsm_05", "swissimage_2", "swissalti3d_2", "buildings3d", "names", "copdem30", "osm", "gwr",
+          "tlm_pkg")
 # shared files that change with the source and are fetched again after this many days
 MAX_AGE_DAYS = {"osm": 14, "gwr": 7}
 SHARED_EXT = {"osm": (".osm.pbf",), "gwr": (".zip",), "buildings3d": (".zip",)}
