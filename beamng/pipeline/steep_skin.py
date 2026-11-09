@@ -299,7 +299,13 @@ def rock_texture(n=ROCK_TEX_N, seed=53):
 
 
 def texture_files(lv):
-    """{level path: PNG bytes} of the skin's textures (v3.1.3: and the fringe's, the bank's colour with fringe_alpha)."""
+    """{level path: PNG bytes} of the skin's textures (v3.1.3: and the fringe's, the bank's colour with fringe_alpha);
+    drawn once and kept (texcache: 32 s, steep_skin and skin_blend both write them)."""
+    import texcache
+    return {f"{lv}/{D}/{n}": b for n, b in texcache.get("skin", _texture_bytes, [__file__]).items()}
+
+
+def _texture_bytes():
     col_img, nrm_img = bank_texture()
     rock_col, rock_nrm = rock_texture()
     out = {}
@@ -308,7 +314,7 @@ def texture_files(lv):
                      ("t_steep_fringe_b.color.png", np.dstack([col_img, fringe_alpha()]))):
         b = io.BytesIO()
         Image.fromarray(im).save(b, "PNG", optimize=True)
-        out[f"{lv}/{D}/{name}"] = b.getvalue()
+        out[name] = b.getvalue()
     return out
 
 

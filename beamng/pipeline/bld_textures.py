@@ -1031,25 +1031,73 @@ def walls(dst):
 ROOF_TILE = {"coppi": 4.0, "tegole": 4.0, "piode": 3.0, "flat": 4.0, "metal": 4.0}
 
 
+PARTS = ("roof_coppi", "roof_tegole", "roof_metal", "openings_atlas", "stone_wall", "plaster", "roof_piode", "roof_flat",
+         "plinth")                       # the slowest first (35, 24, 20, 17 s of the 110 s on one core)
+
+
+def _part(_, name):
+    import tempfile
+    tmp = tempfile.mkdtemp(prefix="bldtex_")
+    import shutil
+    r = globals()[name](tmp)
+    files = {f: open(os.path.join(tmp, f), "rb").read() for f in sorted(os.listdir(tmp))}
+    shutil.rmtree(tmp, ignore_errors=True)
+    return name, r, files
+
+
+def _key():
+    """The textures depend on this file's code and the libraries that draw and write them."""
+    import hashlib
+    import PIL
+    import scipy
+    h = hashlib.sha1(open(os.path.abspath(__file__), "rb").read())
+    h.update(("%s %s %s" % (np.__version__, scipy.__version__, PIL.__version__)).encode())
+    return h.hexdigest()[:16]
+
+
 def build(dst):
     """All the textures of the buildings in dst; returns the openings index and the mean colour of
-    every tiling texture (the vertex colour that gives a wall or roof a measured tone divides by it)."""
+    every tiling texture (the vertex colour that gives a wall or roof a measured tone divides by it).
+    switzerlandNG faster builds (2026-11-09): 110 s on one core in every build, the same files every time. They are
+    drawn in TILE_WORKERS forked processes (tilepool) and kept in MAGLIASO_TEXTURE_CACHE (the Switzerland Builder's
+    cache, by the code and library versions) for the next builds: the same bytes either way."""
+    import shutil
     os.makedirs(dst, exist_ok=True)
-    plaster(dst)
-    stone_wall(dst)
-    plinth(dst)
-    roof_coppi(dst)
-    roof_tegole(dst)
-    roof_piode(dst)
-    roof_flat(dst)
-    roof_metal(dst)
-    idx = openings_atlas(dst)
+    cache = os.environ.get("MAGLIASO_TEXTURE_CACHE")
+    keep = os.path.join(cache, "bld_" + _key()) if cache else None
+    import pickle
+    if keep and os.path.exists(os.path.join(keep, "index.pkl")):
+        for f in sorted(os.listdir(keep)):
+            if f != "index.pkl":
+                shutil.copyfile(os.path.join(keep, f), os.path.join(dst, f))
+        print("building textures kept from an earlier build (%s)" % os.path.basename(keep), flush=True)
+        idx, means = pickle.load(open(os.path.join(keep, "index.pkl"), "rb"))
+        return idx, means
+    import tilepool
+    idx = None
+    written = []
+    for name, r, files in tilepool.imap(_part, PARTS, None):
+        if name == "openings_atlas":
+            idx = r
+        for f, b in files.items():
+            open(os.path.join(dst, f), "wb").write(b)
+            written.append(f)
     means = {}
     for name in ("t_bld_plaster", "t_bld_stone", "t_bld_plinth", "t_roof_coppi", "t_roof_tegole", "t_roof_piode",
                  "t_roof_flat", "t_roof_metal"):
         a = np.asarray(Image.open(os.path.join(dst, name + "_b.color.png")).convert("RGB"), np.float32) / 255.0
         means[name] = [round(float(v), 4) for v in a.reshape(-1, 3).mean(0)]
     json.dump(means, open(os.path.join(dst, "bld_textures.json"), "w"), indent=1)
+    written.append("bld_textures.json")
+    if keep:
+        try:
+            os.makedirs(keep + ".part", exist_ok=True)
+            for f in written:
+                shutil.copyfile(os.path.join(dst, f), os.path.join(keep + ".part", f))
+            pickle.dump((idx, means), open(os.path.join(keep + ".part", "index.pkl"), "wb"))
+            os.replace(keep + ".part", keep)
+        except OSError as e:
+            print("building textures not kept:", e, flush=True)
     return idx, means
 
 

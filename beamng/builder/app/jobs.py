@@ -526,6 +526,8 @@ class Manager:
             "MAGLIASO_GWR_REUSE": "1",
             "MAGLIASO_OSM_PBFS": " ".join(chk["osm_extracts"]),
             "MAGLIASO_CHECKPOINT": "1",
+            # procedural textures drawn the same in every build (buildings, the skin), kept here (texcache.py)
+            "MAGLIASO_TEXTURE_CACHE": os.path.join(self.cache_dir, "textures"),
             "PYTHONHASHSEED": "0",
             "PYTHONUNBUFFERED": "1",
             "PYTHONIOENCODING": "utf-8",
