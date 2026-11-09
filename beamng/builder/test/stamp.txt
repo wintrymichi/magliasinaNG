@@ -1,1 +1,1 @@
-axen 2026-11-09T19:15Z faster builds: parallel downloads, tile pools, threaded zip, one finish process
+sisikon 2026-11-09T19:17Z faster builds, small area on Linux (4096 terrain)
