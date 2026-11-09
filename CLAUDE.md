@@ -2383,7 +2383,8 @@ Faster builds (switzerlandNG, thread "Velocizzare la creazione delle mappe", 202
   their end now (real servers honour it, but a proxy may not).
 - Review 2 of the reviewer thread found what the first round missed:
   pmap's stall test compared the CPU since the LAST RESULT, so a worker that computed more than 2 s and then
-  deadlocked was never flagged (reproduced: it hung until `timeout` killed it). The window now rolls: the clock restarts
+  deadlocked was never flagged: the first stall check was cumulative, found by the reviewer thread with a test
+  (a worker burning 8 s of CPU, then blocking on a lock: it hung until `timeout` killed it). The window now rolls: the clock restarts
   whenever the workers used 2 s of CPU. A test of a stall must deadlock only in the CHILD (os.getpid() != parent): the
   serial fallback runs the same function in the main process and a test that deadlocks everywhere hangs there too.
   A retry after a hang reran steps that are not idempotent (skin_grass, sidewalks, road_seams, steep_skin...): a hung

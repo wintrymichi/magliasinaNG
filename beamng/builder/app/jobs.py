@@ -529,8 +529,11 @@ class Manager:
             return (f"'{st['step']}' must not run twice on the same level; resume from an earlier step or build "
                     f"the area again")
         t0 = st.get("started_ts")
-        if not t0 or st.get("kind") in ("stages", "recenter"):
-            return None                     # stages resume from their checkpoint, recenter from its journal
+        if not t0 or st.get("kind") in ("script", "stages", "recenter"):
+            # the rule: script steps (downloads, rasters, buildings...) rewrite their outputs from scratch and are
+            # repeatable; stages resume from their checkpoint, recenter from its journal; only the finishing steps,
+            # which change the level in place, need the test below
+            return None
         n, first = 0, None
         for top in (b.level_dir, os.path.join(b.root, "work")):
             for dp, dns, fs in os.walk(top):
@@ -545,6 +548,10 @@ class Manager:
                             first = first or q
                     except OSError:
                         pass
+        if n and st.get("chain_start"):
+            return (f"it hung before it printed its first line, and the finishing steps of the same run before it "
+                    f"wrote {n} files since then (e.g. {os.path.relpath(first, b.root)}): which of them are its own "
+                    f"cannot be told, so it is not run again by itself; resume from this step")
         if n:
             return (f"it had already written {n} files (e.g. {os.path.relpath(first, b.root)}), so a second run "
                     f"could apply its changes twice; resume from an earlier step or build the area again")
@@ -739,6 +746,7 @@ class Manager:
                     cur = by[m1.group(1)]
                     logf.write(f"\n[{now()}] ===== {cur['label']} ({cur['key']})\n")
                     cur["status"], cur["started"], cur["started_ts"] = "running", now(), time.time()
+                    cur.pop("chain_start", None)
                     b.save()
                 logf.write(line)
                 logf.flush()
@@ -767,7 +775,8 @@ class Manager:
                 bad["hung"] = True
             # failed here; _run decides whether it runs again (a hang) or the build stops (_fail)
             bad["status"] = "failed"
-            bad["started_ts"] = bad.get("started_ts") or t_chain
+            if not bad.get("started_ts"):
+                bad["started_ts"], bad["chain_start"] = t_chain, True
             b.save()
             return "failed"
         for st in chain:
