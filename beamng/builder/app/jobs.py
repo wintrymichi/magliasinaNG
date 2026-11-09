@@ -61,6 +61,9 @@ STALL_MIN = float(os.environ.get("SWISSBUILDER_STALL_MIN", "20"))
 STEP_RETRIES = int(os.environ.get("SWISSBUILDER_STEP_RETRIES", "2"))
 RETRY_WAIT = float(os.environ.get("SWISSBUILDER_RETRY_WAIT", "60"))
 DOWNLOADS = {"swisstopo", "worldcover", "survey", "tlm", "gwr", "osm"}
+# finishing steps that must never run twice on the same level (CLAUDE.md): a hang there is a failure, not a retry
+NOT_REPEATABLE = {"skin_grass", "sidewalks", "road_seams", "road_sags", "steep_skin", "skin_blend"}
+WORKER_VARS = ("PATCH_WORKERS", "NET_WORKERS", "OPT_WORKERS", "TILE_WORKERS", "ZIP_WORKERS")
 
 
 def now():
@@ -94,10 +97,21 @@ class Watch:
     but its progress lines grow the log every few seconds; a long computation uses CPU)."""
     CHECK = 30.0
 
+    warned = False
+
     def __init__(self, p, paths):
         self.p, self.paths = p, [x for x in paths if x]
         self.t_moved = self.t_check = time.time()
         self.last = None
+        try:
+            import psutil  # noqa: F401
+            self.on = True
+        except ImportError:
+            # without psutil the CPU and disk of the tree are unknown: a long silent computation would look hung
+            self.on = False
+            if not Watch.warned:
+                Watch.warned = True
+                print("watchdog off: psutil is not installed (a hung step is not stopped by itself)", flush=True)
 
     def _sample(self):
         sizes = []
@@ -122,7 +136,7 @@ class Watch:
 
     def hung(self):
         now_ = time.time()
-        if now_ - self.t_check < self.CHECK:
+        if not self.on or now_ - self.t_check < self.CHECK:
             return False
         self.t_check = now_
         sizes, cpu, io = self._sample()
@@ -417,6 +431,8 @@ class Manager:
                             b.state["status"], b.state["error"], b.state["failed_step"] = "running", None, None
                             b.save()
                             continue
+                        if bad is not None:
+                            self._fail(b, bad)
                         return
                     if r == "cancelled":
                         break
@@ -487,6 +503,14 @@ class Manager:
             if hung:
                 st["error_note"] = "hung"
             return False
+        if st["key"] not in DOWNLOADS:
+            why = self._unsafe_retry(b, st)
+            if why:
+                b.log(f"[{now()}] {st['label']} ({st['key']}) hung and cannot be run again by itself: {why}")
+                st["error_note"] = "hung_written"
+                st["written_note"] = why
+                return False
+            st["hangs"] = st.get("hangs", 0) + 1          # the retry gets half the workers (memory, swap)
         st["tries"] = n + 1
         st["status"] = "pending"
         b.save()
@@ -497,6 +521,35 @@ class Manager:
             time.sleep(0.5)
         return not self.cancel_flag
 
+    def _unsafe_retry(self, b, st):
+        """Why a hung step may not simply run again, or None. A finishing step listed in NOT_REPEATABLE never; any
+        other step only if it wrote no file into the level or the work folder (bng.LevelWriter writes its files at
+        the end: a step stopped while computing has written none)."""
+        if st.get("kind") == "finish" and st.get("step") in NOT_REPEATABLE:
+            return (f"'{st['step']}' must not run twice on the same level; resume from an earlier step or build "
+                    f"the area again")
+        t0 = st.get("started_ts")
+        if not t0 or st.get("kind") in ("stages", "recenter"):
+            return None                     # stages resume from their checkpoint, recenter from its journal
+        n, first = 0, None
+        for top in (b.level_dir, os.path.join(b.root, "work")):
+            for dp, dns, fs in os.walk(top):
+                dns[:] = [d for d in dns if d not in ("logs", "reports", "__pycache__")]
+                for f in fs:
+                    if f.endswith((".log", ".pkl")) or "report" in f:
+                        continue
+                    q = os.path.join(dp, f)
+                    try:
+                        if os.path.getmtime(q) >= t0 - 1:
+                            n += 1
+                            first = first or q
+                    except OSError:
+                        pass
+        if n:
+            return (f"it had already written {n} files (e.g. {os.path.relpath(first, b.root)}), so a second run "
+                    f"could apply its changes twice; resume from an earlier step or build the area again")
+        return None
+
     def _fail(self, b, st):
         st["status"] = "failed"
         b.state["status"] = "failed"
@@ -505,7 +558,11 @@ class Manager:
         b.save()
 
     def _error(self, st):
-        if st.pop("error_note", None) == "hung":
+        note = st.pop("error_note", None)
+        if note == "hung_written":
+            return (f"Step '{st['label']}' stopped responding (no output, no CPU, no disk for {STALL_MIN:.0f} min) "
+                    f"and {st.pop('written_note', '')}. See the log, which has the stacks of its threads.")
+        if note == "hung":
             return (f"Step '{st['label']}' stopped responding (no output, no CPU, no disk for {STALL_MIN:.0f} min) "
                     f"{STEP_RETRIES + 1} times: see the log, which has the stacks of its threads (the build can be "
                     f"resumed from this step).")
@@ -551,7 +608,7 @@ class Manager:
                     lf = open(lp, "w", encoding="utf-8", errors="replace")
                     lf.write(f"$ {sys.executable} {st['script']}\n")
                     lf.flush()
-                    p = popen([sys.executable, st["script"]], cwd=pipe, env=self.env(b), stdout=lf,
+                    p = popen([sys.executable, st["script"]], cwd=pipe, env=self.env(b, st.get("hangs", 0)), stdout=lf,
                                          stderr=subprocess.STDOUT)
                     running[st["key"]] = (st, p, lf, lp, Watch(p, [lp]))
                     b.log(f"[{now()}] started: {st['label']} ({st['key']})")
@@ -631,7 +688,9 @@ class Manager:
         os.makedirs(os.path.join(b.folder, "logs"), exist_ok=True)
         lp = os.path.join(b.folder, "logs", "finish_chain.log")
         lf = open(lp, "wb")
-        p = popen(args, cwd=pipe, env=self.env(b), stdout=lf, stderr=subprocess.STDOUT)
+        t_chain = time.time()
+        p = popen(args, cwd=pipe, env=self.env(b, max(st.get("hangs", 0) for st in chain)), stdout=lf,
+                  stderr=subprocess.STDOUT)
         lf.close()
         with self.lock:
             self.current = (b, p)
@@ -708,10 +767,7 @@ class Manager:
                 bad["hung"] = True
             # failed here; _run decides whether it runs again (a hang) or the build stops (_fail)
             bad["status"] = "failed"
-            if not (bad.get("hung") and bad.get("tries", 0) < STEP_RETRIES):
-                if bad.get("hung"):
-                    bad["error_note"] = "hung"
-                self._fail(b, bad)
+            bad["started_ts"] = bad.get("started_ts") or t_chain
             b.save()
             return "failed"
         for st in chain:
@@ -732,7 +788,11 @@ class Manager:
         return t / 2 ** 30
 
     # ------------------------------------------------------------------ one step
-    def env(self, b):
+    def env(self, b, hangs=None):
+        """hangs: how often the step to run hung before (default: the step run_process runs); each hang halves the
+        workers, so a step that hung thrashing the swap gets a chance on its retry."""
+        if hangs is None:
+            hangs = self._step_now.get("hangs", 0) if self._step_now else 0
         e = dict(os.environ)
         for k in ("PYTHONPATH", "PYTHONHOME", "MAGLIASO_ZONE", "MAGLIASO_LEVEL_DIR"):
             e.pop(k, None)
@@ -759,6 +819,10 @@ class Manager:
             "GDAL_HTTP_LOW_SPEED_LIMIT": "1024", "GDAL_HTTP_MAX_RETRY": "5", "GDAL_HTTP_RETRY_DELAY": "5",
         })
         e.update(system.workers(self.settings.get("workers", "auto")))
+        if hangs:
+            for k in WORKER_VARS:
+                if k in e:
+                    e[k] = str(max(1, int(e[k]) >> hangs))
         return e
 
     def run_process(self, b, args, cwd, env=None):

@@ -90,6 +90,15 @@ def _kill(ex):
         ex.shutdown(wait=False, cancel_futures=True)
     except Exception:
         pass
+    # the next pool forks: no thread of this one may be running then (a child would inherit a lock it holds)
+    t = getattr(ex, "_executor_manager_thread", None)
+    if t is not None:
+        t.join(10)
+    for p in list(getattr(ex, "_processes", {}).values() if getattr(ex, "_processes", None) else []):
+        try:
+            p.join(5)
+        except Exception:
+            pass
 
 
 def pmap(fn, items, n, chunksize=1, ordered=True, label="workers", pickled=False):
@@ -150,9 +159,11 @@ def pmap(fn, items, n, chunksize=1, ordered=True, label="workers", pickled=False
                     done, _ = wait(list(running), timeout=30, return_when=FIRST_COMPLETED)
                     if not done:
                         cpu = _workers_cpu(ex)
-                        if cpu_last is None:
-                            cpu_last = cpu
-                        if cpu is not None and time.time() - t_last > POOL_STALL and cpu - cpu_last < 2.0:
+                        if cpu is not None and (cpu_last is None or cpu < cpu_last or cpu - cpu_last >= 2.0):
+                            # a rolling window: the clock restarts whenever the workers used 2 s of CPU, so a worker
+                            # that computed for a while and then blocked is caught POOL_STALL s after it stopped
+                            t_last, cpu_last = time.time(), cpu
+                        if cpu is not None and time.time() - t_last > POOL_STALL:
                             broken = "no result and no CPU in the workers for %.0f s" % (time.time() - t_last)
                             break
                         continue

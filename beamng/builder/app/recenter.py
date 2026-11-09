@@ -9,7 +9,8 @@ props). Shapes placed by their object's position (nearly all) are not touched. H
 
     python -m app.recenter <level folder> <dx> <dy> [--missions <gameplay/missions/<level> folder>]
 
-Safe to run once only: it writes recenter.json into the level and refuses a second run.
+Safe to run once only: it writes recenter.json into the level and refuses a second run. A run stopped half way (a
+crash, the app closed, the watchdog) goes on where it stopped: recenter.journal lists every file already moved.
 """
 import json
 import os
@@ -52,7 +53,7 @@ def _rewrite(path, text):
     os.replace(tmp, path)          # a new file: the level may be a hard-linked copy
 
 
-def shift_json_file(path, dx, dy, stats, absolute_shapes=None):
+def shift_json_file(path, dx, dy, stats, absolute_shapes=None, write=True):
     raw = open(path, encoding="utf-8").read()
     lines = [l for l in raw.splitlines() if l.strip()]
     try:
@@ -77,7 +78,7 @@ def shift_json_file(path, dx, dy, stats, absolute_shapes=None):
                     absolute_shapes.setdefault(d["shapeName"], []).append(path)
                     continue                      # its vertices move instead (shift_dae)
         shift_obj(d, dx, dy, stats)
-    if stats["points"] == n0:
+    if stats["points"] == n0 or not write:
         return
     if per_line:
         text = "\n".join(json.dumps(d, separators=(",", ":")) for d in docs) + "\n"
@@ -132,6 +133,19 @@ def recenter(level, dx, dy, missions=None):
     if os.path.exists(mark):
         raise SystemExit(f"recenter: {level} was moved already ({json.load(open(mark))})")
     stats = {"points": 0, "files": 0, "dae_vertices": 0, "dae_files": 0}
+    # the files moved so far ("<phase> <path>" a line, appended right after each file is replaced): a second run
+    # after a stop skips them (2026-11-09: a kill half way through and a retry moved the first files twice)
+    jpath = os.path.join(level, "recenter.journal")
+    done = set()
+    if os.path.exists(jpath):
+        done = {l.rstrip("\n") for l in open(jpath, encoding="utf-8") if l.endswith("\n")}
+        print(f"recenter: going on after a stop, {len(done)} files moved already", flush=True)
+    journal = open(jpath, "a", encoding="utf-8")
+
+    def did(key):
+        journal.write(key + "\n")
+        journal.flush()
+        os.fsync(journal.fileno())
     absolute = {}
     users = shape_users(level)
     name = os.path.basename(level)
@@ -142,16 +156,26 @@ def recenter(level, dx, dy, missions=None):
                                                          "managedItemData.json", "recenter.json")):
                 files.append(os.path.join(dp, f))
     for p in sorted(files):
-        shift_json_file(p, dx, dy, stats, absolute)
+        key = "json " + os.path.relpath(p, level)
+        # a file done before still tells which shapes are in level coordinates (nothing written)
+        shift_json_file(p, dx, dy, stats if key not in done else dict(stats), absolute, write=key not in done)
+        if key not in done:
+            did(key)
     # shapes in level coordinates: their vertices move, their objects stay at 0 (one shape used by an object placed
     # elsewhere as well would move twice there: then the object at 0 is moved instead)
     for shape, where in absolute.items():
         path = os.path.join(level, *shape.split("/")[3:]) if shape.startswith(f"/levels/{name}/") else None
         if path and os.path.exists(path) and users.get(shape, 0) == len(where):
-            stats["dae_vertices"] += shift_dae(path, dx, dy)
-            stats["dae_files"] += 1
+            key = "dae " + os.path.relpath(path, level)
+            if key not in done:
+                stats["dae_vertices"] += shift_dae(path, dx, dy)
+                stats["dae_files"] += 1
+                did(key)
         else:
             for items in sorted(set(where)):
+                key = "pos " + shape + " " + os.path.relpath(items, level)
+                if key in done:
+                    continue
                 rows = [json.loads(l) for l in open(items, encoding="utf-8") if l.strip()]
                 for d in rows:
                     if d.get("class") == "TSStatic" and d.get("shapeName") == shape:
@@ -159,13 +183,22 @@ def recenter(level, dx, dy, missions=None):
                         d["position"][1] += dy
                         stats["points"] += 1
                 _rewrite(items, "\n".join(json.dumps(d, separators=(",", ":")) for d in rows) + "\n")
+                did(key)
     if missions and os.path.isdir(missions):
         for dp, _, fs in os.walk(missions):
             for f in fs:
                 if f.endswith(".json"):
-                    shift_json_file(os.path.join(dp, f), dx, dy, stats)
+                    q = os.path.join(dp, f)
+                    key = "mis " + os.path.relpath(q, missions)
+                    if key not in done:
+                        shift_json_file(q, dx, dy, stats)
+                        did(key)
     stats.update(dx=dx, dy=dy)
-    json.dump(stats, open(mark, "w"), indent=1)
+    journal.close()
+    with open(mark + ".part", "w") as f:
+        json.dump(stats, f, indent=1)
+    os.replace(mark + ".part", mark)
+    os.remove(jpath)
     print("recenter:", stats, flush=True)
     return stats
 

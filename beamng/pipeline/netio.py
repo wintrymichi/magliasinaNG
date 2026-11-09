@@ -14,6 +14,7 @@ read timeout); the transfer is then retried from where it stopped. A file that f
 DownloadError with the URL and the last error, so the step fails with a clear message (and the app retries the
 step, which skips the finished files) instead of waiting for ever.
 """
+import json
 import os
 import sys
 import threading
@@ -45,11 +46,18 @@ class Stalled(IOError):
 SAY = None                     # another place for the lines (the app's build log), else stdout
 
 
+_SAY_LOCK = threading.Lock()
+
+
 def say(*a):
-    if SAY is not None:
-        SAY(" ".join(str(x) for x in a))
-    else:
-        print(*a, flush=True)
+    """One whole line (threads side by side glued their lines together with print, 2026-11-09)."""
+    text = " ".join(str(x) for x in a)
+    with _SAY_LOCK:
+        if SAY is not None:
+            SAY(text)
+        else:
+            sys.stdout.write(text + "\n")
+            sys.stdout.flush()
 
 
 def human(n):
@@ -329,6 +337,53 @@ def get_json(url, params=None, **kw):
     return get(url, params=params, **kw).json()
 
 
+PART_MAX_AGE = 6 * 3600       # a part with no validator is resumed only this long after it was last written
+
+
+def _part_meta(part, meta_p, pos):
+    """What the part on disk was cut from: {"validator", "total"}, or {} when it cannot be trusted (none written by
+    this module, or too old to resume without a validator). The caches outlive builds and the Geofabrik pbf or the
+    GWR zip change every day: yesterday's part plus today's tail is a corrupt file of the right size (review 2)."""
+    if not pos:
+        return {}
+    try:
+        m = json.load(open(meta_p, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not m.get("validator") and time.time() - os.path.getmtime(part) > PART_MAX_AGE:
+        return {}
+    return m
+
+
+def _save_meta(meta_p, r, size):
+    et = r.headers.get("ETag") or ""
+    v = et if et and not et.startswith("W/") else (r.headers.get("Last-Modified") or "")
+    try:
+        with open(meta_p, "w", encoding="utf-8") as f:
+            json.dump({"validator": v, "total": size or None}, f)
+    except OSError:
+        pass
+
+
+def _drop_part(part, meta_p):
+    for q in (part, meta_p):
+        try:
+            os.remove(q)
+        except OSError:
+            pass
+
+
+def _content_range(r):
+    """(first byte, total or None) of a 206 answer."""
+    cr = r.headers.get("Content-Range", "")
+    try:
+        a = cr.split()[1]
+        rng, tot = a.split("/")
+        return int(rng.split("-")[0]), (int(tot) if tot.isdigit() else None)
+    except (IndexError, ValueError):
+        return None, None
+
+
 def fetch(url, dest, progress=None, name=None, attempts=ATTEMPTS, headers=None, expect_size=None):
     """url into dest (dest.part until it is whole; resumed after a cut). (dest, "skip" | "ok"); DownloadError when
     it fails attempts times."""
@@ -340,27 +395,49 @@ def fetch(url, dest, progress=None, name=None, attempts=ATTEMPTS, headers=None, 
         return dest, "skip"
     os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
     part = dest + ".part"
+    meta_p = part + ".json"
     name = name or os.path.basename(dest)
     last = None
     counted = 0                                  # bytes of this file already added to progress
     for attempt in range(attempts):
         pos = os.path.getsize(part) if os.path.exists(part) else 0
+        meta = _part_meta(part, meta_p, pos)
+        if not meta and pos:
+            pos = 0                              # a part of unknown origin: never glue it to today's file
         h = dict(headers or {})
+        # the byte counts below must be the file's own bytes, not a gzipped answer decoded on the way (review 2)
+        h["Accept-Encoding"] = "identity"
         if pos:
             h["Range"] = "bytes=%d-" % pos
+            if meta.get("validator"):
+                h["If-Range"] = meta["validator"]   # the file changed since: the server sends it whole (200)
         tr = None
         try:
             r = session().get(url, headers=h, stream=True, timeout=(CONNECT, READ))
             tr = _register(r, name)
             with r:
-                if pos and r.status_code == 416:            # the part is the whole file already
+                if pos and r.status_code == 416:
+                    # whole already only if the part is as long as the file was (and still is, when the server says)
+                    cr = r.headers.get("Content-Range", "")
+                    now_total = int(cr.rsplit("/", 1)[1]) if "/" in cr and cr.rsplit("/", 1)[1].isdigit() else None
+                    if pos != meta.get("total") or (now_total is not None and now_total != pos):
+                        _drop_part(part, meta_p)
+                        raise IOError("the part on disk does not fit the file on the server: from the start")
                     size = pos
                 else:
                     _check(r, url)
-                    if pos and r.status_code != 206:          # no ranges here: from the start
+                    if pos and r.status_code != 206:          # no ranges, or the file changed: from the start
                         pos = 0
+                    if pos:
+                        start, total = _content_range(r)
+                        if start != pos or (meta.get("total") and total and total != meta["total"]):
+                            _drop_part(part, meta_p)
+                            raise IOError("the server answered bytes from %s (of %s), asked from %d (of %s): "
+                                          "from the start" % (start, total, pos, meta.get("total")))
                     clen = int(r.headers.get("Content-Length") or 0)
                     size = (pos + clen) if clen else (expect_size or 0)
+                    if not pos:
+                        _save_meta(meta_p, r, size)
                     if progress is not None:
                         progress.expect(dest, size)
                         if attempt == 0 and pos:
@@ -390,6 +467,10 @@ def fetch(url, dest, progress=None, name=None, attempts=ATTEMPTS, headers=None, 
                     if size >= BIG:
                         fl.add(0, force=True)
             replace(part, dest)
+            try:
+                os.remove(meta_p)
+            except OSError:
+                pass
             if progress is not None:
                 progress.file_done()
             return dest, "ok"
@@ -424,7 +505,8 @@ def get_range(url, a, b, progress=None, attempts=ATTEMPTS, what=None, sink=None)
     for attempt in range(attempts):
         tr = None
         try:
-            r = session().get(url, headers={"Range": "bytes=%d-%d" % (pos, b)}, stream=True, timeout=(CONNECT, READ))
+            r = session().get(url, headers={"Range": "bytes=%d-%d" % (pos, b), "Accept-Encoding": "identity"},
+                              stream=True, timeout=(CONNECT, READ))
             tr = _register(r, what)
             with r:
                 _check(r, url)

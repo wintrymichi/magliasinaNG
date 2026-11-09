@@ -178,15 +178,24 @@ PKG_STEM = os.path.basename(URL).split(".")[0]
 PROG = netio.Progress("swissTLM3D")
 
 
+def member_path(name):
+    return os.path.join(PKG, PKG_STEM + "__" + name.replace("\\", "/").split("/")[-1])
+
+
+def to_fetch(z, names, name):
+    """The network bytes of a member still to be copied from the package (0 when the local copy is there)."""
+    dst = member_path(name)
+    info = z.getinfo(names[name])
+    return 0 if os.path.exists(dst) and os.path.getsize(dst) == info.file_size else info.compress_size
+
+
 def member(z, names, name):
     """The local copy of a package member (made from the package on the first build that needs it)."""
-    dst = os.path.join(PKG, PKG_STEM + "__" + name.replace("\\", "/").split("/")[-1])
+    dst = member_path(name)
     if os.path.exists(dst) and os.path.getsize(dst) == z.getinfo(names[name]).file_size:
         return dst, False
     os.makedirs(PKG, exist_ok=True)
     info = z.getinfo(names[name])
-    with PROG.lock:
-        PROG.total += info.compress_size             # what this member costs over the network
     short = name.replace("\\", "/").split("/")[-1]
     netio.say("[download]   swissTLM3D %s: %s (%s unpacked)" % (short, netio.human(info.compress_size),
                                                               netio.human(info.file_size)))
@@ -226,6 +235,10 @@ def layer_job(job):
         if not pairs:
             print(layer, "not in the package:", [n for n in names if n.upper().endswith(".SHP")], flush=True)
             return
+        # every member this layer will copy counts into the step's total at once (counted one by one, the total
+        # grew under the percentage and the line said 100 % while the .dbf files were still to come, 2026-11-09)
+        with PROG.lock:
+            PROG.total += sum(to_fetch(z, names, m) for pr in pairs for m in pr)
         dims = 2 if layer in FLAT else 3
         feats, fields, got = [], [], 0
         for shp, dbf in pairs:

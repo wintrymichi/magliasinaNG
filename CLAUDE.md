@@ -2381,6 +2381,22 @@ Faster builds (switzerlandNG, thread "Velocizzare la creazione delle mappe", 202
   the known ones stands in). The swissTLM3D total is the compressed size of the members it reads.
 - A test server that sends past the end of a byte range made get_range write the range 3x too long: ranges are cut at
   their end now (real servers honour it, but a proxy may not).
+- Review 2 of the reviewer thread found what the first round missed:
+  pmap's stall test compared the CPU since the LAST RESULT, so a worker that computed more than 2 s and then
+  deadlocked was never flagged (reproduced: it hung until `timeout` killed it). The window now rolls: the clock restarts
+  whenever the workers used 2 s of CPU. A test of a stall must deadlock only in the CHILD (os.getpid() != parent): the
+  serial fallback runs the same function in the main process and a test that deadlocks everywhere hangs there too.
+  A retry after a hang reran steps that are not idempotent (skin_grass, sidewalks, road_seams, steep_skin...): a hung
+  step now runs again only if it is not in jobs.NOT_REPEATABLE and wrote no file into the level or WORK since it
+  started (LevelWriter writes at the end, so a step stopped while computing has written none), with half the workers
+  per earlier hang (swap thrashing looks like a hang). recenter wrote its marker at the END: a kill half way and any
+  rerun moved the first files twice; it keeps recenter.journal now (one line a file moved, fsynced) and goes on.
+  netio.fetch resumed any old .part: the caches outlive builds and the pbf / GWR zip change daily, and a 416 on a part
+  longer than today's file was taken as "complete". A part is resumed only with its <dest>.part.json (If-Range with the
+  ETag or Last-Modified, a 206 must start at the part's end and keep the total) and every download asks for
+  Accept-Encoding: identity (a gzipped answer decoded by requests never matches Content-Length). Before forking a new
+  pool after a break, join the old executor's manager thread (a fork beside a live thread can inherit a held lock).
+  Without psutil the step watchdog is off (it would see 0 CPU and kill a long silent computation).
 
 ## main is the Malcantone only (2026-11-07)
 
