@@ -1,1 +1,1 @@
-sisikon 2026-11-09T22:10Z anti-hang: downloads with percentage, pmap, step watchdog
+windows 2026-11-09T22:11Z anti-hang: downloads with percentage, pmap (spawn for optimize), step watchdog
