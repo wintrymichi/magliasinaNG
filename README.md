@@ -122,10 +122,10 @@ Measured on GitHub's runners (4 cores, 16 GB of memory), every step from the fir
 
 | Area | Size | Time | Level zip |
 |---|---|---|---|
-| Axenstrasse and Sisikon (Uri, Schwyz): mountains, the Urnersee, 44 road and rail tunnels and galleries | 32.8 km² | 38 min | 0.86 GB (3.8 GB unpacked) |
+| Axenstrasse and Sisikon (Uri, Schwyz): mountains, the Urnersee, 44 road and rail tunnels and galleries | 32.8 km² | 41–45 min (61 min before the faster builds of 2026-11-09) | 0.86 GB (3.8 GB unpacked) |
 | Vitznau and Gersau (Lucerne without open survey, Schwyz): Lake Lucerne, the Rigi's slopes | 17 km² | 39 min | 0.56 GB (2.2 GB unpacked) |
 | Montreux and Chillon (Vaud, no open survey): a lakeside town, Lake Geneva, the A9's tunnels | 8.7 km² | 31 min | 0.36 GB (1.1 GB unpacked) |
-| Sisikon, small test area, on Windows | 0.9 km² | 18 min | 0.28 GB |
+| Sisikon, small test area, on Windows | 0.9 km² | 14 min (18 min before) | 0.28 GB |
 | Lugano (Ticino zone ti_1_0), dense town | 64 km² | about 5 h | 1.9 GB |
 
 A dense town takes far longer than mountains and lake of the same size: the build time grows with the buildings and roads, not with the area. So the app gives the build time as a range, from mountains to a dense town, and the remaining time shown during a build follows the real speed of the steps. On a slow internet connection add the downloads: a few GB per area.

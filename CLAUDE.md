@@ -2302,6 +2302,50 @@ Sisikon 32.8 km2 in 38 min on 2026-11-07 and 60.6 min of steps on 2026-11-08 (ru
 the earlier "38 min" in these notes was the first build, before paved_edges, rail_walls and the gallery cuts), zip
 0.86 GB (44 tunnels and galleries, 22.4 km); Sisikon 0.9 km2 on Windows in 18 min.
 
+Faster builds (switzerlandNG, thread "Velocizzare la creazione delle mappe", 2026-11-09; plan: the Claude Doc of
+"Pianificare switzerlandNG più veloce"):
+- What a build spent (build.json of run 42440861766, Axenstrasse 60.6 min of steps): downloads 14.6 min one after the
+  other (OpenStreetMap 9.1: one connection to Geofabrik), stages 10.1, finishing steps 29.8 (steep_skin 8.7 on one
+  core, tunnels 3.1, unpaved 2.2, paved_edges 2.1, forest_mosaic 1.9), zip 2.8 on one core. Fixed costs paid by every
+  build however small: the buildings' procedural textures 110 s (bld_textures.build, the same files every time), the
+  skin's textures 31 s twice (steep_skin and skin_blend), the 12.3 km terrain block for a 1 km area.
+- system.workers took 16 GB as "low" (PATCH_WORKERS 1): every GitHub test build ran unpaved and paved_edges on one
+  worker though the Axenstrasse's finishing steps used 2-5 GB. Read the [mem] lines of the job log before choosing
+  workers by memory.
+- Done: the downloads and the steps that need only swisstopo's files side by side (jobs.EARLY, each step's log in
+  logs/<key>.log, put into build.log when it ends); the finishing steps in one build_level.py --finish process
+  (FINISH_CHAIN, not on Windows), its progress read from its "== finish:" and "[finish ...]" lines; steep_skin's and
+  skin_grass's tiles in forked workers (tilepool.py, TILE_WORKERS); the zip deflated in threads (package.py,
+  ZIP_WORKERS); OpenStreetMap in 4 byte ranges and the municipal boundaries kept beside the extract; swissTLM3D in 8 MB
+  ranges read ahead, its layers side by side and its members kept in data/tlm_pkg; the textures kept between builds
+  (texcache.py, MAGLIASO_TEXTURE_CACHE); a 4096 terrain block (6.1 km) for areas up to 2.1 km a side (zone.TER_MARGIN
+  2 km, as the biggest area had). Not done: parallel lanes of finishing steps (plan measure 5): the steps read and
+  rewrite the same .ter and level files one after the other, and with the pools the finishing steps of the small
+  Sisikon took 3 min in all.
+- Every pool must give the level of one process: steep_skin and skin_grass were run old (git archive HEAD) and new on
+  two cp -al copies of the released Axenstrasse level and compared file by file with the uuids masked (cmpdirs): 0
+  files differ; the zip is compared by entry sizes, CRCs and offsets (the dates are the packaging time). A step's
+  report is merged in tile order (tilepool.merge_report: "max" keys take the larger value), so it matches too.
+- The first round with the downloads side by side lost what it won: swissTLM3D took 583 s (84 s alone the day before)
+  because download_tlm read the package with one 4 MB range request after the other, a new connection each, and the
+  small area's landcover waited for it. A step that streams a remote file must read ahead in parallel, not only the
+  big downloads. And a cached file needs the cache folder in app/cache.py SHARED, or the next build downloads it again.
+- download_osm.fetch_big: the HEAD request's final address (a redirect to a signed S3 URL) answered 401 to GET: send
+  the GETs to the original URL. Geofabrik is blocked in the cloud: the range download was checked against a local
+  HTTP server that answers ranges (scratch srv.py), byte for byte.
+- Scratch mistakes of this thread: a text replacement meant for main() matched the same lines in the new function
+  written just above it and replaced the wrong block (locate the function first, then replace inside it); a git
+  stash ran while a background job used the working tree (it worked, but run the old code from a git archive copy
+  instead); `cd dir && rm -rf *` was refused by the safety check (use absolute paths). forest_mosaic and tunnels do
+  nothing on a released level (already done there): profile them only in a build.
+- Measured after (wall time from the first step to the zip, two GitHub jobs): Axenstrasse 66.6 -> 41.4 min (run
+  42680459047) and 45.4 min (run 42687155488: the same code, steep_skin 170 -> 232 s and tunnels 113 -> 184 s on
+  another runner: GitHub's runners differ by up to 50 % a step, compare two runs before calling a change slower);
+  downloads 5.2 min, stages 11, finishing steps 16-22. Sisikon 0.9 km2: Windows 17.6 -> 13.7 min, Linux 14.7 min.
+  The Axen zip of the new code differed from the 2026-11-08 zip in 11 building/prop files and 3 new house_pv files,
+  terrain and skin identical: newer daily data (GWR, OSM), not the pools. Left the biggest: stages (buildings_mesh),
+  tunnels, forest_mosaic (whole-block rasters), landcover.
+
 ## main is the Malcantone only (2026-11-07)
 
 - PR #113 (switzerland-builder, which carries the whole `ticino` branch) was merged into main by mistake: 324 files,
