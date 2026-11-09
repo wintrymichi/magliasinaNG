@@ -992,8 +992,123 @@ class BaseColours:
 
 # ------------------------------------------------------------------------------------------------ step
 
+def _skin_tile(G, t):
+    """One mesh tile of the skin (steep_skin_step): (its report counts, (where it lowers the terrain, its DAE, its
+    object) or None, its plants). G: what the step loaded (read only); the tiles are independent of each other."""
+    tr, tc = t
+    q, n, m, road, hard, solid, lake_z, RS, colours, lay = (G[k] for k in (
+        "q", "n", "m", "road", "hard", "solid", "lake_z", "RS", "colours", "lay"))
+    X0, Y0, Z0, MAXH, sq, lv = (G[k] for k in ("X0", "Y0", "Z0", "MAXH", "sq", "lv"))
+    rep, trees = {}, []
+    a0, a1 = max(tr - m, 0), min(tr + TILE + m + 1, n)
+    b0, b1 = max(tc - m, 0), min(tc + TILE + m + 1, n)
+    H = Z0 + q[a0:a1, b0:b1].astype(np.float64) / 65535.0 * MAXH
+    sol = solid[a0:a1, b0:b1] | (H < lake_z + 0.3)
+    sol_hard = hard[a0:a1, b0:b1]
+    hl = hard[a0:a1, b0:b1] | (H < lake_z + 0.3)
+    S, steep, seeds = skin_mask(H, road[a0:a1, b0:b1], sol, sq, hl)
+    if (S | seeds).any():
+        S = S | seeds | foot(S | seeds, road[a0:a1, b0:b1], hl)
+    core = (tr - a0, min(tr + TILE, n - 1) - a0, tc - b0, min(tc + TILE, n - 1) - b0)
+    if not S[core[0]:core[1] + 1, core[2]:core[3] + 1].any():
+        return rep, None, trees
+    Hn, low, rr, cc = tile_skin(H, S, sq, core, sol)
+    if not len(rr):
+        return rep, None, trees
+    # the terrain lowered under the core's inner squares only (the margins belong to the next tiles)
+    cr = slice(core[0], core[1] + (1 if core[1] + a0 == n - 1 else 0))
+    ccs = slice(core[2], core[3] + (1 if core[3] + b0 == n - 1 else 0))
+    lo = low[cr, ccs]
+    qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
+    Hq = Z0 + np.where(low, np.clip(np.rint((Hn - Z0) / MAXH * 65535.0), 0, 65535), q[a0:a1, b0:b1]) / 65535.0 * MAXH
+    keys, z = lattice(ndi.gaussian_filter(H, SMOOTH), Hq, rr, cc)       # rounded crest and toe
+    R, C = keys[:, 0] / 2.0, keys[:, 1] / 2.0
+    # the edge of the skin: cut along a smooth line (the blurred mask at EDGE_ISO), not the staircase of
+    # the squares, and its colours blurred (no spikes of another colour)
+    wv = ndi.map_coordinates(ndi.gaussian_filter(S.astype(np.float64), EDGE_BLUR), [R, C], order=1)
+    wv = EDGE_ISO + np.minimum(wv - EDGE_ISO, inside(keys))      # the cut never on the squares' staircase
+    fl = split_max(Hq, R, C) + EPS                  # down onto the terrain towards the cut: no lip
+    z = fl + np.clip((wv - EDGE_ISO) / EDGE_FADE, 0.0, 1.0) * (z - fl)
+    # v3.1: under a road surface the skin is under it (its foot): hidden by the road, never over it
+    hr = RS.height(X0 + (b0 + C) * sq, Y0 + (a0 + R) * sq, "low")
+    cut = np.isfinite(hr) & (z > hr)                # G1: the bank over the road here (a cut, not a fill)
+    z = np.where(np.isfinite(hr), np.minimum(z, hr - ROAD_DIVE), z)
+    # v3.1: m from the nearest road vertex (less half a square: about the edge of its surface); beside a road
+    # the skin no higher than the terrain (EPS): no lip at the road edge
+    dv = ndi.distance_transform_edt(~road[a0:a1, b0:b1]) * sq
+    droad = np.maximum(ndi.map_coordinates(dv, [R, C], order=1) - sq / 2, 0.0)
+    # v3.1 (G1): under a line from the true road edge, not the terrain's facets (ROAD_CLAMP: teeth), and the
+    # terrain under the skin lowered under it
+    ox, oy = X0 + b0 * sq, Y0 + a0 * sq
+    F, din = foot_line(RS, road[a0:a1, b0:b1], ox, oy, sq, keys)
+    clamp = np.isfinite(F) & ~np.isfinite(hr)
+    rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > F + 1e-6)).sum())
+    z = np.where(clamp, np.minimum(z, F), z)
+    # ... and on the road under a cut the same line on down under it: the skin comes out of the asphalt along
+    # its edge, not between the lattice points that happen to lie on the road (a saw edge along a diagonal
+    # road). Not where the bank falls away from the road (a fill): the skin comes up to the edge from below
+    # there, and going on down it left the ground at the road edge over it. Never under the terrain under the
+    # road either: from there to the road edge the terrain stood over the skin
+    dive = np.maximum(hr - FOOT_TAN * np.minimum(din, FOOT_DIVE), np.minimum(split_max(Hq, R, C) + EPS, hr - ROAD_DIVE))
+    z = np.where(cut, np.minimum(z, dive), z)
+    own = np.zeros_like(S)
+    own[cr, ccs] = True
+    # the road footprint holds the vertices nearest to the road's faces, up to half a square beyond its edge:
+    # those outside the road surface (not under it) may go down too, under a cut they hold its foot
+    rv = road[a0:a1, b0:b1] & own & S
+    if rv.any():
+        vr, vc = np.nonzero(rv)
+        rv[vr, vc] = np.isfinite(RS.height(X0 + (b0 + vc) * sq, Y0 + (a0 + vr) * sq, "low"))
+    free = own & S & ~sol_hard & ~rv & (H >= lake_z + 0.3)
+    Hq2, z = lower_under(Hq, keys, z, wv, hr, free)
+    moved = Hq2 < Hq - 1e-4
+    rep["foot_lowered_vertices"] = rep.get("foot_lowered_vertices", 0) + int(moved[cr, ccs].sum())
+    rep["foot_lowered_max_m"] = round(max(rep.get("foot_lowered_max_m", 0.0),
+                                          float((Hq - Hq2)[cr, ccs].max())), 3)
+    Hn = np.where(moved, Hq2, Hn)
+    low = low | moved
+    lo = low[cr, ccs]
+    qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
+    cg = colours.ground(lay[a0:a1, b0:b1], a0, b0)
+    col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
+                           for k in range(3)])
+    mb = bng.MeshBuilder()
+    far = [(1, LOD_LIFT[1], bng.MeshBuilder()), (2, LOD_LIFT[2], bng.MeshBuilder())]
+    ntri, info = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far, droad, RS)
+    rep["skin_points_over_road"] = rep.get("skin_points_over_road", 0) + info["over_road"]
+    rep["skin_over_road_max_m"] = round(max(rep.get("skin_over_road_max_m", -9.0), info["over_road_max"]), 3)
+    if ntri:
+        trees += plants(info, wv, hr, droad, np.random.default_rng(tr * 100003 + tc))
+    if not ntri:                                    # nothing left inside the cut: the terrain as it was
+        return rep, None, trees
+    origin = np.array([ox + (b1 - b0) * sq / 2, oy + (a1 - a0) * sq / 2, float(np.median(z))])
+    with tempfile.TemporaryDirectory() as tmp:
+        f = os.path.join(tmp, "s.dae")
+        # detail sizes from the radius of the tile's squares: near, middle and far as LOD_DIST
+        radius = 0.5 * float(np.hypot(core[1] - core[0], core[3] - core[2])) * sq
+        px = [max(2, int(round(radius * PIX_K / d))) for d in LOD_DIST]
+        lods = [(px[i + 1], mbk) for i, (_, _, mbk) in enumerate(far) if not mbk.empty()]
+        mb.write_dae(f, name=f"skin_{tr}_{tc}", origin=origin, detail=px[0], weld=False, lods=lods)
+        rep["triangles_far"] = rep.get("triangles_far", 0) + sum(m.triangle_count() for _, m in lods)
+        for k, (_, mk) in enumerate(lods):
+            rep[f"triangles_lod{k + 1}"] = rep.get(f"triangles_lod{k + 1}", 0) + mk.triangle_count()
+        rel = f"{D}/skin_{tr:04d}_{tc:04d}.dae"
+        dae = open(f, "rb").read()
+    ob = bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=True, decal=False)
+    ob["__parent"] = "terrain_skin"
+    rep["tiles"] = 1
+    rep["squares"] = int(len(rr))
+    rep["triangles"] = int(ntri)
+    rep["steep_vertices"] = int(steep[core[0]:core[1], core[2]:core[3]].sum())
+    rep["changed_vertices"] = int(lo.sum())
+    dz = np.abs(Hn - H)[cr, ccs]
+    rep["changed_max_m"] = float(dz.max()) if dz.size else 0.0
+    return rep, ((a0, b0, cr, ccs, lo, qn), (rel, dae), ob), trees
+
+
 def steep_skin_step(root, report=None):
     import walls as pw
+    import tilepool
     t0 = time.time()
     zi = bng.LevelFiles(root)
     lv = f"levels/{LEVEL_NAME}"
@@ -1024,114 +1139,21 @@ def steep_skin_step(root, report=None):
     rep = {"tiles": 0, "squares": 0, "triangles": 0, "steep_vertices": 0, "changed_vertices": 0,
            "changed_max_m": 0.0}
     m = int(np.ceil(REACH / sq)) + DILATE + 4
-    for tr in range(0, n - 1, TILE):
-        for tc in range(0, n - 1, TILE):
-            a0, a1 = max(tr - m, 0), min(tr + TILE + m + 1, n)
-            b0, b1 = max(tc - m, 0), min(tc + TILE + m + 1, n)
-            H = Z0 + q[a0:a1, b0:b1].astype(np.float64) / 65535.0 * MAXH
-            sol = solid[a0:a1, b0:b1] | (H < lake_z + 0.3)
-            sol_hard = hard[a0:a1, b0:b1]
-            hl = hard[a0:a1, b0:b1] | (H < lake_z + 0.3)
-            S, steep, seeds = skin_mask(H, road[a0:a1, b0:b1], sol, sq, hl)
-            if (S | seeds).any():
-                S = S | seeds | foot(S | seeds, road[a0:a1, b0:b1], hl)
-            core = (tr - a0, min(tr + TILE, n - 1) - a0, tc - b0, min(tc + TILE, n - 1) - b0)
-            if not S[core[0]:core[1] + 1, core[2]:core[3] + 1].any():
-                continue
-            Hn, low, rr, cc = tile_skin(H, S, sq, core, sol)
-            if not len(rr):
-                continue
-            # the terrain lowered under the core's inner squares only (the margins belong to the next tiles)
-            cr = slice(core[0], core[1] + (1 if core[1] + a0 == n - 1 else 0))
-            ccs = slice(core[2], core[3] + (1 if core[3] + b0 == n - 1 else 0))
-            lo = low[cr, ccs]
-            qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
-            Hq = Z0 + np.where(low, np.clip(np.rint((Hn - Z0) / MAXH * 65535.0), 0, 65535), q[a0:a1, b0:b1]) / 65535.0 * MAXH
-            keys, z = lattice(ndi.gaussian_filter(H, SMOOTH), Hq, rr, cc)       # rounded crest and toe
-            R, C = keys[:, 0] / 2.0, keys[:, 1] / 2.0
-            # the edge of the skin: cut along a smooth line (the blurred mask at EDGE_ISO), not the staircase of
-            # the squares, and its colours blurred (no spikes of another colour)
-            wv = ndi.map_coordinates(ndi.gaussian_filter(S.astype(np.float64), EDGE_BLUR), [R, C], order=1)
-            wv = EDGE_ISO + np.minimum(wv - EDGE_ISO, inside(keys))      # the cut never on the squares' staircase
-            fl = split_max(Hq, R, C) + EPS                  # down onto the terrain towards the cut: no lip
-            z = fl + np.clip((wv - EDGE_ISO) / EDGE_FADE, 0.0, 1.0) * (z - fl)
-            # v3.1: under a road surface the skin is under it (its foot): hidden by the road, never over it
-            hr = RS.height(X0 + (b0 + C) * sq, Y0 + (a0 + R) * sq, "low")
-            cut = np.isfinite(hr) & (z > hr)                # G1: the bank over the road here (a cut, not a fill)
-            z = np.where(np.isfinite(hr), np.minimum(z, hr - ROAD_DIVE), z)
-            # v3.1: m from the nearest road vertex (less half a square: about the edge of its surface); beside a road
-            # the skin no higher than the terrain (EPS): no lip at the road edge
-            dv = ndi.distance_transform_edt(~road[a0:a1, b0:b1]) * sq
-            droad = np.maximum(ndi.map_coordinates(dv, [R, C], order=1) - sq / 2, 0.0)
-            # v3.1 (G1): under a line from the true road edge, not the terrain's facets (ROAD_CLAMP: teeth), and the
-            # terrain under the skin lowered under it
-            ox, oy = X0 + b0 * sq, Y0 + a0 * sq
-            F, din = foot_line(RS, road[a0:a1, b0:b1], ox, oy, sq, keys)
-            clamp = np.isfinite(F) & ~np.isfinite(hr)
-            rep["lip_clamped_points"] = rep.get("lip_clamped_points", 0) + int((clamp & (z > F + 1e-6)).sum())
-            z = np.where(clamp, np.minimum(z, F), z)
-            # ... and on the road under a cut the same line on down under it: the skin comes out of the asphalt along
-            # its edge, not between the lattice points that happen to lie on the road (a saw edge along a diagonal
-            # road). Not where the bank falls away from the road (a fill): the skin comes up to the edge from below
-            # there, and going on down it left the ground at the road edge over it. Never under the terrain under the
-            # road either: from there to the road edge the terrain stood over the skin
-            dive = np.maximum(hr - FOOT_TAN * np.minimum(din, FOOT_DIVE), np.minimum(split_max(Hq, R, C) + EPS, hr - ROAD_DIVE))
-            z = np.where(cut, np.minimum(z, dive), z)
-            own = np.zeros_like(S)
-            own[cr, ccs] = True
-            # the road footprint holds the vertices nearest to the road's faces, up to half a square beyond its edge:
-            # those outside the road surface (not under it) may go down too, under a cut they hold its foot
-            rv = road[a0:a1, b0:b1] & own & S
-            if rv.any():
-                vr, vc = np.nonzero(rv)
-                rv[vr, vc] = np.isfinite(RS.height(X0 + (b0 + vc) * sq, Y0 + (a0 + vr) * sq, "low"))
-            free = own & S & ~sol_hard & ~rv & (H >= lake_z + 0.3)
-            Hq2, z = lower_under(Hq, keys, z, wv, hr, free)
-            moved = Hq2 < Hq - 1e-4
-            rep["foot_lowered_vertices"] = rep.get("foot_lowered_vertices", 0) + int(moved[cr, ccs].sum())
-            rep["foot_lowered_max_m"] = round(max(rep.get("foot_lowered_max_m", 0.0),
-                                                  float((Hq - Hq2)[cr, ccs].max())), 3)
-            Hn = np.where(moved, Hq2, Hn)
-            low = low | moved
-            lo = low[cr, ccs]
-            qn = np.clip(np.rint((Hn[cr, ccs] - Z0) / MAXH * 65535.0), 0, 65535).astype(np.uint16)
-            cg = colours.ground(lay[a0:a1, b0:b1], a0, b0)
-            col = np.column_stack([ndi.map_coordinates(ndi.gaussian_filter(cg[..., k], COLOUR_BLUR), [R, C], order=1)
-                                   for k in range(3)])
-            mb = bng.MeshBuilder()
-            far = [(1, LOD_LIFT[1], bng.MeshBuilder()), (2, LOD_LIFT[2], bng.MeshBuilder())]
-            ntri, info = tile_mesh(mb, keys, z, rr, cc, ox, oy, sq, col, wv, far, droad, RS)
-            rep["skin_points_over_road"] = rep.get("skin_points_over_road", 0) + info["over_road"]
-            rep["skin_over_road_max_m"] = round(max(rep.get("skin_over_road_max_m", -9.0), info["over_road_max"]), 3)
-            if ntri:
-                trees += plants(info, wv, hr, droad, np.random.default_rng(tr * 100003 + tc))
-            if not ntri:                                    # nothing left inside the cut: the terrain as it was
-                continue
-            sub = q_new[a0:a1, b0:b1][cr, ccs]
-            q_new[a0:a1, b0:b1][cr, ccs] = np.where(lo, qn, sub)
-            origin = np.array([ox + (b1 - b0) * sq / 2, oy + (a1 - a0) * sq / 2, float(np.median(z))])
-            with tempfile.TemporaryDirectory() as tmp:
-                f = os.path.join(tmp, "s.dae")
-                # detail sizes from the radius of the tile's squares: near, middle and far as LOD_DIST
-                radius = 0.5 * float(np.hypot(core[1] - core[0], core[3] - core[2])) * sq
-                px = [max(2, int(round(radius * PIX_K / d))) for d in LOD_DIST]
-                lods = [(px[i + 1], mbk) for i, (_, _, mbk) in enumerate(far) if not mbk.empty()]
-                mb.write_dae(f, name=f"skin_{tr}_{tc}", origin=origin, detail=px[0], weld=False, lods=lods)
-                rep["triangles_far"] = rep.get("triangles_far", 0) + sum(m.triangle_count() for _, m in lods)
-                for k, (_, mk) in enumerate(lods):
-                    rep[f"triangles_lod{k + 1}"] = rep.get(f"triangles_lod{k + 1}", 0) + mk.triangle_count()
-                rel = f"{D}/skin_{tr:04d}_{tc:04d}.dae"
-                files[f"{lv}/{rel}"] = open(f, "rb").read()
-            ob = bng.tsstatic(f"/levels/{LEVEL_NAME}/{rel}", origin, collision=True, decal=False)
-            ob["__parent"] = "terrain_skin"
-            objs.append(ob)
-            rep["tiles"] += 1
-            rep["squares"] += int(len(rr))
-            rep["triangles"] += int(ntri)
-            rep["steep_vertices"] += int(steep[core[0]:core[1], core[2]:core[3]].sum())
-            rep["changed_vertices"] += int(lo.sum())
-            dz = np.abs(Hn - H)[cr, ccs]
-            rep["changed_max_m"] = max(rep["changed_max_m"], float(dz.max()) if dz.size else 0.0)
+    G = {"q": q, "n": n, "m": m, "road": road, "hard": hard, "solid": solid, "lake_z": lake_z, "RS": RS,
+         "colours": colours, "lay": lay, "X0": X0, "Y0": Y0, "Z0": Z0, "MAXH": MAXH, "sq": sq, "lv": lv}
+    # switzerlandNG: the tiles in TILE_WORKERS forked processes (tilepool), merged in tile order: the same level as
+    # one process (8.7 of the Axenstrasse's 30 min of finishing steps were this loop on one core)
+    tiles = [(tr, tc) for tr in range(0, n - 1, TILE) for tc in range(0, n - 1, TILE)]
+    for part, out, tt in tilepool.imap(_skin_tile, tiles, G, chunksize=8):
+        tilepool.merge_report(rep, part)
+        trees += tt
+        if out is None:
+            continue
+        (a0, b0, cr, ccs, lo, qn), (rel, dae), ob = out
+        sub = q_new[a0:, b0:][cr, ccs]
+        q_new[a0:, b0:][cr, ccs] = np.where(lo, qn, sub)
+        files[f"{lv}/{rel}"] = dae
+        objs.append(ob)
     # v3.1: the plants, capped, as forest items of their own types (a new run replaces them)
     if len(trees) > PLANT_MAX:
         keep = np.random.default_rng(7).choice(len(trees), PLANT_MAX, replace=False)
@@ -1383,6 +1405,13 @@ def meadow_cut(txt, origin, colours, lay, Hter, X0, Y0, sq):
     return out, removed, rep
 
 
+def _meadow_file(G, o):
+    """meadow_cut of one skin object's file (skin_grass_step)."""
+    f = o["shapeName"].lstrip("/")
+    return meadow_cut(G["zi"].read(f).decode("utf-8"), o["position"], G["colours"], G["lay"], G["Hter"], G["X0"],
+                      G["Y0"], G["sq"])
+
+
 def skin_grass_step(root, report=None):
     """v3.1.2 (finishing step after steep_skin): no skin earth on the meadow banks; the terrain there meadow again."""
     import walls as pw
@@ -1404,13 +1433,18 @@ def skin_grass_step(root, report=None):
     items = f"{lv}/main/MissionGroup/level_objects/terrain_skin/items.level.json"
     objs = read_items(zi, items) if items in zi.NameToInfo else []
     keep_objs = []
+    import tilepool
+    # switzerlandNG: the skin files cut in TILE_WORKERS forked processes (each file on its own), merged in order
+    G = {"zi": zi, "colours": colours, "lay": lay, "Hter": Hter, "X0": X0, "Y0": Y0, "sq": sq}
+    todo = [o for o in objs if o.get("shapeName", "").lstrip("/") in zi.NameToInfo]
+    cuts = tilepool.imap(_meadow_file, todo, G, chunksize=4)
     for o in objs:
         f = o.get("shapeName", "").lstrip("/")
         if not f or f not in zi.NameToInfo:
             keep_objs.append(o)
             continue
         rep["files"] += 1
-        new, rem, r = meadow_cut(zi.read(f).decode("utf-8"), o["position"], colours, lay, Hter, X0, Y0, sq)
+        new, rem, r = next(cuts)
         for k in ("removed_triangles", "kept_triangles"):
             rep[k] += r[k]
         if len(rem):
@@ -1424,6 +1458,8 @@ def skin_grass_step(root, report=None):
         if new is not None:
             files[f] = new.encode("utf-8")
             rep["changed_files"] += 1
+    for _ in cuts:                                      # (none left: closes the workers)
+        pass
     if not (files or gone):
         rep["seconds"] = round(time.time() - t0)
         print("skin grass: nothing to do %s" % rep, flush=True)

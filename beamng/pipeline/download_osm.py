@@ -104,13 +104,19 @@ def zone_main():
     got = [[], []]
     seen = [set(), set()]
     for url in ZONE_PBFS:
-        pbf = ds.fetch(url, os.path.join(DATA, "osm", os.path.basename(url)))[0]
+        t = time.time()
+        pbf, how = fetch_big(url, os.path.join(DATA, "osm", os.path.basename(url)))
+        print("%s %s in %.0f s" % (os.path.basename(url), how, time.time() - t), flush=True)
+        t = time.time()
         for k, els in enumerate(pbf_elements(pbf, box)):
             for e in els:
                 if (e["type"], e["id"]) not in seen[k]:
                     seen[k].add((e["type"], e["id"]))
                     got[k].append(e)
-    comm = pbf_communes(ds.fetch(PBF, os.path.join(DATA, "osm", os.path.basename(PBF)))[0], box)
+        print("elements of %s over the zone read in %.0f s" % (os.path.basename(url), time.time() - t), flush=True)
+    t = time.time()
+    comm = pbf_communes(fetch_big(PBF, os.path.join(DATA, "osm", os.path.basename(PBF)))[0], box)
+    print("municipalities read in %.0f s" % (time.time() - t), flush=True)
     src = "Geofabrik " + ", ".join(map(os.path.basename, ZONE_PBFS)) + time.strftime(" %Y-%m-%d")
     for path, els in ((OUT, got[0]), (POIS, got[1]), (COMMUNES, comm)):
         d = {"elements": els, "bbox": b, "source": src}
@@ -121,6 +127,63 @@ def zone_main():
         with gzip.open(PINNED[path], "wt", encoding="utf-8") as f:
             json.dump(d, f, separators=(",", ":"))
         print(os.path.basename(path), len(els), "OSM elements over", b, flush=True)
+
+
+PARTS = 4                      # connections of a big download (fetch_big)
+
+
+def fetch_big(url, dest, parts=PARTS, min_mb=64):
+    """download_swisstopo.fetch, in `parts` byte ranges at once when the server takes ranges and the file is big: one
+    connection to Geofabrik took most of the 9 min of the Axenstrasse's OpenStreetMap step (switzerlandNG faster
+    builds). (path, "skip" / "ok" / "FAILED")."""
+    import download_swisstopo as ds
+    if os.path.exists(dest):
+        return dest, "skip"
+    try:
+        h = requests.head(url, allow_redirects=True, timeout=60)
+        size = int(h.headers.get("Content-Length", 0))
+        ranges = h.headers.get("Accept-Ranges", "") == "bytes"      # (the GETs go to url again: a redirect's
+        # signed address may hold for HEAD only)
+    except Exception as e:
+        print("fetch_big: no size of", url, e, flush=True)
+        size, ranges = 0, False
+    if not ranges or size < min_mb * 2 ** 20 or parts < 2:
+        return ds.fetch(url, dest)
+    from concurrent.futures import ThreadPoolExecutor
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    part = dest + ".part"
+    with open(part, "wb") as f:
+        f.truncate(size)
+    cuts = [size * k // parts for k in range(parts + 1)]
+
+    def get(k):
+        a, b = cuts[k], cuts[k + 1] - 1
+        for attempt in range(5):
+            pos = a
+            try:
+                with requests.get(url, headers={"Range": "bytes=%d-%d" % (a, b)}, stream=True, timeout=120) as r:
+                    if r.status_code != 206:
+                        raise RuntimeError("answer %d to a range" % r.status_code)
+                    with open(part, "r+b") as f:
+                        f.seek(a)
+                        for chunk in r.iter_content(1 << 20):
+                            f.write(chunk)
+                            pos += len(chunk)
+                if pos == b + 1:
+                    return True
+                raise RuntimeError("range %d cut at %d of %d" % (k, pos - a, b + 1 - a))
+            except Exception as e:
+                print("retry range", k, url, e, flush=True)
+                time.sleep(5 * (attempt + 1))
+        return False
+
+    with ThreadPoolExecutor(parts) as pool:
+        ok = all(pool.map(get, range(parts)))
+    if not ok or os.path.getsize(part) != size:
+        os.remove(part)
+        return ds.fetch(url, dest)
+    os.replace(part, dest)
+    return dest, "ok (%d ranges, %.0f MB)" % (parts, size / 2 ** 20)
 
 
 def main():
@@ -217,8 +280,16 @@ def pbf_communes(pbf, box):
     import subprocess, tempfile
     import osmium
     s_, w_, n_, e_ = box
-    adm = os.path.join(tempfile.mkdtemp(), "adm.osm.pbf")
-    subprocess.run(["osmium", "tags-filter", pbf, "r/boundary=administrative", "--overwrite", "-o", adm], check=True)
+    # the boundaries of the whole extract, kept beside it (switzerlandNG faster builds: the Switzerland Builder's cache
+    # keeps it for the next build, data/osm is shared): made again when the extract is newer
+    adm = pbf[:-len(".osm.pbf")] + ".admin.osm.pbf" if pbf.endswith(".osm.pbf") else pbf + ".admin.osm.pbf"
+    if not (os.path.exists(adm) and os.path.getmtime(adm) >= os.path.getmtime(pbf)):
+        tmp = os.path.join(tempfile.mkdtemp(), "adm.osm.pbf")
+        subprocess.run(["osmium", "tags-filter", pbf, "r/boundary=administrative", "--overwrite", "-o", tmp], check=True)
+        shutil.move(tmp, adm + ".part")
+        os.replace(adm + ".part", adm)
+    else:
+        print("municipal boundaries of", os.path.basename(pbf), "kept from an earlier build", flush=True)
     rels, ways = [], {}
     for o in osmium.FileProcessor(adm).with_locations():
         if o.is_way():

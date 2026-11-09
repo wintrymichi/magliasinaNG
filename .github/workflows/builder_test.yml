@@ -70,7 +70,19 @@ jobs:
           sudo mkdir -p /mnt/sb && sudo chown "$USER" /mnt/sb
           free -g; df -h / /mnt
 
+      - id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+
+      # the OpenStreetMap extract of Switzerland (and its municipal boundaries) kept between test builds, as the app
+      # keeps it for 14 days on a PC (cache.py): a new key every week, so the first build of a week downloads it.
+      # "[builder nocache]" in the commit message builds without it (the time of a first build on a new PC)
+      - uses: actions/cache@v4
+        if: ${{ !contains(github.event.head_commit.message, '[builder nocache]') }}
+        with:
+          path: /mnt/sb/data/cache/osm
+          key: builder-osm-${{ steps.week.outputs.week }}
 
       - name: Build, first part (launcher, downloads, stages)
         run: |

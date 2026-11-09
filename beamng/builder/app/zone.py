@@ -6,7 +6,10 @@ Malcantone's origin), as the Ticino zones do: the data measured for the Malcanto
 where they belong and are left out of any other area by its box. The finished level is moved to its own origin
 afterwards (recenter.py). A zone is:
   - the playable area: the rectangle picked (axis-aligned in the local frame), at most MAX_SIDE m a side;
-  - the terrain block: TER_SIZE samples TER_SQUARE m apart (12.3 km) centred on it, on the Malcantone's sample grid.
+  - the terrain block: ter_size samples TER_SQUARE m apart centred on it, on the Malcantone's sample grid: TER_SIZE
+    (8192, 12.3 km) as the Ticino zones, or TER_SMALL (4096, 6.1 km) when that still leaves TER_MARGIN round the area
+    (switzerlandNG faster builds, 2026-11-09: a 1 km area had 12.3 km of terrain, and every step that walks the
+    terrain worked on 4 times the samples; the backdrop takes over beyond the block as before).
 """
 import json
 import math
@@ -23,6 +26,8 @@ K = 1.0001374973449562
 TER_X0, TER_Y0 = -7230.0, -4731.0
 TER_SQUARE = 1.5
 TER_SIZE = 8192
+TER_SMALL = 4096            # the terrain block of a small area (BeamNG terrains are a power of 2 a side)
+TER_MARGIN = 2000.0         # m of terrain block at least round the area (the biggest area leaves 1.95 km)
 
 MAX_SIDE = 8400.0           # m: a Ticino zone's core and its overlap (7,680 + 2 x 300), 2 km inside the terrain block
 MIN_SIDE = 500.0
@@ -89,9 +94,18 @@ def rect(bbox):
     return (min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts))
 
 
-def terrain_origin(x0, y0, x1, y1):
-    """South-west sample of the terrain block centred on the rectangle, on the pipeline's sample grid."""
-    half = (TER_SIZE - 1) * TER_SQUARE / 2
+def ter_size_for(x0, y0, x1, y1):
+    """Samples a side of the terrain block of the rectangle: TER_SMALL when it holds the area with TER_MARGIN round it
+    (areas up to 2.1 km a side), TER_SIZE otherwise."""
+    side = max(x1 - x0, y1 - y0)
+    return TER_SMALL if (TER_SMALL - 1) * TER_SQUARE >= side + 2 * TER_MARGIN else TER_SIZE
+
+
+def terrain_origin(x0, y0, x1, y1, n=None):
+    """South-west sample of the terrain block (n samples a side, by default ter_size_for) centred on the rectangle,
+    on the pipeline's sample grid."""
+    n = n or ter_size_for(x0, y0, x1, y1)
+    half = (n - 1) * TER_SQUARE / 2
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     tx = TER_X0 + round((cx - half - TER_X0) / TER_SQUARE) * TER_SQUARE
     ty = TER_Y0 + round((cy - half - TER_Y0) / TER_SQUARE) * TER_SQUARE
@@ -147,8 +161,10 @@ def check(bbox):
     out["estimate_hours_low"] = round(0.25 + 0.012 * km2, 1)
     out["estimate_hours"] = round(0.4 + 0.07 * km2, 1)
     out["estimate_disk_gb"] = round(12 + 0.45 * km2)
-    tx, ty = terrain_origin(x0, y0, x1, y1)
-    side = (TER_SIZE - 1) * TER_SQUARE
+    n = ter_size_for(x0, y0, x1, y1)
+    tx, ty = terrain_origin(x0, y0, x1, y1, n)
+    side = (n - 1) * TER_SQUARE
+    out["terrain_km"] = round(side / 1000, 1)
     out["terrain_wgs"] = [list(to_wgs(tx, ty)), list(to_wgs(tx + side, ty)), list(to_wgs(tx + side, ty + side)),
                           list(to_wgs(tx, ty + side))]
     out["area_wgs"] = [list(to_wgs(x0, y0)), list(to_wgs(x1, y0)), list(to_wgs(x1, y1)), list(to_wgs(x0, y1))]
@@ -161,14 +177,15 @@ def check(bbox):
 def make_zone(name, title, bbox):
     """The zone file of a build (config.ZONE) for the WGS84 box (south, west, north, east)."""
     x0, y0, x1, y1 = rect(bbox)
-    tx, ty = terrain_origin(x0, y0, x1, y1)
+    n = ter_size_for(x0, y0, x1, y1)
+    tx, ty = terrain_origin(x0, y0, x1, y1, n)
     a = [(E0 + x0 * K, N0 + y0 * K), (E0 + x1 * K, N0 + y1 * K)]
     return {
         "name": name, "level": name, "title": title,
         "builder": True, "bbox_wgs": [float(v) for v in bbox],
         "core_local": [round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2)],
         "area_lv95": [round(a[0][0], 2), round(a[0][1], 2), round(a[1][0], 2), round(a[1][1], 2)],
-        "ter_size": TER_SIZE, "ter_x0": tx, "ter_y0": ty,
+        "ter_size": n, "ter_x0": tx, "ter_y0": ty,
         "biome": "Switzerland",
     }
 

@@ -97,14 +97,23 @@ def save_settings(s):
 
 
 def workers(setting="auto"):
-    """Worker processes of the heavy steps by memory (the 14 GB PC was OOM-killed with 14 optimize workers,
-    CLAUDE.md 2026-10-17): PATCH_WORKERS, NET_WORKERS, OPT_WORKERS."""
+    """Worker processes of the heavy steps by memory and cores (the 14 GB PC was OOM-killed with 14 optimize
+    workers, CLAUDE.md 2026-10-17): PATCH_WORKERS (unpaved, paved_edges: each holds the level's faces), NET_WORKERS
+    (the road tiles), OPT_WORKERS (optimize), TILE_WORKERS (steep_skin, skin_grass: forked tiles that share the step's
+    arrays) and ZIP_WORKERS (threads that deflate the zip). switzerlandNG faster builds (2026-11-09): a 16 GB PC got
+    the "low" set before (one PATCH worker), though the Axenstrasse's finishing steps used 2-5 GB."""
     ram = memory_gb()
-    if setting == "low" or ram < 20:
-        return {"PATCH_WORKERS": "1", "NET_WORKERS": "2", "OPT_WORKERS": "2"}
-    if setting == "high" and ram >= 48:
-        return {"PATCH_WORKERS": "3", "NET_WORKERS": "4", "OPT_WORKERS": "6"}
-    return {"PATCH_WORKERS": "2", "NET_WORKERS": "3", "OPT_WORKERS": "4"}
+    cpus = os.cpu_count() or 1
+    if setting == "low" or ram < 12:
+        w = {"PATCH_WORKERS": 1, "NET_WORKERS": 2, "OPT_WORKERS": 2, "TILE_WORKERS": 2, "ZIP_WORKERS": 2}
+    elif ram < 20:
+        w = {"PATCH_WORKERS": 2, "NET_WORKERS": 2, "OPT_WORKERS": 3, "TILE_WORKERS": 3, "ZIP_WORKERS": 4}
+    elif setting == "high" and ram >= 48:
+        w = {"PATCH_WORKERS": 3, "NET_WORKERS": 4, "OPT_WORKERS": 6, "TILE_WORKERS": 8, "ZIP_WORKERS": 8}
+    else:
+        w = {"PATCH_WORKERS": 2, "NET_WORKERS": 3, "OPT_WORKERS": 4, "TILE_WORKERS": 4, "ZIP_WORKERS": 4}
+    # never more processes than cores (a 2-core PC with 32 GB ran 3 network workers on 2 cores)
+    return {k: str(max(1, min(v, cpus))) for k, v in w.items()}
 
 
 def info(settings):

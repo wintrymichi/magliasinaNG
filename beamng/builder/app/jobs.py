@@ -43,6 +43,14 @@ FINISH_MIN = {"optimize": 10, "paved_edges": 32, "roof_posts": 24, "steep_skin":
               "markings": 6, "road_wear": 5, "parking": 5, "signs": 5, "understory": 6, "forest_mosaic": 5, "grass": 3,
               "steep_yards": 3, "skin_grass": 3, "skin_blend": 6, "road_seams": 5, "sidewalks": 4, "wall_fill": 4}
 FINISH_DEFAULT = 2
+# switzerlandNG faster builds (2026-11-09): the downloads run beside each other, and the steps that need only
+# swisstopo's files start as soon as those are there; everything after them waits for all of them. Value: the steps
+# it waits for. The Axenstrasse spent 14.6 min in these one after the other, OpenStreetMap alone 9.1.
+EARLY = {"swisstopo": (), "worldcover": (), "survey": (), "tlm": (), "gwr": (), "osm": (),
+         "rasters": ("swisstopo",), "buildings": ("swisstopo",)}
+# the finishing steps in one process (build_level.py --finish a b c ...: each step in a forked child of it, as
+# before), its progress read from what it prints; not on Windows (no fork: there each step keeps its own process)
+FINISH_CHAIN = hasattr(os, "fork")
 TAIL = [("recenter", "Move the level to its own origin", 3), ("package", "Pack the level as a mod (zip)", 8),
         ("install", "Put it in BeamNG's mods folder", 1)]
 STEP_FORK_WIN = sys.platform == "win32"
@@ -220,8 +228,8 @@ class Manager:
             if self.current and self.current[0].id == bid:
                 self.cancel_flag = True
                 p = self.current[1]
-                if p is not None:
-                    kill_tree(p.pid)
+                for q in (p if isinstance(p, list) else [p] if p is not None else []):
+                    kill_tree(q.pid)
 
     def delete(self, bid):
         self.cancel(bid)
@@ -277,6 +285,34 @@ class Manager:
                 continue
             if self.cancel_flag:
                 break
+            until = b.state.get("until")
+            if st["kind"] == "script" and st["key"] in EARLY:
+                group = [s_ for s_ in b.state["steps"] if s_["key"] in EARLY and s_["status"] not in ("done", "skipped")]
+                if until not in {s_["key"] for s_ in group} and len(group) > 1:
+                    if not self.run_early(b, group):
+                        return
+                    continue
+            if st["kind"] == "finish" and FINISH_CHAIN:
+                chain = []
+                for s_ in b.state["steps"][i:]:
+                    if s_["kind"] != "finish" or s_["status"] in ("done", "skipped"):
+                        break
+                    chain.append(s_)
+                    if s_["key"] == until:
+                        break
+                if len(chain) > 1:
+                    r = self.run_finish_chain(b, chain)
+                    if r == "failed":
+                        return
+                    if r == "cancelled":
+                        break
+                    if until in {s_["key"] for s_ in chain}:
+                        b.state["until"] = None
+                        b.state["status"] = "stopped"
+                        b.log(f"[{now()}] stopped after {until} (--until)")
+                        b.save()
+                        return
+                    continue
             st["status"] = "running"
             st["started"] = now()
             st["started_ts"] = time.time()
@@ -323,6 +359,144 @@ class Manager:
             b.state["finished"] = now()
             b.log(f"\n[{now()}] BUILD DONE: {b.zip_path}")
         b.save()
+
+    def _fail(self, b, st):
+        st["status"] = "failed"
+        b.state["status"] = "failed"
+        b.state["error"] = f"Step '{st['label']}' failed: see the log (the build can be resumed from this step)."
+        b.state["failed_step"] = st["key"]
+        b.save()
+
+    def run_early(self, b, group):
+        """The EARLY steps of the group at once, each as soon as the steps it waits for are done; each writes its own
+        log (logs/<key>.log), put into build.log when it ends. True when all are done; False on a failure or a stop
+        (the others are let finish first: they are downloads, kept for the resume)."""
+        pipe = os.path.join(b.code, "pipeline")
+        logs = os.path.join(b.folder, "logs")
+        os.makedirs(logs, exist_ok=True)
+        keys = {st["key"] for st in group}
+        todo, running, failed = list(group), {}, None
+        b.log(f"\n[{now()}] ===== {len(group)} steps side by side: {', '.join(st['key'] for st in group)}")
+        while todo or running:
+            if not self.cancel_flag and failed is None:
+                for st in list(todo):
+                    wait = [k for k in EARLY[st["key"]] if k in keys and
+                            next(s_ for s_ in group if s_["key"] == k)["status"] != "done"]
+                    if wait:
+                        continue
+                    todo.remove(st)
+                    st["status"], st["started"], st["started_ts"] = "running", now(), time.time()
+                    lp = os.path.join(logs, st["key"] + ".log")
+                    lf = open(lp, "w", encoding="utf-8", errors="replace")
+                    lf.write(f"$ {sys.executable} {st['script']}\n")
+                    lf.flush()
+                    kw = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if sys.platform == "win32" else {}
+                    p = subprocess.Popen([sys.executable, st["script"]], cwd=pipe, env=self.env(b), stdout=lf,
+                                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, **kw)
+                    running[st["key"]] = (st, p, lf, lp)
+                    b.log(f"[{now()}] started: {st['label']} ({st['key']})")
+                    b.save()
+            elif todo:
+                for st in todo:                       # stopped or failed: the rest stay for the resume
+                    st["status"] = "pending"
+                todo = []
+            with self.lock:
+                self.current = (b, [r[1] for r in running.values()])
+            for k, (st, p, lf, lp) in list(running.items()):
+                code = p.poll()
+                if code is None:
+                    continue
+                lf.close()
+                del running[k]
+                st["seconds"] = round(time.time() - st["started_ts"])
+                with open(lp, encoding="utf-8", errors="replace") as f:
+                    out = f.read()
+                b.log(f"\n[{now()}] ===== {st['label']} ({k}): {st['seconds']} s, side by side")
+                b.log(out)
+                if self.cancel_flag:
+                    st["status"] = "pending"
+                elif code:
+                    b.log(f"[{now()}] exit code {code}")
+                    st["status"] = "failed"
+                    failed = failed or st
+                else:
+                    st["status"] = "done"
+                    st["ended"] = now()
+                b.save()
+            if running:
+                time.sleep(0.5)
+        with self.lock:
+            self.current = (b, None)
+        if all(st["status"] == "done" for st in group):
+            # the new downloads into the cache (as after the osm step one by one)
+            cache.harvest(self.cache_dir, os.path.join(b.root, "data"), b.log)
+            return True
+        if failed is not None:
+            self._fail(b, failed)
+        return False
+
+    def run_finish_chain(self, b, chain):
+        """The finishing steps of chain in one process (build_level.py --finish ...): their status from the lines it
+        prints ("== finish: <name>", "[finish <name>: <s> s]", a step left out). "done", "failed" or "cancelled"."""
+        import re
+        pipe = os.path.join(b.code, "pipeline")
+        self.step_reference(b)
+        by = {st["step"]: st for st in chain}
+        args = [sys.executable, "build_level.py", "--finish"] + [st["step"] for st in chain]
+        b.log(f"\n[{now()}] ===== {len(chain)} finishing steps in one process")
+        b.log(f"$ {' '.join(args)}")
+        p = subprocess.Popen(args, cwd=pipe, env=self.env(b), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             stdin=subprocess.DEVNULL, bufsize=1, text=True, encoding="utf-8", errors="replace")
+        with self.lock:
+            self.current = (b, p)
+        cur = None
+        start = re.compile(r"^== finish: (\w+)")
+        end = re.compile(r"^\[finish (\w+): (\d+) s\]")
+
+        def close(st, status="done"):
+            st["status"] = status
+            st["seconds"] = round(time.time() - st["started_ts"])
+            st["ended"] = now()
+
+        with open(os.path.join(b.folder, "build.log"), "a", encoding="utf-8", errors="replace") as logf:
+            for line in p.stdout:
+                m1, m2 = start.match(line), end.match(line)
+                if m1 and m1.group(1) in by:
+                    if cur is not None and cur["status"] == "running":
+                        close(cur)                  # left out in this zone: no time line
+                    cur = by[m1.group(1)]
+                    logf.write(f"\n[{now()}] ===== {cur['label']} ({cur['key']})\n")
+                    cur["status"], cur["started"], cur["started_ts"] = "running", now(), time.time()
+                    b.save()
+                logf.write(line)
+                logf.flush()
+                if m2 and m2.group(1) in by and by[m2.group(1)]["status"] == "running":
+                    close(by[m2.group(1)])
+                    b.save()
+            code = p.wait()
+        with self.lock:
+            self.current = (b, None)
+        if self.cancel_flag:
+            for st in chain:
+                if st["status"] == "running":
+                    st["status"] = "pending"
+            b.log(f"[{now()}] stopped by the user")
+            b.save()
+            return "cancelled"
+        if code:
+            b.log(f"[{now()}] exit code {code}")
+            bad = cur if cur is not None and cur["status"] == "running" else next(
+                (st for st in chain if st["status"] == "pending"), chain[0])
+            if bad.get("started_ts"):
+                bad["seconds"] = round(time.time() - bad["started_ts"])
+            self._fail(b, bad)
+            return "failed"
+        for st in chain:
+            if st["status"] in ("running", "pending"):
+                st["started_ts"] = st.get("started_ts") or time.time()
+                close(st)
+        b.save()
+        return "done"
 
     def _used_gb(self, b):
         t = 0
