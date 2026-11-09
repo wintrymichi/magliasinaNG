@@ -70,8 +70,9 @@ class RangeFile(io.RawIOBase):
     def _get(self, k):
         a, b = k * self.CHUNK, min((k + 1) * self.CHUNK, self.size) - 1
         # netio: kept-alive session per thread, (connect, read) timeouts, the stall watchdog, resumed after a cut;
-        # the bytes count into the step's percentage (PROG)
-        return netio.get_range(self.url, a, b, PROG, what="swissTLM3D bytes %d-%d" % (a, b))
+        # not counted into PROG here: the read-ahead and the zip's directory reach past the members, and the line
+        # said "2.0 GB of 1.7 GB" (2026-11-09); member() counts each member's compressed bytes as it unpacks them
+        return netio.get_range(self.url, a, b, None, what="swissTLM3D bytes %d-%d" % (a, b))
 
     def readinto(self, b):
         if self.pos >= self.size:
@@ -200,6 +201,7 @@ def member(z, names, name):
     netio.say("[download]   swissTLM3D %s: %s (%s unpacked)" % (short, netio.human(info.compress_size),
                                                               netio.human(info.file_size)))
     line = netio._FileLine("swissTLM3D " + short, info.file_size)
+    sent = 0
     with z.open(names[name]) as f, open(dst + ".part", "wb") as o:
         while True:
             c = f.read(1 << 22)
@@ -207,6 +209,10 @@ def member(z, names, name):
                 break
             o.write(c)
             line.add(len(c))
+            # the compressed bytes behind what was unpacked so far (the step's percentage, PROG)
+            done = info.compress_size * line.n // max(info.file_size, 1)
+            PROG.add(done - sent)
+            sent = done
     line.add(0, force=True)
     netio.replace(dst + ".part", dst)
     return dst, True

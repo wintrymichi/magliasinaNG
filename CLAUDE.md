@@ -2398,6 +2398,10 @@ Faster builds (switzerlandNG, thread "Velocizzare la creazione delle mappe", 202
   Accept-Encoding: identity (a gzipped answer decoded by requests never matches Content-Length). Before forking a new
   pool after a break, join the old executor's manager thread (a fork beside a live thread can inherit a held lock).
   Without psutil the step watchdog is off (it would see 0 CPU and kill a long silent computation).
+  The test builds of that round (f0d038c, 074a0e6) were green but the swissTLM3D line said "2.0 GB of 1.7 GB": the
+  range reads (read-ahead, the zip's directory) went into the percentage while the total was the members' compressed
+  size. The percentage now counts each member's compressed bytes as it is unpacked; count a total and its progress
+  from the same thing.
 
 ## main is the Malcantone only (2026-11-07)
 
