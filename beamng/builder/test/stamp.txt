@@ -1,1 +1,1 @@
-sisikon 2026-11-09T19:17Z faster builds, small area on Linux (4096 terrain)
+windows 2026-11-09T19:18Z faster builds on Windows (small area, 4096 terrain, downloads side by side)
