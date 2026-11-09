@@ -1,1 +1,1 @@
-windows 2026-11-09T19:18Z faster builds on Windows (small area, 4096 terrain, downloads side by side)
+sisikon 2026-11-09T19:49Z faster builds, second round (tlm ranges and cache, texture cache)
