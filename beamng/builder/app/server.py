@@ -20,7 +20,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import BUILDER, HERE, VERSION
-from . import jobs, system, zone as zonemod
+from . import jobs, system, update, zone as zonemod
 
 WEB = os.path.join(BUILDER, "web")
 OWN_TYPES = {".html": "text/html", ".css": "text/css", ".js": "application/javascript", ".svg": "image/svg+xml",
@@ -30,6 +30,31 @@ SEARCH = "https://api3.geo.admin.ch/rest/services/api/SearchServer"
 
 manager = None
 settings = None
+UPDATE = {"check": None, "running": False, "log": [], "error": None, "done": False}
+UPDATE_EVERY = 6 * 3600                     # a new look at GitHub every 6 hours while the app is open
+
+
+def update_checker():
+    while True:
+        UPDATE["check"] = update.check()
+        time.sleep(UPDATE_EVERY)
+
+
+def run_update():
+    """The update from the page: write the new files, then end with RESTART_CODE so the launcher starts the new
+    version (and sets the Python libraries up again when environment.yml changed)."""
+    UPDATE.update(running=True, log=[], error=None, done=False)
+    try:
+        update.apply(say=lambda s: (UPDATE["log"].append(s), print("  " + s, flush=True)))
+        UPDATE["done"] = True
+        print("\n  switzerlandNG restarts with the new version...\n", flush=True)
+        time.sleep(1.5)                       # the page reads "done" before the app goes
+        manager.shutdown()
+        os._exit(update.RESTART_CODE)
+    except Exception as e:                    # noqa: shown on the page
+        UPDATE["error"] = str(e)
+    finally:
+        UPDATE["running"] = False
 
 
 def regions_geojson():
@@ -157,6 +182,16 @@ class Handler(BaseHTTPRequestHandler):
                     manager.reload()
                 system.save_settings(settings)
                 return self._send(200, self.state())
+            if path == "/api/update":
+                if d.get("check"):
+                    UPDATE["check"] = update.check()
+                    return self._send(200, self.state())
+                if manager.current or manager.queue:
+                    raise ValueError("A build is running: update when it is done (or stop it first).")
+                if UPDATE["running"]:
+                    raise ValueError("The update is already running.")
+                threading.Thread(target=run_update, daemon=True).start()
+                return self._send(200, {"ok": True})
             if path == "/api/quit":
                 threading.Thread(target=lambda: (time.sleep(0.3), os._exit(0)), daemon=True).start()
                 return self._send(200, {"ok": True})
@@ -172,7 +207,9 @@ class Handler(BaseHTTPRequestHandler):
         cur = manager.current[0].id if manager.current else None
         return {"version": VERSION, "settings": settings, "system": system.info(settings),
                 "builds": sorted([b.public() for b in manager.builds.values()], key=lambda s: s["created"], reverse=True),
-                "running": cur, "queue": list(manager.queue)}
+                "running": cur, "queue": list(manager.queue),
+                "update": dict(UPDATE["check"] or {}, running=UPDATE["running"], log=UPDATE["log"][-12:],
+                               error=UPDATE["error"], done=UPDATE["done"])}
 
 
 def search(text):
@@ -233,6 +270,8 @@ def main():
     if not a.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     jobs.stop_on_signals()
+    if not os.environ.get("SWISSNG_NO_UPDATE_CHECK"):
+        threading.Thread(target=update_checker, daemon=True).start()
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

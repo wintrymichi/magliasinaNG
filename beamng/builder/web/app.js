@@ -318,13 +318,57 @@ $("s_save").onclick = async () => {
 async function refresh() {
   try {
     state = await api("/api/state");
-    renderSystem(); renderSettings(); renderBuilds();
+    renderSystem(); renderSettings(); renderBuilds(); renderUpdate();
   } catch (e) {
+    if (updating) { waitRestart(); return; }
     $("sysbar").innerHTML = `<span class="chip err">The app is not answering: ${esc(e.message)}</span>`;
   }
 }
 refresh();
 setInterval(refresh, 3000);
+
+/* ------------------------------------------------------------------ update */
+let updating = false, waiting = false;
+async function waitRestart() {
+  if (waiting) return;
+  waiting = true;
+  $("update").hidden = false;
+  $("update").innerHTML = "<p>switzerlandNG is restarting with the new version (a few seconds, or some minutes when its Python libraries changed). This page reloads by itself.</p>";
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 3000));
+    try { const r = await fetch("/", { cache: "no-store" }); if (r.ok) { location.reload(); return; } } catch (_) {}
+  }
+}
+function renderUpdate() {
+  const u = state.update || {};
+  const box = $("update");
+  if (u.running || u.done) {
+    updating = true;
+    box.hidden = false;
+    box.innerHTML = `<p><b>Updating switzerlandNG…</b> the app restarts by itself when it is done.</p><pre>${esc((u.log || []).join("\n"))}</pre>`;
+    return;
+  }
+  if (u.error) {
+    box.hidden = false;
+    box.innerHTML = `<p class="err">The update did not work: ${esc(u.error)}</p><button class="btn" id="upd_go">Try again</button>`;
+  } else if (u.available && !u.git) {
+    const busy = state.running || (state.queue || []).length;
+    box.hidden = false;
+    box.innerHTML = `<p><b>A new version of switzerlandNG is out</b> (${esc((u.latest_date || "").slice(0, 10))}: ${esc(u.latest_message || "")}).</p>` +
+      (busy ? `<p class="muted">It can be installed when the build is done.</p>` : `<button class="btn primary" id="upd_go">Update and restart</button>`);
+  } else if (u.available && u.git) {
+    box.hidden = false;
+    box.innerHTML = `<p><b>A new version is out.</b> This folder is a git checkout: run <code>git pull</code>, then start the app again.</p>`;
+  } else {
+    box.hidden = true;
+    return;
+  }
+  const b = $("upd_go");
+  if (b) b.onclick = async () => {
+    b.disabled = true;
+    try { await api("/api/update", { body: {} }); updating = true; await refresh(); } catch (e) { alert(e.message); b.disabled = false; }
+  };
+}
 
 /* ------------------------------------------------------------------ log */
 let logId = null, logOff = 0, logTimer = null;

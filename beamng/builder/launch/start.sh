@@ -5,6 +5,7 @@
 #   start.sh                      the app (http://127.0.0.1:8765)
 #   start.sh --no-browser         the app without opening the browser
 #   start.sh cli <command> ...    the command line (python -m app.cli: check, build, resume)
+#   start.sh update [--check|--full]  the newest version from GitHub, then the app (update-switzerlandng.sh)
 #   SWISSBUILDER_RUNTIME=<dir>    keeps micromamba, the Python environment and the settings there
 set -euo pipefail
 
@@ -85,4 +86,16 @@ if [ "${1:-}" = "cli" ]; then
   shift
   exec "$MM" run -p "$ENVP" python -m app.cli "$@"
 fi
-exec "$MM" run -p "$ENVP" python -m app.server "$@"
+if [ "${1:-}" = "update" ]; then        # the newest version from GitHub (app/update.py), then the app again
+  shift
+  "$MM" run -p "$ENVP" python -m app.update "$@" || exit $?
+  case " $* " in *" --check "*) exit 0 ;; esac
+  [ -n "${SWISSNG_UPDATE_ONLY:-}" ] && exit 0
+  exec bash "$HERE/start.sh"             # the NEW launcher (it sets the libraries up again if they changed)
+fi
+rc=0
+"$MM" run -p "$ENVP" python -m app.server "$@" || rc=$?
+if [ "$rc" = 75 ]; then                  # updated from the page: start the new version
+  exec bash "$HERE/start.sh" "$@"
+fi
+exit "$rc"

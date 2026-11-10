@@ -5,6 +5,7 @@
 #   start.ps1                     the app (http://127.0.0.1:8765)
 #   start.ps1 --no-browser        the app without opening the browser
 #   start.ps1 cli <command> ...   the command line (python -m app.cli: check, build, resume)
+#   start.ps1 update [--check|--full]  the newest version from GitHub, then the app ("Update switzerlandNG.bat")
 #   $env:SWISSBUILDER_RUNTIME     keeps micromamba, the Python environment and the settings there
 #
 # PowerShell variable names ignore case: every name below is used for one thing only (CLAUDE.md, $w/$W). No param()
@@ -96,13 +97,25 @@ try {
     }
 
     Set-Location $BuilderDir
+    $Rest = @()
+    if ($AppArgs.Count -gt 1) { $Rest = $AppArgs[1..($AppArgs.Count - 1)] }
     if ($AppArgs.Count -gt 0 -and $AppArgs[0] -eq 'cli') {
-        $Rest = @()
-        if ($AppArgs.Count -gt 1) { $Rest = $AppArgs[1..($AppArgs.Count - 1)] }
         & $MmExe run -p $EnvDir python -m app.cli @Rest
+        exit $LASTEXITCODE
+    }
+    $Again = @($AppArgs)
+    if ($AppArgs.Count -gt 0 -and $AppArgs[0] -eq 'update') {
+        # the newest version from GitHub (app\update.py), then the app again
+        & $MmExe run -p $EnvDir python -m app.update @Rest
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        if ($Rest -contains '--check' -or $env:SWISSNG_UPDATE_ONLY) { exit 0 }
+        $Again = @()
     } else {
         & $MmExe run -p $EnvDir python -m app.server @AppArgs
+        if ($LASTEXITCODE -ne 75) { exit $LASTEXITCODE }   # 75: updated from the page
     }
+    # the NEW launcher, in a new PowerShell (it sets the libraries up again if they changed)
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath @Again
     exit $LASTEXITCODE
 } catch {
     Write-Host ''
