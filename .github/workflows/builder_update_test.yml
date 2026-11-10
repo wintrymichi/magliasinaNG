@@ -1,0 +1,87 @@
+# switzerlandNG: the installer and the updater, as a user's PC runs them (Windows PowerShell 5.1 and Linux bash).
+# Started by a change of beamng/builder/test/update_stamp.txt on a push of switzerland-builder.
+#   1. the one-line installer (launch/install.*) into A: the newest commit of the branch
+#   2. A is made to look like an install of an older commit (OLD, 3 commits back of the files the app uses)
+#   3. "Update switzerlandNG" in A (sets up the app's Python first, then only the changed files)
+#   4. the installer again into B; A and B must hold the same files (the state files aside)
+#   5. the installer once more into A: it must say "already in ... updating" and find it up to date
+name: builder_update_test
+on:
+  push:
+    branches: [switzerland-builder]
+    paths: [beamng/builder/test/update_stamp.txt]
+permissions:
+  contents: read
+concurrency:
+  group: builder-update-test
+  cancel-in-progress: true
+jobs:
+  update:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      SWISSBUILDER_NO_PAUSE: "1"
+      SWISSNG_UPDATE_ONLY: "1"
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+      - name: Older commit to start from
+        shell: bash
+        run: |
+          OLD=$(git log --format=%H -n 4 -- beamng/builder | tail -1)
+          echo "OLD=$OLD" >> "$GITHUB_ENV"
+          echo "start from $OLD"; git log --oneline -n 4 -- beamng/builder
+      - name: Install (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          bash beamng/builder/launch/install.sh "$RUNNER_TEMP/A" --no-start
+          export SWISSBUILDER_RUNTIME="$RUNNER_TEMP/rt"
+          A="$RUNNER_TEMP/A"
+          git ls-tree -r --name-only "$OLD" | LC_ALL=C sort > "$A/.switzerlandng-files.txt"
+          echo "{\"commit\": \"$OLD\"}" > "$A/.switzerlandng.json"
+          git show "$OLD:beamng/builder/app/server.py" > "$A/beamng/builder/app/server.py"   # an old file to rewrite
+          "$A/update-switzerlandng.sh"
+          cat "$A/.switzerlandng.json"
+          bash beamng/builder/launch/install.sh "$RUNNER_TEMP/B" --no-start
+          diff -r -x '.switzerlandng*' -x __pycache__ -x .runtime "$A" "$RUNNER_TEMP/B"
+          bash beamng/builder/launch/install.sh "$A" --no-start | tee "$RUNNER_TEMP/again.log"
+          grep -q "up to date" "$RUNNER_TEMP/again.log"
+          echo "UPDATE TEST PASSED"
+      - name: Install (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:SWISSBUILDER_RUNTIME = 'D:\sbu\runtime'
+          $DirA = Join-Path $env:RUNNER_TEMP 'A'
+          $DirB = Join-Path $env:RUNNER_TEMP 'B'
+          powershell -NoProfile -ExecutionPolicy Bypass -File beamng\builder\launch\install.ps1 $DirA --no-start
+          if ($LASTEXITCODE -ne 0) { throw "install A: $LASTEXITCODE" }
+          $Names = git ls-tree -r --name-only $env:OLD | Sort-Object -CaseSensitive
+          [IO.File]::WriteAllText((Join-Path $DirA '.switzerlandng-files.txt'), (($Names -join "`n") + "`n"))
+          [IO.File]::WriteAllText((Join-Path $DirA '.switzerlandng.json'), "{`"commit`": `"$($env:OLD)`"}")
+          git show "$($env:OLD):beamng/builder/app/server.py" | Set-Content -Encoding UTF8 (Join-Path $DirA 'beamng\builder\app\server.py')
+          & cmd.exe /c "`"$DirA\Update switzerlandNG.bat`""
+          if ($LASTEXITCODE -ne 0) { throw "update: $LASTEXITCODE" }
+          Get-Content (Join-Path $DirA '.switzerlandng.json')
+          powershell -NoProfile -ExecutionPolicy Bypass -File beamng\builder\launch\install.ps1 $DirB --no-start
+          if ($LASTEXITCODE -ne 0) { throw "install B: $LASTEXITCODE" }
+          $Diff = 0
+          Get-ChildItem -Recurse -File $DirB | ForEach-Object {
+            $Rel = $_.FullName.Substring($DirB.Length + 1)
+            if ($Rel -like '.switzerlandng*' -or $Rel -like '*__pycache__*') { return }
+            $Other = Join-Path $DirA $Rel
+            if (-not (Test-Path -LiteralPath $Other)) { Write-Host "missing in A: $Rel"; $script:Diff++ ; return }
+            if ((Get-FileHash -LiteralPath $Other).Hash -ne (Get-FileHash -LiteralPath $_.FullName).Hash) { Write-Host "differs: $Rel"; $script:Diff++ }
+          }
+          if ($Diff -gt 0) { throw "$Diff files differ between the updated A and the fresh B" }
+          $Out = powershell -NoProfile -ExecutionPolicy Bypass -File beamng\builder\launch\install.ps1 $DirA --no-start | Out-String
+          Write-Host $Out
+          if ($Out -notmatch 'up to date') { throw 'the second install did not find A up to date' }
+          Write-Host 'UPDATE TEST PASSED'

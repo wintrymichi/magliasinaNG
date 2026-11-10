@@ -2403,6 +2403,27 @@ Faster builds (switzerlandNG, thread "Velocizzare la creazione delle mappe", 202
   size. The percentage now counts each member's compressed bytes as it is unpacked; count a total and its progress
   from the same thing.
 
+## switzerlandNG updates (app/update.py, launch/install.*, 2026-11-10)
+
+- Until 2026-11-10 the builder had no update path at all: the README link was the branch zip (always the newest, but a
+  user had to unpack it again by hand) and VERSION was a fixed "1.0.0". Now `.switzerlandng.json` (commit) and
+  `.switzerlandng-files.txt` (file list) at the top of an install say what it has; app/update.py takes only the files
+  GitHub's compare lists (each checked against its git blob sha1), the whole codeload archive when the commit is not
+  known or the compare lists 300+ files. Delete only files in the old file list: a data folder may be put inside.
+- The cloud container has GITHUB_TOKEN set: urllib sent it as Bearer to raw.githubusercontent.com, which answered 404
+  to every file (curl without the token: 200). It looked like the CDN lagging after a push and cost a retry loop and
+  ~5 min of a test. Send a token only to api.github.com; compare curl and Python with the SAME headers before blaming
+  the server.
+- cmd reads a running .bat line by line at byte offsets: an update rewriting "Start Switzerland Builder.bat" while it
+  runs would make cmd go on in the middle of the new file. The .bat files are one parenthesised block (parsed at once;
+  `if errorlevel 1` instead of %errorlevel%, which a block expands at parse time). bash keeps the old inode open when
+  a script is replaced with os.replace (never write a running .sh in place).
+- The page's "Update and restart" ends the server with exit code 75 (update.RESTART_CODE); start.sh/start.ps1 then
+  run the NEW launcher (env hash -> the libraries again if environment.yml changed). Refused while a build runs or
+  waits. Tested in the cloud: delta from 629949c (13 files, result = git archive of the new commit, CRLF and exec bits
+  right), full archive from an unknown version (349 MB, a stale listed file removed), install.sh 21 s, the server
+  path to exit 75. Windows: builder_update_test.yml (beamng/builder/test/update_stamp.txt).
+
 ## main is the Malcantone only (2026-11-07)
 
 - PR #113 (switzerland-builder, which carries the whole `ticino` branch) was merged into main by mistake: 324 files,

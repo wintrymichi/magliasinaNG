@@ -24,7 +24,14 @@ This branch (`switzerland-builder`) is the builder. The Malcantone mod itself, i
 
 ## Quick start
 
-1. **Download** [switzerland-builder.zip](https://github.com/wintrymichi/magliasinaNG/archive/refs/heads/switzerland-builder.zip) and unpack it anywhere, for example on the disk with the most free space. It is about 330 MB because the branch carries the whole repository (the photos and checks of the Malcantone map); the app uses about 55 MB of it.
+1. **Install** it with one line, which always takes the newest version (about 330 MB, in `switzerlandNG` in your home folder; it puts a `switzerlandNG` shortcut on the Windows desktop and starts the app):
+
+   | System | Paste into |
+   |---|---|
+   | Windows 10 / 11 | *Run* (Win+R) or a command prompt: `powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/wintrymichi/magliasinaNG/switzerland-builder/beamng/builder/launch/install.ps1 \| iex"` |
+   | macOS, Linux | a terminal: `curl -fsSL https://raw.githubusercontent.com/wintrymichi/magliasinaNG/switzerland-builder/beamng/builder/launch/install.sh \| bash` |
+
+   Or **download** [switzerland-builder.zip](https://github.com/wintrymichi/magliasinaNG/archive/refs/heads/switzerland-builder.zip) and unpack it anywhere, for example on the disk with the most free space. It is about 330 MB because the branch carries the whole repository (the photos and checks of the Malcantone map); the app uses about 55 MB of it.
 2. **Start it** with a double click:
 
    | System | Double-click |
@@ -36,6 +43,16 @@ This branch (`switzerland-builder`) is the builder. The Malcantone mod itself, i
 3. **The first start takes 5 to 10 minutes, once.** The launcher downloads [micromamba](https://mamba.readthedocs.io/) and sets up Python with the map libraries (GDAL, rasterio, shapely, osmium...) in its own folder, about 2 GB. Later starts take a few seconds.
 4. **The app opens in your browser** at `http://127.0.0.1:8765`. Only your own computer can reach it. Keep the black window open while you use the app: closing it stops the app (a running build stops too and resumes later from the step it was in).
 5. **Pick an area, name it and press *Build this area*.** When the build is done the level is in BeamNG.drive's mods folder: start the game and pick it in *Freeroam*.
+
+## Updates
+
+switzerlandNG is always updated to the newest version of this branch, and only the files that changed are downloaded (usually a few hundred KB). Your builds, downloads and settings stay.
+
+- **In the app:** when a new version is out, a red box at the top says so; press *Update and restart* (not while a build runs). The app checks GitHub when it starts and every 6 hours.
+- **With the update script:** `Update switzerlandNG.bat` (Windows), `Update switzerlandNG.command` (macOS) or `./update-switzerlandng.sh` (Linux). It updates the app and starts it. `--check` only says whether a new version is out, `--full` downloads the whole version again (to repair a broken install).
+- **Running the installer again** on the same folder updates it too.
+
+A folder unpacked from the zip by hand does not know its version yet: its first update downloads the whole version once (about 330 MB), the later ones only the changes. When the new version needs other Python libraries, the next start sets them up again (some minutes). A build that is already running or stopped keeps the pipeline code it started with; `cli resume <build id> --update-code` gives it the new one. A git checkout is updated with `git pull`.
 
 ## Using the app
 
@@ -189,8 +206,11 @@ Every level is called `ch_<name>` in the game's files, so levels of different ar
 
 ```
 Start Switzerland Builder.bat / .command, start-switzerland-builder.sh   launchers (repository root)
+Update switzerlandNG.bat / .command, update-switzerlandng.sh              update scripts (repository root)
 beamng/builder/
-  launch/start.ps1, start.sh   micromamba, the Python environment (environment.yml), then the app
+  launch/start.ps1, start.sh   micromamba, the Python environment (environment.yml), then the app ("update": the updater)
+  launch/install.ps1, install.sh  one-line installers of the newest commit of the branch
+  app/update.py                updates: newest commit of the branch, changed files only (.switzerlandng.json keeps the commit)
   app/server.py                the local web server (127.0.0.1 only, a token per page)
   app/jobs.py                  builds, their steps and their state; one process per step, resumable
   app/zone.py                  the checks of an area, the zone file the pipeline reads (MAGLIASO_ZONE)
@@ -205,7 +225,7 @@ beamng/pipeline/               the magliasinaNG pipeline (shared with the Malcan
 
 A build is the pipeline's own build of a Ticino zone (`zone_build.yml` of the ticino branch) with a zone file of the picked area: the downloads (`download_*.py`), the rasters, land cover, buildings, trees and road network, `build_level.py` stages and finishing steps, then the app's recentring and packaging. Everything that only exists for the Malcantone (street photos, hand-made lists) is left out of any other area by its box.
 
-Tests: `python tests/test_builder.py` from `beamng/builder` with the app's Python. `.github/workflows/builder_test.yml` builds the test areas of `beamng/builder/test/` on GitHub through the launcher, as a user's PC runs it, when `beamng/builder/test/stamp.txt` changes on this branch; the zips and logs go to a draft release. `builder_probe.yml` runs the probe of the cantons' sources.
+Tests: `python tests/test_builder.py` from `beamng/builder` with the app's Python. `.github/workflows/builder_test.yml` builds the test areas of `beamng/builder/test/` on GitHub through the launcher, as a user's PC runs it, when `beamng/builder/test/stamp.txt` changes on this branch; the zips and logs go to a draft release. `builder_probe.yml` runs the probe of the cantons' sources. `builder_update_test.yml` (on `beamng/builder/test/update_stamp.txt`) installs, updates from an older commit and installs again on Windows and Linux, and checks that the updated folder equals a fresh install.
 
 ## Sources and licences
 

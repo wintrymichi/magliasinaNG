@@ -47,16 +47,16 @@ class UpdateError(Exception):
     pass
 
 
-def _headers(accept="application/vnd.github+json"):
+def _headers(accept="application/vnd.github+json", url=API):
     h = {"User-Agent": "switzerlandNG/" + VERSION, "Accept": accept}
     tok = os.environ.get("GITHUB_TOKEN")
-    if tok:
+    if tok and url.startswith(API):          # raw.githubusercontent.com answers 404 to a token it does not take
         h["Authorization"] = "Bearer " + tok
     return h
 
 
 def _get(url, accept="application/vnd.github+json", timeout=30):
-    req = urllib.request.Request(url, headers=_headers(accept))
+    req = urllib.request.Request(url, headers=_headers(accept, url))
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.read()
@@ -166,6 +166,19 @@ def _save_state(commit, date, files):
     os.replace(STATE + ".tmp", STATE)
 
 
+def _raw(sha, rel):
+    """One file of a commit: a few tries at raw.githubusercontent.com (a busy CDN), then the contents API (counts
+    towards the hourly limit)."""
+    url = f"{RAW}/{sha}/{urllib.parse.quote(rel)}"
+    for wait in (0, 3, 10):
+        time.sleep(wait)
+        try:
+            return _get(url, accept="*/*", timeout=120)
+        except UpdateError:
+            pass
+    return _get(f"{API}/contents/{urllib.parse.quote(rel)}?ref={sha}", accept="application/vnd.github.raw", timeout=120)
+
+
 def _delta(base, new, say):
     """Only the changed files, or None when the compare cannot be used."""
     files, page = [], 1
@@ -199,7 +212,7 @@ def _delta(base, new, say):
         rel = _safe(f["filename"])
         if rel is None:
             continue
-        data = _get(f"{RAW}/{new}/{urllib.parse.quote(rel)}", accept="*/*", timeout=120)
+        data = _raw(new, rel)
         if f.get("sha") and blob_sha(data) != f["sha"]:
             raise UpdateError(f"{rel}: the downloaded file does not match GitHub's hash")
         got[rel] = data
@@ -213,7 +226,7 @@ def _full(new, say):
     tmpd = tempfile.mkdtemp(prefix="swissng-update-")
     try:
         arc = os.path.join(tmpd, "src.tar.gz")
-        req = urllib.request.Request(CODELOAD + new, headers=_headers("*/*"))
+        req = urllib.request.Request(CODELOAD + new, headers=_headers("*/*", CODELOAD))
         try:
             with urllib.request.urlopen(req, timeout=60) as r, open(arc, "wb") as f:
                 n, last = 0, 0
@@ -305,9 +318,10 @@ def main(argv=None):
             print(f"  installed {(c['installed'] or 'not known')[:10]}, newest {c['latest'][:10]} ({c['latest_date']}): "
                   + ("an update is out." if c["available"] else "up to date."))
             return 0
-        apply(full="--full" in argv, say=lambda s: print("  " + s, flush=True))
-        print("\n  Start switzerlandNG again with its launcher (the first start after an update of the Python libraries "
-              "sets them up again).", flush=True)
+        r = apply(full="--full" in argv, say=lambda s: print("  " + s, flush=True))
+        if r["updated"] and os.environ.get("SWISSNG_UPDATE_ONLY"):
+            print("\n  Start switzerlandNG again with its launcher (the first start after an update of the Python "
+                  "libraries sets them up again).", flush=True)
         return 0
     except UpdateError as e:
         print(f"\n  The update did not work: {e}\n  Nothing is half written: start it again.", flush=True)
